@@ -6,11 +6,16 @@ import { assetConditionSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfDate } from '@/server/as-of';
 import { db } from '@/server/db';
-import { loadSecondLifeDataPack, relistAsset } from '@/server/second-life';
+import { loadSecondLifeDataPack, relistAsset, type RelistRefusal } from '@/server/second-life';
 
 const bodySchema = z.strictObject({ target: assetConditionSchema });
 
-const statusFor = { asset_not_found: 404, asset_not_returned: 409, target_not_allowed: 422 };
+// Every refusal has a status here (the compiler checks), and a message in the UI (D-038).
+const statusFor = {
+  asset_not_found: 404,
+  asset_not_returned: 409,
+  target_not_allowed: 422,
+} satisfies Record<RelistRefusal, number>;
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/assets/[id]/relist'>) => {

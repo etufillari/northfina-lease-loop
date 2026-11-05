@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import { assetConditionSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { endLease } from '@/server/contract-endings';
+import { endLease, type EndLeaseRefusal } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
@@ -27,13 +27,18 @@ const bodySchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-const statusFor: Record<string, number> = {
+// Every refusal has a status here (the compiler checks), and a message in the UI (D-038).
+const statusFor = {
   contract_not_found: 404,
   unknown_customer: 404,
   already_ended: 409,
   asset_not_leased: 409,
   too_early: 409,
-};
+  no_vat_rate: 422,
+  usage_went_down: 422,
+  condition_improved: 422,
+  next_lessee_is_current: 422,
+} satisfies Record<EndLeaseRefusal, number>;
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/end'>) => {
@@ -51,7 +56,7 @@ export const POST = handleRoute(
     });
     if (!result.ok) {
       return fail(
-        statusFor[result.reason] ?? 422,
+        statusFor[result.reason],
         result.reason.toUpperCase(),
         'The lease cannot be ended'
       );

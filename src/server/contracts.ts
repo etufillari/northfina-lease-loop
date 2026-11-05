@@ -3,7 +3,7 @@
 // commit together.
 import { z } from 'zod';
 import type { AssetCategory } from '@/data/schemas';
-import { signContract, type Contract } from '@/domain/contract';
+import { signContract, type Contract, type SignResult } from '@/domain/contract';
 import { decideApplication } from '@/domain/eligibility';
 import { invoiceSchedule } from '@/domain/invoicing';
 import { answersNotMatchingCustomer } from '@/domain/persona';
@@ -35,9 +35,33 @@ export interface SignLeaseInput {
   actor: string;
 }
 
+/** Why the application decided on the server can't be signed (D-024). */
+type ApplicationRefusal =
+  | 'no_vat_rate'
+  | 'application_incomplete'
+  | 'application_invalid'
+  | 'application_declined'
+  | 'application_needs_review'
+  | 'signatory_must_sign';
+
+/** Every reason `signLease` refuses; `POST /api/contracts` answers each in upper case. */
+export type SignLeaseRefusal =
+  | 'quote_not_found'
+  | 'quote_already_used'
+  | 'asset_not_found'
+  | 'asset_not_available'
+  | 'unknown_customer'
+  | 'answers_do_not_match_customer'
+  | Extract<QuoteToSign, { ok: false }>['reason']
+  | Extract<SignResult, { ok: false }>['reason']
+  | ApplicationRefusal;
+
 export type SignLeaseResult =
   | { ok: true; id: number; contract: Contract; quoteId: number }
-  | { ok: false; reason: string }
+  | {
+      ok: false;
+      reason: Exclude<SignLeaseRefusal, 'answers_do_not_match_customer' | 'price_choice_required'>;
+    }
   /** The named customer's record says otherwise for these questions (D-031). */
   | { ok: false; reason: 'answers_do_not_match_customer'; questionIds: string[] }
   /** Today's rent is lower: the customer must choose before anything is signed (D-014). */
@@ -185,7 +209,7 @@ function applicationRefusal(
   input: SignLeaseInput,
   category: string,
   quote: Pick<Quote, 'financedCents' | 'monthlyNetRentCents' | 'termMonths'>
-): string | null {
+): ApplicationRefusal | null {
   const schedule = invoiceSchedule(
     {
       startDate: input.today,

@@ -142,9 +142,12 @@ export interface RelistInput {
   actor: string;
 }
 
+/** Every reason `relistAsset` refuses; `POST /api/assets/:id/relist` answers each in upper case. */
+export type RelistRefusal = 'asset_not_found' | 'asset_not_returned' | 'target_not_allowed';
+
 export type RelistResult =
   | { ok: true; asset: Asset; listingId: number; valuation: SecondLifeOption['valuation'] }
-  | { ok: false; reason: 'asset_not_found' | 'asset_not_returned' | 'target_not_allowed' };
+  | { ok: false; reason: RelistRefusal };
 
 /** Thrown inside the transaction to roll it back when the asset changed meanwhile. */
 class AssetChangedError extends Error {}

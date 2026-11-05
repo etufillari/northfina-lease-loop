@@ -13,6 +13,7 @@ import {
   endEarly,
   itemAgeAtStart,
   type EarlyExitChoice,
+  type EndEarlyResult,
   type ExitContext,
 } from '@/domain/early-exit';
 import { getContract } from './contracts';
@@ -60,6 +61,14 @@ export function earlyExitContext(
   };
 }
 
+/** Every reason `endLeaseEarly` refuses; `POST /api/contracts/:id/end-early` answers each. */
+export type EndEarlyRefusal =
+  | 'contract_not_found'
+  | 'already_ended'
+  | 'asset_not_leased'
+  | 'unknown_band'
+  | Extract<EndEarlyResult, { ok: false }>['reason'];
+
 export interface EndEarlyInput {
   contractId: number;
   choice: EarlyExitChoice;
@@ -71,7 +80,7 @@ export async function endLeaseEarly(
   db: PrismaClient,
   data: EarlyExitData,
   input: EndEarlyInput
-): Promise<EndLeaseResult> {
+): Promise<EndLeaseResult<EndEarlyRefusal>> {
   const found = await getContract(db, input.contractId);
   if (!found) return { ok: false, reason: 'contract_not_found' };
   const { contract } = found;

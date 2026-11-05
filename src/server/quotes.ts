@@ -3,7 +3,7 @@
 // the customer saw is the price in the contract.
 import { z } from 'zod';
 import { priceCheckAtSigning, type PriceCheck } from '@/domain/contract';
-import { makeQuote, type Quote } from '@/domain/quote';
+import { makeQuote, type Quote, type QuoteResult } from '@/domain/quote';
 import { quoteStatus, type QuoteStatus } from '@/domain/signing';
 import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
@@ -20,8 +20,12 @@ export interface CreateQuoteInput {
   actor: string;
 }
 
+/** Every reason `createQuote` refuses; `POST /api/quotes` answers each in upper case. */
+export type CreateQuoteRefusal =
+  'asset_not_found' | 'asset_not_available' | Extract<QuoteResult, { ok: false }>['reason'];
+
 export type CreateQuoteResult =
-  { ok: true; id: number; quote: Quote } | { ok: false; reason: string };
+  { ok: true; id: number; quote: Quote } | { ok: false; reason: CreateQuoteRefusal };
 
 export interface StoredQuote {
   id: number;

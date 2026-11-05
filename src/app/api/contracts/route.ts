@@ -5,7 +5,7 @@
 // today's rent is lower, answers 409 PRICE_CHOICE_REQUIRED with the offer and signs nothing.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { signLease } from '@/server/contracts';
+import { signLease, type SignLeaseRefusal } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
@@ -28,7 +28,8 @@ const bodySchema = z.strictObject({
   answers: z.record(z.string().regex(/^q_[a-z0-9_]+$/), answerSchema),
 });
 
-const statusFor: Record<string, number> = {
+// Every refusal has a status here (the compiler checks), and a message in the UI (D-038).
+const statusFor = {
   quote_not_found: 404,
   quote_already_used: 409,
   quote_expired: 410,
@@ -42,7 +43,11 @@ const statusFor: Record<string, number> = {
   application_needs_review: 403,
   signatory_must_sign: 403,
   answers_do_not_match_customer: 422,
-};
+  starts_before_signing: 422,
+  no_vat_rate: 422,
+  application_incomplete: 422,
+  application_invalid: 422,
+} satisfies Record<SignLeaseRefusal, number>;
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, bodySchema);
@@ -58,7 +63,7 @@ export const POST = handleRoute(async (request) => {
   if (!result.ok) {
     const { ok: _ok, reason, ...details } = result;
     return fail(
-      statusFor[reason] ?? 422,
+      statusFor[reason],
       reason.toUpperCase(),
       'The lease cannot be signed',
       // Which answers differ from the customer's record, or today's cheaper offer.

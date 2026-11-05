@@ -6,7 +6,7 @@ import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfDate } from '@/server/as-of';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
-import { createQuote } from '@/server/quotes';
+import { createQuote, type CreateQuoteRefusal } from '@/server/quotes';
 
 const bodySchema = z.strictObject({
   assetId: z.string().trim().min(1).max(100),
@@ -14,10 +14,19 @@ const bodySchema = z.strictObject({
   downPaymentCents: z.number().int().nonnegative(),
 });
 
-const statusFor: Record<string, number> = {
+// Every refusal has a status here (the compiler checks), and a message in the UI (D-038).
+const statusFor = {
   asset_not_found: 404,
   asset_not_available: 409,
-};
+  unknown_asset: 404,
+  below_minimum: 422,
+  above_maximum: 422,
+  unknown_term: 422,
+  down_payment_negative: 422,
+  down_payment_off_step: 422,
+  down_payment_too_large: 422,
+  no_price_list_on_date: 422,
+} satisfies Record<CreateQuoteRefusal, number>;
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, bodySchema);
@@ -28,7 +37,7 @@ export const POST = handleRoute(async (request) => {
     actor: 'customer',
   });
   if (!result.ok) {
-    return fail(statusFor[result.reason] ?? 422, result.reason.toUpperCase(), 'No quote was made');
+    return fail(statusFor[result.reason], result.reason.toUpperCase(), 'No quote was made');
   }
   return ok({ id: result.id, quote: result.quote }, { status: 201 });
 });

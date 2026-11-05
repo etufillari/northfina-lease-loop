@@ -3,7 +3,12 @@
 // transaction.
 import { z } from 'zod';
 import { assetConditionSchema, type Customer, type VatRates } from '@/data/schemas';
-import { endOfTerm, type EndOfTermChoice, type Ending } from '@/domain/end-of-term';
+import {
+  endOfTerm,
+  type EndOfTermChoice,
+  type EndOfTermResult,
+  type Ending,
+} from '@/domain/end-of-term';
 import { withAudit } from './audit';
 import { getContract } from './contracts';
 import type { PrismaClient } from './prisma-client';
@@ -16,8 +21,16 @@ export interface EndLeaseInput {
   actor: string;
 }
 
-export type EndLeaseResult =
-  { ok: true; ending: Ending } | { ok: false; reason: string; opensOn?: string };
+/** Every reason `endLease` refuses; `POST /api/contracts/:id/end` answers each in upper case. */
+export type EndLeaseRefusal =
+  | 'contract_not_found'
+  | 'already_ended'
+  | 'unknown_customer'
+  | 'asset_not_leased'
+  | Extract<EndOfTermResult, { ok: false }>['reason'];
+
+export type EndLeaseResult<Refusal extends string = EndLeaseRefusal> =
+  { ok: true; ending: Ending } | { ok: false; reason: Refusal; opensOn?: string };
 
 /** Thrown inside the transaction to roll it back when the asset changed meanwhile. */
 class AssetChangedError extends Error {}
@@ -75,7 +88,7 @@ export async function recordEnding(
   target: { contractId: number; assetId: string; asOf: string },
   ending: Ending,
   actor: string
-): Promise<EndLeaseResult> {
+): Promise<EndLeaseResult<'asset_not_leased'>> {
   const sold = ending.kind === 'buy' || ending.kind === 'early_buy';
   try {
     await withAudit(

@@ -10,6 +10,7 @@ import type { Answers } from '@/domain/question-flow';
 import { makeQuote } from '@/domain/quote';
 import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
+import { priceListsWithListings } from './listed-prices';
 import type { PrismaClient } from './prisma-client';
 
 export type { LeaseDataPack } from './lease-data';
@@ -50,7 +51,9 @@ export async function signLease(
       : data.customers.find((c) => c.id === input.customerId);
   if (input.customerId !== undefined && !customer) return { ok: false, reason: 'unknown_customer' };
 
-  const quoted = makeQuote(data.priceLists, data.coefficientTable, {
+  // A re-listed item is priced from its second-life price, not the new-item price (D-035).
+  const priceLists = await priceListsWithListings(db, data.priceLists);
+  const quoted = makeQuote(priceLists, data.coefficientTable, {
     assetId: input.assetId,
     quoteDate: input.today,
     termMonths: input.termMonths,

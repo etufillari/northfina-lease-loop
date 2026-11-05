@@ -51,13 +51,13 @@ model AuditLog {
 // price, where it came from and the billing rule. It is written once and never updated, so a
 // later price list can't change it (D-014). The other columns are copies for lookups.
 model Contract {
-  id           Int      @id @default(autoincrement())
-  created_at   DateTime @default(now())
-  asset_id     String
-  customer_id  String
-  sign_date    String // ISO date
-  start_date   String // ISO date
-  terms_json   String
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime @default(now())
+  asset_id    String
+  customer_id String
+  sign_date   String // ISO date
+  start_date  String // ISO date
+  terms_json  String
 
   @@index([asset_id])
   @@index([customer_id])
@@ -74,4 +74,24 @@ model ContractEnding {
   decided_on     String // ISO date
   effective_date String // ISO date
   ending_json    String
+}
+
+// A returned item refurbished and put back on the market (D-035). One row per relisting, never
+// updated: the latest row for an asset gives its second-life list price in place of the price
+// list's new-item price. `valuation_json` is the domain `SecondLifeValuation` (every line of the
+// value and the refurbishment plan). Earlier contracts keep their own frozen terms (D-019).
+model SecondLifeListing {
+  id                  Int      @id @default(autoincrement())
+  created_at          DateTime @default(now())
+  asset_id            String
+  listed_on           String // ISO date: the valuation date
+  condition_before    String
+  usage_before        Int
+  condition_after     String
+  usage_after         Int
+  refurbishment_cents Int
+  list_price_cents    Int
+  valuation_json      String
+
+  @@index([asset_id])
 }

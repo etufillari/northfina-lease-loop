@@ -53,7 +53,13 @@ export function CatalogueBrowser({
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map(({ asset, price }) => (
             <li key={asset.id}>
-              <AssetCard asset={asset} price={price} locale={locale} t={t} />
+              <AssetCard
+                asset={asset}
+                price={price}
+                locale={locale}
+                t={t}
+                catalogueSearch={catalogueSearchString(query)}
+              />
             </li>
           ))}
         </ul>

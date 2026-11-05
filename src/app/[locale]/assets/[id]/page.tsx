@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { StatusBadge } from '@/components/status-badge';
 import { loadPriceLists } from '@/data/load';
+import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn, nextPriceChange } from '@/domain/price-list';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
@@ -25,9 +26,15 @@ export async function generateMetadata({
   return { title: `${asset.make} ${asset.model} – ${getT(locale)('brand.name')}` };
 }
 
-export default async function AssetPage({ params }: PageProps<'/[locale]/assets/[id]'>) {
+export default async function AssetPage({
+  params,
+  searchParams,
+}: PageProps<'/[locale]/assets/[id]'>) {
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
+  // The catalogue passes its filters along (?q=&category=…). They survive a language switch,
+  // so "Back to catalogue" returns to the same search in the language you are using now.
+  const backHref = `/${locale}${catalogueSearchString(parseCatalogueQuery(await searchParams))}`;
 
   // Render on every request: the price depends on today's date and the item on the database.
   await connection();
@@ -57,7 +64,7 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <Link
-        href={`/${locale}`}
+        href={backHref}
         className="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
       >
         <span aria-hidden="true">&larr;</span>

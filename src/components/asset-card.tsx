@@ -15,9 +15,11 @@ type AssetCardProps = {
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  /** The catalogue's current filters (`?category=…`), passed on so the item page can link back. */
+  catalogueSearch?: string;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, locale, t, catalogueSearch = '' }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
 
   return (
@@ -30,7 +32,7 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
           <h3 id={headingId} className="text-lg leading-snug font-semibold">
             <Link
-              href={`/${locale}/assets/${asset.id}`}
+              href={`/${locale}/assets/${asset.id}${catalogueSearch}`}
               className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
             >
               {asset.model}

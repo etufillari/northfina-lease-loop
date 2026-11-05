@@ -37,6 +37,8 @@ function LanguageLinks({ current, label, search }: LanguageSwitcherProps & { sea
             <li key={locale}>
               <Link
                 href={(rest ? `/${locale}/${rest}` : `/${locale}`) + search}
+                // Replace, don't push: Back then skips "same page in another language".
+                replace
                 hrefLang={locale}
                 lang={locale}
                 aria-current={active ? 'page' : undefined}

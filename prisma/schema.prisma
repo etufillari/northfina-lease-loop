@@ -25,7 +25,7 @@ model Asset {
   usage_unit     String // km | battery_cycles | engine_hours
   usage_value    Int
   previous_lives Int
-  status         String // available | reserved | returned
+  status         String // available | reserved | returned | sold
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
@@ -61,4 +61,17 @@ model Contract {
 
   @@index([asset_id])
   @@index([customer_id])
+}
+
+// How a contract ended (D-029): bought, returned or passed on. Kept apart from `Contract`, whose
+// terms stay frozen. One per contract; `ending_json` is the domain `Ending` from
+// src/domain/end-of-term.ts (buyout invoice, inspection, next lessee).
+model ContractEnding {
+  id             Int      @id @default(autoincrement())
+  created_at     DateTime @default(now())
+  contract_id    Int      @unique
+  kind           String // buy | return | pass_on
+  decided_on     String // ISO date
+  effective_date String // ISO date
+  ending_json    String
 }

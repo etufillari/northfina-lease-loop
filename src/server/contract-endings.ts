@@ -1,0 +1,128 @@
+// End of term (Spine step 6, D-029): buy, return or pass on. The contract row stays frozen; the
+// ending is its own row, written with the asset change and the audit row in one transaction.
+import { z } from 'zod';
+import { assetConditionSchema, type Customer, type VatRates } from '@/data/schemas';
+import { endOfTerm, type EndOfTermChoice, type Ending } from '@/domain/end-of-term';
+import { withAudit } from './audit';
+import { getContract } from './contracts';
+import type { PrismaClient } from './prisma-client';
+
+export interface EndLeaseInput {
+  contractId: number;
+  choice: EndOfTermChoice;
+  today: string;
+  actor: string;
+}
+
+export type EndLeaseResult =
+  { ok: true; ending: Ending } | { ok: false; reason: string; opensOn?: string };
+
+/** Thrown inside the transaction to roll it back when the asset changed meanwhile. */
+class AssetChangedError extends Error {}
+
+export async function endLease(
+  db: PrismaClient,
+  data: { vatRates: VatRates; customers: Customer[] },
+  input: EndLeaseInput
+): Promise<EndLeaseResult> {
+  const found = await getContract(db, input.contractId);
+  if (!found) return { ok: false, reason: 'contract_not_found' };
+  const { contract } = found;
+  if (await db.contractEnding.findUnique({ where: { contract_id: input.contractId } })) {
+    return { ok: false, reason: 'already_ended' };
+  }
+  const { choice } = input;
+  if (
+    choice.kind === 'pass_on' &&
+    choice.nextLessee.startsWith('cust-') &&
+    !data.customers.some((c) => c.id === choice.nextLessee)
+  ) {
+    return { ok: false, reason: 'unknown_customer' };
+  }
+  const asset = await db.asset.findUnique({ where: { id: contract.assetId } });
+  if (!asset || asset.status !== 'reserved') return { ok: false, reason: 'asset_not_leased' };
+
+  const decided = endOfTerm(
+    contract,
+    data.vatRates,
+    { condition: assetConditionSchema.parse(asset.condition), usageValue: asset.usage_value },
+    choice,
+    input.today
+  );
+  if (!decided.ok) return decided;
+  const { ending } = decided;
+
+  try {
+    await withAudit(
+      db,
+      {
+        actor: input.actor,
+        action: `contract.ended_${ending.kind}`,
+        entityType: 'contract',
+        entityId: String(input.contractId),
+        details: { assetId: contract.assetId, ...ending },
+      },
+      async (tx) => {
+        // A finished lease is a finished life, whichever way it ends.
+        const changed = await tx.asset.updateMany({
+          where: { id: contract.assetId, status: 'reserved' },
+          data: {
+            status: ending.kind === 'buy' ? 'sold' : 'returned',
+            previous_lives: { increment: 1 },
+            ...(ending.inspection
+              ? {
+                  condition: ending.inspection.condition,
+                  usage_value: ending.inspection.usageValue,
+                }
+              : {}),
+          },
+        });
+        if (changed.count !== 1) throw new AssetChangedError();
+        return tx.contractEnding.create({
+          data: {
+            contract_id: input.contractId,
+            kind: ending.kind,
+            decided_on: ending.decidedOn,
+            effective_date: ending.effectiveDate,
+            ending_json: JSON.stringify(ending),
+          },
+        });
+      }
+    );
+  } catch (error) {
+    if (error instanceof AssetChangedError) return { ok: false, reason: 'asset_not_leased' };
+    throw error;
+  }
+  return { ok: true, ending };
+}
+
+const inspectionSchema = z.strictObject({
+  condition: assetConditionSchema,
+  usageValue: z.number().int().nonnegative(),
+});
+
+/** Mirrors the domain `Ending`, so a hand-edited row is caught when read. */
+const endingSchema = z.strictObject({
+  kind: z.enum(['buy', 'return', 'pass_on']),
+  decidedOn: z.iso.date(),
+  effectiveDate: z.iso.date(),
+  buyoutInvoice: z
+    .strictObject({
+      invoiceDate: z.iso.date(),
+      vatRatePercent: z.number().min(0),
+      netCents: z.number().int(),
+      vatCents: z.number().int(),
+      grossCents: z.number().int(),
+    })
+    .optional(),
+  inspection: inspectionSchema.optional(),
+  nextLessee: z.string().optional(),
+}) satisfies z.ZodType<Ending>;
+
+export async function getContractEnding(
+  db: PrismaClient,
+  contractId: number
+): Promise<Ending | null> {
+  const row = await db.contractEnding.findUnique({ where: { contract_id: contractId } });
+  return row ? endingSchema.parse(JSON.parse(row.ending_json)) : null;
+}

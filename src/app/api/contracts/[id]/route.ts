@@ -1,6 +1,7 @@
-// GET /api/contracts/:id   The locked contract and its invoice schedule.
+// GET /api/contracts/:id   The locked contract, its invoice schedule and how it ended (or null).
 import { invoiceSchedule } from '@/domain/invoicing';
 import { fail, handleRoute, ok } from '@/server/api-response';
+import { getContractEnding } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadVatRates } from '@/data/load';
@@ -12,6 +13,7 @@ export const GET = handleRoute(
     if (!found) return fail(404, 'CONTRACT_NOT_FOUND', `No contract with id "${id}"`);
 
     const schedule = invoiceSchedule(found.contract, await loadVatRates());
-    return ok({ ...found, schedule });
+    const ending = await getContractEnding(db, found.id);
+    return ok({ ...found, schedule, ending });
   }
 );

@@ -1,15 +1,19 @@
 // A signed contract: the locked price, where it came from, and every invoice.
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { EndOfTermSection } from '@/components/end-of-term-section';
 import { loadVatRates } from '@/data/load';
+import { assetConditionSchema, usageUnitSchema } from '@/data/schemas';
 import { invoiceSchedule } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
+import { getContractEnding } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
+import { todayIso } from '@/server/today';
 
 export default async function ContractPage({ params }: PageProps<'/[locale]/contracts/[id]'>) {
   const { locale, id } = await params;
@@ -23,10 +27,11 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
 
-  const [data, vatRates, assetRow] = await Promise.all([
+  const [data, vatRates, assetRow, ending] = await Promise.all([
     loadLeaseDataPack(),
     loadVatRates(),
     db.asset.findUnique({ where: { id: contract.assetId } }),
+    getContractEnding(db, found.id),
   ]);
   const customer = data.customers.find((c) => c.id === contract.customerId);
   const schedule = invoiceSchedule(contract, vatRates);
@@ -138,6 +143,25 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           </div>
         ) : null}
       </section>
+
+      <EndOfTermSection
+        locale={locale}
+        contractId={found.id}
+        contract={contract}
+        ending={ending}
+        vatRates={vatRates}
+        today={todayIso()}
+        asset={
+          assetRow
+            ? {
+                condition: assetConditionSchema.parse(assetRow.condition),
+                usageValue: assetRow.usage_value,
+                unit: usageUnitSchema.parse(assetRow.usage_unit),
+              }
+            : null
+        }
+        customers={data.customers}
+      />
     </div>
   );
 }

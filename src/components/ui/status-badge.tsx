@@ -6,6 +6,7 @@ const dots: Record<AssetStatus, string> = {
   available: 'bg-emerald-400',
   reserved: 'bg-amber-400',
   returned: 'bg-sky-400',
+  sold: 'bg-slate-400',
 };
 
 export function StatusBadge({ status, t }: { status: AssetStatus; t: Translate }) {

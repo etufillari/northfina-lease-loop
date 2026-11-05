@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCustomers, loadQuestions } from '@/data/load';
 import type { Customer, Question } from '@/data/schemas';
-import { answersFromCustomer, answersNotMatchingCustomer } from './persona';
+import { answersFromCustomer, answersNotMatchingCustomer, customerOnRecord } from './persona';
 import type { Answers, Deal } from './question-flow';
 
 let customers: Customer[];
@@ -166,5 +166,37 @@ describe('answersNotMatchingCustomer', () => {
   it('treats money sent as text as a mismatch, not as the same cents', () => {
     const answers = { ...own('cust-aino'), q_monthly_income: '320000' };
     expect(check('cust-aino', ebike, answers)).toEqual(['q_monthly_income']);
+  });
+});
+
+describe('customerOnRecord', () => {
+  // Issue #30: an empty form with a persona's email or business ID is still that persona.
+  const idOf = (answers: Answers) => customerOnRecord(customers, answers)?.id;
+
+  it('recognises a persona by email, ignoring case and spaces (Mikko)', () => {
+    expect(idOf({ q_email: 'mikko.laine@example.com' })).toBe('cust-mikko');
+    expect(idOf({ q_email: '  Mikko.Laine@Example.COM ' })).toBe('cust-mikko');
+  });
+
+  it('recognises a company by business ID even under another email (Norvi)', () => {
+    expect(idOf({ q_email: 'someone@else.example.com', q_business_id: ' 3299871-7 ' })).toBe(
+      'cust-norvi'
+    );
+  });
+
+  it('prefers the email when email and business ID name different customers', () => {
+    expect(idOf({ q_email: 'aino.virtanen@example.com', q_business_id: '3012456-5' })).toBe(
+      'cust-aino'
+    );
+  });
+
+  it('recognises nobody from an unknown email, a blank answer or no answers', () => {
+    expect(idOf({ q_email: 'new.person@example.com' })).toBeUndefined();
+    expect(idOf({ q_email: '  ', q_business_id: '' })).toBeUndefined();
+    expect(idOf({})).toBeUndefined();
+  });
+
+  it('ignores answers that are not text', () => {
+    expect(idOf({ q_email: 42, q_business_id: ['3299871-7'] })).toBeUndefined();
   });
 });

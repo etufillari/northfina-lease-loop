@@ -79,6 +79,30 @@ export function answersNotMatchingCustomer(
     .map((question) => question.id);
 }
 
+/**
+ * The data-pack customer an application is about when it names none (D-040): the one whose
+ * email matches `q_email` (trimmed, without case), else the one whose business ID matches
+ * `q_business_id` (trimmed). Without this, an empty form with Mikko's email skips the record
+ * check (issue #30). Answers that are blank or not text recognise nobody.
+ */
+export function customerOnRecord(
+  customers: readonly Customer[],
+  answers: Answers
+): Customer | undefined {
+  const text = (value: AnswerValue | undefined) =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  const email = text(answers.q_email)?.toLowerCase();
+  const businessId = text(answers.q_business_id);
+  return (
+    (email === undefined
+      ? undefined
+      : customers.find((c) => c.email.trim().toLowerCase() === email)) ??
+    (businessId === undefined
+      ? undefined
+      : customers.find((c) => 'business_id' in c && c.business_id?.trim() === businessId))
+  );
+}
+
 /** One canonical text per answer: validated and trimmed when it can be, raw when it can't. */
 function comparable(question: Question, value: AnswerValue): string {
   const check = validateAnswer(question, value);

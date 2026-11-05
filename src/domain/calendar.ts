@@ -39,3 +39,13 @@ export function addMonthsClamped(isoDate: string, months: number): string {
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   return toIso(Date.UTC(year, month, Math.min(start.getUTCDate(), lastDay)));
 }
+
+/** True for a real calendar date written as YYYY-MM-DD (2026-02-30 is not one). */
+export function isIsoDate(value: string): boolean {
+  try {
+    toUtcMs(value);
+    return true;
+  } catch {
+    return false;
+  }
+}

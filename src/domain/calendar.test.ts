@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addMonthsClamped } from './calendar';
+import { addDays, addMonthsClamped, isIsoDate } from './calendar';
 
 describe('addDays', () => {
   it('moves within a month and across a month end', () => {
@@ -54,5 +54,13 @@ describe('addMonthsClamped', () => {
   it('throws on negative or fractional months, which are bugs', () => {
     expect(() => addMonthsClamped('2026-11-05', -1)).toThrow(RangeError);
     expect(() => addMonthsClamped('2026-11-05', 1.5)).toThrow(RangeError);
+  });
+});
+
+describe('isIsoDate', () => {
+  it('accepts real dates and refuses impossible or malformed ones', () => {
+    expect(isIsoDate('2028-02-29')).toBe(true);
+    expect(isIsoDate('2027-02-29')).toBe(false);
+    expect(isIsoDate('10.03.2009')).toBe(false);
   });
 });

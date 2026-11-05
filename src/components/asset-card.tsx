@@ -2,6 +2,7 @@
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
+import { MonthlyRate } from '@/components/catalogue-pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -66,16 +67,26 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
         <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
       </dl>
 
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-        <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
-          ) : null}
+      <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.monthlyRate')}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">
+              <MonthlyRate listPriceCents={price.ok ? price.priceCents : undefined} />
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.listPrice')}</p>
+            <p className="mt-1 text-sm font-medium tabular-nums">
+              {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+            </p>
+            {price.ok ? (
+              <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+                {t('asset.priceListVersion', { version: price.priceListVersion })}
+              </p>
+            ) : null}
+          </div>
         </div>
-        <p className="text-right text-xl font-semibold tabular-nums">
-          {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
-        </p>
       </div>
     </article>
   );

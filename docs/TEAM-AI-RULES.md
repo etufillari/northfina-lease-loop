@@ -4,11 +4,11 @@ Paste this into your assistant setup, or tell it: “Read AGENTS.md and docs/TEA
 
 ## Set your scope first
 
-At the start of a session, tell the assistant which role you own:
+At the start of a session, tell the assistant which role you own. The project lead/user is **Developer 1 — lease engine**. Teammates take Developer 2 or 3 according to their existing work. See the [role checklists](03-TEAM-EXECUTION-AND-TASK-BREAKDOWN.md).
 
-- **Engine:** `src/domain/lease-engine/`; lease state, calendar, VAT, invoices and later engine server adapters. Do not rebuild catalogue pricing, applications or return workflows.
-- **Spine:** catalogue/pricing, applications, eligibility and signed contracts. Provide the engine with signed `LeaseTerms`; do not create a second invoice or calendar engine.
-- **Circular/UI:** returns, inspection, refurbishment, second-life workflow and UI integration. Consume engine outputs; do not reproduce billing rules in components.
+- **Developer 1 — Engine:** `src/domain/lease-engine/`; lease state, calendar, VAT, invoices and later engine server adapters. Do not rebuild catalogue pricing, applications or return workflows.
+- **Developer 2 — Spine:** catalogue/pricing, applications, eligibility and signed contracts. Provide the engine with signed `LeaseTerms`; do not create a second invoice or calendar engine.
+- **Developer 3 — Circular/UI:** returns, inspection, refurbishment, second-life workflow and UI integration. Consume engine outputs; do not reproduce billing rules in components.
 
 Existing file authors keep ownership. Role labels are responsibilities, not assigned teammate names. Read current code and coordinate if a feature is already being built.
 

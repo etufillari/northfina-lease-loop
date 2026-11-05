@@ -2,29 +2,56 @@
 
 Use [team AI rules](TEAM-AI-RULES.md) in each teammate's assistant setup. [Architecture](01-SYSTEM-ARCHITECTURE-AND-CONTRACTS.md) describes the small integration contract; [roadmap](02-PRODUCT-OVERVIEW-AND-ROADMAP.md) sets priorities.
 
-## Engine developer (me)
+## Who does what
 
-1. First increment: pure lease transitions, anniversary calendar, invoice-date VAT and rent invoice calculation, with colocated edge tests. Files: `src/domain/lease-engine/`.
-2. Connect signed contract terms from the spine owner. Confirm actual contract schema and naming before writing adapters.
-3. Add audited lease activation and invoice issuance, unique period key, idempotency receipts and atomic asset allocation with the spine owner. Coordinate generated migrations.
-4. Add engine APIs using existing envelopes; test concurrent issuance, rollback and same-key replay.
-5. Show first three invoices and VAT/calendar scenarios. Add settlement/early exit only after agreeing the fee policy.
+| Person                     | Owns                                          | Start now                                                     | Handoff                                                   |
+| -------------------------- | --------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
+| **Developer 1 — you**      | **Lease engine and invoices**                 | Connect signed terms, then persist leases and invoices        | Lease state, schedule, invoice totals and tax explanation |
+| **Developer 2 — teammate** | **Catalogue, application and contract**       | Finish application/eligibility and save signed contracts      | Immutable `LeaseTerms` for the engine                     |
+| **Developer 3 — teammate** | **Returns, refurbishment and UI integration** | Build return/inspection workflow with mocked engine responses | Ready asset and second-life offer, connected demo         |
 
-First increment deliberately has no database/API writes, invoice numbering, signing/eligibility checks or settlement. Consumers must not treat a pure calculation as a stored issued invoice.
+Teammates choose Developer 2/3 according to their existing work; do not overwrite an existing owner's implementation.
 
-## Spine developer
+## Developer 1 — you: lease engine
 
-1. Continue existing catalogue/pricing/application work.
-2. Save approved application and signed contract with locked net rent, dates and stable asset/customer references.
-3. Supply `LeaseTerms` from `src/domain/lease-engine/types.ts`. Mock engine output if needed; do not create a competing invoice calculator.
-4. Pair on atomic activation and invoice persistence boundary. Keep catalogue pricing separate from signed terms.
+**Your scope:** `src/domain/lease-engine/`, future engine services/routes, and their tests.
 
-## Circular/UI developer
+- [x] Initial pure functions: lease transitions, monthly calendar, VAT and rent invoice calculation. 26 focused tests pass; full checks remain blocked by Prisma test setup.
+- [ ] Agree signed `LeaseTerms` with Developer 2; inspect their actual contract schema before writing adapters.
+- [ ] Add lease persistence and activation. Developer 2 owns contract/allocation orchestration; your engine adapter participates in its same audited transaction.
+- [ ] Add invoice persistence/numbering, period uniqueness and idempotency receipts. Repeated requests must return the same stored invoice.
+- [ ] Expose lease/schedule/invoice APIs with existing envelopes and authorization checks.
+- [ ] Test concurrency, audit rollback, price lock, VAT change and month-end dates; show Aino's first three invoices.
 
-1. Build return, inspection and required refurbishment rules with mocked completed lease and invoice responses.
-2. Reprice ready assets and feed offers back through the existing contract flow.
-3. Connect engine output to invoice views; preserve one physical asset identity across lives.
-4. Orchestrate the complete demo and check errors, locales and keyboard navigation.
+**Next action:** connect the signed-contract handoff with Developer 2. Until ready, use a fixed `LeaseTerms` fixture to build your persistence adapter. Coordinate Prisma changes before editing the shared schema.
+
+Early-exit settlement comes later. Pure calculations are not stored issued invoices and do not validate eligibility, signing or asset availability.
+
+## Developer 2 — catalogue, application and contract
+
+**Your scope:** existing catalogue/pricing code, application and eligibility rules, signed contracts, their APIs and customer application/signing screens.
+
+- [ ] Continue existing pricing and catalogue work; handle unavailable assets.
+- [ ] Save applications and return approved/rejected/manual-review decisions with reasons.
+- [ ] Save immutable signed net rent, dates, price version and asset/customer references.
+- [ ] Map signed values into `LeaseTerms` from `src/domain/lease-engine/types.ts`; share one realistic fixture with Developer 1.
+- [ ] Own contract activation and atomic asset allocation, calling Developer 1's engine adapter in the same transaction.
+- [ ] Test eligibility, signing, price lock and activation rollback.
+
+**Next action:** finish one approved application → signed contract and share its terms. Mock the engine while it is being connected; reuse its calendar and invoice calculations.
+
+## Developer 3 — circular lifecycle and UI integration
+
+**Your scope:** returns, inspection, mandatory refurbishment, repricing/second-life workflow, shared UI shell and circular screens.
+
+- [ ] Record return against the original asset and lease.
+- [ ] Inspect condition/usage and determine required refurbishment work.
+- [ ] Keep the asset unavailable until required work is completed.
+- [ ] Create a second-life offer through Developer 2's pricing/contract boundary; preserve the asset ID.
+- [ ] Connect lease/invoice outputs to views, then demonstrate a second contract on that asset.
+- [ ] Check reloads, clear errors, four locales, keyboard flow and audit history.
+
+**Next action:** build return → inspection → refurbishment with mocked completed-lease data. Consume engine outputs rather than calculating rent or VAT in UI components.
 
 ## Integration checkpoints
 

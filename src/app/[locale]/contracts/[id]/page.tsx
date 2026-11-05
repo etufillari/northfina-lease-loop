@@ -243,6 +243,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
       <EndOfTermSection
         locale={locale}
         contractId={found.id}
+        assetId={contract.assetId}
         contract={contract}
         ending={ending}
         vatRates={vatRates}

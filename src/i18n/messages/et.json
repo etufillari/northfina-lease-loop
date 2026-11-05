@@ -258,6 +258,7 @@
   "end.inspection": "Seisukord {condition}, kasutus {usage}.",
   "end.done.early_buy": "Ostsid toote ennetähtaegselt välja. Omandiõigus läheb sulle üle {date}.",
   "end.done.early_hand_back": "Tagastasid toote ennetähtaegselt {date}.",
+  "end.nextLife": "Vaata selle järgmist elu",
   "end.exitInvoice": "Ennetähtaegse lõpetamise arve, kuupäev {date}",
   "early.title": "Lõpeta ennetähtaegselt",
   "early.intro": "Saad liisingu lõpetada mis tahes kuul. Maksad selle, mis sul on veel tasumata, lahkumise päeva väärtuses ja {rate} % intressiga, millele sinu rent on arvutatud. Nii ei maksa sa kunagi intressi kuude eest, mida sa ei kasuta. Viimasel kuul on see täpselt väljaostuhind.",

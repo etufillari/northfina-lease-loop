@@ -258,6 +258,7 @@
   "end.inspection": "Kunto {condition}, käyttö {usage}.",
   "end.done.early_buy": "Lunastit tuotteen etuajassa. Omistus siirtyy sinulle {date}.",
   "end.done.early_hand_back": "Palautit tuotteen etuajassa {date}.",
+  "end.nextLife": "Seuraa sen seuraavaa elämää",
   "end.exitInvoice": "Lopetuslasku, päivätty {date}",
   "early.title": "Lopeta etuajassa",
   "early.intro": "Voit päättää sopimuksen minä kuukautena tahansa. Maksat sen, mitä olet vielä velkaa, lähtöpäivän arvossa sillä {rate} %:n korolla, jolle vuokrasi on laskettu. Et siis maksa korkoa kuukausilta, joita et käytä. Viimeisenä kuukautena summa on täsmälleen lunastushinta.",

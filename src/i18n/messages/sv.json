@@ -258,6 +258,7 @@
   "end.inspection": "Skick {condition}, användning {usage}.",
   "end.done.early_buy": "Du köpte varan i förtid. Äganderätten går över till dig {date}.",
   "end.done.early_hand_back": "Du lämnade tillbaka varan i förtid, {date}.",
+  "end.nextLife": "Följ den in i nästa liv",
   "end.exitInvoice": "Faktura för förtida avslut, daterad {date}",
   "early.title": "Avsluta i förtid",
   "early.intro": "Du kan avsluta leasingen vilken månad som helst. Du betalar det du fortfarande är skyldig, värderat den dag du avslutar med den ränta på {rate} % som hyran bygger på, så du betalar aldrig ränta för månader du inte använder. Den sista månaden är det exakt lösenpriset.",

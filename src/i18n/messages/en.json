@@ -258,6 +258,7 @@
   "end.inspection": "Condition {condition}, usage {usage}.",
   "end.done.early_buy": "You bought the item early. Ownership passes to you on {date}.",
   "end.done.early_hand_back": "You handed the item back early, on {date}.",
+  "end.nextLife": "Follow it into its next life",
   "end.exitInvoice": "Early exit invoice dated {date}",
   "early.title": "Leave early",
   "early.intro": "You can end the lease in any month. You pay what you still owe, valued on the day you leave at the {rate} % interest your rent was built on, so you never pay interest for months you don't use. In the final month it is exactly the buyout.",

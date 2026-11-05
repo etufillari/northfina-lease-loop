@@ -1,4 +1,5 @@
 // The end of term on the contract page: the dates, then either the recorded ending or the form.
+import Link from 'next/link';
 import type { AssetCondition, Customer, UsageUnit, VatRates } from '@/data/schemas';
 import { endOfTermDates, type EndedContract, type Ending } from '@/domain/end-of-term';
 import { formatEuro } from '@/domain/money';
@@ -10,6 +11,8 @@ import { EndOfTermForm } from './end-of-term-form';
 export type EndOfTermSectionProps = {
   locale: Locale;
   contractId: number;
+  /** The leased item, for the links onward to its next life and passport. */
+  assetId: string;
   contract: EndedContract;
   ending: Ending | null;
   vatRates: VatRates;
@@ -111,6 +114,23 @@ function EndingSummary(props: EndOfTermSectionProps & { ending: Ending }) {
           </dd>
         </dl>
       ) : null}
+      <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
+        {/* The loop goes on: a handed-back item gets a second life on its own page (D-035). */}
+        {ending.kind === 'buy' || ending.kind === 'early_buy' ? null : (
+          <Link
+            href={`/${locale}/assets/${props.assetId}`}
+            className="underline underline-offset-4 hover:text-accent-text"
+          >
+            {t('end.nextLife')} <span aria-hidden="true">→</span>
+          </Link>
+        )}
+        <Link
+          href={`/${locale}/assets/${props.assetId}/passport`}
+          className="underline underline-offset-4 hover:text-accent-text"
+        >
+          {t('passport.link')} <span aria-hidden="true">→</span>
+        </Link>
+      </p>
     </div>
   );
 }

@@ -22,6 +22,7 @@
   "status.label": "Olek",
   "status.available": "Saadaval",
   "status.reserved": "Broneeritud",
+  "status.leased": "Välja renditud",
   "status.returned": "Tagastatud",
   "asset.modelYear": "Mudeliaasta",
   "asset.usage": "Kasutus",

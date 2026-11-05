@@ -22,6 +22,7 @@
   "status.label": "Tila",
   "status.available": "Saatavilla",
   "status.reserved": "Varattu",
+  "status.leased": "Vuokrattu",
   "status.returned": "Palautettu",
   "asset.modelYear": "Vuosimalli",
   "asset.usage": "Käyttö",

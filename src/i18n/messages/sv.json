@@ -22,6 +22,7 @@
   "status.label": "Status",
   "status.available": "Tillgänglig",
   "status.reserved": "Reserverad",
+  "status.leased": "Uthyrd",
   "status.returned": "Returnerad",
   "asset.modelYear": "Årsmodell",
   "asset.usage": "Användning",

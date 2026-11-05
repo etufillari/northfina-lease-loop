@@ -133,7 +133,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   const staff = users.filter((user) => user.kind === 'staff');
 
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200 bg-white p-2 dark:border-stone-800 dark:bg-stone-900">
+    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-stone-800 dark:bg-stone-900">
       <label htmlFor={selectId} className="sr-only">
         {t('nav.session')}
       </label>

@@ -1,5 +1,7 @@
 # Instructions for AI coding agents
 
+Read `docs/TEAM-AI-RULES.md` for team ownership and integration boundaries before editing.
+
 You are helping a hackathon team build **Lease Loop**. The challenge is in `CHALLENGE.md`; the engineering rules in `RULES.md` are judged and must be followed. The short version:
 
 - **No AI inside the product.** Never add an AI, ML or LLM SDK, model or API call to the app. All product logic is rules, data and algorithms. `npm run check:no-ai` enforces this.

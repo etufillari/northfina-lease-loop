@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
+import { answersFromCustomer } from '@/domain/persona';
 import { listPriceOn } from '@/domain/price-list';
 import { downPaymentBounds } from '@/domain/pricing';
 import { vatRateOn } from '@/domain/vat';
@@ -66,7 +67,15 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
             table={data.coefficientTable}
             bounds={bounds}
             vatRatePercent={vat.ratePercent}
-            customers={data.customers.map((c) => ({ id: c.id, name: c.name }))}
+            category={asset.category}
+            questions={data.questions}
+            personas={data.customers.map((c) => ({
+              id: c.id,
+              name: c.name,
+              answers: answersFromCustomer(c),
+            }))}
+            vatRates={data.vatRates}
+            today={today}
           />
         )}
       </div>

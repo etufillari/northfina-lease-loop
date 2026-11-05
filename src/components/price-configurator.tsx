@@ -101,6 +101,7 @@ export function PriceConfigurator({
     }
   }
 
+  const terms = live?.termsMonths ?? [12, 24, 36, 48];
   const maxDown = live?.maxDownPaymentCents ?? 0;
   const knownReasons = ['below_minimum', 'above_maximum', 'down_payment_over_max'];
   const notPriceableKey = (
@@ -114,26 +115,41 @@ export function PriceConfigurator({
       <section className="rounded-2xl border border-stone-200 bg-white p-5 lg:col-span-3 dark:border-stone-800 dark:bg-stone-900">
         <h2 className="text-lg font-semibold">{t('asset.configure')}</h2>
 
-        <fieldset className="mt-4">
-          <legend className="text-sm font-medium">{t('price.term')}</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(live?.termsMonths ?? [12, 24, 36, 48]).map((term) => (
+        <div className="mt-4">
+          <label htmlFor="term" className="text-sm font-medium">
+            {t('price.term')}: <strong>{t('price.months', { months: termMonths })}</strong>
+          </label>
+          {/* The Spine asks for sliders, plural: the term is one too, snapping to the four
+              terms the coefficient table prices. */}
+          <input
+            id="term"
+            type="range"
+            min={0}
+            max={terms.length - 1}
+            step={1}
+            value={Math.max(0, terms.indexOf(termMonths))}
+            onChange={(event) => setTermMonths(terms[Number(event.target.value)] ?? termMonths)}
+            aria-valuetext={t('price.months', { months: termMonths })}
+            className="mt-2 w-full accent-emerald-700"
+          />
+          <div className="mt-1 flex justify-between">
+            {terms.map((term) => (
               <button
                 key={term}
                 type="button"
                 onClick={() => setTermMonths(term)}
                 aria-pressed={termMonths === term}
-                className={`rounded-lg px-4 py-2 text-sm font-medium ring-1 ring-inset ${
+                className={`rounded px-1.5 py-0.5 text-xs tabular-nums ${
                   termMonths === term
-                    ? 'bg-emerald-700 text-white ring-emerald-700'
-                    : 'bg-white text-stone-800 ring-stone-300 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-200 dark:ring-stone-700'
+                    ? 'font-semibold text-emerald-800 dark:text-emerald-300'
+                    : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
                 }`}
               >
                 {t('price.months', { months: term })}
               </button>
             ))}
           </div>
-        </fieldset>
+        </div>
 
         <div className="mt-5">
           <label htmlFor="down" className="text-sm font-medium">

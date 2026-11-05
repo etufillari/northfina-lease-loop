@@ -87,6 +87,8 @@ export const applicationSchema = z.strictObject({
   asset_id: z.string().min(1),
   quantity: positiveIntSchema,
   quote_date: isoDateSchema,
+  /** Planned contract start. Age is judged on this date, and the contract copies it. */
+  start_on: isoDateSchema,
   price_list_version: positiveIntSchema.nullable(),
   base_price_cents: centsSchema,
   down_payment_cents: centsSchema,

@@ -31,6 +31,7 @@ const application = {
   asset_id: 'ebike-003',
   quantity: 1,
   quote_date: '2026-11-05',
+  start_on: '2026-11-05',
   price_list_version: 2,
   base_price_cents: 389000,
   down_payment_cents: 0,

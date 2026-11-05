@@ -52,6 +52,7 @@ model Application {
   asset_id           String
   quantity           Int      @default(1)
   quote_date         String
+  start_on           String // planned contract start: the date age is judged on
   price_list_version Int? // null for a re-listed item, which has no list price
   base_price_cents   Int
   down_payment_cents Int

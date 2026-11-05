@@ -6,36 +6,36 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 ## Index
 
-| ID    | Date       | Area        | Decision                                                                                 |
-| ----- | ---------- | ----------- | ---------------------------------------------------------------------------------------- |
-| D-001 | 2026-11-05 | Strategy    | Build in the fork; the starter's tooling and conventions win                             |
-| D-002 | 2026-11-05 | Pricing     | Rent comes from the coefficient table, not our own annuity model                         |
-| D-003 | 2026-11-05 | Product     | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)                         |
-| D-004 | 2026-11-05 | Product     | No agent or MCP integration                                                              |
-| D-005 | 2026-11-05 | Domain      | One rounding rule: `roundHalfUp`, half away from zero, noise-proof                       |
-| D-006 | 2026-11-05 | Testing     | Expected values come from hand calculations, never from the code                         |
-| D-007 | 2026-11-05 | Testing     | `src/domain` held to 90 % coverage, above the 60 % project gate                          |
-| D-008 | 2026-11-05 | Workflow    | Protected `main`: every change is a squash-merged PR with green CI                       |
-| D-009 | 2026-11-05 | CI          | CI pinned to `ubuntu-24.04` for the hackathon                                            |
-| D-010 | 2026-11-05 | Workflow    | Rebase-merge PRs so every small commit stays in the history                              |
-| D-011 | 2026-11-05 | Pricing     | A quote is net; VAT is added at the rate on each invoice date                            |
-| D-012 | 2026-11-05 | Pricing     | Down payment in 10 € steps, bounded so the financed amount fits the table                |
-| D-013 | 2026-11-05 | Pricing     | Follow the table at band edges, even when more down raises the rent                      |
-| D-014 | 2026-11-05 | Contract    | Signing locks a valid quote; a cheaper price today is offered, never forced              |
-| D-015 | 2026-11-05 | Domain      | Dates are ISO strings; calendar maths in UTC in one module                               |
-| D-016 | 2026-11-05 | Invoices    | Bill on the start day in full months; the billing rule is frozen per contract            |
-| D-017 | 2026-11-05 | Testing     | Property-based tests prove every schedule adds up exactly                                |
-| D-018 | 2026-11-05 | UI          | The sliders run the domain pricing in the browser; the server prices again to sign       |
-| D-019 | 2026-11-05 | Contract    | A signed item becomes `reserved`; the contract is stored as a frozen JSON snapshot       |
-| D-020 | 2026-11-05 | Audit       | `withAudit` can build its entry from the result, so new rows are audited by id           |
-| D-021 | 2026-11-05 | Pricing     | The band hint looks for the next band up, not just one slider step back                  |
-| D-022 | 2026-11-05 | Application | Answers that stop applying are set aside: never shown, sent or decided on                |
-| D-023 | 2026-11-05 | Application | Affordability uses the highest monthly total over the whole term                         |
-| D-024 | 2026-11-05 | Application | Only an approved applicant who may sign can sign; the server decides again               |
-| D-025 | 2026-11-05 | Application | Reasons and "why we ask" are translated in the app, not the data pack                    |
-| D-026 | 2026-11-05 | UI          | "Second Life" visual design with swipeable category rows                                 |
-| D-028 | 2026-11-05 | Application | A decline shows as soon as an answer breaks a rule, not when the form is complete        |
-| D-029 | 2026-11-05 | Contract    | End of term: buy, return or pass on to a named next lessee, recorded beside the contract |
+| ID    | Date       | Area        | Decision                                                                           |
+| ----- | ---------- | ----------- | ---------------------------------------------------------------------------------- |
+| D-001 | 2026-11-05 | Strategy    | Build in the fork; the starter's tooling and conventions win                       |
+| D-002 | 2026-11-05 | Pricing     | Rent comes from the coefficient table, not our own annuity model                   |
+| D-003 | 2026-11-05 | Product     | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)                   |
+| D-004 | 2026-11-05 | Product     | No agent or MCP integration                                                        |
+| D-005 | 2026-11-05 | Domain      | One rounding rule: `roundHalfUp`, half away from zero, noise-proof                 |
+| D-006 | 2026-11-05 | Testing     | Expected values come from hand calculations, never from the code                   |
+| D-007 | 2026-11-05 | Testing     | `src/domain` held to 90 % coverage, above the 60 % project gate                    |
+| D-008 | 2026-11-05 | Workflow    | Protected `main`: every change is a squash-merged PR with green CI                 |
+| D-009 | 2026-11-05 | CI          | CI pinned to `ubuntu-24.04` for the hackathon                                      |
+| D-010 | 2026-11-05 | Workflow    | Rebase-merge PRs so every small commit stays in the history                        |
+| D-011 | 2026-11-05 | Pricing     | A quote is net; VAT is added at the rate on each invoice date                      |
+| D-012 | 2026-11-05 | Pricing     | Down payment in 10 € steps, bounded so the financed amount fits the table          |
+| D-013 | 2026-11-05 | Pricing     | Follow the table at band edges, even when more down raises the rent                |
+| D-014 | 2026-11-05 | Contract    | Signing locks a valid quote; a cheaper price today is offered, never forced        |
+| D-015 | 2026-11-05 | Domain      | Dates are ISO strings; calendar maths in UTC in one module                         |
+| D-016 | 2026-11-05 | Invoices    | Bill on the start day in full months; the billing rule is frozen per contract      |
+| D-017 | 2026-11-05 | Testing     | Property-based tests prove every schedule adds up exactly                          |
+| D-018 | 2026-11-05 | UI          | The sliders run the domain pricing in the browser; the server prices again to sign |
+| D-019 | 2026-11-05 | Contract    | A signed item becomes `reserved`; the contract is stored as a frozen JSON snapshot |
+| D-020 | 2026-11-05 | Audit       | `withAudit` can build its entry from the result, so new rows are audited by id     |
+| D-021 | 2026-11-05 | Pricing     | The band hint looks for the next band up, not just one slider step back            |
+| D-022 | 2026-11-05 | Application | Answers that stop applying are set aside: never shown, sent or decided on          |
+| D-023 | 2026-11-05 | Application | Affordability uses the highest monthly total over the whole term                   |
+| D-024 | 2026-11-05 | Application | Only an approved applicant who may sign can sign; the server decides again         |
+| D-025 | 2026-11-05 | Application | Reasons and "why we ask" are translated in the app, not the data pack              |
+| D-026 | 2026-11-05 | UI          | "Second Life" visual design with swipeable category rows                           |
+| D-028 | 2026-11-05 | Application | A decline shows as soon as an answer breaks a rule, not when the form is complete  |
+| D-029 | 2026-11-05 | Contract    | End of term: buy, return, or pass on to a named next lessee                        |
 
 ---
 

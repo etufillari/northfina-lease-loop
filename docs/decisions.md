@@ -210,3 +210,12 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** Second Life puts the product's point, items living more than once, into the design itself, which matters for the product and pitch scores. Native scroll-snap feels smooth on touch and trackpads, and keyboard users reach every card with Tab. Semantic tokens keep dark mode in one place instead of a `dark:` twin on every class.
 - **Consequences:** Visual only: no change to pricing, signing, data or API code. Product photos can replace `CategoryArt` later without changing card layout. The build downloads the two fonts once from Google; the browser never contacts Google.
 - **Evidence:** Checked catalogue → item → sign → contract → audit in the browser in light and dark, at desktop width and 400 px, in all four languages, with no horizontal overflow and no console errors. `npm run check:all` passes.
+
+## D-027 · Category photos in the picture slot
+
+- **Context:** D-026 left `CategoryArt` as a line-drawing stand-in for product photos. We now have three studio photos: e-bike, laptop and tractor.
+- **Decision:** One photo per category, not per item, served from `public/images/` as WebP (about 1000 × 750, 17–27 KB each, down from 340–420 KB JPEGs). `CategoryArt` shows the photo with `next/image`, contained and not cropped, on a tile coloured like the photo's own backdrop. The photo is decorative (`alt=""`) because the make and model sit beside it.
+- **Alternatives:** A photo per item (the dataset has none and the card layout would not change). Cropping to the tile shape (cut the bike in half in the portrait card).
+- **Why:** The slot already gave every card the same shape, so swapping its content changes no layout. Contain plus a matching backdrop works for both the portrait card and the wide detail tile.
+- **Consequences:** Visual only. All items in a category share one picture, so a per-item photo needs an `image` field on the asset later.
+- **Evidence:** Checked the catalogue rows and an item page in the browser; format, lint, typecheck and 249 tests pass.

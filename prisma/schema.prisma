@@ -32,6 +32,181 @@ model Asset {
   @@index([category])
 }
 
+// A person or business from data/customers.json, or one created in the app. Optional
+// columns belong to the other customer types; dates are ISO strings like the domain uses.
+model Customer {
+  id                       String   @id @default(cuid())
+  type                     String // consumer | sole_trader | company
+  name                     String
+  country                  String
+  city                     String   @default("")
+  email                    String
+  is_pep                   Boolean  @default(false)
+  story                    String?
+  birth_date               String? // ISO date, consumers and sole traders
+  employment               String?
+  monthly_net_income_cents Int?
+  business_id              String?
+  vat_registered           Boolean?
+  annual_revenue_cents     Int?
+  applicant_can_sign       Boolean?
+  beneficial_owners_json   String?
+  // Answers the customer chose to save as defaults, JSON { questionId: answer }.
+  saved_defaults_json      String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+}
+
+// A priced offer, frozen at its quote date (the price lock of scenario card 2 hangs on it).
+model Quote {
+  id                        String        @id @default(cuid())
+  asset_id                  String
+  customer_id               String?
+  quantity                  Int           @default(1)
+  quote_date                String // ISO; its price list version is what gets locked
+  price_list_version        Int
+  unit_list_price_cents     Int
+  list_price_cents          Int // unit × quantity: the banded total
+  down_payment_cents        Int
+  term_months               Int
+  financed_cents            Int
+  band                      String
+  factor_ppm                Int
+  monthly_net_rent_cents    Int
+  net_total_cents           Int
+  last_month_net_rent_cents Int
+  buyout_net_cents          Int
+  created_at                DateTime      @default(now())
+  applications              Application[]
+}
+
+// One customer's run through the question flow for one quote.
+model Application {
+  id                    String    @id @default(cuid())
+  quote                 Quote     @relation(fields: [quote_id], references: [id])
+  quote_id              String
+  customer_id           String
+  // draft | approved | awaiting_signature | manual_review | declined | signed | expired
+  status                String    @default("draft")
+  answers_json          String    @default("{}")
+  decision_reasons_json String?
+  signatory_email       String?
+  hold_until            String? // ISO date: the 7-day hold after approval
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+  contract              Contract?
+
+  @@index([customer_id])
+  @@index([status])
+}
+
+// A signed lease. Every money column is locked at signing; VAT is not here on purpose.
+model Contract {
+  id                        String          @id @default(cuid())
+  application               Application     @relation(fields: [application_id], references: [id])
+  application_id            String          @unique
+  customer_id               String
+  // active | ended_returned | ended_bought | ended_early_exit | transferred
+  status                    String          @default("active")
+  quote_date                String
+  price_list_version        Int
+  signed_date               String
+  start_date                String
+  term_months               Int
+  financed_cents            Int
+  monthly_net_rent_cents    Int
+  net_total_cents           Int
+  last_month_net_rent_cents Int
+  buyout_net_cents          Int
+  usage_purpose             String?
+  purchase_at_end           Boolean         @default(false)
+  transfer_token            String?         @unique
+  previous_contract_id      String?
+  ended_on                  String?
+  end_reason                String?
+  created_at                DateTime        @default(now())
+  updated_at                DateTime        @updatedAt
+  assets                    ContractAsset[]
+  invoices                  Invoice[]
+
+  @@index([customer_id])
+  @@index([status])
+}
+
+// Which physical items a contract covers (a fleet contract covers several).
+model ContractAsset {
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  contract_id String
+  asset_id    String
+
+  @@id([contract_id, asset_id])
+  @@index([asset_id])
+}
+
+// One row per invoice, created as a whole schedule at signing. The VAT rate is the one
+// valid on the due date; vat_rate_bp holds basis points (2550 = 25.5 %).
+model Invoice {
+  id           String   @id @default(cuid())
+  contract     Contract @relation(fields: [contract_id], references: [id])
+  contract_id  String
+  number       Int
+  type         String   @default("lease") // lease | buyout | early_exit
+  due_date     String
+  period_start String?
+  period_end   String?
+  net_cents    Int
+  vat_rate_bp  Int
+  vat_cents    Int
+  total_cents  Int
+  created_at   DateTime @default(now())
+
+  @@unique([contract_id, number])
+  @@index([contract_id])
+}
+
+// Why an asset is reserved, for whom and until when. Every `reserved` status has one.
+model Reservation {
+  id          String   @id @default(cuid())
+  asset_id    String
+  customer_id String?
+  kind        String // approval_hold | awaiting_signatory | waitlist_offer | nomination
+  until       String // ISO date, 7 days by default
+  active      Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  @@index([asset_id, active])
+}
+
+// The second-life waiting list, seeded from data/second-life-demand.json.
+model WaitlistEntry {
+  id                         String   @id
+  category                   String
+  max_monthly_net_rent_cents Int
+  min_condition              String
+  preferred_term_months      Int
+  needed_by                  String
+  joined_on                  String
+  who                        String
+  status                     String   @default("waiting") // waiting | offered | leased | removed
+  offered_asset_id           String?
+  created_at                 DateTime @default(now())
+  updated_at                 DateTime @updatedAt
+}
+
+// The item passport: every lifecycle event of an asset, across all its lives.
+model AssetEvent {
+  id           Int      @id @default(autoincrement())
+  asset_id     String
+  contract_id  String?
+  // e.g. leased | returned | refurbished | upgraded | bought | transferred | parts_bin
+  type         String
+  on_date      String // ISO as-of date of the event
+  details_json String?
+  created_at   DateTime @default(now())
+
+  @@index([asset_id])
+}
+
 // Who changed what, and when. Written in the same transaction as the change
 // (see src/server/audit.ts), so a change without an audit row cannot exist.
 model AuditLog {

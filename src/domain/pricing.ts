@@ -13,6 +13,7 @@ export type LeasePriceResult =
       monthlyNetRentCents: number;
       buyoutPercent: number;
       endOfTermBuyoutCents: number;
+      totalCostWithBuyoutCents: number;
     }
   | {
       ok: false;
@@ -58,6 +59,8 @@ export function leasePriceFor(
   // Both calculations use cents throughout and round exactly once after multiplication.
   const monthlyNetRentCents = Math.round(financedCents * factorResult.factor);
   const endOfTermBuyoutCents = Math.round((financedCents * buyoutPercent) / 100);
+  const totalCostWithBuyoutCents =
+    downPaymentCents + monthlyNetRentCents * termMonths + endOfTermBuyoutCents;
 
   return {
     ok: true,
@@ -70,5 +73,6 @@ export function leasePriceFor(
     monthlyNetRentCents,
     buyoutPercent,
     endOfTermBuyoutCents,
+    totalCostWithBuyoutCents,
   };
 }

@@ -42,6 +42,7 @@ describe('leasePriceFor', () => {
       monthlyNetRentCents: 10_730,
       buyoutPercent: 15,
       endOfTermBuyoutCents: 58_350,
+      totalCostWithBuyoutCents: 444_630,
     });
   });
 
@@ -66,6 +67,18 @@ describe('leasePriceFor', () => {
       termMonths: 3,
       monthlyNetRentCents: 3_890,
       endOfTermBuyoutCents: 38_900,
+      totalCostWithBuyoutCents: 50_570,
+    });
+  });
+
+  it('includes the down payment exactly once in the total cost', () => {
+    expect(leasePriceFor(table, 389_000, 100_000, 36)).toMatchObject({
+      ok: true,
+      downPaymentCents: 100_000,
+      financedCents: 289_000,
+      monthlyNetRentCents: 7_972,
+      endOfTermBuyoutCents: 43_350,
+      totalCostWithBuyoutCents: 430_342,
     });
   });
 

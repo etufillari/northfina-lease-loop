@@ -46,3 +46,19 @@ model AuditLog {
   @@index([entity_type, entity_id])
   @@index([created_at])
 }
+
+// A signed lease. `terms_json` is the frozen contract from src/domain/contract.ts: the locked
+// price, where it came from and the billing rule. It is written once and never updated, so a
+// later price list can't change it (D-014). The other columns are copies for lookups.
+model Contract {
+  id           Int      @id @default(autoincrement())
+  created_at   DateTime @default(now())
+  asset_id     String
+  customer_id  String
+  sign_date    String // ISO date
+  start_date   String // ISO date
+  terms_json   String
+
+  @@index([asset_id])
+  @@index([customer_id])
+}

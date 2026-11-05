@@ -111,20 +111,20 @@ export function ApplicationForm(props: ApplicationFormProps) {
 
   return (
     <section aria-labelledby="application" className="mt-12">
-      <h2 id="application" className="text-2xl font-semibold tracking-tight">
+      <h2 id="application" className="font-display text-2xl font-bold tracking-tight">
         {t('application.title')}
       </h2>
-      <p className="mt-1 text-stone-700 dark:text-stone-300">{t('application.intro')}</p>
+      <p className="mt-1 text-muted">{t('application.intro')}</p>
 
       <div className="mt-6 max-w-md">
-        <label htmlFor={personaFieldId} className="text-sm font-medium">
+        <label htmlFor={personaFieldId} className="eyebrow">
           {t('application.persona')}
         </label>
         <select
           id={personaFieldId}
           value={personaId}
           onChange={(event) => choosePersona(event.target.value)}
-          className="mt-2 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-950"
+          className="field mt-2"
         >
           <option value="">{t('application.personaNone')}</option>
           {props.personas.map((p) => (
@@ -135,7 +135,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
         </select>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem] lg:gap-12">
         <div className="space-y-6">
           {asked.map((question) => (
             <QuestionField
@@ -149,7 +149,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
             />
           ))}
           {dropped.some((id) => shown.includes(id)) ? (
-            <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+            <p role="status" className="text-sm text-muted">
               {t('application.dropped')}
             </p>
           ) : null}
@@ -180,8 +180,7 @@ function QuestionField(props: {
   const check = props.answer === undefined ? null : validateAnswer(question, props.answer);
   const error = check && !check.ok ? t(`error.${check.reason}`) : null;
   const describedBy = `${id}-why${error ? ` ${id}-error` : ''}`;
-  const field =
-    'mt-2 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-950';
+  const field = 'field mt-2';
   const common = {
     id,
     'aria-describedby': describedBy,
@@ -231,12 +230,12 @@ function QuestionField(props: {
         {question.text[locale]}
       </label>
       {input}
-      <p id={`${id}-why`} className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+      <p id={`${id}-why`} className="mt-1 text-xs text-muted">
         <span className="font-medium">{t('application.why')}:</span>{' '}
         {translated(`why.${question.id}`, t) ?? question.why_we_ask.en}
       </p>
       {error ? (
-        <p id={`${id}-error`} className="mt-1 text-sm text-red-700 dark:text-red-400">
+        <p id={`${id}-error`} className="mt-1 text-sm font-medium text-danger">
           {error}
         </p>
       ) : null}
@@ -260,16 +259,14 @@ function DecisionPanel(props: {
   return (
     <aside
       aria-live="polite"
-      className="h-fit rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+      className="panel h-fit p-6 shadow-xl shadow-black/5 lg:sticky lg:top-24"
     >
-      <h3 className="text-sm font-medium text-stone-600 dark:text-stone-400">
-        {t('application.decision')}
-      </h3>
+      <h3 className="eyebrow">{t('application.decision')}</h3>
       {decision.status !== 'decided' ? (
         <p className="mt-2 text-sm">{t('application.remaining')}</p>
       ) : (
         <>
-          <p className="mt-1 text-xl font-semibold">{t(`outcome.${decision.outcome}`)}</p>
+          <p className="mt-2 font-display text-2xl font-bold">{t(`outcome.${decision.outcome}`)}</p>
           {decision.outcome === 'approved' && decision.signer.kind === 'applicant' ? (
             <p className="mt-2 text-sm">{t('outcome.approved.text')}</p>
           ) : null}
@@ -295,13 +292,13 @@ function DecisionPanel(props: {
         type="button"
         onClick={props.onSign}
         disabled={!canSign || props.signing === 'busy'}
-        className="mt-6 w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary mt-6 w-full py-3.5"
       >
         {props.signing === 'busy' ? t('lease.signing') : t('lease.sign')}
       </button>
-      <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">{t('lease.signNote')}</p>
+      <p className="mt-2 text-xs text-muted">{t('lease.signNote')}</p>
       {props.signing === 'error' ? (
-        <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="mt-3 text-sm font-medium text-danger">
           {t('lease.error')}
         </p>
       ) : null}

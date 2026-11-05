@@ -52,19 +52,10 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t('catalogue.title')}
-        </h1>
-        <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
-        <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
-          <time dateTime={today}>
-            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
-          </time>
-        </p>
-      </div>
+      {/* Kept for screen readers and the document outline; the tabs below are the visible title. */}
+      <h1 className="sr-only">{t('catalogue.title')}</h1>
 
-      <div className="mt-10">
+      <div>
         <CategoryTabs
           categories={categories}
           active={filter.category}
@@ -90,8 +81,11 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
           <h2 id="category-heading" className="sr-only">
             {t(`category.${filter.category}`)}
           </h2>
-          <p aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
-            {t('catalogue.itemCount', { count: visible.length })}
+          <p className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm text-stone-600 dark:text-stone-400">
+            <span aria-live="polite">{t('catalogue.itemCount', { count: visible.length })}</span>
+            <time dateTime={today}>
+              {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+            </time>
           </p>
           {visible.length === 0 ? (
             <p className="mt-4 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

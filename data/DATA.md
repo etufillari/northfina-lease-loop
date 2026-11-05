@@ -24,6 +24,7 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 | `questions.json`           | The application question bank in 4 languages, the targeting rules (`ask_when`) and the eligibility rules.                                                                                                           |
 | `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                       |
 | `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                            |
+| `staff.json`               | **Added by this team**, not part of the original pack. Seeded `dealer` and `admin` users for the no-password "acting as" login (see `src/server/session.ts`).                                                       |
 
 ## Worked example: the monthly price
 

@@ -11,25 +11,38 @@ import {
   loadRefurbishmentCosts,
   loadResidualCurves,
   loadSecondLifeDemand,
+  loadStaff,
   loadVatRates,
 } from './load';
 import { coefficientTableSchema, priceListsFileSchema } from './schemas';
 
 describe('data pack', () => {
   it('every file in data/ parses against its schema', async () => {
-    const [assets, priceLists, table, curves, vat, questions, customers, demand, refurb, co2] =
-      await Promise.all([
-        loadAssets(),
-        loadPriceLists(),
-        loadCoefficientTable(),
-        loadResidualCurves(),
-        loadVatRates(),
-        loadQuestions(),
-        loadCustomers(),
-        loadSecondLifeDemand(),
-        loadRefurbishmentCosts(),
-        loadCo2Factors(),
-      ]);
+    const [
+      assets,
+      priceLists,
+      table,
+      curves,
+      vat,
+      questions,
+      customers,
+      staff,
+      demand,
+      refurb,
+      co2,
+    ] = await Promise.all([
+      loadAssets(),
+      loadPriceLists(),
+      loadCoefficientTable(),
+      loadResidualCurves(),
+      loadVatRates(),
+      loadQuestions(),
+      loadCustomers(),
+      loadStaff(),
+      loadSecondLifeDemand(),
+      loadRefurbishmentCosts(),
+      loadCo2Factors(),
+    ]);
 
     expect(assets).toHaveLength(30);
     expect(priceLists.map((list) => list.version)).toEqual([1, 2]);
@@ -38,6 +51,7 @@ describe('data pack', () => {
     expect(vat.country).toBe('FI');
     expect(questions.questions.length).toBeGreaterThan(0);
     expect(customers.length).toBeGreaterThan(0);
+    expect(staff.map((person) => person.role).sort()).toEqual(['admin', 'dealer']);
     expect(demand.length).toBeGreaterThan(0);
     expect(refurb.laptop.fixed.length).toBeGreaterThan(0);
     expect(co2.manufacturing_new_kg.e_bike).toBeGreaterThan(0);

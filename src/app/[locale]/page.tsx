@@ -2,7 +2,7 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
-import { loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
 import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
@@ -21,7 +21,12 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assets, priceLists, coefficientTable, vatRates] = await Promise.all([
+    listAssets(db),
+    loadPriceLists(),
+    loadCoefficientTable(),
+    loadVatRates(),
+  ]);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
     .filter((group) => group.assets.length > 0);
@@ -68,6 +73,9 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
                   price={listPriceOn(priceLists, asset.id, today)}
                   locale={locale}
                   t={t}
+                  coefficientTable={coefficientTable}
+                  vatRates={vatRates}
+                  isoDate={today}
                 />
               </li>
             ))}

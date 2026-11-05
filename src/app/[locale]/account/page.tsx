@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { loadAssets } from '@/data/load';
+import { mockLeaseRecords } from '@/data/mock-leases';
 import type { Customer } from '@/data/schemas';
+import { formatEuro } from '@/domain/money';
+import { anniversary } from '@/domain/lease-engine/calendar';
+import type { LeaseStatus } from '@/domain/lease-engine/types';
+import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
-import { isLocale } from '@/i18n/locales';
+import { intlLocale, isLocale } from '@/i18n/locales';
 import { getActiveUser } from '@/server/active-user';
 
 export default async function AccountPage({ params }: PageProps<'/[locale]/account'>) {
@@ -11,7 +17,16 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
   if (!isLocale(locale) || process.env.NODE_ENV !== 'development') notFound();
 
   await connection();
-  const [t, customer] = [getT(locale), await getActiveUser()];
+  const t = getT(locale);
+  const [customer, assets] = await Promise.all([getActiveUser(), loadAssets()]);
+  const leases = customer
+    ? mockLeaseRecords.filter((lease) => lease.terms.customerId === customer.id)
+    : [];
+  const leaseStatusLabels: Record<LeaseStatus, string> = {
+    ACTIVE: t('account.leaseStatus.active'),
+    COMPLETED: t('account.leaseStatus.completed'),
+    TERMINATED: t('account.leaseStatus.terminated'),
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
@@ -55,11 +70,88 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
           )}
         </section>
 
-        <div className="grid gap-6">
-          <HistorySection title={t('account.leases')} message={t('account.historyUnavailable')} />
+        <div className="grid content-start gap-6">
+          <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-8">
+            <h2 className="text-xl font-semibold">{t('account.leases')}</h2>
+            {leases.length > 0 ? (
+              <div className="mt-5 space-y-4">
+                {leases.map((lease) => {
+                  const asset = assets.find((item) => item.id === lease.terms.assetId);
+                  const endDate = anniversary(lease.terms.startDate, lease.terms.termMonths);
+
+                  return (
+                    <article
+                      key={lease.terms.contractId}
+                      className="rounded-xl border border-stone-200 p-4 dark:border-stone-700"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          {asset ? (
+                            <Link
+                              href={`/${locale}/assets/${asset.id}`}
+                              className="font-semibold text-emerald-800 underline-offset-4 hover:underline dark:text-emerald-300"
+                            >
+                              {asset.make} {asset.model}
+                            </Link>
+                          ) : (
+                            <p className="font-semibold">{lease.terms.assetId}</p>
+                          )}
+                          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+                            {t('account.contractId')}: {lease.terms.contractId}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
+                          {t('account.mockLease')}
+                        </span>
+                      </div>
+                      <dl className="mt-4 grid gap-3 border-t border-stone-200 pt-4 sm:grid-cols-2 dark:border-stone-700">
+                        <LeaseFact
+                          label={t('account.leaseStatus')}
+                          value={leaseStatusLabels[lease.status]}
+                        />
+                        <LeaseFact
+                          label={t('account.signedDate')}
+                          value={formatIsoDate(lease.signedDate, locale)}
+                        />
+                        <LeaseFact
+                          label={t('account.leaseStartDate')}
+                          value={formatIsoDate(lease.terms.startDate, locale)}
+                        />
+                        <LeaseFact
+                          label={t('account.leaseEndDate')}
+                          value={endDate.ok ? formatIsoDate(endDate.value, locale) : '—'}
+                        />
+                        <LeaseFact
+                          label={t('account.term')}
+                          value={t('pricing.months', { count: lease.terms.termMonths })}
+                        />
+                        <LeaseFact
+                          label={t('account.monthlyNetRent')}
+                          value={formatEuro(lease.terms.monthlyNetCents, intlLocale[locale])}
+                        />
+                      </dl>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-stone-600 dark:text-stone-400">
+                {t('account.noLeases')}
+              </p>
+            )}
+          </section>
           <HistorySection title={t('account.invoices')} message={t('account.historyUnavailable')} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function LeaseFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-stone-600 dark:text-stone-400">{label}</dt>
+      <dd className="mt-1 text-sm font-medium">{value}</dd>
     </div>
   );
 }

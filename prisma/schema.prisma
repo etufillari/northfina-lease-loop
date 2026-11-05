@@ -46,3 +46,28 @@ model AuditLog {
   @@index([entity_type, entity_id])
   @@index([created_at])
 }
+
+// A submitted lease application: the answers, the decision and a snapshot of the quoted
+// price. The price is recalculated on the server, never taken from the browser, and stored
+// with its price list version so a later contract can show which price was agreed.
+model Application {
+  id                  String   @id @default(uuid())
+  created_at          DateTime @default(now())
+  quote_date          String // YYYY-MM-DD the price was calculated on
+  asset_id            String
+  customer_type       String // consumer | sole_trader | company
+  applicant_name      String?
+  term_months         Int
+  down_payment_cents  Int
+  list_price_cents    Int
+  price_list_version  Int
+  financed_cents      Int
+  monthly_net_cents   Int
+  vat_basis_points    Int // 25.5 % → 2550, kept as an integer like money
+  monthly_gross_cents Int
+  decision            String // approved | rejected | manual_review
+  reasons_json        String // JSON array of eligibility rule ids
+  answers_json        String // JSON object: question id → answer
+
+  @@index([asset_id])
+}

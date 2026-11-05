@@ -16,6 +16,7 @@ Owns the Next.js 16 App Router pages (`src/app/[locale]/`), reusable UI componen
   - `GET /api/assets`: Lists assets with optional `?category=` filtering.
   - `PATCH /api/assets/[id]/status`: Validates `{ status, actor }` and calls `changeAssetStatus` to update status and write an audit entry atomically.
   - `GET /api/audit-log`: Returns the 50 newest audit log entries.
+  - `POST /api/applications/evaluate`: Stateless. Takes `{ deal: { category, financed_amount_cents, term_months }, answers, contract_start_date?, monthly_rent_incl_vat_cents? }` and returns the applicable `questions`, the pruned `answers`, the `dropped` ids and the eligibility `decision` with reasons. The customer type is read from `answers.q_customer_type`, never sent separately. `contract_start_date` defaults to `todayIso()`. The financed amount and rent are trusted from the caller until the pricing module can compute them server-side.
 
 ## Boundary
 

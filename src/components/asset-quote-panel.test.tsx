@@ -4,25 +4,38 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Locale } from '@/i18n/locales';
 import type { Translate } from '@/i18n/get-t';
 
-import { AssetQuotePanel } from './asset-quote-panel';
 import { formatEuro } from '@/domain/money';
 import { intlLocale } from '@/i18n/locales';
+
+import { AssetQuotePanel } from './asset-quote-panel';
 
 const locale: Locale = 'en';
 
 const translations: Record<string, string> = {
   'asset.estimatedLeasePrice': 'Estimated lease price',
-  'asset.leaseDuration': 'Lease duration',
+  'asset.leaseTerm': 'Lease term',
   'asset.month': 'month',
+  'asset.quantity': 'Quantity',
+  'asset.downPayment': 'Down payment',
+  'asset.updatingQuote': 'Updating quote...',
+  'asset.monthlyPaymentIncludingVat': 'Monthly payment including VAT',
+  'asset.netMonthlyRent': 'Net monthly rent',
+  'asset.vat': 'VAT',
+  'asset.unitListPrice': 'Unit list price',
+  'asset.totalFinanced': 'Total financed',
+  'asset.buyout': 'Buyout',
+  'asset.totalIfReturned': 'Total if returned',
+  'asset.totalIfBought': 'Total if bought',
+  'asset.quoteDate': 'Quote date',
+  'asset.quoteUnavailable': 'Unable to calculate quote.',
+  'asset.unavailableForLeasing': 'This asset is currently unavailable for leasing.',
+  'asset.readyToLease': 'Ready to lease this asset?',
+  'asset.leaseApplicationDescription':
+    "Submit a leasing application and we'll get in touch with you about the next steps.",
+  'asset.applyForLeasing': 'Apply for leasing',
 };
 
-const t = ((key: string, values?: Record<string, string | number>) => {
-  if (key === 'asset.leaseDuration') {
-    return `Lease duration ${values?.months}`;
-  }
-
-  return translations[key] ?? key;
-}) as Translate;
+const t = ((key: string) => translations[key] ?? key) as Translate;
 
 const quote = {
   unit_price_cents: 189900,
@@ -103,11 +116,12 @@ afterEach(() => {
 describe('AssetQuotePanel', () => {
   it('renders the quote panel heading and inputs', () => {
     mockFetch(successResponse);
+
     renderPanel();
 
     expect(screen.getByRole('heading', { name: 'Estimated lease price' })).toBeInTheDocument();
 
-    expect(screen.getByLabelText('Lease duration 36')).toHaveValue('36');
+    expect(screen.getByLabelText('Lease term')).toHaveValue('36');
     expect(screen.getByLabelText('Quantity')).toHaveValue(1);
     expect(screen.getByLabelText('Down payment')).toBeInTheDocument();
   });
@@ -144,11 +158,12 @@ describe('AssetQuotePanel', () => {
 
   it('requests a new quote when the lease term changes', async () => {
     const fetchMock = mockFetch(successResponse);
+
     renderPanel();
 
     await flushDebounce();
 
-    fireEvent.change(screen.getByLabelText('Lease duration 36'), {
+    fireEvent.change(screen.getByLabelText('Lease term'), {
       target: { value: '48' },
     });
 
@@ -163,6 +178,7 @@ describe('AssetQuotePanel', () => {
 
   it('requests a new quote when the quantity changes', async () => {
     const fetchMock = mockFetch(successResponse);
+
     renderPanel();
 
     await flushDebounce();
@@ -181,6 +197,7 @@ describe('AssetQuotePanel', () => {
 
   it('requests a new quote when the down payment changes', async () => {
     const fetchMock = mockFetch(successResponse);
+
     renderPanel();
 
     await flushDebounce();
@@ -218,6 +235,7 @@ describe('AssetQuotePanel', () => {
 
   it('displays a fallback error when the request fails', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('Network error'));
+
     vi.stubGlobal('fetch', fetchMock);
 
     renderPanel();
@@ -283,6 +301,8 @@ describe('AssetQuotePanel', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(onUnitPriceChange).toHaveBeenCalledWith(null);
+
+    expect(screen.queryByRole('link', { name: 'Apply for leasing' })).not.toBeInTheDocument();
   });
 
   it('clears the unit price when quote fetching fails', async () => {
@@ -302,5 +322,49 @@ describe('AssetQuotePanel', () => {
     await flushDebounce();
 
     expect(onUnitPriceChange).toHaveBeenCalledWith(null);
+  });
+
+  it('displays the leasing application CTA when a quote is available', async () => {
+    mockFetch(successResponse);
+
+    renderPanel();
+
+    await flushDebounce();
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Ready to lease this asset?',
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "Submit a leasing application and we'll get in touch with you about the next steps."
+      )
+    ).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: 'Apply for leasing' })).toHaveAttribute(
+      'href',
+      '/en/assets/asset-001/apply'
+    );
+  });
+
+  it('does not display the leasing application CTA when quote fetching fails', async () => {
+    mockFetch(
+      {
+        success: false,
+        error: {
+          code: 'QUOTE_NOT_AVAILABLE',
+          message: 'Quote is not available for this asset.',
+        },
+      },
+      false
+    );
+
+    renderPanel();
+
+    await flushDebounce();
+
+    expect(screen.queryByRole('link', { name: 'Apply for leasing' })).not.toBeInTheDocument();
   });
 });

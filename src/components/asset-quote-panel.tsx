@@ -8,6 +8,8 @@ import type { Translate } from '@/i18n/get-t';
 import { formatEuro } from '@/domain/money';
 import { intlLocale } from '@/i18n/locales';
 
+import { ApplyForLeasingCta } from '@/components/apply-for-leasing-cta';
+
 type AssetQuotePanelProps = {
   assetId: string;
   available: boolean;
@@ -320,6 +322,7 @@ export function AssetQuotePanel({
               </p>
             )}
           </div>
+          {quote && !loadingQuote && <ApplyForLeasingCta assetId={assetId} locale={locale} t={t} />}
         </>
       )}
     </aside>

@@ -18,6 +18,7 @@ import {
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { QuestionField } from './question-field';
+import { useSessionState } from './use-session-state';
 
 type ApplicationFormProps = {
   questions: Question[];
@@ -28,12 +29,18 @@ type ApplicationFormProps = {
 
 type Submitted = { id: string; decision: 'approved' | 'manual_review' | 'rejected' };
 
+// Stable starting values for useSessionState (it compares them by identity).
+const NO_ANSWERS: Record<string, string> = {};
+const NOT_SUBMITTED: Submitted | null = null;
+
 export function ApplicationForm({ questions, context, deal, locale }: ApplicationFormProps) {
   const t = getT(locale);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Kept in this tab's session storage, so switching language doesn't wipe the answers.
+  const storageKey = `apply:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
+  const [answers, setAnswers] = useSessionState(`${storageKey}:answers`, NO_ANSWERS);
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
-  const [submitted, setSubmitted] = useState<Submitted | null>(null);
+  const [submitted, setSubmitted] = useSessionState(`${storageKey}:submitted`, NOT_SUBMITTED);
 
   const visible = getVisibleQuestions(questions, answers, context);
   const { evaluation } = decideApplication(questions, answers, context);
@@ -110,7 +117,7 @@ export function ApplicationForm({ questions, context, deal, locale }: Applicatio
         );
       })}
 
-      <div className="sticky bottom-4 z-10 space-y-4 rounded-2xl border border-stone-200 bg-white/95 p-5 shadow-lg backdrop-blur dark:border-stone-800 dark:bg-stone-900/95">
+      <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900">
         <Decision evaluation={evaluation} context={context} locale={locale} t={t} />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm text-stone-600 dark:text-stone-400">

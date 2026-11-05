@@ -3,9 +3,10 @@
 // Signing: tick that you have read the contract and type your full name. The server checks
 // the application again and locks the price; then we go to the signed contract.
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { useSessionState } from './use-session-state';
 
 type SignContractFormProps = { applicationId: string; defaultName: string; locale: Locale };
 
@@ -18,8 +19,12 @@ const errorKeys = {
 export function SignContractForm({ applicationId, defaultName, locale }: SignContractFormProps) {
   const t = getT(locale);
   const router = useRouter();
-  const [name, setName] = useState(defaultName);
-  const [agreed, setAgreed] = useState(false);
+  // Kept in session storage, so switching language keeps the typed name and the tick.
+  const initial = useMemo(() => ({ name: defaultName, agreed: false }), [defaultName]);
+  const [draft, setDraft] = useSessionState(`sign:${applicationId}`, initial);
+  const { name, agreed } = draft;
+  const setName = (next: string) => setDraft((current) => ({ ...current, name: next }));
+  const setAgreed = (next: boolean) => setDraft((current) => ({ ...current, agreed: next }));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

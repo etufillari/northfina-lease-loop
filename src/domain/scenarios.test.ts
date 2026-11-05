@@ -5,6 +5,7 @@ import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load'
 import type { CoefficientTable, PriceList, VatRates } from '@/data/schemas';
 import { priceCheckAtSigning, signContract } from './contract';
 import { listPriceOn } from './price-list';
+import { invoiceSchedule } from './invoicing';
 import { makeQuote } from './quote';
 import { downPaymentBounds, quoteLease } from './pricing';
 import { vatRateOn, withVat } from './vat';
@@ -120,5 +121,74 @@ describe('card 2, the price lock: laptop-004 quoted Thu 5 Nov (v1), signed Fri 6
       ok: true,
       contract: { priceListVersion: 1, listPriceCents: 349_000, monthlyNetRentCents: 9_627 },
     });
+  });
+});
+
+/** Quote and sign on the start date, as the cards describe. */
+function signedLease(assetId: string, startDate: string, termMonths: number, downPaymentCents = 0) {
+  const made = makeQuote(priceLists, table, {
+    assetId,
+    quoteDate: startDate,
+    termMonths,
+    downPaymentCents,
+  });
+  if (!made.ok) throw new Error(made.reason);
+  const signed = signContract(made.quote, {
+    customerId: 'cust-test',
+    signDate: startDate,
+    startDate,
+  });
+  if (!signed.ok) throw new Error(signed.reason);
+  const schedule = invoiceSchedule(signed.contract, vatRates);
+  if (!schedule.ok) throw new Error(schedule.reason);
+  return { contract: signed.contract, ...schedule };
+}
+
+describe('card 1, invoices: Aino’s first three invoices and the total cost', () => {
+  it('bills 13 466 in Nov and Dec 2026, then 13 520 from Jan 2027 when VAT goes to 26 %', () => {
+    // 10 730 net. 25.5 %: 2 736 VAT. 26 %: 10 730 × 0.26 = 2 789.8 → 2 790 VAT.
+    const { invoices, totals } = signedLease('ebike-003', '2026-11-05', 36);
+    expect(
+      invoices.slice(0, 3).map((i) => [i.invoiceDate, i.netCents, i.vatCents, i.grossCents])
+    ).toEqual([
+      ['2026-11-05', 10_730, 2_736, 13_466],
+      ['2026-12-05', 10_730, 2_736, 13_466],
+      ['2027-01-05', 10_730, 2_790, 13_520],
+    ]);
+    // 2 × 13 466 + 34 × 13 520 = 26 932 + 459 680 = 486 612 gross over 36 months.
+    expect(totals).toEqual({ netCents: 386_280, vatCents: 100_332, grossCents: 486_612 });
+  });
+});
+
+describe('card 3, tax is not price: ebike-001, 24 months from 15 Sep 2026', () => {
+  it('keeps the net rent and changes only the VAT between Dec 2026 and Jan 2027', () => {
+    // v1 189 900, band A 24 m: 189 900 × 0.036637 = 6 957.37 → 6 957.
+    // Dec, 25.5 %: 1 774.04 → 1 774, gross 8 731. Jan, 26 %: 1 808.82 → 1 809, gross 8 766.
+    const { invoices } = signedLease('ebike-001', '2026-09-15', 24);
+    expect(invoices[3]).toMatchObject({
+      invoiceDate: '2026-12-15',
+      netCents: 6_957,
+      vatRatePercent: 25.5,
+      vatCents: 1_774,
+      grossCents: 8_731,
+    });
+    expect(invoices[4]).toMatchObject({
+      invoiceDate: '2027-01-15',
+      netCents: 6_957,
+      vatRatePercent: 26,
+      vatCents: 1_809,
+      grossCents: 8_766,
+    });
+  });
+});
+
+describe('card 4, calendar traps: laptop-001, 36 months from 31 Jan 2026', () => {
+  it('is due 28 Feb 2026 and 29 Feb 2028 (a leap year), and back on the 31st in March', () => {
+    const { invoices } = signedLease('laptop-001', '2026-01-31', 36);
+    expect(invoices[1]?.invoiceDate).toBe('2026-02-28');
+    expect(invoices[2]?.invoiceDate).toBe('2026-03-31');
+    // Feb 2028 is month 26 of the lease: Jan 2026 + 25 months.
+    expect(invoices[25]?.invoiceDate).toBe('2028-02-29');
+    expect(invoices[35]?.invoiceDate).toBe('2028-12-31');
   });
 });

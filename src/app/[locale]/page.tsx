@@ -1,4 +1,5 @@
 // The catalogue: every asset, grouped by category, with today's net list price.
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
@@ -12,7 +13,9 @@ import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
-export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
@@ -20,7 +23,11 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   await connection();
 
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
+  const search = await searchParams;
+  const asOfParam =
+    typeof search.asOf === 'string' && ISO_DATE.test(search.asOf) ? search.asOf : null;
+  // The page decides what "today" is (?asOf= time-travels); domain code never reads the clock.
+  const today = asOfParam ?? todayIso();
   const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
@@ -63,12 +70,17 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {group.assets.map((asset) => (
               <li key={asset.id}>
-                <AssetCard
-                  asset={asset}
-                  price={listPriceOn(priceLists, asset.id, today)}
-                  locale={locale}
-                  t={t}
-                />
+                <Link
+                  href={`/${locale}/assets/${asset.id}${asOfParam ? `?asOf=${asOfParam}` : ''}`}
+                  className="block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-emerald-700"
+                >
+                  <AssetCard
+                    asset={asset}
+                    price={listPriceOn(priceLists, asset.id, today)}
+                    locale={locale}
+                    t={t}
+                  />
+                </Link>
               </li>
             ))}
           </ul>

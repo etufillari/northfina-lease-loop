@@ -2,8 +2,11 @@
 // <html lang> attribute is always right for the page.
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { PersonaPicker } from '@/components/persona-picker';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
@@ -19,6 +22,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
+  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
 
   return (
     <html lang={locale}>
@@ -43,7 +47,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <div className="flex flex-wrap items-center gap-4">
+              <PersonaPicker locale={locale} initialId={persona} />
+              <LanguageSwitcher current={locale} label={t('nav.language')} />
+            </div>
           </div>
         </header>
 

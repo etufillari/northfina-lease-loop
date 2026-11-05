@@ -17,5 +17,7 @@ Owns the runtime validation contracts (`src/data/schemas.ts`) and server-side di
 
 - `src/data/schemas.ts` is pure (`zod` only) and may be imported by any module (`domain`, `server`, `app`).
 - `src/data/load.ts` performs filesystem I/O (`node:fs/promises`, `node:path`) and may only be imported by server-side code (`app` server components, route handlers, or `server`); importing `src/data/load.ts` from `domain` is forbidden.
-- ** Intentional schema pass-throughs:** `customersFileSchema` does not validate Finnish business ID (`business_id`) check digits, and `refurbishmentCostsSchema` leaves `when` conditions as descriptive strings; interpreting and validating those rules belongs to `domain`.
+- ** Intentional schema pass-throughs:** `customersFileSchema` does not validate Finnish business ID (`business_id`) check digits, and `refurbishmentCostsSchema` leaves `when` conditions as descriptive strings; validating business IDs belongs to `domain` (`question-flow/`). Refurbishment is not in the current plan, so the `when` strings are not interpreted yet.
+- **Units stay as in the data pack:** Schemas keep percentages (`25.5`) and decimal factors (`0.027584`). `domain/money/` converts them once to basis points and parts per million before any calculation.
+- **Status vocabularies differ on purpose:** `assetStatusSchema` (`available | reserved | returned`) describes `data/assets.json` only. The database and `domain/lifecycle/` add `leased` and `sold`.
 - **Known limitation:** `loadDataFile` reads and parses JSON from disk on each invocation without in-memory caching.

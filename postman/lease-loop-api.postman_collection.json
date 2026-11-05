@@ -1,0 +1,156 @@
+{
+  "info": {
+    "name": "Lease Loop API",
+    "description": "Requests for the Lease Loop backend API. Set baseUrl to the running Next.js server before sending requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "assetId",
+      "value": "ebike-003"
+    },
+    {
+      "key": "actor",
+      "value": "postman"
+    }
+  ],
+  "item": [
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "List all assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets"
+          }
+        },
+        {
+          "name": "Filter assets by category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets?category=e_bike"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quotes",
+      "item": [
+        {
+          "name": "Create quote - price list v1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/quotes"
+          }
+        },
+        {
+          "name": "Create quote - price list v2 and VAT preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2027-01-01\",\n  \"downPaymentCents\": 10000,\n  \"termMonths\": 36\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/quotes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Asset status",
+      "description": "These requests change database state and write audit records.",
+      "item": [
+        {
+          "name": "Reserve asset",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"reserved\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{assetId}}/status"
+          }
+        },
+        {
+          "name": "Make asset available again",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"available\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{assetId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit log",
+      "item": [
+        {
+          "name": "List recent audit entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/audit-log"
+          }
+        }
+      ]
+    }
+  ]
+}

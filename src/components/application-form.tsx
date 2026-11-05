@@ -128,7 +128,7 @@ export function ApplicationForm({
       const response = await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'leased', actor }),
+        body: JSON.stringify({ status: 'reserved', actor }),
       });
       const json = (await response.json()) as { success?: boolean };
       if (!response.ok || !json.success) {

@@ -43,7 +43,7 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 export const quoteFailureReasonSchema = z.enum([
   'below_minimum',
   'above_maximum',
-  'unsupported_term',
+  'unknown_term',
   'down_payment_too_high',
 ]);
 export type QuoteFailureReason = z.infer<typeof quoteFailureReasonSchema>;

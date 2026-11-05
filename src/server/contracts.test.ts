@@ -7,6 +7,7 @@ import { listAuditLog } from './audit';
 import { seedAssets } from './assets';
 import { getContract, type LeaseDataPack } from './contracts';
 import { loadLeaseDataPack } from './lease-data';
+import { CorruptRowError } from './stored-row';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -277,5 +278,18 @@ describe('signLease and the named customer', () => {
 describe('getContract', () => {
   it('returns null for an id that does not exist', async () => {
     expect(await getContract(db, 999_999)).toBeNull();
+  });
+
+  it('treats a malformed stored contract as a server error, not a bad request', async () => {
+    const row = await db.contract.create({
+      data: {
+        asset_id: 'ebike-003',
+        customer_id: 'cust-aino',
+        sign_date: '2026-11-05',
+        start_date: '2026-11-05',
+        terms_json: '{"assetId":"ebike-003","monthlyNetRentCents":"10730"}',
+      },
+    });
+    await expect(getContract(db, row.id)).rejects.toThrow(CorruptRowError);
   });
 });

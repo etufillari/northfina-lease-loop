@@ -7,6 +7,7 @@ import { endOfTerm, type EndOfTermChoice, type Ending } from '@/domain/end-of-te
 import { withAudit } from './audit';
 import { getContract } from './contracts';
 import type { PrismaClient } from './prisma-client';
+import { parseStoredJson, parseStoredValue } from './stored-row';
 
 export interface EndLeaseInput {
   contractId: number;
@@ -46,7 +47,13 @@ export async function endLease(
   const decided = endOfTerm(
     contract,
     data.vatRates,
-    { condition: assetConditionSchema.parse(asset.condition), usageValue: asset.usage_value },
+    {
+      condition: parseStoredValue(assetConditionSchema, asset.condition, {
+        table: 'asset',
+        id: asset.id,
+      }),
+      usageValue: asset.usage_value,
+    },
     choice,
     input.today
   );
@@ -168,5 +175,9 @@ export async function getContractEnding(
   contractId: number
 ): Promise<Ending | null> {
   const row = await db.contractEnding.findUnique({ where: { contract_id: contractId } });
-  return row ? endingSchema.parse(JSON.parse(row.ending_json)) : null;
+  if (!row) return null;
+  return parseStoredJson(endingSchema, row.ending_json, {
+    table: 'contract ending',
+    id: contractId,
+  });
 }

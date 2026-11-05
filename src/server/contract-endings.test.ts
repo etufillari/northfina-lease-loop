@@ -8,6 +8,7 @@ import { seedAssets } from './assets';
 import { endLease, getContractEnding } from './contract-endings';
 import { getContract, type LeaseDataPack } from './contracts';
 import { loadLeaseDataPack } from './lease-data';
+import { CorruptRowError } from './stored-row';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -147,5 +148,21 @@ describe('endLease', () => {
   it('refuses when the item is no longer out on lease', async () => {
     await db.asset.update({ where: { id: 'ebike-003' }, data: { status: 'available' } });
     expect(await end({ kind: 'buy' })).toEqual({ ok: false, reason: 'asset_not_leased' });
+  });
+
+  it('treats a malformed stored ending as a server error, not a bad request', async () => {
+    expect((await end({ kind: 'buy' })).ok).toBe(true);
+    await db.contractEnding.update({
+      where: { contract_id: contractId },
+      data: { ending_json: '{"kind":"melted"}' },
+    });
+    await expect(getContractEnding(db, contractId)).rejects.toThrow(CorruptRowError);
+  });
+
+  it('treats a stored condition outside the schema as a server error', async () => {
+    await db.asset.update({ where: { id: 'ebike-003' }, data: { condition: 'shiny' } });
+    await expect(end({ kind: 'return', condition: 'good', usageValue: 0 })).rejects.toThrow(
+      CorruptRowError
+    );
   });
 });

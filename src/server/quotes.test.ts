@@ -8,6 +8,7 @@ import type { LeaseDataPack } from './lease-data';
 import { loadLeaseDataPack } from './lease-data';
 import type { PrismaClient } from './prisma-client';
 import { createQuote, getQuote, viewQuote } from './quotes';
+import { CorruptRowError } from './stored-row';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -160,5 +161,19 @@ describe('viewQuote', () => {
   it('returns null for an id that does not exist', async () => {
     expect(await viewQuote(db, data, 999_999, '2026-11-05')).toBeNull();
     expect(await getQuote(db, 999_999)).toBeNull();
+  });
+
+  it('treats a malformed stored quote as a server error, not a bad request', async () => {
+    const made = await createQuote(db, data, {
+      assetId: 'laptop-004',
+      termMonths: 36,
+      downPaymentCents: 0,
+      today: '2026-11-05',
+      actor: 'customer',
+    });
+    if (!made.ok) throw new Error(made.reason);
+    await db.quote.update({ where: { id: made.id }, data: { terms_json: '{"oops":' } });
+    await expect(getQuote(db, made.id)).rejects.toThrow(CorruptRowError);
+    await expect(viewQuote(db, data, made.id, '2026-11-05')).rejects.toThrow(CorruptRowError);
   });
 });

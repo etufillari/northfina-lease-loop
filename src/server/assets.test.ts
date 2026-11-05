@@ -10,6 +10,7 @@ import * as assetsModule from './assets';
 import { listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
 import { loadLeaseDataPack } from './lease-data';
 import { loadSecondLifeDataPack, relistAsset } from './second-life';
+import { CorruptRowError } from './stored-row';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -112,7 +113,7 @@ describe('a leased item stays leased (D-038)', () => {
 });
 
 describe('toAsset', () => {
-  it('rejects a row with a value the schema does not allow', () => {
+  it('rejects a row with a value the schema does not allow, as a server error', () => {
     const [first] = dataPack;
     if (!first) throw new Error('empty data pack');
     const row = {
@@ -121,6 +122,6 @@ describe('toAsset', () => {
       created_at: new Date(),
       updated_at: new Date(),
     };
-    expect(() => toAsset(row)).toThrow();
+    expect(() => toAsset(row)).toThrow(CorruptRowError);
   });
 });

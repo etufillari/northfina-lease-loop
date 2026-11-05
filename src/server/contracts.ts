@@ -15,6 +15,7 @@ import type { LeaseDataPack } from './lease-data';
 import type { PrismaClient } from './prisma-client';
 import { pricingPriceLists } from './pricing-price-lists';
 import { getQuote, toQuoteRowData } from './quotes';
+import { parseStoredJson } from './stored-row';
 
 export type { LeaseDataPack } from './lease-data';
 
@@ -242,5 +243,6 @@ export async function getContract(
 ): Promise<{ id: number; contract: Contract } | null> {
   const row = await db.contract.findUnique({ where: { id } });
   if (!row) return null;
-  return { id: row.id, contract: Object.freeze(contractSchema.parse(JSON.parse(row.terms_json))) };
+  const contract = parseStoredJson(contractSchema, row.terms_json, { table: 'contract', id });
+  return { id: row.id, contract: Object.freeze(contract) };
 }

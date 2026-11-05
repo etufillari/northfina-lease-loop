@@ -3,21 +3,26 @@
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
 import { assetSchema, type Asset, type AssetCategory } from '@/data/schemas';
+import { parseStoredValue } from './stored-row';
 
-/** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
+/** Database row → data-pack shape. Validates, so a value edited in by hand is a 500 (D-038). */
 export function toAsset(row: AssetRow): Asset {
-  return assetSchema.parse({
-    id: row.id,
-    category: row.category,
-    make: row.make,
-    model: row.model,
-    model_year: row.model_year,
-    serial_number: row.serial_number,
-    condition: row.condition,
-    usage: { unit: row.usage_unit, value: row.usage_value },
-    previous_lives: row.previous_lives,
-    status: row.status,
-  });
+  return parseStoredValue(
+    assetSchema,
+    {
+      id: row.id,
+      category: row.category,
+      make: row.make,
+      model: row.model,
+      model_year: row.model_year,
+      serial_number: row.serial_number,
+      condition: row.condition,
+      usage: { unit: row.usage_unit, value: row.usage_value },
+      previous_lives: row.previous_lives,
+      status: row.status,
+    },
+    { table: 'asset', id: row.id }
+  );
 }
 
 /** Data-pack shape → columns for a new database row. */

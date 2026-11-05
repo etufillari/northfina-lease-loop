@@ -18,6 +18,7 @@ import {
 import { getContract } from './contracts';
 import { recordEnding, type EndLeaseResult } from './contract-endings';
 import type { PrismaClient } from './prisma-client';
+import { parseStoredValue } from './stored-row';
 
 export interface EarlyExitData {
   vatRates: VatRates;
@@ -44,13 +45,14 @@ export function earlyExitContext(
 ): ExitContext | null {
   const annualInterestPercent = bandInterestPercent(data.coefficientTable, contract.band);
   if (annualInterestPercent === null) return null;
-  const condition = assetConditionSchema.parse(asset.condition);
+  const where = { table: 'asset', id: contract.assetId };
+  const condition = parseStoredValue(assetConditionSchema, asset.condition, where);
   return {
     vatRates: data.vatRates,
     curves: data.curves,
     annualInterestPercent,
     item: {
-      category: assetCategorySchema.parse(asset.category),
+      category: parseStoredValue(assetCategorySchema, asset.category, where),
       ageAtStartMonths: itemAgeAtStart(condition, asset.model_year, contract.startDate),
       condition,
       usageValue: asset.usage_value,

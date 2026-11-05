@@ -9,6 +9,7 @@ import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
 import type { PrismaClient } from './prisma-client';
 import { pricingPriceLists } from './pricing-price-lists';
+import { parseStoredJson } from './stored-row';
 
 export interface CreateQuoteInput {
   assetId: string;
@@ -109,7 +110,7 @@ export async function getQuote(db: PrismaClient, id: number): Promise<StoredQuot
   if (!row) return null;
   return {
     id: row.id,
-    quote: quoteSchema.parse(JSON.parse(row.terms_json)),
+    quote: parseStoredJson(quoteSchema, row.terms_json, { table: 'quote', id }),
     contractId: row.contract_id,
     replacesQuoteId: row.replaces_quote_id,
   };

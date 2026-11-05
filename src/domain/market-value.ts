@@ -33,10 +33,18 @@ export function curvePercent(curve: readonly CurvePoint[], ageMonths: number): n
   return curve[curve.length - 1]![1];
 }
 
-/** Usage counts in full steps (9 800 km is 9 steps of 1 000), capped at the category's limit. */
-function usagePercent(curves: ResidualCurves, item: ValuedItem): number {
-  const rule = curves.usage_adjustment[item.category];
-  const steps = Math.floor(item.usageValue / rule.step);
+/**
+ * The usage adjustment in percent (zero or negative). Usage counts in full steps (9 800 km is
+ * 9 steps of 1 000), capped at the category's limit.
+ */
+export function usageAdjustmentPercent(
+  curves: ResidualCurves,
+  category: AssetCategory,
+  usageValue: number
+): number {
+  const rule = curves.usage_adjustment[category];
+  const steps = Math.floor(usageValue / rule.step);
+  if (steps === 0) return 0; // not −0
   return Math.max(steps * rule.percent_per_step, rule.max_total_percent);
 }
 
@@ -44,6 +52,6 @@ function usagePercent(curves: ResidualCurves, item: ValuedItem): number {
 export function marketValue(curves: ResidualCurves, item: ValuedItem): number {
   const percent = curvePercent(curves.curves[item.category], item.ageMonths);
   const condition = curves.condition_multiplier[item.condition];
-  const usage = 1 + usagePercent(curves, item) / 100;
+  const usage = 1 + usageAdjustmentPercent(curves, item.category, item.usageValue) / 100;
   return roundHalfUp((item.listPriceCents * percent * condition * usage) / 100);
 }

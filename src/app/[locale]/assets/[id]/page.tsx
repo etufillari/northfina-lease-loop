@@ -96,6 +96,12 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
               value={formatNumber(asset.previous_lives, locale)}
             />
           </dl>
+          <Link
+            href={`/${locale}/assets/${asset.id}/passport`}
+            className="self-start text-sm font-semibold underline underline-offset-4 hover:text-accent-text"
+          >
+            {t('passport.link')} <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </div>
 

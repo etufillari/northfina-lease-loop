@@ -64,5 +64,8 @@
   "asset.totalIfReturned": "Total if returned",
   "asset.totalIfBought": "Total if bought",
   "asset.quoteDate": "Quote date",
-  "asset.quoteUnavailable": "Unable to calculate quote."
+  "asset.quoteUnavailable": "Unable to calculate quote.",
+  "asset.readyToLease": "Ready to lease this asset?",
+  "asset.leaseApplicationDescription": "Submit a leasing application and we'll get in touch with you about the next steps.",
+  "asset.applyForLeasing": "Apply for leasing"
 }

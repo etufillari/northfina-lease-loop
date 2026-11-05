@@ -64,5 +64,8 @@
   "asset.totalIfReturned": "Totalkostnad vid återlämning",
   "asset.totalIfBought": "Totalkostnad vid utköp",
   "asset.quoteDate": "Offertdatum",
-  "asset.quoteUnavailable": "Det gick inte att beräkna offerten."
+  "asset.quoteUnavailable": "Det gick inte att beräkna offerten.",
+  "asset.readyToLease": "Redo att leasa den här tillgången?",
+  "asset.leaseApplicationDescription": "Skicka in en leasingansökan så kontaktar vi dig om nästa steg.",
+  "asset.applyForLeasing": "Ansök om leasing"
 }

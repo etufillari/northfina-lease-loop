@@ -64,5 +64,8 @@
   "asset.totalIfReturned": "Kogukulu tagastamisel",
   "asset.totalIfBought": "Kogukulu väljaostmisel",
   "asset.quoteDate": "Pakkumise kuupäev",
-  "asset.quoteUnavailable": "Pakkumise arvutamine ebaõnnestus."
+  "asset.quoteUnavailable": "Pakkumise arvutamine ebaõnnestus.",
+  "asset.readyToLease": "Kas oled valmis seda vara rentima?",
+  "asset.leaseApplicationDescription": "Esita renditaotlus ja võtame sinuga ühendust, et rääkida järgmistest sammudest.",
+  "asset.applyForLeasing": "Esita renditaotlus"
 }

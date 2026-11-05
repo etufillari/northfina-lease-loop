@@ -64,5 +64,8 @@
   "asset.totalIfReturned": "Kokonaishinta palautettaessa",
   "asset.totalIfBought": "Kokonaishinta lunastettaessa",
   "asset.quoteDate": "Tarjouspäivä",
-  "asset.quoteUnavailable": "Tarjouksen laskeminen ei onnistunut."
+  "asset.quoteUnavailable": "Tarjouksen laskeminen ei onnistunut.",
+  "asset.readyToLease": "Valmis vuokraamaan tämän kohteen?",
+  "asset.leaseApplicationDescription": "Lähetä vuokraushakemus, niin otamme sinuun yhteyttä ja kerromme seuraavista vaiheista.",
+  "asset.applyForLeasing": "Hae vuokrausta"
 }

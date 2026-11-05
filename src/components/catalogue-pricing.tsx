@@ -105,7 +105,12 @@ export function CataloguePricing({
             >
               {labels.term}
             </label>
-            <div className="mt-2 flex items-center gap-4">
+            <div className="mt-2 max-w-sm">
+              <div className="mb-1 flex justify-end">
+                <output htmlFor="lease-term" className="text-sm font-medium">
+                  {selectedTerm?.label}
+                </output>
+              </div>
               <input
                 id="lease-term"
                 type="range"
@@ -114,20 +119,17 @@ export function CataloguePricing({
                 step="12"
                 value={termMonths}
                 onChange={(event) => setTermMonths(Number(event.currentTarget.value))}
-                className="min-w-0 flex-1 accent-emerald-700"
+                className="lease-term-slider block w-full"
                 aria-valuetext={selectedTerm?.label}
               />
-              <output htmlFor="lease-term" className="min-w-24 text-right text-sm font-medium">
-                {selectedTerm?.label}
-              </output>
-            </div>
-            <div
-              aria-hidden="true"
-              className="mt-1 flex justify-between px-1 text-xs text-stone-500"
-            >
-              {termOptions.map((option) => (
-                <span key={option.value}>{option.value}</span>
-              ))}
+              <div
+                aria-hidden="true"
+                className="mt-1 flex justify-between px-2 text-xs text-stone-500"
+              >
+                {termOptions.map((option) => (
+                  <span key={option.value}>{option.value}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -6,8 +6,14 @@
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
 import type { CoefficientTable, VatRates } from '@/data/schemas';
-import { formatEuro } from '@/domain/money';
-import { bandEdgeHint, quoteLease, type DownPaymentBounds } from '@/domain/pricing';
+import { formatEuro, parseEuros } from '@/domain/money';
+import {
+  bandEdgeHint,
+  cheaperBandAbove,
+  quoteLease,
+  snapDownPayment,
+  type DownPaymentBounds,
+} from '@/domain/pricing';
 import { QUOTE_VALID_DAYS } from '@/domain/pricing-rules';
 import { vatRateOn, withVat } from '@/domain/vat';
 import { formatFactor, formatNumber } from '@/i18n/format';
@@ -47,6 +53,9 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
   const input = { listPriceCents, termMonths, downPaymentCents };
   const quote = quoteLease(table, input);
   const hint = bandEdgeHint(table, input);
+  // Without a down-payment tip, still say why an item just under a band edge rents for more.
+  const bandNote =
+    hint === null && quote.ok ? cheaperBandAbove(table, quote.financedCents, termMonths) : null;
 
   const downId = useId();
 
@@ -81,9 +90,17 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
               <label htmlFor={downId} className="eyebrow">
                 {t('lease.downPayment')}
               </label>
-              <output htmlFor={downId} className="font-display text-xl font-bold tabular-nums">
-                {euro(downPaymentCents)}
-              </output>
+              {bounds.minCents === bounds.maxCents ? (
+                <output htmlFor={downId} className="font-display text-xl font-bold tabular-nums">
+                  {euro(downPaymentCents)}
+                </output>
+              ) : (
+                <EuroField
+                  label={t('lease.downPaymentTyped')}
+                  cents={downPaymentCents}
+                  onCommit={(cents) => setDownPaymentCents(snapDownPayment(bounds, cents))}
+                />
+              )}
             </div>
             {bounds.minCents === bounds.maxCents ? (
               <p className="mt-2 text-sm text-muted">
@@ -151,6 +168,16 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
                 </Row>
               </dl>
               <p className="mt-2 text-xs text-muted">{t('lease.totalCostNote')}</p>
+              {bandNote ? (
+                <p className="mt-3 border-l-2 border-accent pl-3 text-sm text-muted">
+                  {t('lease.bandNote', {
+                    edge: euro(bandNote.minFinancedCents),
+                    band: bandNote.band,
+                    rate: formatNumber(bandNote.annualInterestPercent, locale),
+                    rent: euro(bandNote.monthlyNetRentCents),
+                  })}
+                </p>
+              ) : null}
             </section>
           ) : null}
 
@@ -175,14 +202,6 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
           />
         ) : null}
       </div>
-      {quote.ok ? (
-        <QuoteButton
-          locale={locale}
-          assetId={props.assetId}
-          termMonths={termMonths}
-          downPaymentCents={downPaymentCents}
-        />
-      ) : null}
     </>
   );
 }
@@ -226,7 +245,7 @@ function QuoteButton(props: {
   }
 
   return (
-    <div className="mt-10 max-w-md">
+    <div className="mt-6 border-t border-line pt-5">
       <button
         type="button"
         onClick={() => void save()}
@@ -282,6 +301,12 @@ function MonthlyPanel(
         downPaymentCents={props.downPaymentCents}
         tone="plain"
       />
+      <QuoteButton
+        locale={locale}
+        assetId={props.assetId}
+        termMonths={props.termMonths}
+        downPaymentCents={props.downPaymentCents}
+      />
     </aside>
   );
 }
@@ -301,6 +326,50 @@ function Row({
       <dd className={`tabular-nums ${strong ? 'font-semibold' : ''}`}>{children}</dd>
     </div>
   );
+}
+
+/**
+ * The down payment as a typed amount, next to the slider (#34): a judge can type 20 000 instead of
+ * dragging. Commits on Enter or leaving the field; anything that isn't an amount is undone.
+ */
+function EuroField(props: { label: string; cents: number; onCommit: (cents: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    const cents = draft === null ? null : parseEuros(draft);
+    if (cents !== null) props.onCommit(cents);
+    setDraft(null);
+  };
+  return (
+    <span className="flex items-baseline gap-1.5 rounded-md bg-bg px-2.5 py-1 ring-1 ring-line ring-inset focus-within:ring-2 focus-within:ring-accent">
+      <input
+        type="text"
+        inputMode="decimal"
+        aria-label={props.label}
+        value={draft ?? plainEuros(props.cents)}
+        onChange={(event) => setDraft(event.target.value)}
+        onFocus={(event) => event.target.select()}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commit();
+          if (event.key === 'Escape') setDraft(null);
+        }}
+        className="w-32 bg-transparent text-right font-display text-xl font-bold tabular-nums outline-none focus-visible:outline-none"
+      />
+      <span aria-hidden="true" className="font-display text-xl font-bold text-muted">
+        €
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Cents as an amount the field can parse back (parseEuros drops spaces): 2000000 → "20 000",
+ * 12345 → "123.45". Grouped with no-break spaces in every language, so no comma is ambiguous.
+ */
+function plainEuros(cents: number): string {
+  const euros = String(Math.trunc(cents / 100)).replace(/\B(?=(\d{3})+$)/g, '\u00a0');
+  const rest = cents % 100;
+  return rest === 0 ? euros : `${euros}.${String(rest).padStart(2, '0')}`;
 }
 
 /** How far along its range the slider is, for the filled part of the track. Presentation only. */

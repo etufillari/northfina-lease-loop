@@ -98,6 +98,8 @@ export function PriceConfigurator({
     setStarting(false);
     if (body.success) {
       router.push(`/${locale}/apply/${body.data.application.id}${asOf ? `?asOf=${asOf}` : ''}`);
+    } else {
+      window.alert(body.error?.message ?? t('common.error'));
     }
   }
 

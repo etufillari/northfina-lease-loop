@@ -64,10 +64,13 @@ export function ContractActions({
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...payload, actor: personaId }),
     });
+    const body = await response.json();
     setBusy(false);
-    if ((await response.json()).success) {
+    if (body.success) {
       setPreview(null);
       router.refresh();
+    } else {
+      window.alert(body.error?.message ?? t('common.error'));
     }
   }
 

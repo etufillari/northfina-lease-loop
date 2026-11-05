@@ -2,9 +2,9 @@
 // The smart question flow, one question at a time. Everything comes from the API state:
 // which questions apply, which is next, what can be prefilled. Editing an earlier answer
 // re-runs the flow server-side, and answers that stop applying are dropped there.
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { DecisionScreen, type DecisionReason } from '@/components/decision-screen';
 import { formatEuro } from '@/domain/money';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -17,13 +17,12 @@ type Question = {
   why_we_ask: QuestionText;
   options?: string[];
 };
-type Reason = { rule: string; outcome: string; params?: Record<string, string | number> };
 type WizardState = {
   application: {
     id: string;
     status: string;
     answers: Record<string, unknown>;
-    decisionReasons: Reason[] | null;
+    decisionReasons: DecisionReason[] | null;
     signatoryEmail: string | null;
     holdUntil: string | null;
   };
@@ -94,6 +93,7 @@ export function ApplicationWizard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [warning, setWarning] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(asOf ?? today);
   const [saveDefaults, setSaveDefaults] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -103,7 +103,9 @@ export function ApplicationWizard({
     fetch(`/api/applications/${applicationId}${suffix}`)
       .then((response) => response.json())
       .then((body) => {
-        if (!cancelled && body.success) setState(body.data);
+        if (cancelled) return;
+        if (body.success) setState(body.data);
+        else setError(body.error?.message ?? 'Not found');
       })
       .catch(() => {});
     return () => {
@@ -111,7 +113,7 @@ export function ApplicationWizard({
     };
   }, [applicationId, suffix]);
 
-  if (!state) return <p>{t('common.loading')}</p>;
+  if (!state) return <p>{error ?? t('common.loading')}</p>;
 
   const { application, visibleQuestions, nextQuestionId, prefill, blocked } = state;
   const currentId = editingId ?? nextQuestionId;
@@ -156,6 +158,7 @@ export function ApplicationWizard({
 
   async function submit() {
     setBusy(true);
+    setError(null);
     if (saveDefaults && personaId) {
       await fetch(`/api/customers/${personaId}`, {
         method: 'PUT',
@@ -171,10 +174,12 @@ export function ApplicationWizard({
     const body = await response.json();
     setBusy(false);
     if (body.success) setState(body.data);
+    else setError(body.error?.message ?? t('common.error'));
   }
 
   async function sign() {
     setBusy(true);
+    setError(null);
     const response = await fetch(`/api/applications/${applicationId}/sign${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -182,81 +187,33 @@ export function ApplicationWizard({
     });
     const body = await response.json();
     setBusy(false);
-    if (body.success) router.push(`/${locale}/contracts/${body.data.contractId}${suffix}`);
+    if (!body.success) {
+      // Never a dead button: say what the API objected to (e.g. a start date now in the past).
+      setError(body.error?.message ?? t('common.error'));
+      return;
+    }
+    router.push(`/${locale}/contracts/${body.data.contractId}${suffix}`);
   }
 
   // ---- decision screen -------------------------------------------------------------
   if (application.status !== 'draft') {
-    const status = application.status as
-      'approved' | 'manual_review' | 'awaiting_signature' | 'declined' | 'signed';
     return (
-      <div>
-        <h1 className="text-2xl font-semibold">
-          {t(`decision.${status === 'signed' ? 'approved' : status}.title` as MessageKey)}
-        </h1>
-        <p className="mt-2 text-stone-700 dark:text-stone-300">
-          {t(`decision.${status === 'signed' ? 'approved' : status}.text` as MessageKey, {
-            date: application.holdUntil ?? '',
-            email: application.signatoryEmail ?? '',
-          })}
-        </p>
-
-        {application.decisionReasons ? (
-          <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
-            <h2 className="text-sm font-semibold">{t('decision.reasonsTitle')}</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {application.decisionReasons.map((reason) => (
-                <li key={reason.rule} className="flex items-start justify-between gap-4">
-                  <div>
-                    <p>{t(`reason.${reason.rule}` as MessageKey)}</p>
-                    {reason.rule === 'min_age' && reason.outcome === 'failed' ? (
-                      <p className="text-stone-600 dark:text-stone-400">
-                        {t('reason.min_age.eligibleFrom', {
-                          date: String(reason.params?.eligibleFrom ?? ''),
-                        })}
-                      </p>
-                    ) : null}
-                    {reason.rule === 'affordability' && reason.params?.limitCents !== undefined ? (
-                      <p className="text-stone-600 dark:text-stone-400">
-                        {t('reason.affordability.detail', {
-                          rent: euro(Number(reason.params.monthlyRentWithVatCents ?? 0)),
-                          limit: euro(Number(reason.params.limitCents)),
-                        })}
-                      </p>
-                    ) : null}
-                    {reason.rule === 'affordability' &&
-                    reason.params?.note === 'income_not_asked' ? (
-                      <p className="text-stone-600 dark:text-stone-400">
-                        {t('reason.affordability.notAsked')}
-                      </p>
-                    ) : null}
-                  </div>
-                  <OutcomeBadge t={t} outcome={reason.outcome} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <div className="mt-6 flex flex-wrap gap-3">
-          {status === 'approved' ? (
-            <button
-              type="button"
-              onClick={sign}
-              disabled={busy}
-              className="rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
-            >
-              {t('decision.sign')}
-            </button>
-          ) : null}
-          <Link
-            href={`/${locale}${suffix}`}
-            className="rounded-xl px-4 py-3 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 dark:ring-stone-700 dark:hover:bg-stone-800"
-          >
-            {t('asset.backToCatalogue')}
-          </Link>
-        </div>
-      </div>
+      <DecisionScreen
+        locale={locale}
+        suffix={suffix}
+        status={
+          application.status as
+            'approved' | 'manual_review' | 'awaiting_signature' | 'declined' | 'signed'
+        }
+        holdUntil={application.holdUntil}
+        signatoryEmail={application.signatoryEmail}
+        reasons={application.decisionReasons}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        error={error}
+        busy={busy}
+        onSign={sign}
+      />
     );
   }
 
@@ -412,6 +369,11 @@ export function ApplicationWizard({
           >
             {t('apply.submit')}
           </button>
+          {error ? (
+            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200 ring-inset dark:bg-red-950 dark:text-red-200 dark:ring-red-800">
+              {error}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
@@ -555,25 +517,5 @@ function AnsweredList({
         })}
       </ul>
     </section>
-  );
-}
-
-function OutcomeBadge({ t, outcome }: { t: Translate; outcome: string }) {
-  const styles: Record<string, string> = {
-    passed:
-      'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
-    failed:
-      'bg-red-50 text-red-900 ring-red-200 dark:bg-red-950 dark:text-red-200 dark:ring-red-800',
-    manual_review:
-      'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800',
-    not_applicable:
-      'bg-stone-100 text-stone-600 ring-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:ring-stone-700',
-  };
-  return (
-    <span
-      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${styles[outcome] ?? styles.not_applicable}`}
-    >
-      {t(`outcome.${outcome}` as MessageKey)}
-    </span>
   );
 }

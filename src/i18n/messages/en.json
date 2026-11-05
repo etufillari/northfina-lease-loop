@@ -65,5 +65,6 @@
   "lease.questionStep": "Question {current} of {total}",
   "lease.why": "Why we ask",
   "lease.continue": "Continue",
-  "lease.complete": "Your answers are complete. We can now review your leasing application."
+  "lease.complete": "Your answers are complete. We can now review your leasing application.",
+  "lease.validationError": "This answer does not meet the leasing requirements. The application cannot continue."
 }

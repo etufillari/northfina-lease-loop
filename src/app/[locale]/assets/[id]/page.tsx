@@ -11,6 +11,7 @@ import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
+import { getActiveUser } from '@/server/active-user';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
@@ -37,11 +38,12 @@ export default async function AssetDetailsPage({
   const downPaymentInput = readOptionalText(query.downPayment) ?? '0';
   const downPaymentCents = parseDownPaymentCents(downPaymentInput);
   const termMonths = readTerm(query.term);
-  const [assets, priceLists, coefficientTable, questionsFile] = await Promise.all([
+  const [assets, priceLists, coefficientTable, questionsFile, activeUser] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
     loadCoefficientTable(),
     loadQuestions(),
+    getActiveUser(),
   ]);
   const asset = assets.find((item) => item.id === id);
   if (!asset) notFound();
@@ -69,6 +71,8 @@ export default async function AssetDetailsPage({
           (price.ok ? price.priceCents : 0) - (downPaymentCents ?? 0)
         )}
         questions={questionsFile.questions}
+        customer={activeUser}
+        today={today}
         labels={{
           reserve: t('lease.reserve'),
           reservationInfo: t('lease.reservationInfo'),
@@ -77,6 +81,7 @@ export default async function AssetDetailsPage({
           why: t('lease.why'),
           continue: t('lease.continue'),
           complete: t('lease.complete'),
+          validationError: t('lease.validationError'),
         }}
       >
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">

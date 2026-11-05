@@ -65,5 +65,6 @@
   "lease.questionStep": "Fråga {current} av {total}",
   "lease.why": "Varför vi frågar",
   "lease.continue": "Fortsätt",
-  "lease.complete": "Dina svar är klara. Vi kan nu granska din leasingansökan."
+  "lease.complete": "Dina svar är klara. Vi kan nu granska din leasingansökan.",
+  "lease.validationError": "Detta svar uppfyller inte leasingkraven. Ansökan kan inte fortsätta."
 }

@@ -39,13 +39,22 @@ export function toAssetRowData(asset: Asset) {
 
 export async function listAssets(
   db: PrismaClient,
-  filter: { category?: AssetCategory } = {}
+  filter: { category?: AssetCategory } = {},
+  now = new Date()
 ): Promise<Asset[]> {
   const rows = await db.asset.findMany({
     where: filter.category ? { category: filter.category } : {},
     orderBy: { id: 'asc' },
   });
-  return rows.map(toAsset);
+  return rows.map((row) =>
+    toAsset({
+      ...row,
+      status:
+        row.status === 'reserved' && row.reserved_until !== null && row.reserved_until <= now
+          ? 'available'
+          : row.status,
+    })
+  );
 }
 
 export type ChangeAssetStatusResult =

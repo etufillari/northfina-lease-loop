@@ -65,5 +65,6 @@
   "lease.questionStep": "Küsimus {current} / {total}",
   "lease.why": "Miks me küsime",
   "lease.continue": "Jätka",
-  "lease.complete": "Sinu vastused on valmis. Saame nüüd liisingutaotlust läbi vaadata."
+  "lease.complete": "Sinu vastused on valmis. Saame nüüd liisingutaotlust läbi vaadata.",
+  "lease.validationError": "See vastus ei vasta liisingunõuetele. Taotlust ei saa jätkata."
 }

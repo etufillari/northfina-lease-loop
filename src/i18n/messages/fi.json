@@ -65,5 +65,6 @@
   "lease.questionStep": "Kysymys {current} / {total}",
   "lease.why": "Miksi kysymme",
   "lease.continue": "Jatka",
-  "lease.complete": "Vastauksesi ovat valmiit. Voimme nyt käsitellä leasing-hakemuksesi."
+  "lease.complete": "Vastauksesi ovat valmiit. Voimme nyt käsitellä leasing-hakemuksesi.",
+  "lease.validationError": "Tämä vastaus ei täytä leasing-vaatimuksia. Hakemusta ei voi jatkaa."
 }

@@ -1,7 +1,15 @@
 'use client';
 
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Question } from '@/data/schemas';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import type { Customer, Question } from '@/data/schemas';
 import type { Locale } from '@/i18n/locales';
 
 export type LeaseApplicationLabels = {
@@ -12,6 +20,7 @@ export type LeaseApplicationLabels = {
   why: string;
   continue: string;
   complete: string;
+  validationError: string;
 };
 
 type LeaseApplicationContextValue = {
@@ -23,6 +32,9 @@ type LeaseApplicationContextValue = {
   questions: readonly Question[];
   answers: Record<string, string>;
   setAnswers: (answers: Record<string, string>) => void;
+  validationError: string | null;
+  setValidationError: (message: string | null) => void;
+  today: string;
 };
 
 const LeaseApplicationContext = createContext<LeaseApplicationContextValue | null>(null);
@@ -33,6 +45,8 @@ export function LeaseApplication({
   financedAmountCents,
   questions,
   labels,
+  customer,
+  today,
   children,
 }: {
   assetId: string;
@@ -40,12 +54,38 @@ export function LeaseApplication({
   financedAmountCents: number;
   questions: readonly Question[];
   labels: LeaseApplicationLabels;
+  customer: Customer | null;
+  today: string;
   children: ReactNode;
 }) {
   const [reserved, setReserved] = useState(false);
   const [reserving, setReserving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    if (!customer) return {};
+    const answers: Record<string, string> = {
+      q_customer_type: customer.type,
+      q_full_name: customer.name,
+      q_email: customer.email,
+      q_country: customer.country,
+      q_pep: customer.is_pep ? 'yes' : 'no',
+    };
+    if ('birth_date' in customer) answers.q_birth_date = customer.birth_date;
+    if ('employment' in customer) answers.q_employment = customer.employment;
+    if ('monthly_net_income_cents' in customer) {
+      answers.q_monthly_income = String(customer.monthly_net_income_cents / 100);
+    }
+    if ('business_id' in customer) answers.q_business_id = customer.business_id;
+    if ('vat_registered' in customer) answers.q_vat_registered = String(customer.vat_registered);
+    if ('applicant_can_sign' in customer) {
+      answers.q_can_sign = String(customer.applicant_can_sign);
+    }
+    if ('annual_revenue_cents' in customer) {
+      answers.q_annual_revenue = String(customer.annual_revenue_cents / 100);
+    }
+    return answers;
+  });
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const visibleQuestions = useMemo(
     () =>
@@ -99,6 +139,9 @@ export function LeaseApplication({
         questions: visibleQuestions,
         answers,
         setAnswers,
+        validationError,
+        setValidationError,
+        today,
       }}
     >
       {children}
@@ -131,22 +174,27 @@ export function LeaseStartButton({ available }: { available: boolean }) {
 }
 
 export function LeaseQuestions({ locale }: { locale: Locale }) {
-  const { reserved, labels, questions, answers, setAnswers } = useLeaseApplicationContext();
+  const {
+    reserved,
+    labels,
+    questions,
+    answers,
+    setAnswers,
+    validationError,
+    setValidationError,
+    today,
+  } = useLeaseApplicationContext();
   const [step, setStep] = useState(0);
   const applicationRef = useRef<HTMLDivElement>(null);
   const question = questions[step];
 
-  if (!reserved) {
-    return (
-      <div
-        ref={applicationRef}
-        aria-disabled="true"
-        className="mt-8 border-t border-stone-200 pt-6 opacity-50 dark:border-stone-800"
-      >
-        <p className="text-sm font-semibold">{labels.questionStep.replace('{current}', '1')}</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (reserved) {
+      applicationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      applicationRef.current?.focus();
+    }
+  }, [reserved]);
+
   if (!question) {
     return (
       <p
@@ -166,7 +214,10 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
     <div
       ref={applicationRef}
       tabIndex={-1}
-      className="mt-8 border-t border-stone-200 pt-6 outline-none dark:border-stone-800"
+      aria-disabled={!reserved}
+      className={`mt-8 border-t border-stone-200 pt-6 outline-none dark:border-stone-800 ${
+        reserved ? '' : 'opacity-50'
+      }`}
     >
       <p className="text-sm text-stone-600 dark:text-stone-400">
         {labels.questionStep
@@ -183,6 +234,7 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
         <select
           id={question.id}
           value={answer}
+          disabled={!reserved}
           onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })}
           className="mt-4 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
         >
@@ -198,20 +250,59 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
           id={question.id}
           type={question.type === 'date' ? 'date' : question.type === 'email' ? 'email' : 'text'}
           value={answer}
+          disabled={!reserved}
           onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })}
           className="mt-4 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
         />
       )}
       <button
         type="button"
-        disabled={!answer.trim()}
-        onClick={() => setStep(step + 1)}
+        disabled={!reserved || !answer.trim()}
+        onClick={() => {
+          if (
+            question.blocks_application_when?.some((rule) =>
+              isBlocking(rule, answer, answers, today)
+            )
+          ) {
+            setValidationError(labels.validationError);
+            return;
+          }
+          setValidationError(null);
+          setStep(step + 1);
+        }}
         className="mt-5 w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
       >
         {labels.continue}
       </button>
+      <p className="mt-2 min-h-5 text-sm text-red-700 dark:text-red-300" aria-live="polite">
+        {validationError}
+      </p>
     </div>
   );
+}
+
+function isBlocking(
+  rule: NonNullable<Question['blocks_application_when']>[number],
+  answer: string,
+  answers: Record<string, string>,
+  today: string
+): boolean {
+  if (rule.rule === 'answer_in') return rule.value.includes(answer);
+  if (rule.rule === 'age_under') {
+    const birthDate = answers.q_birth_date;
+    if (!birthDate) return false;
+    const birth = new Date(`${birthDate}T00:00:00Z`);
+    const current = new Date(`${today}T00:00:00Z`);
+    let age = current.getUTCFullYear() - birth.getUTCFullYear();
+    if (
+      current.getUTCMonth() < birth.getUTCMonth() ||
+      (current.getUTCMonth() === birth.getUTCMonth() && current.getUTCDate() < birth.getUTCDate())
+    ) {
+      age -= 1;
+    }
+    return age < rule.value;
+  }
+  return false;
 }
 
 function useLeaseApplicationContext() {

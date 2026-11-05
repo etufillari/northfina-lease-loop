@@ -7,6 +7,7 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ContractDrawerTrigger } from './contract';
 
+// Available = green check, reserved = amber hourglass, returned = blue loop arrows.
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   available: {
     badge:
@@ -30,6 +31,60 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   },
 };
 
+function StatusIcon({ status }: { status: AssetStatus }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-6"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {status === 'reserved' ? (
+        <>
+          <path d="M6 3h12M6 21h12" />
+          <path d="M7 3v3.5a5 5 0 0 0 2 4l3 1.5-3 1.5a5 5 0 0 0-2 4V21" />
+          <path d="M17 3v3.5a5 5 0 0 1-2 4L12 12l3 1.5a5 5 0 0 1 2 4V21" />
+        </>
+      ) : status === 'returned' ? (
+        // Two arrows chasing each other, like the logo: back in the loop.
+        <>
+          <path d="M4.5 11a8 8 0 0 1 13.7-4.7L20 8" />
+          <path d="M20 3v5h-5" />
+          <path d="M19.5 13a8 8 0 0 1-13.7 4.7L4 16" />
+          <path d="M4 21v-5h5" />
+        </>
+      ) : (
+        <path d="M4 12.5 9.5 18 20 6.5" />
+      )}
+    </svg>
+  );
+}
+
+/** An icon with the status text as a tooltip (hover or keyboard focus) and for screen readers. */
+function StatusBadge({ status, t }: { status: AssetStatus; t: Translate }) {
+  return (
+    <span
+      tabIndex={0}
+      className={`group/status relative shrink-0 rounded-full p-0.5 ${statusColors[status]}`}
+    >
+      <StatusIcon status={status} />
+      <span className="sr-only">
+        {t('status.label')}: {t(`status.${status}`)}
+      </span>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-full right-0 z-10 mt-1 hidden rounded-md bg-stone-900 px-2 py-1 text-xs font-medium whitespace-nowrap text-white shadow group-hover/status:block group-focus/status:block dark:bg-stone-100 dark:text-stone-900"
+      >
+        {t(`status.${status}`)}
+      </span>
+    </span>
+  );
+}
+
 type AssetCardProps = {
   asset: Asset;
   price: ListPriceResult;
@@ -50,7 +105,6 @@ export function AssetCard({
   isoDate,
 }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
-  const status = statusStyles[asset.status];
 
   return (
     <article
@@ -64,13 +118,7 @@ export function AssetCard({
             {asset.model}
           </h3>
         </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
+        <StatusBadge status={asset.status} t={t} />
       </div>
 
       <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">

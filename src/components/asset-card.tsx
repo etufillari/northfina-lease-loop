@@ -27,6 +27,11 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
       'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
     dot: 'bg-sky-600 dark:bg-sky-400',
   },
+  sold: {
+    badge:
+      'bg-stone-100 text-stone-500 ring-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:ring-stone-700',
+    dot: 'bg-stone-400 dark:bg-stone-500',
+  },
 };
 
 type AssetCardProps = {

@@ -1,0 +1,40 @@
+// POST /api/contracts/:id/end-of-term  body: { action: "buy" | "return", actor }  [?asOf=]
+// Buy it (buyout invoice, 30 days to pay, asset leaves the loop) or return it (the asset
+// becomes `returned` and feeds the second-life desk).
+import { z } from 'zod';
+import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { asOfFrom } from '@/server/as-of';
+import { db } from '@/server/db';
+import { endOfTerm } from '@/server/lifecycle';
+
+const bodySchema = z.strictObject({
+  action: z.enum(['buy', 'return']),
+  actor: z.string().trim().min(1).max(100),
+});
+
+export const POST = handleRoute(
+  async (request, { params }: RouteContext<'/api/contracts/[id]/end-of-term'>) => {
+    const { id } = await params;
+    const body = await readJsonBody(request, bodySchema);
+    const result = await endOfTerm(db, {
+      contractId: id,
+      action: body.action,
+      actor: body.actor,
+      asOf: asOfFrom(request),
+    });
+    if (!result.ok) {
+      if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
+      if (result.reason === 'not_active')
+        return fail(409, 'NOT_ACTIVE', 'This contract has already ended');
+      if (result.reason === 'term_not_ended') {
+        return fail(
+          409,
+          'TERM_NOT_ENDED',
+          'The term has not ended yet; use the early exit instead'
+        );
+      }
+      return fail(422, 'NO_VAT_RATE', 'No VAT rate is known for this date');
+    }
+    return ok({ done: true });
+  }
+);

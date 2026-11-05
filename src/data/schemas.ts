@@ -28,9 +28,9 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-// `leased` is app-side only: the data pack ships no asset mid-lease, but the app does
-// (docs/DECISIONS.md). Every `reserved` is backed by a Reservation row saying why.
-export const assetStatusSchema = z.enum(['available', 'reserved', 'leased', 'returned']);
+// `leased` and `sold` are app-side only: the data pack ships no asset mid-lease or bought
+// out (docs/DECISIONS.md). Every `reserved` is backed by a Reservation row saying why.
+export const assetStatusSchema = z.enum(['available', 'reserved', 'leased', 'returned', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */

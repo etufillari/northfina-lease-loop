@@ -1,9 +1,11 @@
 // A signed contract: the locked price, where it came from, and every invoice.
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { EarlyExitPanel } from '@/components/early-exit-panel';
 import { EndOfTermSection } from '@/components/end-of-term-section';
-import { loadVatRates } from '@/data/load';
+import { loadResidualCurves, loadVatRates } from '@/data/load';
 import { assetConditionSchema, usageUnitSchema } from '@/data/schemas';
+import { exitMonthOn } from '@/domain/early-exit';
 import { invoiceSchedule } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
@@ -12,6 +14,7 @@ import { intlLocale, isLocale } from '@/i18n/locales';
 import { getContractEnding } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
+import { earlyExitContext } from '@/server/early-exit';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
 
@@ -27,14 +30,27 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
 
-  const [data, vatRates, assetRow, ending] = await Promise.all([
+  const [data, vatRates, curves, assetRow, ending] = await Promise.all([
     loadLeaseDataPack(),
     loadVatRates(),
+    loadResidualCurves(),
     db.asset.findUnique({ where: { id: contract.assetId } }),
     getContractEnding(db, found.id),
   ]);
   const customer = data.customers.find((c) => c.id === contract.customerId);
   const schedule = invoiceSchedule(contract, vatRates);
+  const today = await asOfDate();
+  // Leaving early is offered until the lease ends, unless it has already been ended (D-030).
+  const exitContext =
+    assetRow && !ending
+      ? earlyExitContext(
+          { vatRates, curves, coefficientTable: data.coefficientTable },
+          contract,
+          assetRow
+        )
+      : null;
+  const exitMonth = exitMonthOn(contract, today);
+  const canLeaveEarly = exitContext !== null && (exitMonth.ok || exitMonth.reason !== 'term_over');
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
@@ -144,13 +160,32 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         ) : null}
       </section>
 
+      {canLeaveEarly && exitContext && assetRow ? (
+        <section aria-labelledby="early-exit" className="mt-10">
+          <h2 id="early-exit" className="font-display text-lg font-bold tracking-tight uppercase">
+            {t('early.title')}
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            {t('early.intro', { rate: formatNumber(exitContext.annualInterestPercent, locale) })}
+          </p>
+          <EarlyExitPanel
+            locale={locale}
+            contractId={found.id}
+            contract={contract}
+            context={exitContext}
+            unit={usageUnitSchema.parse(assetRow.usage_unit)}
+            today={today}
+          />
+        </section>
+      ) : null}
+
       <EndOfTermSection
         locale={locale}
         contractId={found.id}
         contract={contract}
         ending={ending}
         vatRates={vatRates}
-        today={await asOfDate()}
+        today={today}
         asset={
           assetRow
             ? {

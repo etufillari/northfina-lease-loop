@@ -37,11 +37,17 @@
   "asset.modelYear": "Mudeliaasta",
   "asset.usage": "Kasutus",
   "asset.previousLives": "Varasemad liisinguperioodid",
+  "asset.serialNumber": "Seerianumber",
   "asset.listPrice": "Hinnakirja hind käibemaksuta",
   "asset.priceListVersion": "Hinnakiri {version}",
   "asset.noPrice": "Sellel kuupäeval hind puudub",
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
-  "footer.skeleton": "Algmall — asenda mind"
+  "footer.skeleton": "Algmall — asenda mind",
+  "assetDetails.backToCatalogue": "Tagasi kataloogi",
+  "assetDetails.backToDetails": "Tagasi toote detailidesse",
+  "assetDetails.startLeasing": "Alusta liisingut",
+  "assetDetails.leaseIntro": "Alustad selle toote liisingut.",
+  "assetDetails.leaseNextStep": "Taotlusprotsess jätkub siin."
 }

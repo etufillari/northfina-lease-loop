@@ -37,11 +37,17 @@
   "asset.modelYear": "Vuosimalli",
   "asset.usage": "Käyttö",
   "asset.previousLives": "Aiemmat vuokrakaudet",
+  "asset.serialNumber": "Sarjanumero",
   "asset.listPrice": "Listahinta alv 0 %",
   "asset.priceListVersion": "Hinnasto {version}",
   "asset.noPrice": "Ei hintaa tälle päivälle",
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
-  "footer.skeleton": "Aloituspohja — korvaa minut"
+  "footer.skeleton": "Aloituspohja — korvaa minut",
+  "assetDetails.backToCatalogue": "Takaisin valikoimaan",
+  "assetDetails.backToDetails": "Takaisin tuotteen tietoihin",
+  "assetDetails.startLeasing": "Aloita leasing",
+  "assetDetails.leaseIntro": "Olet aloittamassa tämän tuotteen leasingin.",
+  "assetDetails.leaseNextStep": "Hakemusprosessi jatkuu tästä."
 }

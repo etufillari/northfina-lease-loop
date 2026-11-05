@@ -5,6 +5,7 @@ import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import Link from 'next/link';
 
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   available: {
@@ -36,9 +37,10 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
   const status = statusStyles[asset.status];
 
   return (
-    <article
+    <Link
+      href={`/${locale}/assets/${asset.id}`}
       aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -77,7 +79,7 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
       </div>
-    </article>
+    </Link>
   );
 }
 

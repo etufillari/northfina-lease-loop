@@ -37,11 +37,17 @@
   "asset.modelYear": "Årsmodell",
   "asset.usage": "Användning",
   "asset.previousLives": "Tidigare leasingperioder",
+  "asset.serialNumber": "Serienummer",
   "asset.listPrice": "Listpris exkl. moms",
   "asset.priceListVersion": "Prislista {version}",
   "asset.noPrice": "Inget pris för detta datum",
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
-  "footer.skeleton": "Startskelett — byt ut mig"
+  "footer.skeleton": "Startskelett — byt ut mig",
+  "assetDetails.backToCatalogue": "Tillbaka till katalogen",
+  "assetDetails.backToDetails": "Tillbaka till produktdetaljer",
+  "assetDetails.startLeasing": "Börja leasa",
+  "assetDetails.leaseIntro": "Du är på väg att börja leasa denna produkt.",
+  "assetDetails.leaseNextStep": "Ansökningsprocessen fortsätter här."
 }

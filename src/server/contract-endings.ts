@@ -1,5 +1,6 @@
-// End of term (Spine step 6, D-029): buy, return or pass on. The contract row stays frozen; the
-// ending is its own row, written with the asset change and the audit row in one transaction.
+// How a lease ends: at the end of term (Spine step 6, D-029) or early (D-030). The contract row
+// stays frozen; the ending is its own row, written with the asset change and the audit row in one
+// transaction.
 import { z } from 'zod';
 import { assetConditionSchema, type Customer, type VatRates } from '@/data/schemas';
 import { endOfTerm, type EndOfTermChoice, type Ending } from '@/domain/end-of-term';
@@ -50,24 +51,41 @@ export async function endLease(
     input.today
   );
   if (!decided.ok) return decided;
-  const { ending } = decided;
+  return recordEnding(
+    db,
+    { contractId: input.contractId, assetId: contract.assetId, asOf: input.today },
+    decided.ending,
+    input.actor
+  );
+}
 
+/**
+ * Writes an ending (end of term or early, D-029/D-030) with the asset change and its audit row
+ * in one transaction. The asset update only matches a leased item, so a race rolls it all back.
+ */
+export async function recordEnding(
+  db: PrismaClient,
+  target: { contractId: number; assetId: string; asOf: string },
+  ending: Ending,
+  actor: string
+): Promise<EndLeaseResult> {
+  const sold = ending.kind === 'buy' || ending.kind === 'early_buy';
   try {
     await withAudit(
       db,
       {
-        actor: input.actor,
+        actor,
         action: `contract.ended_${ending.kind}`,
         entityType: 'contract',
-        entityId: String(input.contractId),
-        details: { assetId: contract.assetId, ...ending, asOf: input.today }, // D-030
+        entityId: String(target.contractId),
+        details: { assetId: target.assetId, ...ending, asOf: target.asOf }, // D-030
       },
       async (tx) => {
         // A finished lease is a finished life, whichever way it ends.
         const changed = await tx.asset.updateMany({
-          where: { id: contract.assetId, status: 'reserved' },
+          where: { id: target.assetId, status: 'reserved' },
           data: {
-            status: ending.kind === 'buy' ? 'sold' : 'returned',
+            status: sold ? 'sold' : 'returned',
             previous_lives: { increment: 1 },
             ...(ending.inspection
               ? {
@@ -80,7 +98,7 @@ export async function endLease(
         if (changed.count !== 1) throw new AssetChangedError();
         return tx.contractEnding.create({
           data: {
-            contract_id: input.contractId,
+            contract_id: target.contractId,
             kind: ending.kind,
             decided_on: ending.decidedOn,
             effective_date: ending.effectiveDate,
@@ -96,6 +114,31 @@ export async function endLease(
   return { ok: true, ending };
 }
 
+const cents = z.number().int();
+const exitPriceSchema = z.strictObject({
+  netCents: cents,
+  vatCents: cents,
+  grossCents: cents,
+  discountCents: cents,
+});
+const earlyExitQuoteSchema = z.strictObject({
+  exitMonth: z.number().int().positive(),
+  effectiveDate: z.iso.date(),
+  monthsLeft: z.number().int().nonnegative(),
+  annualInterestPercent: z.number().min(0),
+  vatRatePercent: z.number().min(0),
+  remainingRentsCents: cents,
+  remainingRentsPvCents: cents,
+  buyoutCents: cents,
+  buyoutPvCents: cents,
+  valueNowCents: cents,
+  valueAtEndCents: cents,
+  endAmountCents: cents,
+  endAmountPvCents: cents,
+  buy: exitPriceSchema,
+  handBack: exitPriceSchema,
+});
+
 const inspectionSchema = z.strictObject({
   condition: assetConditionSchema,
   usageValue: z.number().int().nonnegative(),
@@ -103,7 +146,7 @@ const inspectionSchema = z.strictObject({
 
 /** Mirrors the domain `Ending`, so a hand-edited row is caught when read. */
 const endingSchema = z.strictObject({
-  kind: z.enum(['buy', 'return', 'pass_on']),
+  kind: z.enum(['buy', 'return', 'pass_on', 'early_buy', 'early_hand_back']),
   decidedOn: z.iso.date(),
   effectiveDate: z.iso.date(),
   buyoutInvoice: z
@@ -117,6 +160,7 @@ const endingSchema = z.strictObject({
     .optional(),
   inspection: inspectionSchema.optional(),
   nextLessee: z.string().optional(),
+  earlyExit: earlyExitQuoteSchema.optional(),
 }) satisfies z.ZodType<Ending>;
 
 export async function getContractEnding(

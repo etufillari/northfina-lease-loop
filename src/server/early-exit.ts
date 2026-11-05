@@ -1,0 +1,98 @@
+// Leaving a lease early (D-030): price it with the domain, then record it like an end-of-term
+// choice (one ContractEnding row, the asset change and the audit row in one transaction).
+import {
+  assetCategorySchema,
+  assetConditionSchema,
+  type CoefficientTable,
+  type ResidualCurves,
+  type VatRates,
+} from '@/data/schemas';
+import type { Contract } from '@/domain/contract';
+import {
+  bandInterestPercent,
+  endEarly,
+  itemAgeAtStart,
+  type EarlyExitChoice,
+  type ExitContext,
+} from '@/domain/early-exit';
+import { getContract } from './contracts';
+import { recordEnding, type EndLeaseResult } from './contract-endings';
+import type { PrismaClient } from './prisma-client';
+
+export interface EarlyExitData {
+  vatRates: VatRates;
+  curves: ResidualCurves;
+  coefficientTable: CoefficientTable;
+}
+
+/** The asset columns the valuation needs. */
+export interface ExitAssetRow {
+  category: string;
+  model_year: number;
+  condition: string;
+  usage_value: number;
+}
+
+/**
+ * Everything the early-exit price needs besides the contract, or null when the contract's band is
+ * missing from the table. The asset row still holds the item as delivered while it is leased.
+ */
+export function earlyExitContext(
+  data: EarlyExitData,
+  contract: Contract,
+  asset: ExitAssetRow
+): ExitContext | null {
+  const annualInterestPercent = bandInterestPercent(data.coefficientTable, contract.band);
+  if (annualInterestPercent === null) return null;
+  const condition = assetConditionSchema.parse(asset.condition);
+  return {
+    vatRates: data.vatRates,
+    curves: data.curves,
+    annualInterestPercent,
+    item: {
+      category: assetCategorySchema.parse(asset.category),
+      ageAtStartMonths: itemAgeAtStart(condition, asset.model_year, contract.startDate),
+      condition,
+      usageValue: asset.usage_value,
+    },
+  };
+}
+
+export interface EndEarlyInput {
+  contractId: number;
+  choice: EarlyExitChoice;
+  today: string;
+  actor: string;
+}
+
+export async function endLeaseEarly(
+  db: PrismaClient,
+  data: EarlyExitData,
+  input: EndEarlyInput
+): Promise<EndLeaseResult> {
+  const found = await getContract(db, input.contractId);
+  if (!found) return { ok: false, reason: 'contract_not_found' };
+  const { contract } = found;
+  if (await db.contractEnding.findUnique({ where: { contract_id: input.contractId } })) {
+    return { ok: false, reason: 'already_ended' };
+  }
+  const asset = await db.asset.findUnique({ where: { id: contract.assetId } });
+  if (!asset || asset.status !== 'reserved') return { ok: false, reason: 'asset_not_leased' };
+  const context = earlyExitContext(data, contract, asset);
+  if (!context) return { ok: false, reason: 'unknown_band' };
+
+  const decided = endEarly(
+    contract,
+    context,
+    { condition: context.item.condition, usageValue: context.item.usageValue },
+    input.choice,
+    input.today
+  );
+  if (!decided.ok) return decided;
+  return recordEnding(
+    db,
+    { contractId: input.contractId, assetId: contract.assetId, asOf: input.today },
+    decided.ending,
+    input.actor
+  );
+}

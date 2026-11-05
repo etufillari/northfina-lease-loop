@@ -1,4 +1,4 @@
-// Fair early exit (Smart Problem 2, card 8, D-030). Leaving in month k settles what is still owed,
+// Fair early exit (Smart Problem 2, card 8, D-033). Leaving in month k settles what is still owed,
 // valued today at the band's own interest rate: the bank is exactly as well off as if the lease
 // ran to the end, and the customer pays nothing for time they no longer use. At the final month
 // it is exactly the end-of-term buyout (D-029). The contract stays frozen.
@@ -115,7 +115,7 @@ export function exitMonthOn(contract: BilledContract, date: string): ExitMonthRe
 
 /**
  * What leaving at the end of `exitMonth` costs. Rent n is valued n − k months before it falls
- * due, the convention the coefficient table is built on (D-030), and the end amount T − k months.
+ * due, the convention the coefficient table is built on (D-033), and the end amount T − k months.
  */
 export function earlyExitQuote(
   contract: ExitContract,

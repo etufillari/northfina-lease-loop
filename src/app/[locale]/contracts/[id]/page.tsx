@@ -40,7 +40,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const customer = data.customers.find((c) => c.id === contract.customerId);
   const schedule = invoiceSchedule(contract, vatRates);
   const today = await asOfDate();
-  // Leaving early is offered until the lease ends, unless it has already been ended (D-030).
+  // Leaving early is offered until the lease ends, unless it has already been ended (D-033).
   const exitContext =
     assetRow && !ending
       ? earlyExitContext(

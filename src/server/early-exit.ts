@@ -1,4 +1,4 @@
-// Leaving a lease early (D-030): price it with the domain, then record it like an end-of-term
+// Leaving a lease early (D-033): price it with the domain, then record it like an end-of-term
 // choice (one ContractEnding row, the asset change and the audit row in one transaction).
 import {
   assetCategorySchema,

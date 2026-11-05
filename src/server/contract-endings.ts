@@ -1,4 +1,4 @@
-// How a lease ends: at the end of term (Spine step 6, D-029) or early (D-030). The contract row
+// How a lease ends: at the end of term (Spine step 6, D-029) or early (D-033). The contract row
 // stays frozen; the ending is its own row, written with the asset change and the audit row in one
 // transaction.
 import { z } from 'zod';
@@ -60,7 +60,7 @@ export async function endLease(
 }
 
 /**
- * Writes an ending (end of term or early, D-029/D-030) with the asset change and its audit row
+ * Writes an ending (end of term or early, D-029/D-033) with the asset change and its audit row
  * in one transaction. The asset update only matches a leased item, so a race rolls it all back.
  */
 export async function recordEnding(

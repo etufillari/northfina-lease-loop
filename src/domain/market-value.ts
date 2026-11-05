@@ -1,5 +1,5 @@
 // What a used item is worth on the market (data/residual-curves.json): net list price at its
-// first lease × age curve × condition multiplier × usage adjustment. Early exit (D-030) uses it.
+// first lease × age curve × condition multiplier × usage adjustment. Early exit (D-033) uses it.
 import type { AssetCategory, AssetCondition, ResidualCurves } from '@/data/schemas';
 import { roundHalfUp } from './money';
 

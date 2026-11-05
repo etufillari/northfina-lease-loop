@@ -1,6 +1,6 @@
 'use client';
 
-// Leave early (D-030): pick any month to see what leaving then costs, line by line, and confirm
+// Leave early (D-033): pick any month to see what leaving then costs, line by line, and confirm
 // in the current month. The domain runs here for live feedback; the server decides again (D-018).
 import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';

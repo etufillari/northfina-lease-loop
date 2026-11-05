@@ -31,7 +31,7 @@ export type EndOfTermChoice =
 
 export type EndOfTermKind = EndOfTermChoice['kind'];
 
-/** Every way a lease can end: at the end of term (D-029) or early (D-030). */
+/** Every way a lease can end: at the end of term (D-029) or early (D-033). */
 export type EndingKind = EndOfTermKind | 'early_buy' | 'early_hand_back';
 
 export interface BuyoutInvoice extends VatBreakdown {
@@ -47,7 +47,7 @@ export interface Ending {
   buyoutInvoice?: BuyoutInvoice;
   inspection?: Inspection;
   nextLessee?: string;
-  /** Every line of an early exit's price, as the customer saw it (D-030). */
+  /** Every line of an early exit's price, as the customer saw it (D-033). */
   earlyExit?: EarlyExitQuote;
 }
 

@@ -1,6 +1,6 @@
 // POST /api/contracts/:id/end-early   body: { kind: 'early_buy' }
 //                                          | { kind: 'early_hand_back', condition, usageValue }
-// Leaves the lease in the current month (D-030): records the ending with every line of its
+// Leaves the lease in the current month (D-033): records the ending with every line of its
 // price, sells or takes back the asset, audited together.
 import { z } from 'zod';
 import { loadResidualCurves } from '@/data/load';

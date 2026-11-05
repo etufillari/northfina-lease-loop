@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPriceLists } from '@/data/load';
 import type { PriceList } from '@/data/schemas';
-import { listPriceOn, nextPriceChange } from './price-list';
+import { differentPriceOn, listPriceOn, nextPriceChange } from './price-list';
 
 let priceLists: PriceList[];
 beforeAll(async () => {
@@ -128,5 +128,23 @@ describe('nextPriceChange', () => {
 
   it('throws on a date that is not YYYY-MM-DD', () => {
     expect(() => nextPriceChange(priceLists, 'ebike-001', '2026-11')).toThrow(RangeError);
+  });
+});
+
+describe('differentPriceOn', () => {
+  it('shows list 2’s laptop price next to a contract locked at list 1 (scenario card 2)', () => {
+    expect(differentPriceOn(priceLists, 'laptop-004', '2026-11-06', 349_000)).toEqual({
+      priceCents: 321_100,
+      priceListVersion: 2,
+    });
+  });
+
+  it('is null when today’s price is the locked one', () => {
+    expect(differentPriceOn(priceLists, 'laptop-004', '2026-11-05', 349_000)).toBeNull();
+    expect(differentPriceOn(priceLists, 'farm-001', '2026-11-06', 8_900_000)).toBeNull();
+  });
+
+  it('is null when there is no price today', () => {
+    expect(differentPriceOn(priceLists, 'ebike-999', '2026-11-06', 100)).toBeNull();
   });
 });

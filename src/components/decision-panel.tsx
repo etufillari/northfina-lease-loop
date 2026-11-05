@@ -34,10 +34,16 @@ export function DecisionPanel({
   decision,
   locale,
   t,
+  onSign,
+  isSigning = false,
+  signError = null,
 }: {
   decision: EligibilityDecision;
   locale: Locale;
   t: Translate;
+  onSign?: () => void;
+  isSigning?: boolean;
+  signError?: string | null;
 }) {
   const kind = decision.decision;
   const tone = tones[kind];
@@ -67,6 +73,23 @@ export function DecisionPanel({
             <li key={`${reason.rule}-${i}`}>{reasonText(t, reason, locale)}</li>
           ))}
         </ul>
+      ) : null}
+      {kind === 'yes' && onSign ? (
+        <div className="mt-[16px]">
+          {signError ? (
+            <p role="alert" className="mb-[8px] text-[0.875rem] font-semibold text-[#DC2626]">
+              {signError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={isSigning}
+            onClick={onSign}
+            className="w-full rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a]"
+          >
+            {isSigning ? t('apply.signingButton') : t('apply.signButton')}
+          </button>
+        </div>
       ) : null}
     </section>
   );

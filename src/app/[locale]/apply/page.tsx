@@ -96,7 +96,20 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
         <p className="mt-[12px] text-[1.125rem] text-[#615b57]">{t('apply.intro')}</p>
       </div>
       <div className="mt-[32px]">
-        <ApplicationForm locale={locale} deal={deal}>
+        <ApplicationForm
+          locale={locale}
+          deal={deal}
+          signTarget={
+            quote
+              ? {
+                  assetId: asset.id,
+                  termMonths: term,
+                  downPaymentCents: down,
+                  signedOn: today,
+                }
+              : undefined
+          }
+        >
           <DealSummary t={t} rows={rows}>
             <ChangeTermsDialog
               asset={asset}

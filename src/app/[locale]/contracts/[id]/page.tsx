@@ -55,15 +55,28 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
       : null;
   const exitMonth = exitMonthOn(contract, today);
   const canLeaveEarly = exitContext !== null && (exitMonth.ok || exitMonth.reason !== 'term_over');
+  // The headline: the next invoice still to come, or (once ended or all billed) the total.
+  const next = schedule.ok ? schedule.invoices.find((i) => i.invoiceDate >= today) : undefined;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <p className="eyebrow">
         {assetRow ? `${assetRow.make} ${assetRow.model}` : contract.assetId}
       </p>
-      <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight uppercase sm:text-4xl">
-        {t('contract.title', { id })}
-      </h1>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight uppercase sm:text-4xl">
+          {t('contract.title', { id })}
+        </h1>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${ending ? 'text-muted ring-line' : 'bg-accent/10 text-accent-text ring-accent/40'}`}
+        >
+          <span
+            aria-hidden="true"
+            className={`size-1.5 rounded-full ${ending ? 'bg-muted' : 'bg-accent'}`}
+          />
+          {t(ending ? 'contract.ended' : 'contract.active')}
+        </span>
+      </div>
       <p className="mt-2 text-muted">
         {t('contract.signedBy', {
           customer: customer?.name ?? contract.customerId,
@@ -75,15 +88,34 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         aria-labelledby="locked"
         className="relative mt-8 overflow-hidden rounded-xl bg-stage p-6 text-stage-fg sm:p-8"
       >
-        <h2 id="locked" className="font-display text-lg font-bold tracking-tight uppercase">
-          {t('contract.locked')}
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm text-stage-muted">
-          {t('contract.lockedNote', {
-            date: date(contract.quoteDate),
-            version: contract.priceListVersion,
-          })}
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+          <div className="max-w-2xl">
+            <h2 id="locked" className="font-display text-lg font-bold tracking-tight uppercase">
+              {t('contract.locked')}
+            </h2>
+            <p className="mt-1 text-sm text-stage-muted">
+              {t('contract.lockedNote', {
+                date: date(contract.quoteDate),
+                version: contract.priceListVersion,
+              })}
+            </p>
+          </div>
+          {schedule.ok ? (
+            <div className="text-left sm:text-right">
+              <p className="text-xs font-semibold tracking-[0.08em] text-stage-muted uppercase">
+                {t(next && !ending ? 'lease.monthly' : 'contract.paidInTotal')}
+              </p>
+              <p className="font-display text-4xl font-extrabold tracking-tight text-stage-accent tabular-nums">
+                {euro(next && !ending ? next.grossCents : schedule.totals.grossCents)}
+              </p>
+              {next && !ending ? (
+                <p className="text-sm text-stage-muted">
+                  {t('contract.nextInvoice', { date: date(next.invoiceDate) })}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
         <dl className="mt-6 grid gap-x-10 gap-y-1 text-sm sm:grid-cols-2">
           <Fact label={t('lease.listPrice', { version: contract.priceListVersion })}>
             {euro(contract.listPriceCents)}
@@ -114,9 +146,11 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           </p>
         ) : null}
         {schedule.ok ? (
-          <div className="panel mt-4 overflow-x-auto">
+          // A scroll box, so a 48-month schedule doesn't push the endings off the page; the
+          // header stays put while the rows scroll.
+          <div className="panel mt-4 max-h-[32rem] overflow-auto overscroll-contain">
             <table className="w-full text-sm tabular-nums">
-              <thead className="text-left text-xs tracking-wide text-muted uppercase">
+              <thead className="sticky top-0 z-10 bg-surface text-left text-xs tracking-wide text-muted uppercase">
                 <tr className="border-b border-line">
                   <th className="px-4 py-3 font-semibold">{t('contract.number')}</th>
                   <th className="px-4 py-3 font-semibold">{t('contract.dueDate')}</th>
@@ -171,7 +205,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
                   );
                 })}
               </tbody>
-              <tfoot className="font-semibold">
+              <tfoot className="sticky bottom-0 font-semibold">
                 <tr className="border-t-2 border-line bg-surface-2">
                   <td className="px-4 py-3" colSpan={3}>
                     {t('contract.total')}

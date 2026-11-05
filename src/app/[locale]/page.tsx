@@ -8,7 +8,7 @@ import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import { assetCategorySchema, assetConditionSchema, assetStatusSchema } from '@/data/schemas';
 import { filterAssets } from '@/domain/asset-filter';
 import { formatEuro } from '@/domain/money';
-import { MAX_DOWN_PAYMENT_CENTS } from '@/domain/monthly-rent';
+import { LEASE_TERM_MONTHS, MAX_DOWN_PAYMENT_CENTS } from '@/domain/monthly-rent';
 import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -27,6 +27,8 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
     status: readFilter(assetStatusSchema, query.status),
     condition: readFilter(assetConditionSchema, query.condition),
   };
+  const initialDownPayment = readOptionalText(query.downPayment) ?? '0';
+  const initialTermMonths = readTerm(query.term);
 
   // Render on every request: prices depend on today's date and on the database.
   await connection();
@@ -39,7 +41,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
     loadCoefficientTable(),
   ]);
   const filteredAssets = filterAssets(assets, filters);
-  const termOptions = [0, 12, 24, 36, 48].map((value) => ({
+  const termOptions = LEASE_TERM_MONTHS.map((value) => ({
     value,
     label: t('pricing.months', { count: value }),
   }));
@@ -126,6 +128,8 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
         locale={locale}
         labels={pricingLabels}
         termOptions={termOptions}
+        initialDownPayment={initialDownPayment}
+        initialTermMonths={initialTermMonths}
       >
         {assets.length === 0 ? (
           <p className="mt-10 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
@@ -180,6 +184,20 @@ function readFilter<T extends string>(
   const result = schema.safeParse(value);
   if (!result.success) notFound();
   return result.data;
+}
+
+function readOptionalText(value: string | string[] | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') notFound();
+  return value;
+}
+
+function readTerm(value: string | string[] | undefined): number {
+  if (value === undefined) return 0;
+  if (typeof value !== 'string' || !LEASE_TERM_MONTHS.some((term) => String(term) === value)) {
+    notFound();
+  }
+  return Number(value);
 }
 
 function FilterSelect<T extends string>({

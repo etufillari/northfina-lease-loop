@@ -2,6 +2,7 @@ import type { CoefficientTable } from '@/data/schemas';
 import { monthlyFactorFor } from './coefficient';
 
 export const MAX_DOWN_PAYMENT_CENTS = 50_000_000;
+export const LEASE_TERM_MONTHS = [0, 12, 24, 36, 48] as const;
 
 export type MonthlyRentResult =
   | { ok: true; monthlyRentCents: number }

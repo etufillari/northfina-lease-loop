@@ -44,6 +44,8 @@
   "contract.downPaymentLabel": "Kontantinsats (exkl. moms)",
   "contract.downPaymentRange": "Min {min} · Max {max}",
   "contract.breakdownTitle": "Pris- och avtalsspecifikation",
+  "contract.showBreakdown": "Visa detaljer",
+  "contract.hideBreakdown": "Dölj detaljer",
   "contract.listPrice": "Listpris (exkl. moms, v{version})",
   "contract.downPayment": "Kontantinsats (exkl. moms)",
   "contract.financedAmount": "Finansierat belopp (exkl. moms)",

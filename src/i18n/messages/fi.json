@@ -44,6 +44,8 @@
   "contract.downPaymentLabel": "Käsiraha (alv 0 %)",
   "contract.downPaymentRange": "Min {min} · Maks {max}",
   "contract.breakdownTitle": "Hinnan ja sopimuksen erittely",
+  "contract.showBreakdown": "Näytä erittely",
+  "contract.hideBreakdown": "Piilota erittely",
   "contract.listPrice": "Listahinta (alv 0 %, v{version})",
   "contract.downPayment": "Käsiraha (alv 0 %)",
   "contract.financedAmount": "Rahoitettava osuus (alv 0 %)",

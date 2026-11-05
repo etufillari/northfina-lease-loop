@@ -44,6 +44,8 @@
   "contract.downPaymentLabel": "Down payment (excl. VAT)",
   "contract.downPaymentRange": "Min {min} · Max {max}",
   "contract.breakdownTitle": "Price & contract breakdown",
+  "contract.showBreakdown": "Show details",
+  "contract.hideBreakdown": "Hide details",
   "contract.listPrice": "List price (excl. VAT, v{version})",
   "contract.downPayment": "Down payment (excl. VAT)",
   "contract.financedAmount": "Financed amount (excl. VAT)",

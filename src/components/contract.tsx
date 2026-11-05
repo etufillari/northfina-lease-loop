@@ -31,6 +31,7 @@ export type ContractProps = {
   initialTermMonths?: number;
   initialDownPaymentCents?: number;
   initialSignedContract?: SignedContract | null;
+  defaultBreakdownOpen?: boolean;
   onSign?: (signed: SignedContract) => void;
   onClose?: () => void;
 };
@@ -47,6 +48,7 @@ export function Contract({
   initialTermMonths,
   initialDownPaymentCents = 0,
   initialSignedContract = null,
+  defaultBreakdownOpen = false,
   onSign,
   onClose,
 }: ContractProps) {
@@ -55,6 +57,7 @@ export function Contract({
   const headingId = useId();
   const termSliderId = useId();
   const downPaymentSliderId = useId();
+  const breakdownPanelId = useId();
 
   const terms = availableTermsFromTable(coefficientTable);
   const defaultTerm =
@@ -73,6 +76,7 @@ export function Contract({
   const [signedContract, setSignedContract] = useState<SignedContract | null>(
     initialSignedContract
   );
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState<boolean>(defaultBreakdownOpen);
 
   const isSigned = signedContract !== null;
   const termMonths = isSigned ? signedContract.quote.termMonths : selectedTermMonths;
@@ -293,62 +297,11 @@ export function Contract({
         </div>
       ) : null}
 
-      {/* Full financial breakdown */}
+      {/* Monthly payment headline + collapsible financial breakdown */}
       {activeQuote ? (
-        <div>
-          <h3 className="text-[0.875rem] font-semibold text-[#353331]">
-            {t('contract.breakdownTitle')}
-          </h3>
-
-          <dl className="mt-[12px] grid grid-cols-1 gap-x-[24px] gap-y-[12px] border-y border-[#ededed] py-[16px] text-[0.875rem] sm:grid-cols-2">
-            <BreakdownRow
-              label={t('contract.listPrice', { version: activeQuote.priceListVersion })}
-              value={formatEuro(activeQuote.listPriceCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.bandLabel')}
-              value={t('contract.bandAndFactor', {
-                band: activeQuote.band.band,
-                interest: activeQuote.band.annual_interest_percent,
-                factor: activeQuote.factor.toFixed(6),
-              })}
-            />
-            <BreakdownRow
-              label={t('contract.downPayment')}
-              value={formatEuro(activeQuote.downPaymentCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.monthlyNetRent')}
-              value={formatEuro(activeQuote.monthlyNetRentCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.financedAmount')}
-              value={formatEuro(activeQuote.financedCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.monthlyVat', { rate: activeQuote.vatRatePercent })}
-              value={formatEuro(activeQuote.monthlyVatCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.buyoutOption', { percent: activeQuote.buyoutPercent })}
-              value={formatEuro(activeQuote.buyoutNetCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.totalRentNet', { months: activeQuote.termMonths })}
-              value={formatEuro(activeQuote.totalRentNetCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.totalLeaseNet')}
-              value={formatEuro(activeQuote.totalLeaseNetCents, intlTag)}
-            />
-            <BreakdownRow
-              label={t('contract.totalWithBuyoutNet')}
-              value={formatEuro(activeQuote.totalWithBuyoutNetCents, intlTag)}
-            />
-          </dl>
-
-          {/* Monthly gross rent banner + price lock explanation */}
-          <div className="mt-[16px] flex flex-wrap items-center justify-between gap-[16px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px]">
+        <div className="grid gap-[16px]">
+          {/* Monthly gross rent banner + price lock explanation (always visible) */}
+          <div className="flex flex-wrap items-center justify-between gap-[16px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px]">
             <div className="max-w-md">
               <p className="text-[0.875rem] font-semibold text-[#123054]">
                 {t('contract.monthlyGrossRent')}
@@ -363,6 +316,90 @@ export function Contract({
             <p className="font-mono text-[1.75rem] leading-none font-bold text-[#123054] tabular-nums">
               {formatEuro(activeQuote.monthlyGrossRentCents, intlTag)}
             </p>
+          </div>
+
+          {/* Collapsible breakdown */}
+          <div className="overflow-hidden rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF]">
+            <button
+              type="button"
+              aria-expanded={isBreakdownOpen}
+              aria-controls={breakdownPanelId}
+              onClick={() => setIsBreakdownOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-[12px] bg-[#f7f7f7] px-[16px] py-[12px] text-left text-[0.875rem] font-semibold text-[#353331] transition-colors hover:bg-[#ededed]"
+            >
+              <span>{t('contract.breakdownTitle')}</span>
+              <span className="inline-flex items-center gap-[8px] text-[0.75rem] font-semibold text-[#1354a5]">
+                <span>
+                  {isBreakdownOpen ? t('contract.hideBreakdown') : t('contract.showBreakdown')}
+                </span>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 16 16"
+                  className={`size-[16px] shrink-0 transition-transform ${
+                    isBreakdownOpen ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </span>
+            </button>
+
+            {isBreakdownOpen ? (
+              <dl
+                id={breakdownPanelId}
+                className="grid grid-cols-1 gap-x-[24px] gap-y-[12px] border-t border-[#ededed] p-[16px] text-[0.875rem] sm:grid-cols-2"
+              >
+                <BreakdownRow
+                  label={t('contract.listPrice', { version: activeQuote.priceListVersion })}
+                  value={formatEuro(activeQuote.listPriceCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.bandLabel')}
+                  value={t('contract.bandAndFactor', {
+                    band: activeQuote.band.band,
+                    interest: activeQuote.band.annual_interest_percent,
+                    factor: activeQuote.factor.toFixed(6),
+                  })}
+                />
+                <BreakdownRow
+                  label={t('contract.downPayment')}
+                  value={formatEuro(activeQuote.downPaymentCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.monthlyNetRent')}
+                  value={formatEuro(activeQuote.monthlyNetRentCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.financedAmount')}
+                  value={formatEuro(activeQuote.financedCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.monthlyVat', { rate: activeQuote.vatRatePercent })}
+                  value={formatEuro(activeQuote.monthlyVatCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.buyoutOption', { percent: activeQuote.buyoutPercent })}
+                  value={formatEuro(activeQuote.buyoutNetCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.totalRentNet', { months: activeQuote.termMonths })}
+                  value={formatEuro(activeQuote.totalRentNetCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.totalLeaseNet')}
+                  value={formatEuro(activeQuote.totalLeaseNetCents, intlTag)}
+                />
+                <BreakdownRow
+                  label={t('contract.totalWithBuyoutNet')}
+                  value={formatEuro(activeQuote.totalWithBuyoutNetCents, intlTag)}
+                />
+              </dl>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -44,6 +44,8 @@
   "contract.downPaymentLabel": "Sissemakse (käibemaksuta)",
   "contract.downPaymentRange": "Min {min} · Maks {max}",
   "contract.breakdownTitle": "Hinna ja lepingu jaotus",
+  "contract.showBreakdown": "Näita üksikasju",
+  "contract.hideBreakdown": "Peida üksikasjad",
   "contract.listPrice": "Hinnakirja hind (km-ta, v{version})",
   "contract.downPayment": "Sissemakse (käibemaksuta)",
   "contract.financedAmount": "Finantseeritav summa (käibemaksuta)",

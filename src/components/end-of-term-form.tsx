@@ -106,7 +106,7 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
         <legend className="eyebrow">{t('end.choose')}</legend>
         <div className="mt-3 space-y-3">
           {KINDS.map((k) => (
-            <label key={k} className="flex cursor-pointer gap-3 rounded-lg border border-line p-3">
+            <label key={k} className="choice-card">
               <input
                 type="radio"
                 name="end-kind"

@@ -125,7 +125,7 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
         <legend className="eyebrow">{t('early.choose')}</legend>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {(['early_buy', 'early_hand_back'] as const).map((k) => (
-            <label key={k} className="flex cursor-pointer gap-3 rounded-lg border border-line p-3">
+            <label key={k} className="choice-card">
               <input
                 type="radio"
                 name="early-kind"

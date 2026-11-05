@@ -63,10 +63,7 @@ export function RelistForm(props: RelistFormProps) {
         <legend className="eyebrow">{t('secondLife.chooseCondition')}</legend>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {options.map((o) => (
-            <label
-              key={o.target}
-              className="flex cursor-pointer gap-3 rounded-lg border border-line p-3"
-            >
+            <label key={o.target} className="choice-card">
               <input
                 type="radio"
                 name="relist-target"

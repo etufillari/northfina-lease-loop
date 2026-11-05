@@ -159,6 +159,30 @@
   font-size: 0.875rem;
 }
 
+/* A radio choice drawn as a card: the chosen one is outlined and tinted, not just a dot. */
+@utility choice-card {
+  display: flex;
+  gap: 0.75rem;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  padding: 0.75rem;
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+  & input[type='radio'] {
+    accent-color: var(--accent);
+  }
+  &:hover {
+    border-color: var(--muted);
+  }
+  &:has(input:checked) {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+}
+
 /* The range slider: a filled track up to the thumb. The fill comes from --fill, set inline. */
 @utility range {
   appearance: none;

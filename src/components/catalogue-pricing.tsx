@@ -89,6 +89,7 @@ export function CataloguePricing({
               min="0"
               max={MAX_DOWN_PAYMENT_CENTS / 100}
               step="0.01"
+              className="no-number-spinner mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
               value={downPaymentInput}
               aria-invalid={downPaymentCents === undefined}
               aria-describedby={
@@ -99,7 +100,6 @@ export function CataloguePricing({
                 setDownPaymentInput(value);
                 updateQueryParameter('downPayment', value === '0' ? undefined : value);
               }}
-              className="mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
             />
             <p
               id={downPaymentCents === undefined ? 'down-payment-error' : 'down-payment-help'}

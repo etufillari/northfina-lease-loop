@@ -11,6 +11,17 @@
   outline-offset: 2px;
 }
 
+.no-number-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.no-number-spinner::-webkit-inner-spin-button,
+.no-number-spinner::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .lease-term-slider {
   height: 24px;
   appearance: none;

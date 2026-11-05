@@ -1,8 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { formatEuro } from './money';
+import { formatEuro, roundedDivide } from './money';
 
 // Intl uses no-break spaces; compare with plain spaces so the tests are readable.
 const plain = (text: string) => text.replace(/\s/g, ' ');
+
+describe('roundedDivide', () => {
+  it('rounds down below a half and up from a half', () => {
+    expect(roundedDivide(1, 3)).toBe(0);
+    expect(roundedDivide(2, 3)).toBe(1);
+    expect(roundedDivide(1, 2)).toBe(1);
+    expect(roundedDivide(3, 2)).toBe(2);
+    expect(roundedDivide(5, 2)).toBe(3);
+  });
+
+  it('keeps exact results and zero unchanged', () => {
+    expect(roundedDivide(10, 2)).toBe(5);
+    expect(roundedDivide(0, 7)).toBe(0);
+  });
+
+  it('stays exact at the largest amount the coefficient table allows', () => {
+    expect(roundedDivide(25_000_000 * 56_022, 1_000_000)).toBe(1_400_550);
+  });
+
+  it('rejects inputs that are not whole numbers, and a zero or negative divisor', () => {
+    expect(() => roundedDivide(1.5, 2)).toThrow(RangeError);
+    expect(() => roundedDivide(-1, 2)).toThrow(RangeError);
+    expect(() => roundedDivide(1, 0)).toThrow(RangeError);
+    expect(() => roundedDivide(1, 0.5)).toThrow(RangeError);
+  });
+});
 
 describe('formatEuro', () => {
   it('formats Finnish style: space as thousands separator, comma decimals, € after', () => {

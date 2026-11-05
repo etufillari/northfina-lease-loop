@@ -33,6 +33,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-023 | 2026-11-05 | Application | Affordability uses the highest monthly total over the whole term                   |
 | D-024 | 2026-11-05 | Application | Only an approved applicant who may sign can sign; the server decides again         |
 | D-025 | 2026-11-05 | Application | Reasons and "why we ask" are translated in the app, not the data pack              |
+| D-026 | 2026-11-05 | UI          | "Second Life" visual design with swipeable category rows                           |
 
 ---
 
@@ -200,3 +201,12 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 - **Context:** The data pack has question texts in four languages but `why_we_ask` only in English, and the rules engine returns reason codes.
 - **Decision:** `why.<question>`, `option.<question>.<value>`, `outcome.*` and `reason.*` live in the app's message files in all four languages; the English text from the data pack is the fallback. Reasons are written to be kind and say what to do next ("You can apply from 10 March 2027").
+
+## D-026 · "Second Life" visual design with swipeable category rows
+
+- **Context:** The first UI worked but looked like a default Tailwind page. The user collected references (VibeMe AI on Awwwards: dark, cinematic, horizontal rows of picture cards) and wanted products you can swipe through and click into, without the look getting in the way of pricing and signing. Three clickable mockups were made (Showroom, Fjord, Second Life); the user picked Second Life.
+- **Decision:** Dark ink-blue base with a paper-white light mode, one coral accent, Unbounded for uppercase headings and prices, Instrument Sans for body text (both self-hosted through `next/font`, with `latin-ext` for Estonian and Finnish letters). The catalogue opens with a hero and shows one swipe row per category: native CSS scroll-snap, arrow buttons with translated labels, and the whole card as one link. Every card and item page shows which life the item is on (previous leases + 1), so circularity is visible at a glance. Colours are semantic CSS variables (`bg-surface`, `text-muted`, `bg-accent`) that switch with the colour scheme, and shared pieces (`btn-primary`, `panel`, `field`, `range`, `eyebrow` utilities; `SwipeRow`, `CategoryArt`, `StatusBadge`, `LivesMeter` components in `src/components/ui/`) are there for new pages such as the application flow.
+- **Alternatives:** Showroom (closest to the reference, but generic) and Fjord (calm light marketplace). A JavaScript carousel library (more weight, weaker keyboard and touch behaviour than native scrolling). Stock photos (licensing risk, mixed look); a coloured tile with a line drawing per category stands in until the user's own images are ready.
+- **Why:** Second Life puts the product's point, items living more than once, into the design itself, which matters for the product and pitch scores. Native scroll-snap feels smooth on touch and trackpads, and keyboard users reach every card with Tab. Semantic tokens keep dark mode in one place instead of a `dark:` twin on every class.
+- **Consequences:** Visual only: no change to pricing, signing, data or API code. Product photos can replace `CategoryArt` later without changing card layout. The build downloads the two fonts once from Google; the browser never contacts Google.
+- **Evidence:** Checked catalogue → item → sign → contract → audit in the browser in light and dark, at desktop width and 400 px, in all four languages, with no horizontal overflow and no console errors. `npm run check:all` passes.

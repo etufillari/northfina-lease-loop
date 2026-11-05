@@ -10,7 +10,8 @@ export const GET = handleRoute(async () => ok(await listCustomers(db)));
 
 const bodySchema = z.strictObject({
   name: z.string().trim().min(1).max(200),
-  email: z.email(),
+  // An "empty user" needs only a name; the email is asked again in every application.
+  email: z.union([z.email(), z.literal('')]).default(''),
   type: z.enum(['consumer', 'sole_trader', 'company']).default('consumer'),
   actor: z.string().trim().min(1).max(100),
 });

@@ -46,7 +46,7 @@ export function PersonaPicker({ locale, initialId }: { locale: Locale; initialId
   async function addCustomer() {
     const name = window.prompt(t('persona.newName'));
     if (!name) return;
-    const email = window.prompt(t('persona.newEmail')) ?? '';
+    const email = (window.prompt(t('persona.newEmail')) ?? '').trim();
     const response = await fetch('/api/customers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -56,6 +56,9 @@ export function PersonaPicker({ locale, initialId }: { locale: Locale; initialId
     if (body.success) {
       setCustomers((list) => [...list, body.data]);
       choose(body.data.id);
+    } else {
+      // Never fail silently: say what the API objected to.
+      window.alert(body.error?.message ?? t('common.error'));
     }
   }
 

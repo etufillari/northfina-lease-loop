@@ -50,6 +50,18 @@ export function findIdentity(
   return listIdentities(customers, staff).find((identity) => identityId(identity) === id);
 }
 
+/** A plain, serializable view of an identity: enough for an "acting as" UI, no more. */
+export type IdentitySummary = { id: string; name: string; role: Role; kind: Identity['kind'] };
+
+export function identitySummary(identity: Identity): IdentitySummary {
+  return {
+    id: identityId(identity),
+    name: identityName(identity),
+    role: identity.role,
+    kind: identity.kind,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Permissions: can a role ever do this, not "may this person do this to this record".
 // A record-specific check (e.g. "only the client who owns this contract") belongs in

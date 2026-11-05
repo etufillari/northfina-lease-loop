@@ -5,6 +5,7 @@ import {
   findIdentity,
   identityId,
   identityName,
+  identitySummary,
   isRole,
   listIdentities,
   PERMISSIONS,
@@ -66,6 +67,28 @@ describe('identityId and identityName', () => {
     const identity = listIdentities([], [dealer])[0]!;
     expect(identityId(identity)).toBe('staff-dealer');
     expect(identityName(identity)).toBe('Dealer desk');
+  });
+});
+
+describe('identitySummary', () => {
+  it('flattens a customer identity to a plain id, name, role and kind', () => {
+    const identity = listIdentities([aino], [])[0]!;
+    expect(identitySummary(identity)).toEqual({
+      id: 'cust-aino',
+      name: 'Aino Virtanen',
+      role: 'client',
+      kind: 'customer',
+    });
+  });
+
+  it('flattens a staff identity the same way', () => {
+    const identity = listIdentities([], [dealer])[0]!;
+    expect(identitySummary(identity)).toEqual({
+      id: 'staff-dealer',
+      name: 'Dealer desk',
+      role: 'dealer',
+      kind: 'staff',
+    });
   });
 });
 

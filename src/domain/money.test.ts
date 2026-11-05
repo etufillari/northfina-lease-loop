@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatEuro } from './money';
+import { formatEuro, parseEuroToCents } from './money';
 
 // Intl uses no-break spaces; compare with plain spaces so the tests are readable.
 const plain = (text: string) => text.replace(/\s/g, ' ');
@@ -26,5 +26,36 @@ describe('formatEuro', () => {
 
   it('throws on fractions of a cent', () => {
     expect(() => formatEuro(10.5, 'en')).toThrow(RangeError);
+  });
+});
+
+describe('parseEuroToCents', () => {
+  it('reads whole euros and one or two decimals, with comma or dot', () => {
+    expect(parseEuroToCents('2500')).toBe(250_000);
+    expect(parseEuroToCents('2500,5')).toBe(250_050);
+    expect(parseEuroToCents('2500.50')).toBe(250_050);
+    expect(parseEuroToCents('0,05')).toBe(5);
+    expect(parseEuroToCents('0')).toBe(0);
+  });
+
+  it('is exact where a float would not be', () => {
+    expect(parseEuroToCents('0.29')).toBe(29);
+    expect(parseEuroToCents('1.15')).toBe(115);
+    expect(parseEuroToCents('19.99')).toBe(1999);
+  });
+
+  it('ignores spaces used as thousands separators', () => {
+    expect(parseEuroToCents('2 500,50')).toBe(250_050);
+    expect(parseEuroToCents(' 12 000 ')).toBe(1_200_000);
+  });
+
+  it('rejects anything that is not a plain non-negative amount', () => {
+    for (const bad of ['', 'abc', '-5', '1,234', '1.', '.5', '1,2,3', '1e3', '12€']) {
+      expect(parseEuroToCents(bad), bad).toBeNull();
+    }
+  });
+
+  it('rejects amounts too large to hold exactly', () => {
+    expect(parseEuroToCents('9'.repeat(30))).toBeNull();
   });
 });

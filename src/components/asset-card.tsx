@@ -23,10 +23,10 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
   const fallbackImage = categoryFallbackImages[asset.category];
 
   return (
-    <Link href={`/assets/${asset.id}`} className="group block">
+    <Link href={`/${locale}/assets/${asset.id}`} className="group block">
       <article
         aria-labelledby={headingId}
-        className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+        className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
       >
         <div className="relative mb-4 aspect-[16/9] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
           <Image

@@ -55,8 +55,9 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
         <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
       </dl>
 
+      {/* List price */}
       <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex items-end justify-between gap-3 px-3">
           <div className="text-xs text-stone-600 dark:text-stone-400">
             <p>{t('asset.listPrice')}</p>
             {price.ok ? (
@@ -75,20 +76,20 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
 
         {/* Estimated lease price */}
         {price.ok && (
-          <div className="mt-4 rounded-xl bg-stone-50 p-3 dark:bg-stone-800/60">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-stone-500 dark:text-stone-400">
-                {t('asset.estimatedLeasePrice')} · {t('asset.leaseDuration', { months: 12 })}
-              </p>
-            </div>
+          <div className="mt-4 rounded-xl bg-stone-50 px-3 py-3 dark:bg-stone-800/60">
+            <div className="flex items-end justify-between gap-3">
+              <div className="text-xs text-stone-600 dark:text-stone-400">
+                <p>{t('asset.estimatedLeasePrice')}</p>
+                <p>{t('asset.estimatedLeaseVat')}</p>
+                <p>{t('asset.leaseDuration', { months: 12 })}</p>
+              </div>
 
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-semibold tabular-nums">
-                {formatEuro(leasePrice, intlLocale[locale])}
-              </span>
-              <span className="text-sm text-stone-500 dark:text-stone-400">
-                / {t('asset.month')}
-              </span>
+              <div className="text-right">
+                <p className="text-xl font-semibold tabular-nums">
+                  {formatEuro(leasePrice, intlLocale[locale])}
+                </p>
+                <p className="text-sm text-stone-500 dark:text-stone-400">/ {t('asset.month')}</p>
+              </div>
             </div>
           </div>
         )}

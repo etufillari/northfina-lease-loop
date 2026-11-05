@@ -45,7 +45,8 @@
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
   "footer.skeleton": "Algmall — asenda mind",
-  "asset.estimatedLeasePrice": "Arvestatud liisingu hind käibemaksuta",
+  "asset.estimatedLeasePrice": "Arvestatud liisingu",
+  "asset.estimatedLeaseVat": "hind käibemaksuta",
   "asset.month": "kuu",
   "asset.leaseDuration": "{months} kuud"
 }

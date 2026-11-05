@@ -122,7 +122,16 @@ export function MonthlyInvoices({
           </p>
           <p className="text-[0.75rem] text-[#615b57]">
             {schedule.signingVatRatePercent}%
-            {schedule.invoices.some((inv) => inv.isVatChangedFromSigning) ? ' → 26.0%' : ''}
+            {(() => {
+              const changedRates = Array.from(
+                new Set(
+                  schedule.invoices
+                    .filter((inv) => inv.isVatChangedFromSigning)
+                    .map((inv) => `${inv.vatRatePercent}%`)
+                )
+              );
+              return changedRates.length > 0 ? ` → ${changedRates.join(', ')}` : '';
+            })()}
           </p>
         </div>
 
@@ -169,7 +178,7 @@ export function MonthlyInvoices({
               <tr
                 key={inv.invoiceNumber}
                 className={`transition-colors hover:bg-[#f7f7f7] ${
-                  inv.isVatChangedFromSigning ? 'bg-[#fdfbf7]' : ''
+                  inv.isVatChangedFromSigning ? 'bg-[#f8f7f6]' : ''
                 }`}
               >
                 <td className="px-[16px] py-[12px] font-mono font-medium text-[#353331]">

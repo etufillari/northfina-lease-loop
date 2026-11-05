@@ -69,8 +69,22 @@ describe('GET /api/assets/:id/quote', () => {
     expect(status).toBe(422);
     expect(body.error).toMatchObject({
       code: 'QUOTE_NOT_AVAILABLE',
-      details: { reason: 'below_minimum' },
+      details: { reason: 'below_minimum', down_payment_limits: null },
     });
+  });
+
+  it('tells the slider which down payments work when the price is too high', async () => {
+    const { status, body } = await getQuote('farm-006', 'term=48');
+    expect(status).toBe(422);
+    expect(body.error.details).toEqual({
+      reason: 'above_maximum',
+      down_payment_limits: { min_cents: 1_000_000, max_cents: 25_970_000 },
+    });
+  });
+
+  it('includes the limits in a successful quote', async () => {
+    const { body } = await getQuote('ebike-003', 'term=36&on=2026-11-05');
+    expect(body.data.down_payment_limits).toEqual({ min_cents: 0, max_cents: 359_000 });
   });
 
   it.each([

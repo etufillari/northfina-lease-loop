@@ -16,6 +16,33 @@ export type QuoteInput = {
   termMonths: number;
 };
 
+export type DownPaymentLimitsResult =
+  { ok: true; minCents: number; maxCents: number } | { ok: false; reason: 'below_minimum' };
+
+/**
+ * The down payments that keep the financed amount inside the table, for a slider.
+ * The table's smallest and largest financed amounts decide, so the limits follow the data.
+ * `ok: false` means the price is under the minimum, so no down payment can make the deal valid.
+ * The limits do not depend on the term. Pass the price for all units when leasing several.
+ */
+export function downPaymentLimits(
+  table: CoefficientTable,
+  basePriceCents: number
+): DownPaymentLimitsResult {
+  if (!Number.isInteger(basePriceCents) || basePriceCents < 0) {
+    throw new RangeError(`basePriceCents must be whole cents, got ${basePriceCents}`);
+  }
+  const minFinanced = Math.min(...table.bands.map((b) => b.min_financed_cents));
+  const maxFinanced = Math.max(...table.bands.map((b) => b.max_financed_cents));
+
+  if (basePriceCents < minFinanced) return { ok: false, reason: 'below_minimum' };
+  return {
+    ok: true,
+    minCents: Math.max(0, basePriceCents - maxFinanced),
+    maxCents: basePriceCents - minFinanced,
+  };
+}
+
 /**
  * Rent and buyout for a deal. Each is rounded once, half up (see `roundedDivide`).
  * Limits apply to the financed amount, not the list price, so a down payment can bring

@@ -35,6 +35,7 @@ export const GET = handleRoute(
     }
     return fail(422, 'QUOTE_NOT_AVAILABLE', 'This deal cannot be priced', {
       reason: result.reason,
+      down_payment_limits: result.down_payment_limits ?? null,
     });
   }
 );

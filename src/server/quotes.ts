@@ -4,9 +4,12 @@
 import type { Quote, QuoteFailureReason } from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { listPriceOn } from '@/domain/price-list';
-import { quote } from '@/domain/pricing';
+import { downPaymentLimits, quote } from '@/domain/pricing';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
+
+/** The down payments that keep the deal valid. `null` when no down payment can. */
+export type DownPaymentRange = { min_cents: number; max_cents: number } | null;
 
 export type AssetQuote = Quote & {
   asset_id: string;
@@ -17,13 +20,16 @@ export type AssetQuote = Quote & {
   monthly_total_cents: number;
   buyout_percent: number | null;
   total_net_cost_cents: number;
+  down_payment_limits: DownPaymentRange;
 };
 
 export type QuoteAssetFailureReason =
   QuoteFailureReason | 'asset_not_found' | 'asset_not_available' | 'no_price_on_date';
 
 export type QuoteAssetResult =
-  { ok: true; quote: AssetQuote } | { ok: false; reason: QuoteAssetFailureReason };
+  | { ok: true; quote: AssetQuote }
+  // `down_payment_limits` is set when the deal could not be priced, so a slider can recover.
+  | { ok: false; reason: QuoteAssetFailureReason; down_payment_limits?: DownPaymentRange };
 
 export async function quoteAsset(
   db: PrismaClient,
@@ -45,13 +51,18 @@ export async function quoteAsset(
   const vatRate = vatRateOn(vatRates, date);
   if (!listPrice.ok || !vatRate.ok) return { ok: false, reason: 'no_price_on_date' };
 
+  const limits = downPaymentLimits(table, listPrice.priceCents);
+  const range: DownPaymentRange = limits.ok
+    ? { min_cents: limits.minCents, max_cents: limits.maxCents }
+    : null;
+
   const result = quote(table, {
     basePriceCents: listPrice.priceCents,
     priceListVersion: listPrice.priceListVersion,
     downPaymentCents,
     termMonths,
   });
-  if (!result.ok) return result;
+  if (!result.ok) return { ...result, down_payment_limits: range };
 
   const priced = result.quote;
   const monthlyVatCents = vatCents(priced.monthly_net_rent_cents, vatRate.rateBasisPoints);
@@ -71,6 +82,7 @@ export async function quoteAsset(
         priced.down_payment_cents +
         priced.monthly_net_rent_cents * priced.term_months +
         priced.buyout_cents,
+      down_payment_limits: range,
     },
   };
 }

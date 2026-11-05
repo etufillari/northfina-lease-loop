@@ -94,14 +94,33 @@ describe('quoteAsset', () => {
     });
   });
 
-  it('passes on the reason a deal cannot be priced', async () => {
+  it('passes on the reason a deal cannot be priced, with the down payments that would work', async () => {
+    // ebike-010 costs 28 900 on price list 1: under the minimum, so nothing helps.
     expect(await quoteAsset(db, { ...input, assetId: 'ebike-010' })).toEqual({
       ok: false,
       reason: 'below_minimum',
+      down_payment_limits: null,
     });
     expect(await quoteAsset(db, { ...input, assetId: 'farm-006' })).toEqual({
       ok: false,
       reason: 'above_maximum',
+      down_payment_limits: { min_cents: 1_000_000, max_cents: 25_970_000 },
     });
+  });
+
+  it('returns the down payment limits with a successful quote', async () => {
+    expect(await quoteAsset(db, input)).toMatchObject({
+      ok: true,
+      quote: { down_payment_limits: { min_cents: 0, max_cents: 359_000 } },
+    });
+    expect(
+      await quoteAsset(db, { ...input, assetId: 'ebike-010', date: '2026-11-06' })
+    ).toMatchObject({ ok: true, quote: { down_payment_limits: { min_cents: 0, max_cents: 300 } } });
+  });
+
+  it('recovers farm-006 once the down payment is inside the limits', async () => {
+    expect(
+      await quoteAsset(db, { ...input, assetId: 'farm-006', downPaymentCents: 1_000_000 })
+    ).toMatchObject({ ok: true, quote: { financed_cents: 25_000_000, band: 'D' } });
   });
 });

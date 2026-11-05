@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { quoteSchema } from '@/data/lease-schemas';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { quote, type QuoteInput } from './pricing';
+import { downPaymentLimits, quote, type QuoteInput } from './pricing';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -131,5 +131,54 @@ describe('quote', () => {
       ok: false,
       reason: 'below_minimum',
     });
+  });
+});
+
+describe('downPaymentLimits', () => {
+  it('allows no down payment up to the table maximum for a normal price', () => {
+    expect(downPaymentLimits(table, 389_000)).toEqual({
+      ok: true,
+      minCents: 0,
+      maxCents: 359_000,
+    });
+  });
+
+  it('requires a down payment for farm-006 (a price above the maximum)', () => {
+    expect(downPaymentLimits(table, 26_000_000)).toEqual({
+      ok: true,
+      minCents: 1_000_000,
+      maxCents: 25_970_000,
+    });
+  });
+
+  it('leaves ebike-010 on price list 2 only 300 cents of room', () => {
+    expect(downPaymentLimits(table, 30_300)).toEqual({ ok: true, minCents: 0, maxCents: 300 });
+  });
+
+  it('has exactly one valid down payment at the lowest price that can be financed', () => {
+    expect(downPaymentLimits(table, 30_000)).toEqual({ ok: true, minCents: 0, maxCents: 0 });
+  });
+
+  it('says no down payment helps when the price is under the minimum', () => {
+    expect(downPaymentLimits(table, 29_999)).toEqual({ ok: false, reason: 'below_minimum' });
+    expect(downPaymentLimits(table, 0)).toEqual({ ok: false, reason: 'below_minimum' });
+  });
+
+  it('gives limits at which quote() works, and one cent beyond which it fails', () => {
+    for (const price of [389_000, 26_000_000, 30_300]) {
+      const limits = downPaymentLimits(table, price);
+      if (!limits.ok) throw new Error('expected limits');
+      const at = (downPaymentCents: number) =>
+        quote(table, deal({ basePriceCents: price, downPaymentCents })).ok;
+      expect(at(limits.minCents)).toBe(true);
+      expect(at(limits.maxCents)).toBe(true);
+      expect(at(limits.maxCents + 1)).toBe(false);
+      if (limits.minCents > 0) expect(at(limits.minCents - 1)).toBe(false);
+    }
+  });
+
+  it('rejects a price that is not whole cents', () => {
+    expect(() => downPaymentLimits(table, 100.5)).toThrow(RangeError);
+    expect(() => downPaymentLimits(table, -1)).toThrow(RangeError);
   });
 });

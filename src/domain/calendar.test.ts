@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addDays,
   addMonthsClamped,
   daysInMonth,
   isLeapYear,
@@ -70,6 +71,14 @@ describe('nextDay', () => {
     expect(nextDay('2026-02-28')).toBe('2026-03-01');
     expect(nextDay('2028-02-28')).toBe('2028-02-29');
     expect(nextDay('2026-12-31')).toBe('2027-01-01');
+  });
+});
+
+describe('addDays', () => {
+  it('adds the 7-day hold across a month end', () => {
+    expect(addDays('2026-11-05', 7)).toBe('2026-11-12');
+    expect(addDays('2026-11-28', 7)).toBe('2026-12-05');
+    expect(addDays('2026-11-05', 0)).toBe('2026-11-05');
   });
 });
 

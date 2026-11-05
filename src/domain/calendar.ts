@@ -62,6 +62,16 @@ export function nextDay(isoDate: string): string {
   return toIso(year + 1, 1, 1);
 }
 
+/** `isoDate` plus `days` calendar days (small counts: holds and reservation windows). */
+export function addDays(isoDate: string, days: number): string {
+  if (!Number.isInteger(days) || days < 0) {
+    throw new RangeError(`days must be a non-negative integer, got ${days}`);
+  }
+  let date = isoDate;
+  for (let i = 0; i < days; i++) date = nextDay(date);
+  return date;
+}
+
 /** Full years of age on `onIso` for someone born `birthIso` (birthday counts). */
 export function yearsOld(birthIso: string, onIso: string): number {
   const birth = parseIso(birthIso);

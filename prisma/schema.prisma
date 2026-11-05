@@ -71,3 +71,32 @@ model Application {
 
   @@index([asset_id])
 }
+
+// A signed lease contract. Every price field is COPIED from the approved application at
+// signing and never recalculated, so later price lists can't change it. VAT is not stored:
+// it is charged at the rate on each invoice's own date.
+model Contract {
+  id                 String   @id
+  created_at         DateTime @default(now())
+  application_id     String   @unique
+  asset_id           String
+  signed_date        String // YYYY-MM-DD
+  signer_name        String
+  customer_type      String
+  customer_name      String
+  customer_email     String?
+  business_id        String?
+  start_date         String // YYYY-MM-DD, the signing day
+  end_date           String // YYYY-MM-DD, last day of the lease
+  term_months        Int
+  quote_date         String // when the locked price was calculated
+  price_list_version Int
+  list_price_cents   Int
+  down_payment_cents Int
+  financed_cents     Int
+  monthly_net_cents  Int
+  buyout_cents       Int
+  status             String // active
+
+  @@index([asset_id])
+}

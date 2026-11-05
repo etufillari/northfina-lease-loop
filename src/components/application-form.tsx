@@ -4,6 +4,7 @@
 // this deal, drops answers that stop applying when an earlier answer changes, and shows the
 // decision (yes, no, or "a person will check") live as the customer answers. The server
 // makes the same decision again when the application is sent.
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import type { Question } from '@/data/schemas';
 import { decideApplication } from '@/domain/application';
@@ -17,6 +18,7 @@ import {
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { QuestionField } from './question-field';
+import { useSessionState } from './use-session-state';
 
 type ApplicationFormProps = {
   questions: Question[];
@@ -27,12 +29,18 @@ type ApplicationFormProps = {
 
 type Submitted = { id: string; decision: 'approved' | 'manual_review' | 'rejected' };
 
+// Stable starting values for useSessionState (it compares them by identity).
+const NO_ANSWERS: Record<string, string> = {};
+const NOT_SUBMITTED: Submitted | null = null;
+
 export function ApplicationForm({ questions, context, deal, locale }: ApplicationFormProps) {
   const t = getT(locale);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Kept in this tab's session storage, so switching language doesn't wipe the answers.
+  const storageKey = `apply:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
+  const [answers, setAnswers] = useSessionState(`${storageKey}:answers`, NO_ANSWERS);
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
-  const [submitted, setSubmitted] = useState<Submitted | null>(null);
+  const [submitted, setSubmitted] = useSessionState(`${storageKey}:submitted`, NOT_SUBMITTED);
 
   const visible = getVisibleQuestions(questions, answers, context);
   const { evaluation } = decideApplication(questions, answers, context);
@@ -79,6 +87,14 @@ export function ApplicationForm({ questions, context, deal, locale }: Applicatio
         {submitted.decision !== 'rejected' ? (
           <p className="mt-2">{t(`apply.successNext.${submitted.decision}`)}</p>
         ) : null}
+        {submitted.decision === 'approved' ? (
+          <Link
+            href={`/${locale}/applications/${submitted.id}`}
+            className="mt-4 inline-block rounded-lg bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-emerald-800"
+          >
+            {t('apply.toContract')}
+          </Link>
+        ) : null}
       </section>
     );
   }
@@ -101,7 +117,7 @@ export function ApplicationForm({ questions, context, deal, locale }: Applicatio
         );
       })}
 
-      <div className="sticky bottom-4 z-10 space-y-4 rounded-2xl border border-stone-200 bg-white/95 p-5 shadow-lg backdrop-blur dark:border-stone-800 dark:bg-stone-900/95">
+      <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900">
         <Decision evaluation={evaluation} context={context} locale={locale} t={t} />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm text-stone-600 dark:text-stone-400">

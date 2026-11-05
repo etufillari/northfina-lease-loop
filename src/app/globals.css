@@ -10,3 +10,21 @@
   outline: 2px solid var(--color-emerald-600);
   outline-offset: 2px;
 }
+
+/*
+ * Printing (the contract's "Print or save as PDF").
+ * Browsers print the page URL, title and date in the page margins. With no page margin there
+ * is no room for them, so the printout shows only our content; the body padding gives the
+ * contract its own margin instead. Print in light colours even when the screen is dark.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    padding: 16mm 18mm;
+    color-scheme: light;
+  }
+}

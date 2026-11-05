@@ -145,3 +145,51 @@ export async function submitApplication(
     },
   };
 }
+
+export type StoredApplication = {
+  id: string;
+  createdAt: string;
+  quoteDate: string;
+  assetId: string;
+  customerType: string;
+  applicantName: string | null;
+  termMonths: number;
+  downPaymentCents: number;
+  listPriceCents: number;
+  priceListVersion: number;
+  financedCents: number;
+  monthlyNetCents: number;
+  monthlyGrossCents: number;
+  vatPercent: number;
+  decision: ApplicationDecisionStatus;
+  reasons: EligibilityRuleId[];
+  answers: Record<string, string>;
+};
+
+/** One stored application by id, or `null`. */
+export async function getApplication(
+  db: PrismaClient,
+  id: string
+): Promise<StoredApplication | null> {
+  const row = await db.application.findUnique({ where: { id } });
+  if (!row) return null;
+  return {
+    id: row.id,
+    createdAt: row.created_at.toISOString(),
+    quoteDate: row.quote_date,
+    assetId: row.asset_id,
+    customerType: row.customer_type,
+    applicantName: row.applicant_name,
+    termMonths: row.term_months,
+    downPaymentCents: row.down_payment_cents,
+    listPriceCents: row.list_price_cents,
+    priceListVersion: row.price_list_version,
+    financedCents: row.financed_cents,
+    monthlyNetCents: row.monthly_net_cents,
+    monthlyGrossCents: row.monthly_gross_cents,
+    vatPercent: row.vat_basis_points / 100,
+    decision: row.decision as ApplicationDecisionStatus,
+    reasons: JSON.parse(row.reasons_json) as EligibilityRuleId[],
+    answers: JSON.parse(row.answers_json) as Record<string, string>,
+  };
+}

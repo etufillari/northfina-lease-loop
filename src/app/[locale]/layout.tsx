@@ -22,15 +22,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
   return (
     <html lang={locale}>
-      <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
+      <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100 print:bg-white print:text-black">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-stone-900 focus:shadow"
+          className="print:hidden sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-stone-900 focus:shadow"
         >
           {t('nav.skipToContent')}
         </a>
 
-        <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
+        <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 print:hidden">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <Link href={`/${locale}`} className="flex items-center gap-3 rounded-lg">
               <LoopMark />
@@ -59,7 +59,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {children}
         </main>
 
-        <footer className="border-t border-stone-200 dark:border-stone-800">
+        <footer className="border-t border-stone-200 dark:border-stone-800 print:hidden">
           <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
             {t('footer.skeleton')}
           </div>

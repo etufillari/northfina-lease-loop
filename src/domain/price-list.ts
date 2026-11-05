@@ -68,3 +68,18 @@ export function nextPriceChange(
 
   return { validFrom: next.valid_from, priceCents, priceListVersion: next.version };
 }
+
+/**
+ * Today's list price for `assetId`, but only when it differs from `lockedPriceCents`: what a
+ * signed contract's price-lock note explains ("today's list would say X; yours stays Y").
+ */
+export function differentPriceOn(
+  priceLists: readonly PriceList[],
+  assetId: string,
+  isoDate: string,
+  lockedPriceCents: number
+): { priceCents: number; priceListVersion: number } | null {
+  const today = listPriceOn(priceLists, assetId, isoDate);
+  if (!today.ok || today.priceCents === lockedPriceCents) return null;
+  return { priceCents: today.priceCents, priceListVersion: today.priceListVersion };
+}

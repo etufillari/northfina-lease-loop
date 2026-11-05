@@ -43,7 +43,17 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <div className="flex flex-wrap items-center gap-4">
+              <nav aria-label={t('nav.catalogue')} className="flex gap-4 text-sm font-medium">
+                <Link href={`/${locale}`} className="hover:underline">
+                  {t('nav.catalogue')}
+                </Link>
+                <Link href={`/${locale}/audit`} className="hover:underline">
+                  {t('nav.audit')}
+                </Link>
+              </nav>
+              <LanguageSwitcher current={locale} label={t('nav.language')} />
+            </div>
           </div>
         </header>
 

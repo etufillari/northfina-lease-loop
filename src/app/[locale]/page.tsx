@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import type { ZodType } from 'zod';
 import { AssetCard } from '@/components/asset-card';
+import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { loadPriceLists } from '@/data/load';
 import { assetCategorySchema, assetConditionSchema, assetStatusSchema } from '@/data/schemas';
 import { filterAssets } from '@/domain/asset-filter';
@@ -11,6 +12,7 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
+import { getActiveUser, listActiveUserOptions } from '@/server/active-user';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
@@ -30,7 +32,13 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assets, priceLists, activeUserData] = await Promise.all([
+    listAssets(db),
+    loadPriceLists(),
+    process.env.NODE_ENV === 'development'
+      ? Promise.all([listActiveUserOptions(), getActiveUser()])
+      : Promise.resolve(null),
+  ]);
   const filteredAssets = filterAssets(assets, filters);
   const groups = assetCategorySchema.options
     .map((category) => ({
@@ -41,10 +49,26 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="max-w-2xl">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           {t('catalogue.title')}
         </h1>
+        {activeUserData ? (
+          <DevUserSwitcher
+            users={activeUserData[0]}
+            activeUserId={activeUserData[1]?.id ?? null}
+            buttonLabel={t('dev.mode')}
+            label={t('dev.activeUser')}
+            resetLabel={t('dev.noActiveUser')}
+            customerTypeLabels={{
+              consumer: t('customerType.consumer'),
+              sole_trader: t('customerType.sole_trader'),
+              company: t('customerType.company'),
+            }}
+          />
+        ) : null}
+      </div>
+      <div className="max-w-2xl">
         <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
         <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
           <time dateTime={today}>

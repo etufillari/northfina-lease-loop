@@ -26,5 +26,8 @@ src/generated/
 npm-debug.log*
 .vercel
 
+# local files
+local.md
+
 # notes
 NOTES.md

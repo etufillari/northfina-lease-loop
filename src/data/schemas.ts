@@ -329,6 +329,24 @@ export type Customer = z.infer<typeof customerSchema>;
 export const customersFileSchema = z.array(customerSchema);
 
 // ---------------------------------------------------------------------------
+// data/staff.json: seeded Northfina users for the no-password "acting as" login.
+// Not part of the original data pack; added for the identity and roles feature.
+// ---------------------------------------------------------------------------
+
+export const staffRoleSchema = z.enum(['dealer', 'admin']);
+export type StaffRole = z.infer<typeof staffRoleSchema>;
+
+export const staffSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  role: staffRoleSchema,
+  /** Why this seeded user exists. */
+  story: z.string(),
+});
+export type Staff = z.infer<typeof staffSchema>;
+export const staffFileSchema = z.array(staffSchema);
+
+// ---------------------------------------------------------------------------
 // data/second-life-demand.json: people waiting for a returned item.
 // ---------------------------------------------------------------------------
 

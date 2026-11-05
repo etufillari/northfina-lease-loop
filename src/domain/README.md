@@ -22,11 +22,12 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 ## What is here
 
-| File             | What it does                                                             |
-| ---------------- | ------------------------------------------------------------------------ |
-| `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term. |
-| `price-list.ts`  | Worked example: finds the net list price of an asset on a date.          |
-| `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.              |
+| File             | What it does                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term.                                                                                     |
+| `price-list.ts`  | Worked example: finds the net list price of an asset on a date.                                                                                              |
+| `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.                                                                                                  |
+| `identity.ts`    | Roles for the no-password "acting as" login: merges customers and staff into one `Identity` list, and `can(role, permission)` decides what each role may do. |
 
 ## What teams are expected to add
 

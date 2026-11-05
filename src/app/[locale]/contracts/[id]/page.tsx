@@ -1,12 +1,17 @@
 // A signed lease contract, ready to print or save as PDF. Every price on it was copied at
-// signing; nothing here is recalculated from today's price lists.
+// signing; nothing here is recalculated from today's price lists. Below it (not printed): where
+// the lease stands on the app's date, the return action at the end, and the monthly invoices.
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { ContractDocument } from '@/components/contract-document';
+import { EndOfTermPanel } from '@/components/end-of-term-panel';
+import { InvoiceList } from '@/components/invoice-list';
 import { PrintButton } from '@/components/print-button';
 import { loadPriceLists, loadVatRates } from '@/data/load';
+import { contractStage } from '@/domain/contract';
+import { invoiceSchedule, splitByDate } from '@/domain/invoicing';
 import { differentPriceOn } from '@/domain/price-list';
 import { vatPercentOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
@@ -14,7 +19,7 @@ import { isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 /** Short, readable contract number from the id: the first 8 characters, upper case. */
 const contractNumber = (id: string) => id.slice(0, 8).toUpperCase();
@@ -42,7 +47,9 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   if (!asset) notFound();
 
   const t = getT(locale);
-  const today = todayIso();
+  const { today } = await appDate();
+  const schedule = invoiceSchedule(contract, vatRates);
+  const invoices = schedule.ok ? schedule.invoices : [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 print:max-w-none print:p-0">
@@ -62,12 +69,28 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         t={t}
       />
 
+      {/* Not part of the printed contract: where the lease stands today, and its invoices. */}
+      <EndOfTermPanel
+        contractId={contract.id}
+        assetId={contract.assetId}
+        signerName={contract.signerName}
+        stage={contractStage(contract, today)}
+        status={contract.status}
+        startDate={contract.startDate}
+        endDate={contract.endDate}
+        returnedDate={contract.returnedDate}
+        monthsIssued={splitByDate(invoices, today).issued.length}
+        termMonths={contract.termMonths}
+        locale={locale}
+      />
+      <InvoiceList invoices={invoices} today={today} locale={locale} t={t} />
+
       <Link
-        href={`/${locale}`}
+        href={`/${locale}/contracts`}
         className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 print:hidden"
       >
         <span aria-hidden="true">&larr;</span>
-        {t('contract.toCatalogue')}
+        {t('contracts.backToList')}
       </Link>
     </div>
   );

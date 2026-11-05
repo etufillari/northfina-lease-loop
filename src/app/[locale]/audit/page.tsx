@@ -20,40 +20,46 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">{t('audit.title')}</h1>
-      <p className="mt-2 text-stone-700 dark:text-stone-300">{t('audit.intro')}</p>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+      <h1 className="font-display text-3xl font-extrabold tracking-tight uppercase sm:text-4xl">
+        {t('audit.title')}
+      </h1>
+      <p className="mt-2 text-muted">{t('audit.intro')}</p>
       {rows.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 dark:border-stone-700">
+        <p className="mt-8 rounded-lg border border-dashed border-line p-6 text-muted">
           {t('audit.empty')}
         </p>
       ) : (
-        <div className="mt-8 overflow-x-auto">
+        <div className="panel mt-8 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-stone-600 dark:text-stone-400">
-              <tr className="border-b border-stone-200 dark:border-stone-800">
-                <th className="py-2 pr-4 font-medium">{t('audit.when')}</th>
-                <th className="py-2 pr-4 font-medium">{t('audit.who')}</th>
-                <th className="py-2 pr-4 font-medium">{t('audit.what')}</th>
-                <th className="py-2 pr-4 font-medium">{t('audit.entity')}</th>
-                <th className="py-2 font-medium">{t('audit.details')}</th>
+            <thead className="text-left text-xs tracking-wide text-muted uppercase">
+              <tr className="border-b border-line">
+                <th className="px-4 py-3 font-semibold">{t('audit.when')}</th>
+                <th className="px-4 py-3 font-semibold">{t('audit.who')}</th>
+                <th className="px-4 py-3 font-semibold">{t('audit.what')}</th>
+                <th className="px-4 py-3 font-semibold">{t('audit.entity')}</th>
+                <th className="px-4 py-3 font-semibold">{t('audit.details')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-stone-100 align-top dark:border-stone-800"
+                  className="border-b border-line align-top last:border-b-0 hover:bg-surface-2"
                 >
-                  <td className="py-2 pr-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                     <time dateTime={row.created_at}>{when.format(new Date(row.created_at))}</time>
                   </td>
-                  <td className="py-2 pr-4">{row.actor}</td>
-                  <td className="py-2 pr-4 font-mono text-xs">{row.action}</td>
-                  <td className="py-2 pr-4 font-mono text-xs">
+                  <td className="px-4 py-3">{row.actor}</td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full bg-surface-2 px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap text-accent-text">
+                      {row.action}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
                     {row.entity_type} {row.entity_id}
                   </td>
-                  <td className="py-2 font-mono text-xs break-all">
+                  <td className="px-4 py-3 font-mono text-xs break-all text-muted">
                     {row.details === null ? '' : JSON.stringify(row.details)}
                   </td>
                 </tr>

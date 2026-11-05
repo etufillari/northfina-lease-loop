@@ -32,12 +32,14 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const schedule = invoiceSchedule(contract, vatRates);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <p className="text-sm text-stone-600 dark:text-stone-400">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+      <p className="eyebrow">
         {assetRow ? `${assetRow.make} ${assetRow.model}` : contract.assetId}
       </p>
-      <h1 className="text-3xl font-semibold tracking-tight">{t('contract.title', { id })}</h1>
-      <p className="mt-2 text-stone-700 dark:text-stone-300">
+      <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight uppercase sm:text-4xl">
+        {t('contract.title', { id })}
+      </h1>
+      <p className="mt-2 text-muted">
         {t('contract.signedBy', {
           customer: customer?.name ?? contract.customerId,
           date: date(contract.signDate),
@@ -46,18 +48,18 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
 
       <section
         aria-labelledby="locked"
-        className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900"
+        className="relative mt-8 overflow-hidden rounded-xl bg-stage p-6 text-stage-fg sm:p-8"
       >
-        <h2 id="locked" className="text-lg font-semibold">
+        <h2 id="locked" className="font-display text-lg font-bold tracking-tight uppercase">
           {t('contract.locked')}
         </h2>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+        <p className="mt-1 max-w-2xl text-sm text-stage-muted">
           {t('contract.lockedNote', {
             date: date(contract.quoteDate),
             version: contract.priceListVersion,
           })}
         </p>
-        <dl className="mt-4 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+        <dl className="mt-6 grid gap-x-10 gap-y-1 text-sm sm:grid-cols-2">
           <Fact label={t('lease.listPrice', { version: contract.priceListVersion })}>
             {euro(contract.listPriceCents)}
           </Fact>
@@ -74,24 +76,22 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
       </section>
 
       <section aria-labelledby="invoices" className="mt-10">
-        <h2 id="invoices" className="text-lg font-semibold">
+        <h2 id="invoices" className="font-display text-lg font-bold tracking-tight uppercase">
           {t('contract.invoices')}
         </h2>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          {t('contract.billingRule')}
-        </p>
+        <p className="mt-1 max-w-2xl text-sm text-muted">{t('contract.billingRule')}</p>
         {schedule.ok ? (
-          <div className="mt-4 overflow-x-auto">
+          <div className="panel mt-4 overflow-x-auto">
             <table className="w-full text-sm tabular-nums">
-              <thead className="text-left text-stone-600 dark:text-stone-400">
-                <tr className="border-b border-stone-200 dark:border-stone-800">
-                  <th className="py-2 pr-4 font-medium">{t('contract.number')}</th>
-                  <th className="py-2 pr-4 font-medium">{t('contract.dueDate')}</th>
-                  <th className="py-2 pr-4 font-medium">{t('contract.period')}</th>
-                  <th className="py-2 pr-4 text-right font-medium">{t('contract.net')}</th>
-                  <th className="py-2 pr-4 text-right font-medium">{t('contract.vatRate')}</th>
-                  <th className="py-2 pr-4 text-right font-medium">{t('contract.vat')}</th>
-                  <th className="py-2 text-right font-medium">{t('contract.gross')}</th>
+              <thead className="text-left text-xs tracking-wide text-muted uppercase">
+                <tr className="border-b border-line">
+                  <th className="px-4 py-3 font-semibold">{t('contract.number')}</th>
+                  <th className="px-4 py-3 font-semibold">{t('contract.dueDate')}</th>
+                  <th className="px-4 py-3 font-semibold">{t('contract.period')}</th>
+                  <th className="px-4 py-3 text-right font-semibold">{t('contract.net')}</th>
+                  <th className="px-4 py-3 text-right font-semibold">{t('contract.vatRate')}</th>
+                  <th className="px-4 py-3 text-right font-semibold">{t('contract.vat')}</th>
+                  <th className="px-4 py-3 text-right font-semibold">{t('contract.gross')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,14 +124,14 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
                 })}
               </tbody>
               <tfoot className="font-semibold">
-                <tr className="border-t-2 border-stone-300 dark:border-stone-700">
-                  <td className="py-2 pr-4" colSpan={3}>
+                <tr className="border-t-2 border-line bg-surface-2">
+                  <td className="px-4 py-3" colSpan={3}>
                     {t('contract.total')}
                   </td>
-                  <td className="py-2 pr-4 text-right">{euro(schedule.totals.netCents)}</td>
+                  <td className="px-4 py-3 text-right">{euro(schedule.totals.netCents)}</td>
                   <td />
-                  <td className="py-2 pr-4 text-right">{euro(schedule.totals.vatCents)}</td>
-                  <td className="py-2 text-right">{euro(schedule.totals.grossCents)}</td>
+                  <td className="px-4 py-3 text-right">{euro(schedule.totals.vatCents)}</td>
+                  <td className="px-4 py-3 text-right">{euro(schedule.totals.grossCents)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -147,17 +147,14 @@ function InvoiceRows({ cells, vatNote }: { cells: string[]; vatNote: string | nu
     <>
       {vatNote ? (
         <tr>
-          <td
-            colSpan={7}
-            className="bg-amber-50 px-3 py-2 text-amber-950 dark:bg-amber-950 dark:text-amber-100"
-          >
+          <td colSpan={7} className="bg-warn-bg px-4 py-2 text-warn-fg">
             {vatNote}
           </td>
         </tr>
       ) : null}
-      <tr className="border-b border-stone-100 dark:border-stone-800">
+      <tr className="border-b border-line last:border-b-0 hover:bg-surface-2">
         {cells.map((cell, i) => (
-          <td key={i} className={`py-2 pr-4 ${i >= 3 ? 'text-right' : ''}`}>
+          <td key={i} className={`px-4 py-2.5 whitespace-nowrap ${i >= 3 ? 'text-right' : ''}`}>
             {cell}
           </td>
         ))}
@@ -168,9 +165,9 @@ function InvoiceRows({ cells, vatNote }: { cells: string[]; vatNote: string | nu
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-stone-100 py-1.5 dark:border-stone-800">
-      <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
-      <dd className="font-medium tabular-nums">{children}</dd>
+    <div className="flex justify-between gap-4 border-b border-white/10 py-2">
+      <dt className="text-stage-muted">{label}</dt>
+      <dd className="font-semibold tabular-nums">{children}</dd>
     </div>
   );
 }

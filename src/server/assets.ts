@@ -51,6 +51,8 @@ export async function listAssets(
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
 
+export type EndOfTermResolution = 'buyout' | 'return' | 'pass_on';
+
 /** Sets an asset's status and writes `asset.status_changed` to the audit log, atomically. */
 export async function changeAssetStatus(
   db: PrismaClient,
@@ -69,6 +71,49 @@ export async function changeAssetStatus(
       details: { from: existing.status, to: input.status },
     },
     (tx) => tx.asset.update({ where: { id: input.id }, data: { status: input.status } })
+  );
+  return { ok: true, asset: toAsset(updated) };
+}
+
+/**
+ * Resolves an asset's end of lease (buyout, return, or pass on to second life),
+ * updating its status and creating an audit record with details atomically.
+ */
+export async function resolveAssetEndOfTerm(
+  db: PrismaClient,
+  input: {
+    id: string;
+    action: EndOfTermResolution;
+    actor: string;
+    details?: Record<string, unknown>;
+  }
+): Promise<ChangeAssetStatusResult> {
+  const existing = await db.asset.findUnique({ where: { id: input.id } });
+  if (!existing) return { ok: false, reason: 'not_found' };
+
+  const nextStatus: AssetStatus = input.action === 'buyout' ? 'sold' : 'returned';
+  const auditAction =
+    input.action === 'buyout'
+      ? 'asset.bought_out'
+      : input.action === 'return'
+        ? 'asset.returned'
+        : 'asset.passed_on';
+
+  const updated = await withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: auditAction,
+      entityType: 'asset',
+      entityId: input.id,
+      details: {
+        from: existing.status,
+        to: nextStatus,
+        action: input.action,
+        ...input.details,
+      },
+    },
+    (tx) => tx.asset.update({ where: { id: input.id }, data: { status: nextStatus } })
   );
   return { ok: true, asset: toAsset(updated) };
 }

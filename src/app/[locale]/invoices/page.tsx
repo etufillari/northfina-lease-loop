@@ -6,10 +6,24 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { z } from 'zod';
+import { EndOfTermOptions } from '@/components/end-of-term-options';
 import { MonthlyInvoices } from '@/components/monthly-invoices';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import {
+  loadCo2Factors,
+  loadCoefficientTable,
+  loadPriceLists,
+  loadResidualCurves,
+  loadSecondLifeDemand,
+  loadVatRates,
+} from '@/data/load';
 import { isoDateSchema } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
+import {
+  calculateAvoidedCo2,
+  calculateBuyoutSettlement,
+  calculateResidualMarketValue,
+  matchSecondLifeWaitingList,
+} from '@/domain/end-of-term';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
@@ -42,11 +56,22 @@ export default async function InvoicesPage({
   const { asset: assetId, term, down } = query.data;
   const signedOn = query.data.signedOn ?? todayIso();
 
-  const [assets, priceLists, coefficientTable, vatRates] = await Promise.all([
+  const [
+    assets,
+    priceLists,
+    coefficientTable,
+    vatRates,
+    residualCurves,
+    secondLifeDemand,
+    co2Factors,
+  ] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
     loadCoefficientTable(),
     loadVatRates(),
+    loadResidualCurves(),
+    loadSecondLifeDemand(),
+    loadCo2Factors(),
   ]);
 
   const asset = assets.find((a) => a.id === assetId);
@@ -71,6 +96,37 @@ export default async function InvoicesPage({
 
   const { quote } = result;
   const formattedSignedDate = formatIsoDate(signedOn, locale);
+
+  const buyoutSettlement = calculateBuyoutSettlement({
+    buyoutNetCents: quote.buyoutNetCents,
+    asOf: signedOn,
+    vatRates,
+  });
+
+  const relistPriceCents = calculateResidualMarketValue({
+    firstListPriceCents: quote.listPriceCents,
+    ageMonths: quote.termMonths,
+    category: asset.category,
+    condition: asset.condition,
+    usage: asset.usage,
+    residualCurves,
+  });
+
+  const waitingListMatches = matchSecondLifeWaitingList({
+    category: asset.category,
+    condition: asset.condition,
+    relistPriceCents,
+    demand: secondLifeDemand,
+    asOf: signedOn,
+    coefficientTable,
+  });
+
+  const avoidedCo2Kg = calculateAvoidedCo2({
+    category: asset.category,
+    co2Factors,
+    relistPriceCents,
+    firstListPriceCents: quote.listPriceCents,
+  });
 
   const summaryRows: [string, string][] = [
     [t('apply.deal.item'), `${asset.make} ${asset.model}`],
@@ -182,6 +238,19 @@ export default async function InvoicesPage({
             model: asset.model,
             serial_number: asset.serial_number,
           }}
+        />
+
+        {/* End of term options (Buy, Return, Pass on) */}
+        <EndOfTermOptions
+          assetId={asset.id}
+          assetCategory={asset.category}
+          assetCondition={asset.condition}
+          assetName={`${asset.make} ${asset.model}`}
+          initialStatus={asset.status}
+          locale={locale}
+          buyoutSettlement={buyoutSettlement}
+          waitingListMatches={waitingListMatches}
+          avoidedCo2Kg={avoidedCo2Kg}
         />
       </div>
     </div>

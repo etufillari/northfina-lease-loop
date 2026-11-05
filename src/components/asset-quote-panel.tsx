@@ -90,6 +90,7 @@ export function AssetQuotePanel({
     const timeout = window.setTimeout(async () => {
       try {
         setLoadingQuote(true);
+        setQuote(null);
         setQuoteError(null);
 
         const query = new URLSearchParams({
@@ -122,19 +123,21 @@ export function AssetQuotePanel({
             throw new Error(body.error.message);
           }
 
-          throw new Error('Unable to calculate quote');
+          throw new Error(t('asset.quoteUnavailable'));
         }
 
         setQuote(body.data);
         setDownPaymentLimits(body.data.down_payment_limits);
         onUnitPriceChange(body.data.unit_price_cents);
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') return;
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
 
         setQuote(null);
         onUnitPriceChange(null);
 
-        setQuoteError(error instanceof Error ? error.message : 'Unable to calculate quote');
+        setQuoteError(error instanceof Error ? error.message : t('asset.quoteUnavailable'));
       } finally {
         if (!controller.signal.aborted) {
           setLoadingQuote(false);
@@ -146,7 +149,7 @@ export function AssetQuotePanel({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [assetId, available, term, downPayment, quantity, onUnitPriceChange]);
+  }, [assetId, available, term, downPayment, quantity, onUnitPriceChange, t]);
 
   return (
     <aside className="h-fit rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-6">
@@ -154,7 +157,7 @@ export function AssetQuotePanel({
 
       {!available ? (
         <div className="mt-6 rounded-xl bg-stone-50 px-4 py-4 text-sm text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-          This asset is currently unavailable for leasing.
+          {t('asset.unavailableForLeasing')}
         </div>
       ) : (
         <>
@@ -165,10 +168,10 @@ export function AssetQuotePanel({
                 htmlFor="term"
                 className="text-sm font-medium text-stone-700 dark:text-stone-300"
               >
-                {t('asset.leaseDuration', { months: term })}
+                {t('asset.leaseTerm')}
               </label>
 
-              <span className="text-lg font-semibold tabular-nums">
+              <span className="font-semibold tabular-nums">
                 {term} {t('asset.month')}
               </span>
             </div>
@@ -192,32 +195,6 @@ export function AssetQuotePanel({
             </div>
           </div>
 
-          {/* Quantity */}
-          <div className="mt-7">
-            <label
-              htmlFor="quantity"
-              className="text-sm font-medium text-stone-700 dark:text-stone-300"
-            >
-              Quantity
-            </label>
-
-            <input
-              id="quantity"
-              type="number"
-              min={1}
-              max={1000}
-              value={quantity}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-
-                if (Number.isInteger(value)) {
-                  setQuantity(Math.min(1000, Math.max(1, value)));
-                }
-              }}
-              className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-800"
-            />
-          </div>
-
           {/* Down payment */}
           <div className="mt-7">
             <div className="flex items-center justify-between gap-3">
@@ -225,7 +202,7 @@ export function AssetQuotePanel({
                 htmlFor="down-payment"
                 className="text-sm font-medium text-stone-700 dark:text-stone-300"
               >
-                Down payment
+                {t('asset.downPayment')}
               </label>
 
               <span className="font-semibold tabular-nums">{formatMoney(downPayment)}</span>
@@ -251,14 +228,42 @@ export function AssetQuotePanel({
             )}
           </div>
 
+          {/* Quantity */}
+          <div className="mt-7">
+            <label
+              htmlFor="quantity"
+              className="text-sm font-medium text-stone-700 dark:text-stone-300"
+            >
+              {t('asset.quantity')}
+            </label>
+
+            <input
+              id="quantity"
+              type="number"
+              min={1}
+              max={1000}
+              value={quantity}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+
+                if (Number.isInteger(value)) {
+                  setQuantity(Math.min(1000, Math.max(1, value)));
+                }
+              }}
+              className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-800"
+            />
+          </div>
+
           {/* Quote result */}
           <div className="mt-8 rounded-xl bg-stone-50 p-4 dark:bg-stone-800/60 sm:p-5">
             {loadingQuote ? (
-              <p className="text-sm text-stone-500 dark:text-stone-400">Updating quote...</p>
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                {t('asset.updatingQuote')}
+              </p>
             ) : quote ? (
               <>
                 <p className="text-xs text-stone-600 dark:text-stone-400">
-                  Monthly payment including VAT
+                  {t('asset.monthlyPaymentIncludingVat')}
                 </p>
 
                 <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">
@@ -270,42 +275,48 @@ export function AssetQuotePanel({
 
                 <div className="mt-5 space-y-3 border-t border-stone-200 pt-4 text-sm dark:border-stone-700">
                   <QuoteFact
-                    label="Net monthly rent"
+                    label={t('asset.netMonthlyRent')}
                     value={formatMoney(quote.monthly_net_rent_cents)}
                   />
 
                   <QuoteFact
-                    label={`VAT (${quote.vat_rate_percent}%)`}
+                    label={`${t('asset.vat')} (${quote.vat_rate_percent}%)`}
                     value={formatMoney(quote.monthly_vat_cents)}
                   />
 
-                  <QuoteFact label="Unit list price" value={formatMoney(quote.unit_price_cents)} />
+                  <QuoteFact
+                    label={t('asset.unitListPrice')}
+                    value={formatMoney(quote.unit_price_cents)}
+                  />
 
-                  <QuoteFact label="Total financed" value={formatMoney(quote.financed_cents)} />
+                  <QuoteFact
+                    label={t('asset.totalFinanced')}
+                    value={formatMoney(quote.financed_cents)}
+                  />
 
-                  <QuoteFact label="Buyout" value={formatMoney(quote.buyout_cents)} />
+                  <QuoteFact label={t('asset.buyout')} value={formatMoney(quote.buyout_cents)} />
                 </div>
 
                 <div className="mt-5 space-y-3 border-t border-stone-200 pt-4 text-sm dark:border-stone-700">
                   <QuoteFact
-                    label="Total if returned"
+                    label={t('asset.totalIfReturned')}
                     value={formatMoney(quote.total_if_returned_cents)}
                   />
 
                   <QuoteFact
-                    label="Total if bought"
+                    label={t('asset.totalIfBought')}
                     value={formatMoney(quote.total_if_bought_cents)}
                     strong
                   />
                 </div>
 
                 <p className="mt-5 text-xs text-stone-500 dark:text-stone-400">
-                  Quote date: {quote.quote_date}
+                  {t('asset.quoteDate')}: {quote.quote_date}
                 </p>
               </>
             ) : (
               <p className="text-sm text-red-600 dark:text-red-400">
-                {quoteError ?? 'Unable to calculate quote.'}
+                {quoteError ?? t('asset.quoteUnavailable')}
               </p>
             )}
           </div>

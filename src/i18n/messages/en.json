@@ -49,5 +49,20 @@
   "asset.estimatedLeaseVat": "excl. VAT",
   "asset.month": "month",
   "asset.leaseDuration": "{months} months",
-  "navigation.backToCatalogue": "Back"
+  "asset.leaseTerm": "Lease term",
+  "navigation.backToCatalogue": "Back",
+  "asset.unavailableForLeasing": "This asset is currently unavailable for leasing.",
+  "asset.downPayment": "Down payment",
+  "asset.quantity": "Quantity",
+  "asset.updatingQuote": "Updating quote...",
+  "asset.monthlyPaymentIncludingVat": "Monthly payment including VAT",
+  "asset.netMonthlyRent": "Net monthly rent",
+  "asset.vat": "VAT",
+  "asset.unitListPrice": "Unit list price",
+  "asset.totalFinanced": "Total financed",
+  "asset.buyout": "Buyout",
+  "asset.totalIfReturned": "Total if returned",
+  "asset.totalIfBought": "Total if bought",
+  "asset.quoteDate": "Quote date",
+  "asset.quoteUnavailable": "Unable to calculate quote."
 }

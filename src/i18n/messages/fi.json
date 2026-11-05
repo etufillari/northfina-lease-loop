@@ -48,6 +48,21 @@
   "asset.estimatedLeasePrice": "Arvioitu vuokrasopimuksen",
   "asset.estimatedLeaseVat": "hinta alv 0 %",
   "asset.month": "kuukausi",
+  "asset.leaseTerm": "Vuokra-aika",
   "asset.leaseDuration": "{months} kuukautta",
-  "navigation.backToCatalogue": "Takaisin"
+  "navigation.backToCatalogue": "Takaisin",
+  "asset.unavailableForLeasing": "Tämä kohde ei ole tällä hetkellä vuokrattavissa.",
+  "asset.downPayment": "Käsiraha",
+  "asset.quantity": "Määrä",
+  "asset.updatingQuote": "Päivitetään tarjousta...",
+  "asset.monthlyPaymentIncludingVat": "Kuukausierä sisältäen arvonlisäveron",
+  "asset.netMonthlyRent": "Kuukausivuokra ilman arvonlisäveroa",
+  "asset.vat": "Arvonlisävero",
+  "asset.unitListPrice": "Yksikköhinta",
+  "asset.totalFinanced": "Rahoitettava summa",
+  "asset.buyout": "Lunastushinta",
+  "asset.totalIfReturned": "Kokonaishinta palautettaessa",
+  "asset.totalIfBought": "Kokonaishinta lunastettaessa",
+  "asset.quoteDate": "Tarjouspäivä",
+  "asset.quoteUnavailable": "Tarjouksen laskeminen ei onnistunut."
 }

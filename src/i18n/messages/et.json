@@ -48,6 +48,21 @@
   "asset.estimatedLeasePrice": "Arvestatud liisingu",
   "asset.estimatedLeaseVat": "hind käibemaksuta",
   "asset.month": "kuu",
+  "asset.leaseTerm": "Rendiperiood",
   "asset.leaseDuration": "{months} kuud",
-  "navigation.backToCatalogue": "Tagasi"
+  "navigation.backToCatalogue": "Tagasi",
+  "asset.unavailableForLeasing": "See vara ei ole praegu liisinguks saadaval.",
+  "asset.downPayment": "Sissemakse",
+  "asset.quantity": "Kogus",
+  "asset.updatingQuote": "Pakkumist uuendatakse...",
+  "asset.monthlyPaymentIncludingVat": "Igakuine makse koos käibemaksuga",
+  "asset.netMonthlyRent": "Igakuine renditasu ilma käibemaksuta",
+  "asset.vat": "Käibemaks",
+  "asset.unitListPrice": "Ühe ühiku nimekirjahind",
+  "asset.totalFinanced": "Finantseeritav summa",
+  "asset.buyout": "Väljaostuhind",
+  "asset.totalIfReturned": "Kogukulu tagastamisel",
+  "asset.totalIfBought": "Kogukulu väljaostmisel",
+  "asset.quoteDate": "Pakkumise kuupäev",
+  "asset.quoteUnavailable": "Pakkumise arvutamine ebaõnnestus."
 }

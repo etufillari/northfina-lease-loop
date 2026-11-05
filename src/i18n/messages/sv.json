@@ -48,6 +48,21 @@
   "asset.estimatedLeasePrice": "Uppskattad leasingpris",
   "asset.estimatedLeaseVat": "exkl. moms",
   "asset.month": "månad",
+  "asset.leaseTerm": "Leasingperiod",
   "asset.leaseDuration": "{months} månader",
-  "navigation.backToCatalogue": "Tillbaka"
+  "navigation.backToCatalogue": "Tillbaka",
+  "asset.unavailableForLeasing": "Den här tillgången är för närvarande inte tillgänglig för leasing.",
+  "asset.downPayment": "Första förhöjd hyra",
+  "asset.quantity": "Antal",
+  "asset.updatingQuote": "Uppdaterar offerten...",
+  "asset.monthlyPaymentIncludingVat": "Månadsbetalning inklusive moms",
+  "asset.netMonthlyRent": "Månadshyra exklusive moms",
+  "asset.vat": "Moms",
+  "asset.unitListPrice": "Listpris per enhet",
+  "asset.totalFinanced": "Totalt finansierat belopp",
+  "asset.buyout": "Lösenbelopp",
+  "asset.totalIfReturned": "Totalkostnad vid återlämning",
+  "asset.totalIfBought": "Totalkostnad vid utköp",
+  "asset.quoteDate": "Offertdatum",
+  "asset.quoteUnavailable": "Det gick inte att beräkna offerten."
 }

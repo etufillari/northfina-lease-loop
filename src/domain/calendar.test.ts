@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { addMonthsClamped, daysInMonth, isLeapYear, previousDay } from './calendar';
+import {
+  addMonthsClamped,
+  daysInMonth,
+  isLeapYear,
+  nextDay,
+  previousDay,
+  yearsOld,
+} from './calendar';
 
 describe('isLeapYear', () => {
   it('follows the 4 / 100 / 400 rules', () => {
@@ -54,6 +61,23 @@ describe('addMonthsClamped', () => {
     expect(() => addMonthsClamped('05.11.2026', 1)).toThrow(RangeError);
     expect(() => addMonthsClamped('2026-11-05', 1.5)).toThrow(RangeError);
     expect(() => addMonthsClamped('2026-11-05', -1)).toThrow(RangeError);
+  });
+});
+
+describe('nextDay', () => {
+  it('steps forward over month and year ends', () => {
+    expect(nextDay('2026-11-05')).toBe('2026-11-06');
+    expect(nextDay('2026-02-28')).toBe('2026-03-01');
+    expect(nextDay('2028-02-28')).toBe('2028-02-29');
+    expect(nextDay('2026-12-31')).toBe('2027-01-01');
+  });
+});
+
+describe('yearsOld', () => {
+  it('counts the birthday itself as a full year', () => {
+    expect(yearsOld('2009-03-10', '2027-03-09')).toBe(17);
+    expect(yearsOld('2009-03-10', '2027-03-10')).toBe(18);
+    expect(yearsOld('2009-03-10', '2026-11-20')).toBe(17);
   });
 });
 

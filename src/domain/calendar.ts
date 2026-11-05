@@ -54,6 +54,22 @@ export function addMonthsClamped(startIso: string, months: number): string {
   return toIso(year, month, day);
 }
 
+/** The calendar day after `isoDate`. A quote made Thursday is valid through Friday. */
+export function nextDay(isoDate: string): string {
+  const { year, month, day } = parseIso(isoDate);
+  if (day < daysInMonth(year, month)) return toIso(year, month, day + 1);
+  if (month < 12) return toIso(year, month + 1, 1);
+  return toIso(year + 1, 1, 1);
+}
+
+/** Full years of age on `onIso` for someone born `birthIso` (birthday counts). */
+export function yearsOld(birthIso: string, onIso: string): number {
+  const birth = parseIso(birthIso);
+  const on = parseIso(onIso);
+  const beforeBirthday = on.month < birth.month || (on.month === birth.month && on.day < birth.day);
+  return on.year - birth.year - (beforeBirthday ? 1 : 0);
+}
+
 /** The calendar day before `isoDate`. A period from the 5th ends on the 4th. */
 export function previousDay(isoDate: string): string {
   const { year, month, day } = parseIso(isoDate);

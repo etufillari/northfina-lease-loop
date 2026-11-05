@@ -8,9 +8,9 @@ import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { currentDate } from '@/server/app-date';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -20,8 +20,11 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   await connection();
 
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [today, assets, priceLists] = await Promise.all([
+    currentDate(db), // the page decides what "today" is; domain code never reads the clock
+    listAssets(db),
+    loadPriceLists(),
+  ]);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
     .filter((group) => group.assets.length > 0);

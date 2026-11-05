@@ -64,6 +64,28 @@ describe('GET /api/assets/:id/quote', () => {
     expect(body.data).toMatchObject({ down_payment_cents: 0, quote_date: todayIso() });
   });
 
+  it('uses the demo date when one is set, unless the request names a date', async () => {
+    const setting = { key: 'demo_date', value: '2026-11-05' };
+    await testDb.current?.appSetting.create({ data: setting });
+    try {
+      const byDemoDate = await getQuote('ebike-003', 'term=36');
+      expect(byDemoDate.body.data).toMatchObject({
+        quote_date: '2026-11-05',
+        price_list_version: 1,
+        base_price_cents: 389_000,
+      });
+
+      const byRequest = await getQuote('ebike-003', 'term=36&on=2026-11-06');
+      expect(byRequest.body.data).toMatchObject({
+        quote_date: '2026-11-06',
+        price_list_version: 2,
+        base_price_cents: 408_400,
+      });
+    } finally {
+      await testDb.current?.appSetting.deleteMany();
+    }
+  });
+
   it('answers 404 for an unknown asset', async () => {
     const { status, body } = await getQuote('nope', 'term=36');
     expect(status).toBe(404);

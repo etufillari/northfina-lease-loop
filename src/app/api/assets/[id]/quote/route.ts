@@ -1,12 +1,13 @@
 // GET /api/assets/:id/quote?term=36&down=0&quantity=1&on=2026-11-05
 // `term` is in months, `down` in cents (default 0), `quantity` is how many units (default 1)
-// and `on` is the quote date (default today). Prices and limits are for all units together.
+// and `on` is the quote date (default: the date the app runs on). Prices and limits are for
+// all units together. `on` only previews a price; applications never take a date from here.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { fail, handleRoute, ok } from '@/server/api-response';
+import { currentDate } from '@/server/app-date';
 import { db } from '@/server/db';
 import { quoteAsset } from '@/server/quotes';
-import { todayIso } from '@/server/today';
 
 const querySchema = z.strictObject({
   term: z.coerce.number().int().positive(),
@@ -23,7 +24,7 @@ export const GET = handleRoute(
 
     const result = await quoteAsset(db, {
       assetId: id,
-      date: query.on ?? todayIso(),
+      date: query.on ?? (await currentDate(db)),
       termMonths: query.term,
       downPaymentCents: query.down,
       quantity: query.quantity,

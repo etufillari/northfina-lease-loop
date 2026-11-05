@@ -3,7 +3,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import type { CoefficientTable, PriceList, VatRates } from '@/data/schemas';
+import { priceCheckAtSigning, signContract } from './contract';
 import { listPriceOn } from './price-list';
+import { makeQuote } from './quote';
 import { downPaymentBounds, quoteLease } from './pricing';
 import { vatRateOn, withVat } from './vat';
 
@@ -87,6 +89,36 @@ describe('data-pack traps on price', () => {
     expect(downPaymentBounds(table, priceOn('farm-006', '2026-11-05'))).toMatchObject({
       ok: true,
       minCents: 1_000_000,
+    });
+  });
+});
+
+describe('card 2, the price lock: laptop-004 quoted Thu 5 Nov (v1), signed Fri 6 Nov (v2, −8 %)', () => {
+  it('locks the quoted v1 price, and tells the customer a cheaper quote is available today', () => {
+    // Thu, v1: 349 000 × 0.027584 = 9 626.8 → 9 627/month (36 m, band B).
+    // Fri, v2: 321 100 × 0.027584 = 8 857.2 → 8 857/month. Saving 770/month.
+    const made = makeQuote(priceLists, table, {
+      assetId: 'laptop-004',
+      quoteDate: '2026-11-05',
+      termMonths: 36,
+      downPaymentCents: 0,
+    });
+    if (!made.ok) throw new Error(made.reason);
+
+    expect(priceCheckAtSigning(priceLists, table, made.quote, '2026-11-06')).toMatchObject({
+      kind: 'cheaper_today',
+      savingPerMonthCents: 770,
+      requote: { priceListVersion: 2, monthlyNetRentCents: 8_857 },
+    });
+
+    const signed = signContract(made.quote, {
+      customerId: 'cust-aino',
+      signDate: '2026-11-06',
+      startDate: '2026-11-06',
+    });
+    expect(signed).toMatchObject({
+      ok: true,
+      contract: { priceListVersion: 1, listPriceCents: 349_000, monthlyNetRentCents: 9_627 },
     });
   });
 });

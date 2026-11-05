@@ -66,6 +66,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
                 <AssetCard
                   asset={asset}
                   price={listPriceOn(priceLists, asset.id, today)}
+                  leasePrice={21500} // TODO: Replace with actual lease price calculation
                   locale={locale}
                   t={t}
                 />

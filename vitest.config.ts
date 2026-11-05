@@ -9,6 +9,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     globalSetup: ['./tests/global-setup.ts'],
+    setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
       // Business logic and server code must stay tested; UI pages are not measured.

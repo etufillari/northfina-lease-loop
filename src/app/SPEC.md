@@ -17,11 +17,18 @@ Owns the Next.js 16 App Router pages (`src/app/[locale]/`), reusable UI componen
   - `PATCH /api/assets/[id]/status`: Validates `{ status, actor }` and calls `changeAssetStatus` to update status and write an audit entry atomically.
   - `GET /api/audit-log`: Returns the 50 newest audit log entries.
   - `POST /api/applications/evaluate`: Stateless. Takes `{ deal: { category, financed_amount_cents, term_months }, answers, contract_start_date?, monthly_rent_incl_vat_cents? }` and returns the applicable `questions`, the pruned `answers`, the `dropped` ids and the eligibility `decision` with reasons. The customer type is read from `answers.q_customer_type`, never sent separately. `contract_start_date` defaults to `todayIso()`. The financed amount and rent are trusted from the caller until the pricing module can compute them server-side.
+- **Application page:** `src/app/[locale]/apply/page.tsx` (`/[locale]/apply?asset=…&term=…&down=…`, `down` in net cents) prices the lease with `calculateContractQuote`, passes the rent incl. VAT to `ApplicationForm`, which asks the questions through the evaluate route and shows the decision. `ChangeTermsDialog` changes the term and down payment in a popup.
+- **Contract configurator:** `src/components/contract.tsx` renders term and down-payment sliders with a live quote preview (calling the pure `calculateContractQuote`) and a collapsible price breakdown, and links to the application page. Its `onSign` callback is client-side only today; signing moves to `POST /api/contracts`.
+- **Planned (see `docs/architecture.md` §5 and §11):**
+  - Pages: price step with term comparison, contract and invoices, early exit, end of term, a minimal second-life page (relist quote, waiting-list matches, relist), and the asset passport with CO₂ and money saved. The admin/back-office view is phase 2.
+  - A header "today is…" date picker that sends `asOf` with every request (`resolveAsOf()` on the server, falling back to `todayIso()`).
+  - Routes: `GET /api/quote` (preview), `POST /api/quotes` (locks the price), `POST /api/applications` and `PUT /api/applications/:id/answers/:questionId` (persisted applications, reusing the evaluate logic), `POST /api/contracts`, `GET /api/contracts/:id`, `GET /api/contracts/:id/exit-quote`, `POST /api/contracts/:id/exit`, `GET|POST /api/contracts/:id/end-of-term`, `GET /api/assets/:id/relist-quote`, `GET /api/assets/:id/matches`, `POST /api/assets/:id/relist`.
 
 ## Boundary
 
-- **Composition root:** Orchestrates `data` (`@/data/load`, `@/data/schemas`), `domain`, `server`, and `i18n`. Reads the clock (`todayIso()`) once per request and passes the resulting `YYYY-MM-DD` string down to `domain`.
+- **Composition root:** Orchestrates `data` (`@/data/load`, `@/data/schemas`), `domain`, `server`, and `i18n`. Resolves the date once per request (`resolveAsOf()`: the client's `asOf` if valid, otherwise `todayIso()`) and passes the resulting `YYYY-MM-DD` string down to `domain`. Client components may import pure `domain` functions for live previews only; the server recomputes before anything is saved.
 - **Forbidden reaches:** Must not embed business calculations (pricing formulas, eligibility rules, VAT logic) inline in components or route handlers — those belong in `domain`. Must not bypass `handleRoute()` / `ok()` / `fail()` in `/api/*` routes or bypass `withAudit()` for database writes. All user-facing strings must come from `i18n` (`getT(locale)`) or localized data-pack fields, never hardcoded inline literals.
 - **Known limitations:**
   - `src/proxy.ts` redirects `/` unconditionally to `/en` without inspecting `Accept-Language`.
-  - Only the catalogue page (`/[locale]`) and asset/audit API routes exist in the starter; UI routes and API endpoints for steps 2–7 of the Spine are not yet built.
+  - Only the catalogue page, the application page, the contract configurator, the stateless evaluate route and the asset/audit routes exist; the planned pages and routes above are not yet built. Applications are not persisted yet.
+  - Domain failures reach the UI as error codes; the UI translates codes (`errors.<CODE>`), never server messages.

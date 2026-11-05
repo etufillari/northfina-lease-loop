@@ -10,12 +10,10 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
+import { asOfFromPage } from '@/server/as-of';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { termEndsOn } from '@/server/lifecycle';
-import { todayIso } from '@/server/today';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function ContractPage({
   params,
@@ -30,10 +28,7 @@ export default async function ContractPage({
   const contract = await getContract(db, id);
   if (!contract) notFound();
 
-  const search = await searchParams;
-  const asOfParam =
-    typeof search.asOf === 'string' && ISO_DATE.test(search.asOf) ? search.asOf : null;
-  const asOf = asOfParam ?? todayIso();
+  const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
   const endsOn = termEndsOn(contract);
 
@@ -96,7 +91,7 @@ export default async function ContractPage({
           locale={locale}
           contractId={contract.id}
           personaId={persona}
-          asOf={asOfParam}
+          asOf={asOf}
           endsOn={endsOn}
           today={asOf}
           buyoutNetCents={contract.buyout_net_cents}

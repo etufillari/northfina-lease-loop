@@ -10,10 +10,8 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
+import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -23,11 +21,9 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   await connection();
 
   const t = getT(locale);
-  const search = await searchParams;
-  const asOfParam =
-    typeof search.asOf === 'string' && ISO_DATE.test(search.asOf) ? search.asOf : null;
-  // The page decides what "today" is (?asOf= time-travels); domain code never reads the clock.
-  const today = asOfParam ?? todayIso();
+  // The page decides what "today" is (the time-travel control or ?asOf=); domain code
+  // never reads the clock.
+  const { asOf: today, asOfParam } = await asOfFromPage(await searchParams);
   const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))

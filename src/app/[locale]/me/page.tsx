@@ -8,12 +8,10 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
+import { asOfFromPage } from '@/server/as-of';
 import { listCustomerContracts } from '@/server/contracts';
 import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function MePage({ params, searchParams }: PageProps<'/[locale]/me'>) {
   const { locale } = await params;
@@ -22,10 +20,7 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
 
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  const search = await searchParams;
-  const asOfParam =
-    typeof search.asOf === 'string' && ISO_DATE.test(search.asOf) ? search.asOf : null;
-  const asOf = asOfParam ?? todayIso();
+  const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const suffix = asOfParam ? `?asOf=${asOfParam}` : '';
 
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;

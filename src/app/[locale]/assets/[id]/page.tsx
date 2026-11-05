@@ -8,10 +8,8 @@ import { PriceConfigurator } from '@/components/price-configurator';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function AssetPage({
   params,
@@ -25,10 +23,7 @@ export default async function AssetPage({
   const asset = await db.asset.findUnique({ where: { id } });
   if (!asset) notFound();
 
-  const search = await searchParams;
-  const asOfParam =
-    typeof search.asOf === 'string' && ISO_DATE.test(search.asOf) ? search.asOf : null;
-  const asOf = asOfParam ?? todayIso();
+  const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
 
   return (
@@ -55,12 +50,7 @@ export default async function AssetPage({
       </div>
 
       {asset.status === 'available' || asset.status === 'returned' ? (
-        <PriceConfigurator
-          locale={locale}
-          assetId={asset.id}
-          personaId={persona}
-          asOf={asOfParam}
-        />
+        <PriceConfigurator locale={locale} assetId={asset.id} personaId={persona} asOf={asOf} />
       ) : (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
           {t('asset.notAvailable')}

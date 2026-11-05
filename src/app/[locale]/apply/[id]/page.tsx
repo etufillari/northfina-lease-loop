@@ -1,13 +1,11 @@
 // Spine step 3: the application. The wizard itself is a client component; this shell
-// provides the persona and the as-of date.
+// provides the persona and the as-of date (the time-travel control or ?asOf=).
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { ApplicationWizard } from '@/components/application-wizard';
 import { PERSONA_COOKIE } from '@/components/persona-cookie';
 import { isLocale } from '@/i18n/locales';
-import { todayIso } from '@/server/today';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+import { asOfFromPage } from '@/server/as-of';
 
 export default async function ApplyPage({
   params,
@@ -15,8 +13,7 @@ export default async function ApplyPage({
 }: PageProps<'/[locale]/apply/[id]'>) {
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
-  const search = await searchParams;
-  const asOf = typeof search.asOf === 'string' && ISO_DATE.test(search.asOf) ? search.asOf : null;
+  const { asOf } = await asOfFromPage(await searchParams);
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
 
   return (
@@ -26,7 +23,7 @@ export default async function ApplyPage({
         applicationId={id}
         personaId={persona}
         asOf={asOf}
-        today={todayIso()}
+        today={asOf}
       />
     </div>
   );

@@ -4,11 +4,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
+import { AS_OF_COOKIE } from '@/components/as-of-cookie';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { PERSONA_COOKIE } from '@/components/persona-cookie';
 import { PersonaPicker } from '@/components/persona-picker';
+import { TimeTravel } from '@/components/time-travel';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { todayIso } from '@/server/today';
 import '../globals.css';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
@@ -22,7 +25,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const cookieStore = await cookies();
+  const persona = cookieStore.get(PERSONA_COOKIE)?.value ?? null;
+  const asOfCookie = cookieStore.get(AS_OF_COOKIE)?.value;
+  const travelling = Boolean(asOfCookie && /^\d{4}-\d{2}-\d{2}$/.test(asOfCookie));
 
   return (
     <html lang={locale}>
@@ -48,6 +54,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               </span>
             </Link>
             <div className="flex flex-wrap items-center gap-4">
+              <TimeTravel
+                locale={locale}
+                current={travelling ? asOfCookie! : todayIso()}
+                travelling={travelling}
+              />
               <PersonaPicker locale={locale} initialId={persona} />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:fresh": "npm run db:reset && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",

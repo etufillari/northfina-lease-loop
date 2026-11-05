@@ -5,6 +5,8 @@
   "brand.tagline": "Ringmajanduslik liising elektrijalgratastele, sülearvutitele ja põllutöömasinatele",
   "nav.skipToContent": "Liigu sisu juurde",
   "nav.language": "Keel",
+  "nav.timeTravel": "Ajarännak",
+  "nav.today": "Tagasi tänasesse",
   "catalogue.title": "Kataloog",
   "catalogue.intro": "Iga toodet saab liisida, tagastada, korda teha ja uuesti liisida.",
   "catalogue.pricesOn": "Hinnakirja netohinnad seisuga {date}",

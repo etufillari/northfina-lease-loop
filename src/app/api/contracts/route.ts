@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { signContract } from '@/server/contracts';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 const signSchema = z.strictObject({
   applicationId: z.string().trim().min(1).max(64),
@@ -24,7 +24,7 @@ const failures = {
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, signSchema);
-  const result = await signContract(db, body, todayIso());
+  const result = await signContract(db, body, (await appDate()).today);
   if (!result.ok) {
     const [status, code, message] = failures[result.reason];
     return fail(

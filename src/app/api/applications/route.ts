@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { submitApplication } from '@/server/applications';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 const submitApplicationSchema = z.strictObject({
   assetId: z.string().trim().min(1).max(50),
@@ -26,7 +26,7 @@ const failures = {
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, submitApplicationSchema);
-  const result = await submitApplication(db, body, todayIso());
+  const result = await submitApplication(db, body, (await appDate()).today);
   if (!result.ok) {
     const [status, code, message] = failures[result.reason];
     return fail(status, code, message);

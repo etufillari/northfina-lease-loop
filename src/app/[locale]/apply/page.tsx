@@ -18,7 +18,7 @@ import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 export default async function ApplyPage({ params, searchParams }: PageProps<'/[locale]/apply'>) {
   const { locale } = await params;
@@ -43,7 +43,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
     );
   }
 
-  const today = todayIso();
+  const { today } = await appDate();
   const [priceLists, table, vatRates, questionsFile] = await Promise.all([
     loadPriceLists(),
     loadCoefficientTable(),

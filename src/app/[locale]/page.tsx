@@ -11,7 +11,7 @@ import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -21,7 +21,9 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   await connection();
 
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
+  // The page decides what "today" is (the real date, or the time-travel date); domain code
+  // never reads the clock.
+  const { today } = await appDate();
   const query = parseCatalogueQuery(await searchParams);
   const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
 

@@ -17,7 +17,7 @@ import { getApplication } from '@/server/applications';
 import { getAsset } from '@/server/assets';
 import { getContractForApplication } from '@/server/contracts';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 export default async function ApplicationPage({
   params,
@@ -40,7 +40,7 @@ export default async function ApplicationPage({
   if (!asset) notFound();
 
   const t = getT(locale);
-  const today = todayIso();
+  const { today } = await appDate();
   const check = checkSignable({
     decision: application.decision,
     quoteDate: application.quoteDate,

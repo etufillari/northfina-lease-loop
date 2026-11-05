@@ -1,9 +1,15 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
+import { quoteAndSign } from '../../tests/helpers/quote-and-sign';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import * as assetsModule from './assets';
+import { listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import { loadLeaseDataPack } from './lease-data';
+import { loadSecondLifeDataPack, relistAsset } from './second-life';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -18,9 +24,23 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  await db.quote.deleteMany();
+  await db.contract.deleteMany();
   await db.auditLog.deleteMany();
   await db.asset.deleteMany();
 });
+
+// Aino's own record (data/customers.json).
+const ainoAnswers = {
+  q_customer_type: 'consumer',
+  q_full_name: 'Aino Virtanen',
+  q_birth_date: '1997-04-12',
+  q_email: 'aino.virtanen@example.com',
+  q_country: 'FI',
+  q_employment: 'employed',
+  q_monthly_income: 320_000,
+  q_usage_purpose: 'commuting',
+};
 
 describe('seedAssets', () => {
   it('inserts every asset from the data pack once', async () => {
@@ -54,26 +74,40 @@ describe('listAssets', () => {
   });
 });
 
-describe('changeAssetStatus', () => {
-  it('updates the status and writes an audit row with from and to', async () => {
-    await seedAssets(db, dataPack);
-
-    const result = await changeAssetStatus(db, {
-      id: 'ebike-001',
-      status: 'reserved',
-      actor: 'team-test',
-    });
-
-    expect(result).toMatchObject({ ok: true, asset: { id: 'ebike-001', status: 'reserved' } });
-    const audit = await db.auditLog.findFirstOrThrow();
-    expect(audit).toMatchObject({ action: 'asset.status_changed', entity_id: 'ebike-001' });
-    expect(JSON.parse(audit.details_json ?? '')).toEqual({ from: 'available', to: 'reserved' });
+describe('a leased item stays leased (D-038)', () => {
+  // Card: set a reserved item back to available, sign again, and two live contracts exist.
+  // The only ways an item becomes available again are re-listing a returned item (D-035).
+  it('has no API route that sets an asset status by hand', () => {
+    expect(existsSync(join(process.cwd(), 'src/app/api/assets/[id]/status'))).toBe(false);
+    expect('changeAssetStatus' in assetsModule).toBe(false);
   });
 
-  it('answers not_found for an unknown id and writes nothing', async () => {
-    const result = await changeAssetStatus(db, { id: 'nope', status: 'reserved', actor: 'x' });
-    expect(result).toEqual({ ok: false, reason: 'not_found' });
-    expect(await db.auditLog.count()).toBe(0);
+  it('cannot be re-listed while leased, so it cannot be leased a second time', async () => {
+    await seedAssets(db, dataPack);
+    const [lease, secondLife] = await Promise.all([loadLeaseDataPack(), loadSecondLifeDataPack()]);
+    const asAino = {
+      assetId: 'ebike-003',
+      customerId: 'cust-aino',
+      termMonths: 36,
+      downPaymentCents: 0,
+      answers: ainoAnswers,
+      today: '2026-11-05',
+      actor: 'cust-aino',
+    };
+    expect((await quoteAndSign(db, lease, asAino)).ok).toBe(true);
+
+    const relisted = await relistAsset(db, secondLife, {
+      assetId: 'ebike-003',
+      target: 'good',
+      today: '2026-11-05',
+      actor: 'back-office',
+    });
+    expect(relisted).toEqual({ ok: false, reason: 'asset_not_returned' });
+    expect(await quoteAndSign(db, lease, { ...asAino, customerId: 'cust-sanna' })).toEqual({
+      ok: false,
+      reason: 'asset_not_available',
+    });
+    expect(await db.contract.count({ where: { asset_id: 'ebike-003' } })).toBe(1);
   });
 });
 

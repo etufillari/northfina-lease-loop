@@ -1,8 +1,8 @@
-// Reading and changing assets in the database. Rows are converted to the same `Asset`
+// Reading and seeding assets in the database. A status changes only through signing, ending
+// and re-listing, each audited (D-038). Rows are converted to the same `Asset`
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
-import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
-import { withAudit } from './audit';
+import { assetSchema, type Asset, type AssetCategory } from '@/data/schemas';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
 export function toAsset(row: AssetRow): Asset {
@@ -46,31 +46,6 @@ export async function listAssets(
     orderBy: { id: 'asc' },
   });
   return rows.map(toAsset);
-}
-
-export type ChangeAssetStatusResult =
-  { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
-
-/** Sets an asset's status and writes `asset.status_changed` to the audit log, atomically. */
-export async function changeAssetStatus(
-  db: PrismaClient,
-  input: { id: string; status: AssetStatus; actor: string }
-): Promise<ChangeAssetStatusResult> {
-  const existing = await db.asset.findUnique({ where: { id: input.id } });
-  if (!existing) return { ok: false, reason: 'not_found' };
-
-  const updated = await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'asset.status_changed',
-      entityType: 'asset',
-      entityId: input.id,
-      details: { from: existing.status, to: input.status },
-    },
-    (tx) => tx.asset.update({ where: { id: input.id }, data: { status: input.status } })
-  );
-  return { ok: true, asset: toAsset(updated) };
 }
 
 /** Inserts assets that are not in the database yet. Never overwrites changes you made. */

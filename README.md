@@ -46,7 +46,7 @@ New to TypeScript, Next.js or Prisma? Read these files in this order:
 3. **`src/domain/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
 4. **`src/domain/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
 5. **`src/app/[locale]/page.tsx`**: the catalogue page. Next.js App Router: every folder under `src/app/` is a URL.
-6. **`src/app/api/assets/`**: API routes. They use the response envelope (`src/server/api-response.ts`), and the status change writes an audit row in the same transaction (`src/server/audit.ts`).
+6. **`src/app/api/assets/`**: API routes. They use the response envelope (`src/server/api-response.ts`), and every change writes an audit row in the same transaction (`src/server/audit.ts`). There is no route that sets an asset's status by hand (D-038).
 7. **`prisma/schema.prisma`**: the database. Add your own models (Contract, Invoice, …) and run `npm run db:migrate`.
 
 Handy docs: [Next.js App Router](https://nextjs.org/docs/app), [TypeScript for programmers who know C](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes.html), [Prisma](https://www.prisma.io/docs), [Vitest](https://vitest.dev/guide/), [Tailwind CSS](https://tailwindcss.com/docs).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatIsoDate, formatNumber } from './format';
+import { formatFactor, formatIsoDate, formatNumber } from './format';
 import { getT } from './get-t';
 import { defaultLocale, isLocale, locales } from './locales';
 
@@ -43,5 +43,13 @@ describe('formatting', () => {
   it('formats numbers per locale', () => {
     expect(formatNumber(18_400, 'en')).toBe('18,400');
     expect(plain(formatNumber(18_400, 'fi'))).toBe('18 400');
+  });
+});
+
+describe('formatFactor', () => {
+  it('shows all six decimals of a coefficient-table factor in the locale style', () => {
+    expect(formatFactor(0.027584, 'en')).toBe('0.027584');
+    expect(formatFactor(0.027584, 'fi')).toBe('0,027584');
+    expect(formatFactor(0.05, 'en')).toBe('0.05');
   });
 });

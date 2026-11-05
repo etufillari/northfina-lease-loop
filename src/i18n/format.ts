@@ -12,3 +12,8 @@ export function formatIsoDate(isoDate: string, locale: Locale): string {
 export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(intlLocale[locale]).format(value);
 }
+
+/** A pricing factor with every decimal the table has: 0.027584 → "0.027584" / "0,027584". */
+export function formatFactor(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale[locale], { maximumFractionDigits: 6 }).format(value);
+}

@@ -4,6 +4,7 @@ import type { AskWhenCondition, Question } from '@/data/schemas';
 import {
   evaluateCondition,
   isAskable,
+  pruneAnswers,
   visibleQuestions,
   type FlowContext,
   type FlowDeal,
@@ -184,5 +185,56 @@ describe('visibleQuestions', () => {
     };
     const b: Question = { ...questions[0]!, id: 'q_b', ask_when: [] };
     expect(ids(visibleQuestions([a, b], ctx({}, { q_b: 'x' })))).toEqual(['q_b']);
+  });
+});
+
+describe('pruneAnswers', () => {
+  const consumer = {
+    customer_type: 'consumer',
+    category: 'laptop',
+    financed_amount_cents: 500_000,
+  };
+
+  it('keeps everything when all answers still apply', () => {
+    const answers = { q_customer_type: 'consumer', q_email: 'a@b.fi', q_employment: 'employed' };
+    expect(pruneAnswers(questions, ctx(consumer, answers))).toEqual({ kept: answers, dropped: [] });
+  });
+
+  it('drops the signatory email when the applicant can sign after all', () => {
+    const deal = { customer_type: 'company', category: 'laptop', financed_amount_cents: 400_000 };
+    const result = pruneAnswers(
+      questions,
+      ctx(deal, { q_can_sign: 'yes', q_signatory_email: 'x@y.fi' })
+    );
+    expect(result).toEqual({ kept: { q_can_sign: 'yes' }, dropped: ['q_signatory_email'] });
+  });
+
+  it('cascades: a lower amount drops q_pep and q_pep_details together', () => {
+    const answers = { q_pep: 'yes', q_pep_details: 'Minister', q_email: 'a@b.fi' };
+    const high = { ...consumer, financed_amount_cents: 1_000_000 };
+    expect(pruneAnswers(questions, ctx(high, answers)).dropped).toEqual([]);
+    expect(pruneAnswers(questions, ctx(consumer, answers))).toEqual({
+      kept: { q_email: 'a@b.fi' },
+      dropped: ['q_pep', 'q_pep_details'],
+    });
+  });
+
+  it('drops consumer-only answers when the customer type changes to company', () => {
+    const answers = { q_full_name: 'Aino', q_birth_date: '1990-01-01', q_email: 'a@b.fi' };
+    const result = pruneAnswers(questions, ctx({ ...consumer, customer_type: 'company' }, answers));
+    expect(result).toEqual({
+      kept: { q_email: 'a@b.fi' },
+      dropped: ['q_full_name', 'q_birth_date'],
+    });
+  });
+
+  it('drops unknown ids and ignores unanswered entries', () => {
+    const result = pruneAnswers(questions, ctx(consumer, { q_nope: 'x', q_email: undefined }));
+    expect(result).toEqual({ kept: {}, dropped: ['q_nope'] });
+  });
+
+  it('does not mutate the answers it receives', () => {
+    const answers = Object.freeze({ q_pep: 'yes' });
+    expect(() => pruneAnswers(questions, ctx(consumer, answers))).not.toThrow();
   });
 });

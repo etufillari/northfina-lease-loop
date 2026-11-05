@@ -72,3 +72,32 @@ export function visibleQuestions(questions: readonly Question[], ctx: FlowContex
   }
   return visible;
 }
+
+export type PruneResult = {
+  /** The answers that still apply. */
+  kept: Record<string, AnswerValue>;
+  /** Ids whose answers were removed, so the UI can say what changed. */
+  dropped: string[];
+};
+
+/**
+ * Removes the answers that no longer apply after the customer changed an earlier answer or the
+ * deal (amount, term, customer type). Run it after every change.
+ *
+ * No loop is needed: `visibleQuestions` already ignores the answer of a hidden question, so
+ * a cascade (amount drops, `q_pep` hides, `q_pep_details` hides with it) resolves in one pass.
+ * Answers for ids that are not in the question bank are dropped too. Unanswered
+ * (`undefined`) entries are neither kept nor reported.
+ */
+export function pruneAnswers(questions: readonly Question[], ctx: FlowContext): PruneResult {
+  const visible = new Set(visibleQuestions(questions, ctx).map((q) => q.id));
+  const kept: Record<string, AnswerValue> = {};
+  const dropped: string[] = [];
+
+  for (const [id, value] of Object.entries(ctx.answers)) {
+    if (value === undefined) continue;
+    if (visible.has(id)) kept[id] = value;
+    else dropped.push(id);
+  }
+  return { kept, dropped };
+}

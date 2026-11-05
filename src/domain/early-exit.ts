@@ -114,8 +114,9 @@ export function exitMonthOn(contract: BilledContract, date: string): ExitMonthRe
 }
 
 /**
- * What leaving at the end of `exitMonth` costs. Rent n is valued n − k months before it falls
- * due, the convention the coefficient table is built on (D-033), and the end amount T − k months.
+ * What leaving at the end of `exitMonth` (k) costs. Rents are billed in advance (D-016), so rent
+ * k + 1 falls due on the effective date itself and rent k + n is discounted n − 1 months (D-039).
+ * The buyout and the end amount are paid at handover, T − k months away (D-033).
  */
 export function earlyExitQuote(
   contract: ExitContract,
@@ -135,7 +136,7 @@ export function earlyExitQuote(
   const monthsLeft = term - exitMonth;
 
   let rentsPv = 0;
-  for (let n = 1; n <= monthsLeft; n++) rentsPv += contract.monthlyNetRentCents * discount(n);
+  for (let n = 1; n <= monthsLeft; n++) rentsPv += contract.monthlyNetRentCents * discount(n - 1);
   const remainingRentsPvCents = roundHalfUp(rentsPv);
   const buyoutPvCents = roundHalfUp(contract.buyoutCents * discount(monthsLeft));
 

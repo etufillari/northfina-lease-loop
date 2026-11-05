@@ -70,13 +70,13 @@ describe('endLeaseEarly', () => {
       today: '2027-05-20',
       actor: 'cust-aino',
     });
-    // Hand-worked in src/domain/early-exit.test.ts: 330 666 + 26 % VAT = 416 639.
+    // Hand-worked in src/domain/early-exit.test.ts: 332 525 + 26 % VAT = 418 982.
     expect(result).toMatchObject({
       ok: true,
       ending: {
         kind: 'early_buy',
         effectiveDate: '2027-06-05',
-        earlyExit: { exitMonth: 7, buy: { netCents: 330_666, grossCents: 416_639 } },
+        earlyExit: { exitMonth: 7, buy: { netCents: 332_525, grossCents: 418_982 } },
       },
     });
     expect(await asset()).toMatchObject({ status: 'sold', previous_lives: 1 });
@@ -93,10 +93,10 @@ describe('endLeaseEarly', () => {
       today: '2027-05-20',
       actor: 'cust-aino',
     });
-    // 282 427 + 48 239 − 259 230 = 71 436 (src/domain/early-exit.test.ts).
+    // 284 286 + 48 239 − 259 230 = 73 295 (src/domain/early-exit.test.ts).
     expect(result).toMatchObject({
       ok: true,
-      ending: { earlyExit: { handBack: { netCents: 71_436 } } },
+      ending: { earlyExit: { handBack: { netCents: 73_295 } } },
     });
     expect(await asset()).toMatchObject({
       status: 'returned',

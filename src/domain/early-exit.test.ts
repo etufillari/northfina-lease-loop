@@ -83,18 +83,20 @@ describe('card 8: Aino ends the lease from card 1 in month 7', () => {
     expect(q.monthsLeft).toBe(29);
     // 29 × 10 730 = 311 170 still to pay.
     expect(q.remainingRentsCents).toBe(311_170);
-    // r = 7.9 / 1200 = 0.00658333…; v²⁹ = 0.826718542679.
-    // 10 730 × (1 − v²⁹) / r = 10 730 × 26.321234023 = 282 426.841 → 282 427.
-    expect(q.remainingRentsPvCents).toBe(282_427);
+    // r = 7.9 / 1200 = 0.00658333…; v = 1 / (1 + r); v²⁹ = 0.826718542679.
+    // Rents are billed in advance (D-016): rent 8 is due on 5 Jun 2027 itself, so rent 7 + j is
+    // discounted j − 1 months (D-039). 10 730 × (1 + v + … + v²⁸) = 10 730 × 26.494515481
+    // = 284 286.151 → 284 286.
+    expect(q.remainingRentsPvCents).toBe(284_286);
     // 58 350 × v²⁹ = 48 239.027 → 48 239.
     expect(q.buyoutPvCents).toBe(48_239);
-    // Buy early: 282 427 + 48 239 = 330 666; discount 311 170 + 58 350 − 330 666 = 38 854.
-    expect(q.buy.netCents).toBe(330_666);
-    expect(q.buy.discountCents).toBe(38_854);
-    // VAT 26 % on 5 Jun 2027: 85 973.16 → 85 973; total 416 639.
+    // Buy early: 284 286 + 48 239 = 332 525; discount 311 170 + 58 350 − 332 525 = 36 995.
+    expect(q.buy.netCents).toBe(332_525);
+    expect(q.buy.discountCents).toBe(36_995);
+    // VAT 26 % on 5 Jun 2027: 86 456.5 → 86 457 (half up); total 418 982.
     expect(q.vatRatePercent).toBe(26);
-    expect(q.buy.vatCents).toBe(85_973);
-    expect(q.buy.grossCents).toBe(416_639);
+    expect(q.buy.vatCents).toBe(86_457);
+    expect(q.buy.grossCents).toBe(418_982);
     // The bike now (age 7, curve 82 + (70 − 82) / 6 = 80 %): 389 000 × 0.80 = 311 200.
     expect(q.valueNowCents).toBe(311_200);
     // At the end (age 36, 40 %): 155 600, more than the 58 350 buyout, so staying to the end
@@ -102,16 +104,16 @@ describe('card 8: Aino ends the lease from card 1 in month 7', () => {
     expect(q.valueAtEndCents).toBe(155_600);
     expect(q.endAmountCents).toBe(58_350);
     expect(q.endAmountPvCents).toBe(48_239);
-    // Hand back early: 282 427 + 48 239 − 311 200 = 19 466; VAT 5 061.16 → 5 061; 24 527.
-    expect(q.handBack.netCents).toBe(19_466);
-    expect(q.handBack.vatCents).toBe(5_061);
-    expect(q.handBack.grossCents).toBe(24_527);
+    // Hand back early: 284 286 + 48 239 − 311 200 = 21 325; VAT 5 544.5 → 5 545; 26 870.
+    expect(q.handBack.netCents).toBe(21_325);
+    expect(q.handBack.vatCents).toBe(5_545);
+    expect(q.handBack.grossCents).toBe(26_870);
   });
 
   it('is what earlyExitOn gives for a decision made during month 7', () => {
     const result = earlyExitOn(aino, ainoContext(), '2027-05-20');
     expect(result.ok && result.quote.exitMonth).toBe(7);
-    expect(result.ok && result.quote.handBack.netCents).toBe(19_466);
+    expect(result.ok && result.quote.handBack.netCents).toBe(21_325);
   });
 });
 
@@ -119,18 +121,20 @@ describe('earlyExitQuote edge cases', () => {
   it('month 1: 35 rents left, VAT still 25.5 % on 5 Dec 2026', () => {
     const q = quote(aino, ainoContext(), 1);
     expect(q.effectiveDate).toBe('2026-12-05');
-    // 10 730 × (1 − v³⁵) / r = 334 445.823 → 334 446; 58 350 × v³⁵ = 46 376.730 → 46 377.
-    expect(q.remainingRentsPvCents).toBe(334_446);
+    // 10 730 × (1 + v + … + v³⁴) = 10 730 × 31.374426020 = 336 647.591 → 336 648;
+    // 58 350 × v³⁵ = 46 376.730 → 46 377.
+    expect(q.remainingRentsPvCents).toBe(336_648);
     expect(q.buyoutPvCents).toBe(46_377);
-    // 334 446 + 46 377 = 380 823; VAT 25.5 % = 97 109.865 → 97 110.
-    expect(q.buy.netCents).toBe(380_823);
+    // 336 648 + 46 377 = 383 025; VAT 25.5 % = 97 671.375 → 97 671.
+    expect(q.buy.netCents).toBe(383_025);
     expect(q.vatRatePercent).toBe(25.5);
-    expect(q.buy.vatCents).toBe(97_110);
-    expect(q.buy.grossCents).toBe(477_933);
-    // Age 1: 100 + (82 − 100) / 6 = 97 % → 377 330. 380 823 − 377 330 = 3 493; VAT 890.715 → 891.
+    expect(q.buy.vatCents).toBe(97_671);
+    expect(q.buy.grossCents).toBe(480_696);
+    // Age 1: 100 + (82 − 100) / 6 = 97 % → 377 330. 383 025 − 377 330 = 5 695;
+    // VAT 1 452.225 → 1 452.
     expect(q.valueNowCents).toBe(377_330);
-    expect(q.handBack.netCents).toBe(3_493);
-    expect(q.handBack.vatCents).toBe(891);
+    expect(q.handBack.netCents).toBe(5_695);
+    expect(q.handBack.vatCents).toBe(1_452);
   });
 
   it('month 2 takes effect on 5 Jan 2027, so VAT is 26 %', () => {
@@ -171,16 +175,16 @@ describe('earlyExitQuote edge cases', () => {
       item: { category: 'laptop', ageAtStartMonths: 0, condition: 'poor', usageValue: 0 },
     };
     const q = quote(laptop, context, 11);
-    // r = 0.00825. One rent left: 6 717 / 1.00825 = 6 662.038 → 6 662.
-    expect(q.remainingRentsPvCents).toBe(6_662);
+    // r = 0.00825. One rent left, due on the exit day itself: 6 717, not discounted.
+    expect(q.remainingRentsPvCents).toBe(6_717);
     expect(q.endAmountCents).toBe(28_776);
     // 28 776 / 1.00825 = 28 540.541 → 28 541.
     expect(q.endAmountPvCents).toBe(28_541);
     // Age 11: 75 + (60 − 75) × 5/6 = 62.5 % × 0.4 → 119 900 × 0.25 = 29 975.
     expect(q.valueNowCents).toBe(29_975);
-    // 6 662 + 28 541 − 29 975 = 5 228. Buy: 6 662 + 47 960 / 1.00825 (47 567.568 → 47 568).
-    expect(q.handBack.netCents).toBe(5_228);
-    expect(q.buy.netCents).toBe(54_230);
+    // 6 717 + 28 541 − 29 975 = 5 283. Buy: 6 717 + 47 960 / 1.00825 (47 567.568 → 47 568).
+    expect(q.handBack.netCents).toBe(5_283);
+    expect(q.buy.netCents).toBe(54_285);
   });
 
   it('never charges a negative amount for handing back', () => {
@@ -237,7 +241,7 @@ describe('endEarly', () => {
       ok: true,
       ending: { kind: 'early_buy', decidedOn: '2027-05-20', effectiveDate: '2027-06-05' },
     });
-    expect(result.ok && result.ending.earlyExit?.buy.grossCents).toBe(416_639);
+    expect(result.ok && result.ending.earlyExit?.buy.grossCents).toBe(418_982);
   });
 
   it('credits a handed-back item at the value it was inspected in', () => {
@@ -250,11 +254,11 @@ describe('endEarly', () => {
     );
     // 1 200 km = 1 step, −2 %. Now: 389 000 × 0.80 × 0.85 × 0.98 = 259 229.6 → 259 230.
     // At the end: 389 000 × 0.40 × 0.85 × 0.98 = 129 614.8 → 129 615, still above the buyout.
-    // 282 427 + 48 239 − 259 230 = 71 436; VAT 26 % = 18 573.36 → 18 573.
+    // 284 286 + 48 239 − 259 230 = 73 295; VAT 26 % = 19 056.7 → 19 057.
     expect(result.ok && result.ending.earlyExit?.valueNowCents).toBe(259_230);
     expect(result.ok && result.ending.earlyExit?.handBack).toMatchObject({
-      netCents: 71_436,
-      vatCents: 18_573,
+      netCents: 73_295,
+      vatCents: 19_057,
     });
     expect(result.ok && result.ending.inspection).toEqual({ condition: 'good', usageValue: 1_200 });
   });

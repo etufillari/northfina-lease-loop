@@ -31,6 +31,7 @@ const application = {
   asset_id: 'ebike-003',
   quantity: 1,
   quote_date: '2026-11-05',
+  start_on: '2026-11-05',
   price_list_version: 2,
   base_price_cents: 389000,
   down_payment_cents: 0,
@@ -117,6 +118,14 @@ describe('lease records', () => {
     expect(contractSchema.safeParse({ ...contract, status: 'paused' }).success).toBe(false);
     expect(invoiceSchema.safeParse({ ...invoice, status: 'overdue' }).success).toBe(false);
     expect(contractSchema.safeParse({ ...contract, start_on: '5.11.2026' }).success).toBe(false);
+  });
+
+  it('limits the size of an answer', () => {
+    expect(answersSchema.safeParse({ q_x: 'a'.repeat(1000) }).success).toBe(true);
+    expect(answersSchema.safeParse({ q_x: 'a'.repeat(1001) }).success).toBe(false);
+    expect(answersSchema.safeParse({ q_x: Array(50).fill('owner') }).success).toBe(true);
+    expect(answersSchema.safeParse({ q_x: Array(51).fill('owner') }).success).toBe(false);
+    expect(answersSchema.safeParse({ q_x: ['a'.repeat(1001)] }).success).toBe(false);
   });
 
   it('rejects answers to something that is not a question id', () => {

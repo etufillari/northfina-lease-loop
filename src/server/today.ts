@@ -1,5 +1,5 @@
-// "Today" for the app, as an ISO date. Domain code never reads the clock itself:
-// pages and routes call this once and pass the result in.
+// The real calendar date, as an ISO date. Domain code never reads the clock itself. Pages and
+// routes should call `currentDate` in ./app-date.ts, which also honours an admin's demo date.
 
 /** The calendar date of `now` in `timeZone` (Helsinki by default), as `YYYY-MM-DD`. */
 export function todayIso(now: Date = new Date(), timeZone = 'Europe/Helsinki'): string {

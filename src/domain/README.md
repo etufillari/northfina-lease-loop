@@ -22,21 +22,23 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 ## What is here
 
-| File             | What it does                                                                                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term.                                                                                     |
-| `price-list.ts`  | Worked example: finds the net list price of an asset on a date.                                                                                              |
-| `money.ts`       | `roundedDivide` is the one rounding rule. `formatEuro` formats cents for a locale; use it only in the UI.                                                    |
-| `pricing.ts`     | `quote` prices a deal: financed amount, band, monthly net rent and buyout.                                                                                   |
-| `vat.ts`         | The VAT rate on a date, and VAT on a net amount.                                                                                                             |
-| `identity.ts`    | Roles for the no-password "acting as" login: merges customers and staff into one `Identity` list, and `can(role, permission)` decides what each role may do. |
+| File               | What it does                                                                                                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `coefficient.ts`   | Worked example: finds the monthly factor for a financed amount and term.                                                                                                                                       |
+| `price-list.ts`    | Worked example: finds the net list price of an asset on a date.                                                                                                                                                |
+| `money.ts`         | `roundedDivide` is the one rounding rule. `formatEuro` formats cents for a locale; use it only in the UI.                                                                                                      |
+| `pricing.ts`       | `quote` prices a deal: financed amount, band, monthly net rent and buyout.                                                                                                                                     |
+| `vat.ts`           | The VAT rate on a date, and VAT on a net amount.                                                                                                                                                               |
+| `question-flow.ts` | `questionsToAsk` works out which questions apply and drops answers that no longer do. `invalidAnswers` checks each answer fits its question type. `blockingAnswer` finds an answer that stops the application. |
+| `age.ts`           | `ageOn` gives an age in whole years on a date, and `eligibleFrom` gives the date someone reaches an age.                                                                                                       |
+| `business-id.ts`   | `isValidBusinessId` checks the format and check digit of a Finnish Y-tunnus.                                                                                                                                   |
+| `eligibility.ts`   | `decide` applies the eligibility rules and returns yes, no or manual review, with every reason.                                                                                                                |
+| `identity.ts`      | Roles for the no-password "acting as" login: merges customers and staff into one `Identity` list, and `can(role, permission)` decides what each role may do.                                                   |
 
 ## What teams are expected to add
 
 Create these as you need them. Do not commit empty files.
 
-- `question-flow`: which question to ask next, from `data/questions.json`, and what happens
-  to answers that stop applying.
 - `contract`: build the contract from an approved application and lock it so it cannot change.
 - `invoicing`: the monthly invoices for a contract, including a VAT rate change mid-contract.
 - `end-of-term`: return, buy out or extend, and the value of the returned item.

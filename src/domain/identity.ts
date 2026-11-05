@@ -89,6 +89,8 @@ export const PERMISSIONS = [
   'application.decide_manual_review',
   /** Read the audit log. */
   'audit_log.view',
+  /** Change how the demo runs, e.g. the date the app runs on. */
+  'demo.configure',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -106,7 +108,7 @@ const DEALER_PERMISSIONS: readonly Permission[] = [
 const GRANTS: Record<Role, readonly Permission[]> = {
   client: ['application.submit', 'contract.sign', 'contract.view_own', 'contract.end_term'],
   dealer: DEALER_PERMISSIONS,
-  admin: [...DEALER_PERMISSIONS, 'application.decide_manual_review'],
+  admin: [...DEALER_PERMISSIONS, 'application.decide_manual_review', 'demo.configure'],
 };
 
 /** Whether `role` may ever perform `permission`. */

@@ -144,6 +144,12 @@ describe('can', () => {
     expect(can('admin', 'application.decide_manual_review')).toBe(true);
   });
 
+  it('lets only admin change how the demo runs', () => {
+    expect(can('admin', 'demo.configure')).toBe(true);
+    expect(can('dealer', 'demo.configure')).toBe(false);
+    expect(can('client', 'demo.configure')).toBe(false);
+  });
+
   it('has no permission that applies to nobody', () => {
     const roles: Role[] = ['client', 'dealer', 'admin'];
     for (const permission of PERMISSIONS) {

@@ -4,6 +4,7 @@
 import { cookies } from 'next/headers';
 import { loadCustomers, loadStaff } from '@/data/load';
 import { can, findIdentity, type Identity, type Permission } from '@/domain/identity';
+import type { Customer } from '@/data/schemas';
 import { ApiError } from './api-response';
 import { SESSION_COOKIE_NAME, verifySession } from './session';
 
@@ -56,4 +57,16 @@ export async function requireRole(permission: Permission): Promise<Identity> {
     throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
   }
   return actor;
+}
+
+/**
+ * Like `requireRole`, but also hands back the customer record. Only customers can hold a
+ * client permission, so the 403 here is a safeguard for a permission granted to staff later.
+ */
+export async function requireCustomer(permission: Permission): Promise<Customer> {
+  const actor = await requireRole(permission);
+  if (actor.kind !== 'customer') {
+    throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
+  }
+  return actor.customer;
 }

@@ -34,8 +34,15 @@ export type QuoteAssetFailureReason =
 
 export type QuoteAssetResult =
   | { ok: true; quote: AssetQuote }
-  // `down_payment_limits` is set when the deal could not be priced, so a slider can recover.
-  | { ok: false; reason: QuoteAssetFailureReason; down_payment_limits?: DownPaymentRange };
+  // Set when the asset has a price but the deal could not be priced: the limits let a slider
+  // recover, and the price is what a rejected application records.
+  | {
+      ok: false;
+      reason: QuoteAssetFailureReason;
+      down_payment_limits?: DownPaymentRange;
+      base_price_cents?: number;
+      price_list_version?: number;
+    };
 
 /**
  * `quantity` units are priced as one deal: `base_price_cents` is the total for all of them,
@@ -83,7 +90,14 @@ export async function quoteAsset(
     downPaymentCents,
     termMonths,
   });
-  if (!result.ok) return { ...result, down_payment_limits: range };
+  if (!result.ok) {
+    return {
+      ...result,
+      down_payment_limits: range,
+      base_price_cents: basePriceCents,
+      price_list_version: listPrice.priceListVersion,
+    };
+  }
 
   const priced = result.quote;
   const monthlyVatCents = vatCents(priced.monthly_net_rent_cents, vatRate.rateBasisPoints);

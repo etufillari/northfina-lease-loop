@@ -147,11 +147,15 @@ describe('quoteAsset', () => {
       ok: false,
       reason: 'below_minimum',
       down_payment_limits: null,
+      base_price_cents: 28_900,
+      price_list_version: 1,
     });
     expect(await quoteAsset(db, { ...input, assetId: 'farm-006' })).toEqual({
       ok: false,
       reason: 'above_maximum',
       down_payment_limits: { min_cents: 1_000_000, max_cents: 25_970_000 },
+      base_price_cents: 26_000_000,
+      price_list_version: 1,
     });
   });
 

@@ -9,7 +9,7 @@ import type { Customer } from '@/data/schemas';
 import { ageOn, eligibleFrom } from './age';
 import { isValidBusinessId } from './business-id';
 
-const MIN_AGE = 18;
+export const MIN_AGE = 18;
 const ALLOWED_COUNTRIES = ['FI', 'SE', 'EE'];
 const MAX_RENT_PERCENT_OF_INCOME = 30;
 
@@ -40,6 +40,12 @@ function moneyAnswer(answers: Answers, questionId: string): number | undefined {
   return typeof value === 'number' ? value : undefined;
 }
 
+/** The applicant's birth date: the form answer, else the record. Companies have none. */
+export function applicantBirthDate(customer: Customer, answers: Answers): string | null {
+  if (customer.type === 'company') return null;
+  return textAnswer(answers, 'q_birth_date') ?? customer.birth_date;
+}
+
 /** Compares in whole numbers: rent ÷ income ≤ 30 % is the same as rent × 100 ≤ income × 30. */
 function isAffordable(rentCents: number, incomeCents: number): boolean {
   return rentCents * 100 <= incomeCents * MAX_RENT_PERCENT_OF_INCOME;
@@ -55,12 +61,10 @@ export function decide(input: EligibilityInput): Eligibility {
   const reasons: EligibilityReason[] = [];
   let eligible_from: string | null = null;
 
-  if (customer.type !== 'company') {
-    const birthDate = textAnswer(answers, 'q_birth_date') ?? customer.birth_date;
-    if (ageOn(birthDate, startOn) < MIN_AGE) {
-      reasons.push('min_age');
-      eligible_from = eligibleFrom(birthDate, MIN_AGE);
-    }
+  const birthDate = applicantBirthDate(customer, answers);
+  if (birthDate !== null && ageOn(birthDate, startOn) < MIN_AGE) {
+    reasons.push('min_age');
+    eligible_from = eligibleFrom(birthDate, MIN_AGE);
   }
 
   const country = textAnswer(answers, 'q_country') ?? customer.country;

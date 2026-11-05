@@ -2,7 +2,14 @@ import { cookies } from 'next/headers';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadCustomers, loadStaff } from '@/data/load';
 import type { Customer, Staff } from '@/data/schemas';
-import { actorForToken, getActor, requireActor, requireRole, sessionSecret } from './actor';
+import {
+  actorForToken,
+  getActor,
+  requireActor,
+  requireCustomer,
+  requireRole,
+  sessionSecret,
+} from './actor';
 import { SESSION_COOKIE_NAME, signSession } from './session';
 
 // getActor/requireActor/requireRole read the real session cookie via next/headers, which
@@ -124,5 +131,32 @@ describe('getActor, requireActor and requireRole', () => {
     mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
     const actor = await requireRole('asset.change_status');
     expect(actor).toMatchObject({ kind: 'staff', role: 'dealer' });
+  });
+
+  it('requireCustomer resolves with the customer record for a client', async () => {
+    const token = await signSession({ sub: 'cust-aino', role: 'client' }, secret);
+    mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
+    expect(await requireCustomer('application.submit')).toMatchObject({
+      id: 'cust-aino',
+      type: 'consumer',
+    });
+  });
+
+  it('requireCustomer keeps the 401 and 403 of requireRole', async () => {
+    mockedCookies.mockResolvedValue(cookieJarWith(undefined) as never);
+    await expect(requireCustomer('application.submit')).rejects.toMatchObject({ status: 401 });
+
+    const token = await signSession({ sub: 'staff-dealer', role: 'dealer' }, secret);
+    mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
+    await expect(requireCustomer('application.submit')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('requireCustomer refuses staff even for a permission that staff hold', async () => {
+    const token = await signSession({ sub: 'staff-dealer', role: 'dealer' }, secret);
+    mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
+    await expect(requireCustomer('asset.change_status')).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
   });
 });

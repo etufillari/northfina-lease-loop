@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
-import { decide, type EligibilityInput } from './eligibility';
+import { applicantBirthDate, decide, type EligibilityInput } from './eligibility';
 
 // Tests run against the real data pack, so they also catch a changed customer.
 let customers: Customer[];
@@ -200,5 +200,19 @@ describe('decide: several reasons', () => {
       reasons: ['min_age', 'residency', 'affordability'],
       eligible_from: '2027-03-10',
     });
+  });
+});
+
+describe('applicantBirthDate', () => {
+  it('prefers the form answer over the record', () => {
+    expect(applicantBirthDate(customer('cust-aino'), {})).toBe('1997-04-12');
+    expect(applicantBirthDate(customer('cust-aino'), { q_birth_date: '2000-01-01' })).toBe(
+      '2000-01-01'
+    );
+  });
+
+  it('works for sole traders and gives nothing for companies', () => {
+    expect(applicantBirthDate(customer('cust-pekka'), {})).toBe('1988-01-22');
+    expect(applicantBirthDate(customer('cust-norvi'), { q_birth_date: '2000-01-01' })).toBeNull();
   });
 });

@@ -175,19 +175,31 @@ function FilterSelect<T extends string>({
       <label htmlFor={id} className="block text-sm font-medium text-stone-700 dark:text-stone-300">
         {label}
       </label>
-      <select
-        id={id}
-        name={id}
-        defaultValue={value ?? ''}
-        className="mt-1 block w-full rounded-lg border border-stone-300 bg-white py-2 pr-[17px] pl-3 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-      >
-        <option value="">{allLabel}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          id={id}
+          name={id}
+          defaultValue={value ?? ''}
+          className="mt-1 block w-full appearance-none rounded-lg border border-stone-300 bg-white py-2 pr-10 pl-3 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+        >
+          <option value="">{allLabel}</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          className="pointer-events-none absolute top-1/2 right-[18px] size-4 -translate-y-1/2 text-stone-600 dark:text-stone-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="m4 6 4 4 4-4" />
+        </svg>
+      </div>
     </div>
   );
 }

@@ -34,6 +34,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-024 | 2026-11-05 | Application | Only an approved applicant who may sign can sign; the server decides again         |
 | D-025 | 2026-11-05 | Application | Reasons and "why we ask" are translated in the app, not the data pack              |
 | D-026 | 2026-11-05 | UI          | "Second Life" visual design with swipeable category rows                           |
+| D-027 | 2026-11-05 | UI          | One photo per category in the picture slot, contained on a matching backdrop       |
 | D-028 | 2026-11-05 | Application | A decline shows as soon as an answer breaks a rule, not when the form is complete  |
 | D-029 | 2026-11-05 | Contract    | End of term: buy, return, or pass on to a named next lessee                        |
 | D-030 | 2026-11-05 | Demo        | A validated "as of" date cookie is the app's only source of today                  |

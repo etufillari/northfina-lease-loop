@@ -6,21 +6,23 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 ## Index
 
-| ID    | Date       | Area     | Decision                                                                  |
-| ----- | ---------- | -------- | ------------------------------------------------------------------------- |
-| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win              |
-| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model          |
-| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)          |
-| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                               |
-| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof        |
-| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code          |
-| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate           |
-| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI        |
-| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                             |
-| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history               |
-| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date             |
-| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table |
-| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent       |
+| ID    | Date       | Area     | Decision                                                                    |
+| ----- | ---------- | -------- | --------------------------------------------------------------------------- |
+| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win                |
+| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model            |
+| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)            |
+| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                                 |
+| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof          |
+| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code            |
+| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate             |
+| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI          |
+| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                               |
+| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history                 |
+| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date               |
+| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table   |
+| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent         |
+| D-014 | 2026-11-05 | Contract | Signing locks a valid quote; a cheaper price today is offered, never forced |
+| D-015 | 2026-11-05 | Domain   | Dates are ISO strings; calendar maths in UTC in one module                  |
 
 ---
 
@@ -110,3 +112,17 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Alternatives:** Quietly charge the cheaper of the two bands (deviates from the bank's own table).
 - **Why:** The table is Northfina's pricing. Our job is to apply it faithfully and make the effect visible.
 - **Evidence:** A test pins both sides of the edge.
+
+## D-014 · Signing locks the quote; a cheaper price is offered
+
+- **Context:** Scenario card 2. laptop-004 is quoted on Thu 5 Nov at 349 000 (price list v1) and signed on Fri 6 Nov, when v2 makes laptops 8 % cheaper (321 100).
+- **Decision:** A quote records its price-list version, the coefficient table and every amount, and stays valid for 7 days (`QUOTE_VALID_DAYS`). Signing a valid quote copies it into a frozen contract. Before signing, `priceCheckAtSigning` re-quotes the same terms for today: if the rent would be lower, the customer is offered the new quote; if higher, the quote protects them.
+- **Alternatives:** Always price on the signing day (simpler, but a quote becomes meaningless). Lock the quote silently (customer overpays 770 a month on card 2 without knowing).
+- **Why:** A quote is a promise the customer can rely on, and a bank shouldn't profit from a customer not noticing a price drop. Comparing the monthly rent, not the list price, keeps it right at band edges (D-013).
+- **Consequences:** The contract stores where every number came from, so the UI can explain the locked price. An expired quote can't be signed; the customer gets a fresh quote.
+- **Evidence:** Card 2 test: locked at 9 627/month (v1), offered 8 857/month (v2), saving 770.
+
+## D-015 · ISO dates and one calendar module
+
+- **Decision:** Dates travel as ISO strings (`YYYY-MM-DD`). Arithmetic lives in `src/domain/calendar.ts` and runs in UTC. An impossible date such as 2026-02-30 throws, because it can only come from a bug.
+- **Why:** UTC can't lose or gain a day to time zones or daylight saving. The invoice schedule (31st starts, leap years) will build on the same module.

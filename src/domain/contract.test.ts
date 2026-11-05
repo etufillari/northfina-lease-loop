@@ -1,7 +1,10 @@
+import fc from 'fast-check';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import type { CoefficientTable, PriceList } from '@/data/schemas';
+import { addDays } from './calendar';
 import { priceCheckAtSigning, signContract } from './contract';
+import { DOWN_PAYMENT_STEP_CENTS, QUOTE_VALID_DAYS } from './pricing-rules';
 import { makeQuote, type Quote } from './quote';
 
 let table: CoefficientTable;
@@ -121,5 +124,43 @@ describe('priceCheckAtSigning', () => {
     expect(priceCheckAtSigning(priceLists, table, quote, '2026-11-06')).toEqual({
       kind: 'unchanged',
     });
+  });
+});
+
+describe('signContract properties (random quotes, signed any day they are valid)', () => {
+  const anyQuote = fc.record({
+    assetIndex: fc.nat(),
+    // 5 Nov 2026 (v1) to early 2027 (v2): both price lists.
+    quoteDate: fc.integer({ min: 0, max: 90 }).map((d) => addDays('2026-11-05', d)),
+    termMonths: fc.constantFrom(12, 24, 36, 48),
+    downSteps: fc.integer({ min: 0, max: 2_000 }),
+    signAfterDays: fc.integer({ min: 0, max: QUOTE_VALID_DAYS }),
+    startAfterDays: fc.integer({ min: 0, max: 60 }),
+  });
+
+  it('never changes an amount: the contract is the quote, number for number', () => {
+    fc.assert(
+      fc.property(anyQuote, (q) => {
+        const assetIds = Object.keys(priceLists[0]?.prices ?? {});
+        const assetId = assetIds[q.assetIndex % assetIds.length] ?? '';
+        const made = makeQuote(priceLists, table, {
+          assetId,
+          quoteDate: q.quoteDate,
+          termMonths: q.termMonths,
+          downPaymentCents: q.downSteps * DOWN_PAYMENT_STEP_CENTS,
+        });
+        fc.pre(made.ok);
+        if (!made.ok) return;
+        const signDate = addDays(q.quoteDate, q.signAfterDays);
+        const signed = signContract(made.quote, {
+          customerId: 'cust-test',
+          signDate,
+          startDate: addDays(signDate, q.startAfterDays),
+        });
+        if (!signed.ok) throw new Error(signed.reason);
+        const { validUntil: _validUntil, ...locked } = made.quote;
+        expect(signed.contract).toMatchObject(locked);
+      })
+    );
   });
 });

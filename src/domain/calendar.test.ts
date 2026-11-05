@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { addDays, addMonthsClamped, isIsoDate } from './calendar';
 
@@ -54,6 +55,35 @@ describe('addMonthsClamped', () => {
   it('throws on negative or fractional months, which are bugs', () => {
     expect(() => addMonthsClamped('2026-11-05', -1)).toThrow(RangeError);
     expect(() => addMonthsClamped('2026-11-05', 1.5)).toThrow(RangeError);
+  });
+});
+
+describe('addMonthsClamped properties (random dates and month counts)', () => {
+  // Any day from 2000 to 2050 (leap years and 2000 itself included), up to 10 years ahead.
+  const anyDate = fc.integer({ min: 0, max: 365 * 50 }).map((d) => addDays('2000-01-01', d));
+  const parts = (iso: string) => iso.split('-').map(Number) as [number, number, number];
+
+  it('lands exactly n calendar months later, on a day no later than the start day', () => {
+    fc.assert(
+      fc.property(anyDate, fc.integer({ min: 0, max: 120 }), (start, months) => {
+        const [startYear, startMonth, startDay] = parts(start);
+        const [year, month, day] = parts(addMonthsClamped(start, months));
+        expect(year * 12 + month).toBe(startYear * 12 + startMonth + months);
+        expect(day).toBeLessThanOrEqual(startDay);
+      })
+    );
+  });
+
+  it('keeps the start day, or moves only to the last day of a shorter month', () => {
+    fc.assert(
+      fc.property(anyDate, fc.integer({ min: 0, max: 120 }), (start, months) => {
+        const result = addMonthsClamped(start, months);
+        const kept = parts(result)[2] === parts(start)[2];
+        // The day after a month's last day is the 1st.
+        const lastOfMonth = parts(addDays(result, 1))[2] === 1;
+        expect(kept || lastOfMonth).toBe(true);
+      })
+    );
   });
 });
 

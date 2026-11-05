@@ -37,6 +37,7 @@
   "asset.modelYear": "Model year",
   "asset.usage": "Usage",
   "asset.previousLives": "Previous leases",
+  "asset.serialNumber": "Serial number",
   "asset.listPrice": "Day-one list price excl. VAT",
   "asset.monthlyRate": "Monthly rate excl. VAT",
   "asset.priceListVersion": "Price list {version}",
@@ -51,5 +52,19 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
-  "footer.skeleton": "Starter skeleton — replace me"
+  "footer.skeleton": "Starter skeleton — replace me",
+  "assetDetails.backToCatalogue": "Back to catalogue",
+  "assetDetails.backToDetails": "Back to item details",
+  "assetDetails.startLeasing": "Start leasing",
+  "assetDetails.leaseIntro": "You are about to start a lease for this item.",
+  "assetDetails.leaseNextStep": "The application flow will continue here.",
+  "lease.reserve": "Start leasing",
+  "lease.reservationInfo": "Reservation is held for 15 minutes.",
+  "lease.reserving": "Reserving...",
+  "lease.reservationError": "This item is no longer available. Please go back and choose another item.",
+  "lease.questionStep": "Question {current} of {total}",
+  "lease.why": "Why we ask",
+  "lease.continue": "Continue",
+  "lease.complete": "Your answers are complete. We can now review your leasing application.",
+  "lease.validationError": "This answer does not meet the leasing requirements. The application cannot continue."
 }

@@ -37,6 +37,7 @@
   "asset.modelYear": "Vuosimalli",
   "asset.usage": "Käyttö",
   "asset.previousLives": "Aiemmat vuokrakaudet",
+  "asset.serialNumber": "Sarjanumero",
   "asset.listPrice": "Päivän listahinta alv 0 %",
   "asset.monthlyRate": "Kuukausihinta alv 0 %",
   "asset.priceListVersion": "Hinnasto {version}",
@@ -51,5 +52,19 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
-  "footer.skeleton": "Aloituspohja — korvaa minut"
+  "footer.skeleton": "Aloituspohja — korvaa minut",
+  "assetDetails.backToCatalogue": "Takaisin valikoimaan",
+  "assetDetails.backToDetails": "Takaisin tuotteen tietoihin",
+  "assetDetails.startLeasing": "Aloita leasing",
+  "assetDetails.leaseIntro": "Olet aloittamassa tämän tuotteen leasingin.",
+  "assetDetails.leaseNextStep": "Hakemusprosessi jatkuu tästä.",
+  "lease.reserve": "Aloita leasing",
+  "lease.reservationInfo": "Varaus on voimassa 15 minuuttia.",
+  "lease.reserving": "Varataan...",
+  "lease.reservationError": "Tuote ei ole enää saatavilla. Palaa takaisin ja valitse toinen tuote.",
+  "lease.questionStep": "Kysymys {current} / {total}",
+  "lease.why": "Miksi kysymme",
+  "lease.continue": "Jatka",
+  "lease.complete": "Vastauksesi ovat valmiit. Voimme nyt käsitellä leasing-hakemuksesi.",
+  "lease.validationError": "Tämä vastaus ei täytä leasing-vaatimuksia. Hakemusta ei voi jatkaa."
 }

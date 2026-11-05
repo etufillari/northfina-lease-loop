@@ -39,17 +39,80 @@ export function toAssetRowData(asset: Asset) {
 
 export async function listAssets(
   db: PrismaClient,
-  filter: { category?: AssetCategory } = {}
+  filter: { category?: AssetCategory } = {},
+  now = new Date()
 ): Promise<Asset[]> {
   const rows = await db.asset.findMany({
     where: filter.category ? { category: filter.category } : {},
     orderBy: { id: 'asc' },
   });
-  return rows.map(toAsset);
+  return rows.map((row) =>
+    toAsset({
+      ...row,
+      status:
+        row.status === 'reserved' && row.reserved_until !== null && row.reserved_until <= now
+          ? 'available'
+          : row.status,
+    })
+  );
 }
 
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
+
+export type ReserveAssetResult =
+  | { ok: true; asset: Asset; reservedUntil: string }
+  | { ok: false; reason: 'not_found' | 'unavailable' };
+
+const RESERVATION_MINUTES = 15;
+
+export async function reserveAsset(
+  db: PrismaClient,
+  input: { id: string; actor: string; now: Date }
+): Promise<ReserveAssetResult> {
+  const reservedUntil = new Date(input.now.getTime() + RESERVATION_MINUTES * 60_000);
+  const existing = await db.asset.findUnique({ where: { id: input.id } });
+  if (!existing) return { ok: false, reason: 'not_found' };
+
+  try {
+    const updated = await withAudit(
+      db,
+      {
+        actor: input.actor,
+        action: 'asset.reserved',
+        entityType: 'asset',
+        entityId: input.id,
+        details: {
+          from: existing.status,
+          to: 'reserved',
+          reservedUntil: reservedUntil.toISOString(),
+        },
+      },
+      async (tx) => {
+        const claimed = await tx.asset.updateMany({
+          where: {
+            id: input.id,
+            OR: [
+              { status: 'available' },
+              { status: 'reserved', reserved_until: { lte: input.now } },
+            ],
+          },
+          data: { status: 'reserved', reserved_until: reservedUntil, reserved_by: input.actor },
+        });
+        if (claimed.count !== 1) throw new ReservationUnavailableError();
+        return tx.asset.findUniqueOrThrow({ where: { id: input.id } });
+      }
+    );
+    return { ok: true, asset: toAsset(updated), reservedUntil: reservedUntil.toISOString() };
+  } catch (error) {
+    if (error instanceof ReservationUnavailableError) {
+      return { ok: false, reason: 'unavailable' };
+    }
+    throw error;
+  }
+}
+
+class ReservationUnavailableError extends Error {}
 
 /** Sets an asset's status and writes `asset.status_changed` to the audit log, atomically. */
 export async function changeAssetStatus(

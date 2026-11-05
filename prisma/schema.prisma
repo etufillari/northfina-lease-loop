@@ -26,6 +26,8 @@ model Asset {
   usage_value    Int
   previous_lives Int
   status         String // available | reserved | returned
+  reserved_until DateTime?
+  reserved_by    String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 

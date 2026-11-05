@@ -52,6 +52,19 @@ describe('listAssets', () => {
     expect(laptops).toHaveLength(10);
     expect(laptops.every((asset) => asset.category === 'laptop')).toBe(true);
   });
+
+  it('treats expired reservations as available', async () => {
+    await seedAssets(db, dataPack);
+    const now = new Date('2026-11-05T20:00:00.000Z');
+    await db.asset.update({
+      where: { id: 'ebike-001' },
+      data: { status: 'reserved', reserved_until: new Date('2026-11-05T19:59:00.000Z') },
+    });
+
+    const assets = await listAssets(db, {}, now);
+
+    expect(assets.find((asset) => asset.id === 'ebike-001')?.status).toBe('available');
+  });
 });
 
 describe('changeAssetStatus', () => {
@@ -84,6 +97,8 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      reserved_until: null,
+      reserved_by: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

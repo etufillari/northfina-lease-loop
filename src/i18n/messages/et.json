@@ -37,6 +37,7 @@
   "asset.modelYear": "Mudeliaasta",
   "asset.usage": "Kasutus",
   "asset.previousLives": "Varasemad liisinguperioodid",
+  "asset.serialNumber": "Seerianumber",
   "asset.listPrice": "Esimese päeva hinnakirjahind käibemaksuta",
   "asset.monthlyRate": "Kuuhind käibemaksuta",
   "asset.priceListVersion": "Hinnakiri {version}",
@@ -51,5 +52,19 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
-  "footer.skeleton": "Algmall — asenda mind"
+  "footer.skeleton": "Algmall — asenda mind",
+  "assetDetails.backToCatalogue": "Tagasi kataloogi",
+  "assetDetails.backToDetails": "Tagasi toote detailidesse",
+  "assetDetails.startLeasing": "Alusta liisingut",
+  "assetDetails.leaseIntro": "Alustad selle toote liisingut.",
+  "assetDetails.leaseNextStep": "Taotlusprotsess jätkub siin.",
+  "lease.reserve": "Alusta liisimist",
+  "lease.reservationInfo": "Broneering kehtib 15 minutit.",
+  "lease.reserving": "Broneerimine...",
+  "lease.reservationError": "Toode pole enam saadaval. Mine tagasi ja vali teine toode.",
+  "lease.questionStep": "Küsimus {current} / {total}",
+  "lease.why": "Miks me küsime",
+  "lease.continue": "Jätka",
+  "lease.complete": "Sinu vastused on valmis. Saame nüüd liisingutaotlust läbi vaadata.",
+  "lease.validationError": "See vastus ei vasta liisingunõuetele. Taotlust ei saa jätkata."
 }

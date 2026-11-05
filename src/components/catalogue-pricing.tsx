@@ -161,6 +161,9 @@ export function CataloguePricing({
 export function MonthlyRate({ listPriceCents }: { listPriceCents: number | undefined }) {
   const pricing = useContext(PricingContext);
   if (!pricing) throw new Error('MonthlyRate must be rendered inside CataloguePricing');
+  if (pricing.termMonths === 0) {
+    return <span>{formatEuro(0, intlLocale[pricing.locale])}</span>;
+  }
   if (pricing.downPaymentCents === undefined) {
     return <span>{pricing.quoteUnavailable}</span>;
   }

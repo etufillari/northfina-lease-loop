@@ -177,6 +177,11 @@ export default async function InvoicesPage({
           monthlyNetRentCents={quote.monthlyNetRentCents}
           vatRates={vatRates}
           locale={locale}
+          asset={{
+            make: asset.make,
+            model: asset.model,
+            serial_number: asset.serial_number,
+          }}
         />
       </div>
     </div>

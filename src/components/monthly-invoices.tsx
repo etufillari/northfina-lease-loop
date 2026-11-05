@@ -11,6 +11,7 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { InvoiceBillDialog, type InvoiceBillAssetInfo } from './invoice-bill-dialog';
 
 export type MonthlyInvoicesProps = {
   /** Contract signing / start date in ISO YYYY-MM-DD */
@@ -23,6 +24,8 @@ export type MonthlyInvoicesProps = {
   vatRates: VatRates;
   /** Current display locale */
   locale: Locale;
+  /** Optional leased asset metadata displayed on opened invoice bills */
+  asset?: InvoiceBillAssetInfo;
   /** Initial state for whether all invoices are expanded (default: false = first 3 invoices) */
   initialExpanded?: boolean;
   /** Optional custom title override */
@@ -49,6 +52,7 @@ export function MonthlyInvoices({
   monthlyNetRentCents,
   vatRates,
   locale,
+  asset,
   initialExpanded = false,
   title,
   schedule: externalSchedule,
@@ -57,6 +61,7 @@ export function MonthlyInvoices({
   const intlTag = intlLocale[locale];
   const headingId = useId();
   const [isExpanded, setIsExpanded] = useState<boolean>(initialExpanded);
+  const [selectedInvoice, setSelectedInvoice] = useState<MonthlyInvoice | null>(null);
 
   const schedule =
     externalSchedule ??
@@ -174,13 +179,17 @@ export function MonthlyInvoices({
               <th scope="col" className="px-[16px] py-[10px] text-right">
                 {t('invoices.tableHeaderTotal')}
               </th>
+              <th scope="col" className="px-[16px] py-[10px] text-right">
+                {t('invoices.tableHeaderAction')}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#ededed] bg-[#FFFFFF] dark:divide-stone-800 dark:bg-stone-900">
             {visibleInvoices.map((inv) => (
               <tr
                 key={inv.invoiceNumber}
-                className={`transition-colors hover:bg-[#f7f7f7] dark:hover:bg-stone-800/60 ${
+                onClick={() => setSelectedInvoice(inv)}
+                className={`cursor-pointer transition-colors hover:bg-[#f7f7f7] dark:hover:bg-stone-800/60 ${
                   inv.isVatChangedFromSigning ? 'bg-[#f8f7f6] dark:bg-amber-950/20' : ''
                 }`}
               >
@@ -216,6 +225,19 @@ export function MonthlyInvoices({
                 <td className="px-[16px] py-[12px] text-right font-mono font-bold text-[#123054] tabular-nums dark:text-sky-200">
                   {formatEuro(inv.grossTotalCents, intlTag)}
                 </td>
+                <td className="px-[16px] py-[12px] text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedInvoice(inv);
+                    }}
+                    className="rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[8px] py-[4px] text-[0.75rem] font-semibold text-[#1354a5] transition-colors hover:bg-[#ededed] dark:border-stone-700 dark:bg-stone-800 dark:text-sky-400 dark:hover:bg-stone-700"
+                  >
+                    {t('invoices.viewBill')}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -241,6 +263,16 @@ export function MonthlyInvoices({
               : t('invoices.showAllButton', { count: schedule.invoices.length })}
           </button>
         </div>
+      ) : null}
+      {selectedInvoice ? (
+        <InvoiceBillDialog
+          invoice={selectedInvoice}
+          signedOn={schedule.signedOn}
+          termMonths={schedule.termMonths}
+          locale={locale}
+          asset={asset}
+          onClose={() => setSelectedInvoice(null)}
+        />
       ) : null}
     </section>
   );

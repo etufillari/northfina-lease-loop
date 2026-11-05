@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { downPaymentBounds, quoteLease } from './pricing';
+import { bandEdgeHint, downPaymentBounds, quoteLease } from './pricing';
 import { DOWN_PAYMENT_STEP_CENTS } from './pricing-rules';
 
 // Real data pack; every expected value is worked out by hand from it in the comments.
@@ -143,5 +143,31 @@ describe('downPaymentBounds', () => {
         expect({ price, down, ok: quote.ok }).toEqual({ price, down, ok: inBounds });
       }
     }
+  });
+});
+
+describe('bandEdgeHint', () => {
+  it('tells the customer when one step less down payment lowers the rent (D-013)', () => {
+    // laptop-003, 200 000, 36 m. 10 € down → 199 000 financed, band A: × 0.028625 = 5 696.4 → 5 696.
+    // No down payment → 200 000, band B: × 0.027584 = 5 516.8 → 5 517. Saving 179/month.
+    expect(
+      bandEdgeHint(table, { listPriceCents: 200_000, termMonths: 36, downPaymentCents: 1_000 })
+    ).toEqual({ downPaymentCents: 0, monthlyNetRentCents: 5_517, savingPerMonthCents: 179 });
+  });
+
+  it('finds the cheaper band several steps away, not just one step back', () => {
+    // Found in the browser: laptop-003 with 20 € down → 198 000 financed, band A:
+    // × 0.028625 = 5 667.75 → 5 668. No down payment → band B, 5 517. Saving 151/month.
+    expect(
+      bandEdgeHint(table, { listPriceCents: 200_000, termMonths: 36, downPaymentCents: 2_000 })
+    ).toEqual({ downPaymentCents: 0, monthlyNetRentCents: 5_517, savingPerMonthCents: 151 });
+  });
+
+  it('says nothing away from a band edge, at zero down, or for an invalid quote', () => {
+    const hint = (downPaymentCents: number, listPriceCents = 389_000) =>
+      bandEdgeHint(table, { listPriceCents, termMonths: 36, downPaymentCents });
+    expect(hint(10_000)).toBeNull();
+    expect(hint(0)).toBeNull();
+    expect(hint(0, 28_900)).toBeNull();
   });
 });

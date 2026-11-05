@@ -97,3 +97,36 @@ export function downPaymentBounds(
   const maxCents = Math.floor((listPriceCents - lowest) / step) * step;
   return { ok: true, minCents, maxCents, stepCents: step };
 }
+
+export interface BandEdgeHint {
+  downPaymentCents: number;
+  monthlyNetRentCents: number;
+  savingPerMonthCents: number;
+}
+
+/**
+ * At a band edge a bigger down payment can raise the rent (D-013). Within a band, less down
+ * means more rent, so the only cheaper option is the next band up: the largest down payment
+ * (on a slider step) that still keeps the financed amount in it. Returns it when it lowers the
+ * rent; otherwise null.
+ */
+export function bandEdgeHint(table: CoefficientTable, input: QuoteInput): BandEdgeHint | null {
+  const current = quoteLease(table, input);
+  if (!current.ok) return null;
+  const nextBand = table.bands
+    .filter((b) => b.min_financed_cents > current.financedCents)
+    .sort((a, b) => a.min_financed_cents - b.min_financed_cents)[0];
+  if (!nextBand) return null;
+
+  const step = DOWN_PAYMENT_STEP_CENTS;
+  const downPaymentCents =
+    Math.floor((input.listPriceCents - nextBand.min_financed_cents) / step) * step;
+  if (downPaymentCents < 0 || downPaymentCents >= input.downPaymentCents) return null;
+  const cheaper = quoteLease(table, { ...input, downPaymentCents });
+  if (!cheaper.ok || cheaper.monthlyNetRentCents >= current.monthlyNetRentCents) return null;
+  return {
+    downPaymentCents,
+    monthlyNetRentCents: cheaper.monthlyNetRentCents,
+    savingPerMonthCents: current.monthlyNetRentCents - cheaper.monthlyNetRentCents,
+  };
+}

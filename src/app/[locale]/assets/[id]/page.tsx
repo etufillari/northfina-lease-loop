@@ -17,7 +17,7 @@ import { isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
-import { todayIso } from '@/server/today';
+import { asOfDate } from '@/server/as-of';
 
 export default async function AssetPage({ params }: PageProps<'/[locale]/assets/[id]'>) {
   const { locale, id } = await params;
@@ -28,7 +28,7 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
   if (!row) notFound();
   const asset = toAsset(row);
   const t = getT(locale);
-  const today = todayIso();
+  const today = await asOfDate();
   const data = await loadLeaseDataPack();
 
   const price = listPriceOn(data.priceLists, asset.id, today);

@@ -78,7 +78,13 @@ describe('signLease', () => {
       action: 'contract.signed',
       entity_type: 'contract',
       entity_id: String(result.id),
-      details: { assetId: 'ebike-003', monthlyNetRentCents: 10_730, priceListVersion: 1 },
+      // asOf: the effective date it was signed on (D-030), the `today` passed in above.
+      details: {
+        assetId: 'ebike-003',
+        monthlyNetRentCents: 10_730,
+        priceListVersion: 1,
+        asOf: '2026-11-05',
+      },
     });
   });
 

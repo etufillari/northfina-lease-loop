@@ -9,7 +9,7 @@ import { endLease } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
-import { todayIso } from '@/server/today';
+import { asOfDate } from '@/server/as-of';
 
 const inspection = {
   condition: assetConditionSchema,
@@ -46,7 +46,7 @@ export const POST = handleRoute(
     const result = await endLease(db, await loadLeaseDataPack(), {
       contractId: found.id,
       choice,
-      today: todayIso(),
+      today: await asOfDate(),
       actor: found.contract.customerId,
     });
     if (!result.ok) {

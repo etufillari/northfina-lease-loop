@@ -6,7 +6,7 @@ import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { signLease } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
-import { todayIso } from '@/server/today';
+import { asOfDate } from '@/server/as-of';
 
 const answerSchema = z.union([
   z.string().max(500),
@@ -40,7 +40,7 @@ export const POST = handleRoute(async (request) => {
   const result = await signLease(db, await loadLeaseDataPack(), {
     ...rest,
     ...(customerId === undefined ? {} : { customerId }),
-    today: todayIso(),
+    today: await asOfDate(),
     actor: customerId ?? String(body.answers.q_email ?? 'applicant'),
   });
   if (!result.ok) {

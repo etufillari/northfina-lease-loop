@@ -11,7 +11,7 @@ import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { asOfDate } from '@/server/as-of';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -21,7 +21,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   await connection();
 
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
+  const today = await asOfDate(); // the demo date or the real one (D-030); domain code never reads the clock
   const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))

@@ -13,7 +13,7 @@ import { getContractEnding } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
-import { todayIso } from '@/server/today';
+import { asOfDate } from '@/server/as-of';
 
 export default async function ContractPage({ params }: PageProps<'/[locale]/contracts/[id]'>) {
   const { locale, id } = await params;
@@ -150,7 +150,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         contract={contract}
         ending={ending}
         vatRates={vatRates}
-        today={todayIso()}
+        today={await asOfDate()}
         asset={
           assetRow
             ? {

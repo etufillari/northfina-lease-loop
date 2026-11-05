@@ -60,7 +60,7 @@ export async function endLease(
         action: `contract.ended_${ending.kind}`,
         entityType: 'contract',
         entityId: String(input.contractId),
-        details: { assetId: contract.assetId, ...ending },
+        details: { assetId: contract.assetId, ...ending, asOf: input.today }, // D-030
       },
       async (tx) => {
         // A finished lease is a finished life, whichever way it ends.

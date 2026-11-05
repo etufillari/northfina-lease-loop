@@ -75,6 +75,7 @@ export async function signLease(
           customerId: contract.customerId,
           monthlyNetRentCents: contract.monthlyNetRentCents,
           priceListVersion: contract.priceListVersion,
+          asOf: input.today, // the effective date, which can be a demo date (D-030)
         },
       }),
       async (tx) => {

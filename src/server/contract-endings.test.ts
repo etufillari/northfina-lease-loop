@@ -73,6 +73,7 @@ describe('endLease', () => {
       action: 'contract.ended_buy',
       entity_id: String(contractId),
       actor: 'cust-aino',
+      details: { asOf: '2029-11-05' }, // the `today` given to end() (D-030)
     });
   });
 

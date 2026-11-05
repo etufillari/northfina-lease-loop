@@ -23,3 +23,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Clean Coding
+
+- Write small, focused functions and modules with clear names and one
+  responsibility.
+- Prefer straightforward, readable TypeScript over clever or overly abstract
+  solutions; keep types explicit and avoid `any`.
+- Reuse existing patterns and helpers, and avoid duplicated logic or unrelated
+  changes.
+- Handle invalid input and failures explicitly; do not silently swallow errors
+  or return success-shaped fallbacks.
+- Keep comments limited to explaining non-obvious decisions; keep code and
+  directly related documentation in sync.
+- Add or update focused tests for behavior changes, and run the relevant
+  linting, type-checking, and tests before finishing.

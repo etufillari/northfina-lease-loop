@@ -7,28 +7,12 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ContractDrawerTrigger } from './contract';
 
-// Available = green check, reserved = amber hourglass, returned = blue loop arrows.
-const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
-  available: {
-    badge:
-      'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
-    dot: 'bg-emerald-600 dark:bg-emerald-400',
-  },
-  reserved: {
-    badge:
-      'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800',
-    dot: 'bg-amber-500 dark:bg-amber-400',
-  },
-  returned: {
-    badge:
-      'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
-    dot: 'bg-sky-600 dark:bg-sky-400',
-  },
-  sold: {
-    badge:
-      'bg-stone-100 text-stone-800 ring-stone-300 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700',
-    dot: 'bg-stone-500 dark:bg-stone-400',
-  },
+// Available = green check, reserved = amber hourglass, returned = blue loop arrows, sold = stone check.
+const statusColors: Record<AssetStatus, string> = {
+  available: 'text-emerald-600 dark:text-emerald-400',
+  reserved: 'text-amber-600 dark:text-amber-400',
+  returned: 'text-sky-600 dark:text-sky-400',
+  sold: 'text-stone-600 dark:text-stone-400',
 };
 
 function StatusIcon({ status }: { status: AssetStatus }) {

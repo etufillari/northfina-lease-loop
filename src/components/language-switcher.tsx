@@ -3,12 +3,14 @@
 // Links to the same page in each language: /fi/anything → /en/anything.
 // A client component only because it needs the current path.
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { localeNames, locales, type Locale } from '@/i18n/locales';
 
 export function LanguageSwitcher({ current, label }: { current: Locale; label: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const rest = pathname.split('/').slice(2).join('/');
+  const query = searchParams.toString();
 
   return (
     <nav aria-label={label}>
@@ -18,7 +20,7 @@ export function LanguageSwitcher({ current, label }: { current: Locale; label: s
           return (
             <li key={locale}>
               <Link
-                href={rest ? `/${locale}/${rest}` : `/${locale}`}
+                href={`${rest ? `/${locale}/${rest}` : `/${locale}`}${query ? `?${query}` : ''}`}
                 hrefLang={locale}
                 lang={locale}
                 aria-current={active ? 'page' : undefined}

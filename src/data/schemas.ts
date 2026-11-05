@@ -28,8 +28,30 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned']);
+export const assetStatusSchema = z.enum(['available', 'reserved', 'returned', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
+
+export const applicationStatusSchema = z.enum(['pending', 'approved', 'rejected', 'manual_review']);
+export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
+
+export const contractStatusSchema = z.enum(['draft', 'active', 'completed', 'terminated']);
+export type ContractStatus = z.infer<typeof contractStatusSchema>;
+
+export const invoiceStatusSchema = z.enum(['issued', 'paid', 'overdue', 'cancelled']);
+export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
+
+export const endOfTermActionSchema = z.enum(['bought', 'returned', 'passed_on']);
+export type EndOfTermAction = z.infer<typeof endOfTermActionSchema>;
+
+export const assetHistoryEventSchema = z.enum([
+  'lease_started',
+  'returned',
+  'condition_assessed',
+  'refurbished',
+  'made_available',
+  'bought_out',
+]);
+export type AssetHistoryEvent = z.infer<typeof assetHistoryEventSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */
 export const usageUnitSchema = z.enum(['km', 'battery_cycles', 'engine_hours']);

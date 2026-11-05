@@ -17,6 +17,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate    |
 | D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI |
 | D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                      |
+| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history        |
 
 ---
 
@@ -66,6 +67,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 ## D-008 · Protected main
 
+- **Status:** Merge method superseded by D-010.
 - **Decision:** `main` on the fork only changes through pull requests with a green `ci` check, squash-merged so each feature is one conventional commit.
 - **Why:** The submission PR shows our whole history. One green commit per feature reads cleanly, and a broken `main` is impossible.
 
@@ -74,3 +76,10 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Context:** GitHub started moving `ubuntu-latest` to Ubuntu 26.04 in October 2026, overlapping the hackathon.
 - **Decision:** The CI job runs on `ubuntu-24.04`.
 - **Why:** The runner image can't change under us between our last push and judging.
+
+## D-010 · Rebase merges keep the small commits
+
+- **Context:** D-008 chose squash merges out of habit. The starter's rules say small, frequent commits tell the judges our story, and the README says the history shows who built what. Squashing collapses each PR into one commit and hides the test-first red, green, refactor steps.
+- **Decision:** PRs into the fork's `main` are rebase-merged. Squash and merge commits are turned off in the repo settings. `main` stays protected with a required green `ci` check and linear history.
+- **Alternatives:** Squash (one tidy commit per feature, but the story is lost). Merge commits (keeps commits but breaks linear history).
+- **Why:** Every commit already passes the hooks and commitlint, so each one is safe to land on `main` as it is.

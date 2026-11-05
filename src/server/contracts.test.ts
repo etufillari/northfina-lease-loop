@@ -26,11 +26,22 @@ beforeEach(async () => {
   await seedAssets(db, await loadAssets());
 });
 
+const ainoAnswers = {
+  q_customer_type: 'consumer',
+  q_full_name: 'Aino Virtanen',
+  q_birth_date: '1997-04-12',
+  q_email: 'aino.virtanen@example.com',
+  q_country: 'FI',
+  q_employment: 'employed',
+  q_monthly_income: 320_000,
+  q_usage_purpose: 'commuting',
+};
 const aino = {
   assetId: 'ebike-003',
   customerId: 'cust-aino',
   termMonths: 36,
   downPaymentCents: 0,
+  answers: ainoAnswers,
   today: '2026-11-05',
   actor: 'cust-aino',
 };
@@ -105,6 +116,72 @@ describe('signLease', () => {
     expect(await signLease(db, data, { ...aino, downPaymentCents: 1 })).toEqual({
       ok: false,
       reason: 'down_payment_off_step',
+    });
+  });
+});
+
+describe('signLease and the application', () => {
+  it('signs only an approved application, deciding it again on the server', async () => {
+    const { q_country: _country, ...incomplete } = ainoAnswers;
+    expect(await signLease(db, data, { ...aino, answers: incomplete })).toEqual({
+      ok: false,
+      reason: 'application_incomplete',
+    });
+  });
+
+  it('refuses a declined applicant (card 5: Mikko is 17)', async () => {
+    const mikko = { ...ainoAnswers, q_birth_date: '2009-03-10', q_monthly_income: 40_000 };
+    expect(
+      await signLease(db, data, {
+        ...aino,
+        assetId: 'laptop-008',
+        customerId: 'cust-mikko',
+        answers: mikko,
+      })
+    ).toEqual({ ok: false, reason: 'application_declined' });
+    expect(await db.contract.count()).toBe(0);
+  });
+
+  it('refuses to auto-sign an application that needs a person to review it', async () => {
+    // PEP is only asked from 10 000 € financed: farm-008 is 12 900 € (1 290 000 cents).
+    const pep = { ...ainoAnswers, q_pep: 'yes', q_pep_details: 'Member of parliament' };
+    const { q_usage_purpose: _usage, ...answers } = pep;
+    expect(
+      await signLease(db, data, {
+        ...aino,
+        assetId: 'farm-008',
+        answers: { ...answers, q_farm_registry: 'FR-1' },
+      })
+    ).toEqual({ ok: false, reason: 'application_needs_review' });
+  });
+
+  it('refuses an applicant who may not sign for their company (card 6)', async () => {
+    const norvi = {
+      q_customer_type: 'company',
+      q_email: 'fleet@norvi.example.com',
+      q_business_id: '3299871-7',
+      q_company_name: 'Norvi Logistics Oy',
+      q_can_sign: 'no',
+      q_signatory_email: 'ceo@norvi.example.com',
+      q_vat_registered: 'yes',
+      q_usage_purpose: 'delivery',
+    };
+    expect(
+      await signLease(db, data, {
+        ...aino,
+        assetId: 'ebike-004',
+        customerId: 'cust-norvi',
+        answers: norvi,
+      })
+    ).toEqual({ ok: false, reason: 'signatory_must_sign' });
+  });
+
+  it('names a new applicant (not a data-pack persona) by their email', async () => {
+    const { customerId: _persona, ...anonymous } = aino;
+    const result = await signLease(db, data, anonymous);
+    expect(result).toMatchObject({
+      ok: true,
+      contract: { customerId: 'email:aino.virtanen@example.com' },
     });
   });
 });

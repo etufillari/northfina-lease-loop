@@ -1,7 +1,11 @@
 // Signing a lease and reading contracts back. The server always prices from scratch: numbers
 // sent by the browser are never trusted. Signing and its audit row commit together.
 import { z } from 'zod';
+import type { AssetCategory } from '@/data/schemas';
 import { signContract, type Contract } from '@/domain/contract';
+import { decideApplication } from '@/domain/eligibility';
+import { invoiceSchedule } from '@/domain/invoicing';
+import type { Answers } from '@/domain/question-flow';
 import { makeQuote } from '@/domain/quote';
 import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
@@ -11,7 +15,10 @@ export type { LeaseDataPack } from './lease-data';
 
 export interface SignLeaseInput {
   assetId: string;
-  customerId: string;
+  /** A data-pack persona; a new applicant is named by the email they gave. */
+  customerId?: string;
+  /** The application answers; the server decides them again before signing. */
+  answers: Answers;
   termMonths: number;
   downPaymentCents: number;
   /** Quote, signing and start date for an on-the-spot lease (ISO). */
@@ -33,7 +40,7 @@ export async function signLease(
   const asset = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!asset) return { ok: false, reason: 'asset_not_found' };
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
-  if (!data.customers.some((c) => c.id === input.customerId)) {
+  if (input.customerId !== undefined && !data.customers.some((c) => c.id === input.customerId)) {
     return { ok: false, reason: 'unknown_customer' };
   }
 
@@ -44,8 +51,11 @@ export async function signLease(
     downPaymentCents: input.downPaymentCents,
   });
   if (!quoted.ok) return quoted;
+  const refusal = applicationRefusal(data, input, asset.category, quoted.quote);
+  if (refusal) return { ok: false, reason: refusal };
+
   const signed = signContract(quoted.quote, {
-    customerId: input.customerId,
+    customerId: input.customerId ?? `email:${String(input.answers.q_email)}`,
     signDate: input.today,
     startDate: input.today,
   });
@@ -90,6 +100,44 @@ export async function signLease(
     if (error instanceof AssetTakenError) return { ok: false, reason: 'asset_not_available' };
     throw error;
   }
+}
+
+/**
+ * Decides the application on the server with the deal being signed, so a stale or tampered
+ * answer from the browser can't sign. Affordability uses the highest monthly total over the
+ * term (D-023). Returns why it can't be signed, or null when it can.
+ */
+function applicationRefusal(
+  data: LeaseDataPack,
+  input: SignLeaseInput,
+  category: string,
+  quote: { financedCents: number; monthlyNetRentCents: number }
+): string | null {
+  const schedule = invoiceSchedule(
+    {
+      startDate: input.today,
+      termMonths: input.termMonths,
+      monthlyNetRentCents: quote.monthlyNetRentCents,
+      billing: 'start_day_full_months',
+    },
+    data.vatRates
+  );
+  if (!schedule.ok) return 'no_vat_rate';
+  const decision = decideApplication(data.questions, {
+    deal: {
+      category: category as AssetCategory,
+      financedAmountCents: quote.financedCents,
+      termMonths: input.termMonths,
+    },
+    answers: input.answers,
+    startDate: input.today,
+    highestMonthlyGrossCents: Math.max(...schedule.invoices.map((i) => i.grossCents)),
+  });
+  if (decision.status !== 'decided') return `application_${decision.status}`;
+  if (decision.outcome === 'declined') return 'application_declined';
+  if (decision.outcome === 'manual_review') return 'application_needs_review';
+  if (decision.signer.kind === 'signatory') return 'signatory_must_sign';
+  return null;
 }
 
 /** Mirrors the domain `Contract` type, so a hand-edited row is caught when read. */

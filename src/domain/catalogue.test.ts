@@ -205,14 +205,15 @@ describe('browseCatalogue with the data pack', () => {
     });
     expect(items).toHaveLength(12);
     expect(items.every((i) => i.price.ok && i.price.priceListVersion === 2)).toBe(true);
-    expect(items[0].asset.id).toBe('ebike-010'); // the item that is too cheap to lease
+    expect(items[0]?.asset.id).toBe('ebike-010'); // the item that is too cheap to lease
   });
 
   it('prices ebike-003 from list 1 on Thursday 5 Nov 2026', () => {
-    const [item] = browseCatalogue(assets, lists, '2026-11-05', {
+    const items = browseCatalogue(assets, lists, '2026-11-05', {
       ...defaultCatalogueQuery,
       search: 'ebike-003',
     });
-    expect(item.price).toEqual({ ok: true, priceCents: 389_000, priceListVersion: 1 });
+    expect(items).toHaveLength(1);
+    expect(items[0]?.price).toEqual({ ok: true, priceCents: 389_000, priceListVersion: 1 });
   });
 });

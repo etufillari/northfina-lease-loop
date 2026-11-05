@@ -73,3 +73,28 @@ function sumInvoices(invoices: readonly Invoice[]): VatBreakdown {
     { netCents: 0, vatCents: 0, grossCents: 0 }
   );
 }
+
+export interface BilledInvoices {
+  invoices: Invoice[];
+  totals: VatBreakdown;
+  /** Invoices in the schedule that are never issued because the lease ended first. */
+  cancelledCount: number;
+}
+
+/**
+ * The invoices a lease actually issues when it ends on `endDate` (the ending's effective date).
+ * An invoice dated on or after that day is cancelled: its month is settled by the ending itself
+ * (D-033). A full-term ending hands over after the last invoice, so nothing is cancelled (D-029).
+ * `null` means the lease hasn't ended: every invoice is issued.
+ */
+export function billedBefore(
+  schedule: { invoices: readonly Invoice[] },
+  endDate: string | null
+): BilledInvoices {
+  const invoices = schedule.invoices.filter((i) => endDate === null || i.invoiceDate < endDate);
+  return {
+    invoices,
+    totals: sumInvoices(invoices),
+    cancelledCount: schedule.invoices.length - invoices.length,
+  };
+}

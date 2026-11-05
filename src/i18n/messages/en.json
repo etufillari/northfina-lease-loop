@@ -80,6 +80,7 @@
   "contract.locked": "Your locked price",
   "contract.lockedNote": "Priced on {date} from price list {version}. This price was locked when you signed: later price lists can't change it.",
   "contract.invoices": "Invoices",
+  "contract.invoicesCancelled": "The lease ended on {date}, so the {count} invoices after that were cancelled. The ending settled those months.",
   "contract.billingRule": "Billed in advance on the start day each month, a full month at a time. In a shorter month the invoice is due on its last day.",
   "contract.number": "No.",
   "contract.dueDate": "Due date",

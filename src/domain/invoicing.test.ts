@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
 import { addDays } from './calendar';
-import { invoiceSchedule, type BilledContract } from './invoicing';
+import { billedBefore, invoiceSchedule, type BilledContract } from './invoicing';
 
 let vatRates: VatRates;
 beforeAll(async () => {
@@ -138,5 +138,52 @@ describe('invoiceSchedule properties (thousands of random contracts)', () => {
         }
       })
     );
+  });
+});
+
+describe('billedBefore, the invoices a lease issued before it ended', () => {
+  it('keeps months 1–7 of card 8 and cancels the 29 still to come', () => {
+    // Card 8: Aino's card 1 lease ends early in month 7, effective 5 Jun 2027 (D-033).
+    const billed = billedBefore(scheduleOf(contract()), '2027-06-05');
+    expect(billed.invoices.map((i) => i.number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(billed.cancelledCount).toBe(29);
+    // Net 7 × 10 730 = 75 110. VAT: Nov and Dec 2026 at 25.5 % (2 736.15 → 2 736 each),
+    // Jan–May 2027 at 26 % (2 789.8 → 2 790 each): 2 × 2 736 + 5 × 2 790 = 19 422.
+    expect(billed.totals).toEqual({ netCents: 75_110, vatCents: 19_422, grossCents: 94_532 });
+  });
+
+  it('cancels the invoice dated on the ending day: that month is settled by the ending', () => {
+    // 31 Jan start, ending effective 31 Mar 2026: invoices on 31 Jan and 28 Feb only.
+    const billed = billedBefore(
+      scheduleOf(contract({ startDate: '2026-01-31', termMonths: 12 })),
+      '2026-03-31'
+    );
+    expect(billed.invoices.map((i) => i.invoiceDate)).toEqual(['2026-01-31', '2026-02-28']);
+    expect(billed.cancelledCount).toBe(10);
+  });
+
+  it('keeps every invoice when the lease runs its full term (handover after the last one)', () => {
+    // D-029: card 1 hands over on 5 Nov 2029; the last invoice is dated 5 Oct 2029.
+    const full = scheduleOf(contract());
+    const billed = billedBefore(full, '2029-11-05');
+    expect(billed.invoices).toHaveLength(36);
+    expect(billed.cancelledCount).toBe(0);
+    expect(billed.totals).toEqual(full.totals);
+  });
+
+  it('issues every invoice while the lease has not ended', () => {
+    const full = scheduleOf(contract());
+    expect(billedBefore(full, null)).toEqual({
+      invoices: full.invoices,
+      totals: full.totals,
+      cancelledCount: 0,
+    });
+  });
+
+  it('cancels everything for an ending on the start date', () => {
+    const billed = billedBefore(scheduleOf(contract()), '2026-11-05');
+    expect(billed.invoices).toEqual([]);
+    expect(billed.cancelledCount).toBe(36);
+    expect(billed.totals).toEqual({ netCents: 0, vatCents: 0, grossCents: 0 });
   });
 });

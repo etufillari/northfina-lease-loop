@@ -6,7 +6,7 @@ import { EndOfTermSection } from '@/components/end-of-term-section';
 import { loadResidualCurves, loadVatRates } from '@/data/load';
 import { assetConditionSchema, usageUnitSchema } from '@/data/schemas';
 import { exitMonthOn } from '@/domain/early-exit';
-import { invoiceSchedule } from '@/domain/invoicing';
+import { billedBefore, invoiceSchedule } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -38,7 +38,11 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
     getContractEnding(db, found.id),
   ]);
   const customer = data.customers.find((c) => c.id === contract.customerId);
-  const schedule = invoiceSchedule(contract, vatRates);
+  const fullSchedule = invoiceSchedule(contract, vatRates);
+  // After an ending, only the invoices issued before it took effect (D-033).
+  const schedule = fullSchedule.ok
+    ? { ok: true as const, ...billedBefore(fullSchedule, ending?.effectiveDate ?? null) }
+    : fullSchedule;
   const today = await asOfDate();
   // Leaving early is offered until the lease ends, unless it has already been ended (D-033).
   const exitContext =
@@ -101,6 +105,14 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           {t('contract.invoices')}
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-muted">{t('contract.billingRule')}</p>
+        {schedule.ok && ending && schedule.cancelledCount > 0 ? (
+          <p className="mt-2 max-w-2xl text-sm font-semibold">
+            {t('contract.invoicesCancelled', {
+              count: String(schedule.cancelledCount),
+              date: date(ending.effectiveDate),
+            })}
+          </p>
+        ) : null}
         {schedule.ok ? (
           <div className="panel mt-4 overflow-x-auto">
             <table className="w-full text-sm tabular-nums">

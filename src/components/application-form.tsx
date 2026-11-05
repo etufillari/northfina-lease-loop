@@ -134,7 +134,10 @@ export function ApplicationForm(props: ApplicationFormProps) {
 
   return (
     <section aria-labelledby="application" className="mt-12">
-      <h2 id="application" className="font-display text-2xl font-bold tracking-tight">
+      <h2
+        id="application"
+        className="font-display text-2xl font-extrabold tracking-tight uppercase sm:text-3xl"
+      >
         {t('application.title')}
       </h2>
       <p className="mt-1 text-muted">{t('application.intro')}</p>
@@ -159,7 +162,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem] lg:gap-12">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {asked.map((question) => (
             <QuestionField
               key={question.id}
@@ -185,6 +188,10 @@ export function ApplicationForm(props: ApplicationFormProps) {
           t={t}
           signing={signing}
           refusal={refusal}
+          // A persona's record can hold an answer the rules refuse (Typo Trading): say it's a dead end.
+          recordInvalid={
+            decision.status === 'invalid' && persona?.answers[decision.questionId] !== undefined
+          }
           monthlyNetRentCents={props.monthlyNetRentCents}
           offer={props.offer}
           onSign={(choice) => void sign(choice)}
@@ -263,7 +270,8 @@ function QuestionField(props: {
   }
 
   return (
-    <div>
+    // The anchor the decision panel's "next question" link jumps to.
+    <div id={`q-${question.id}`} className="scroll-mt-28">
       <label htmlFor={id} className="text-sm font-medium">
         {question.text[locale]}
       </label>
@@ -302,6 +310,7 @@ function DecisionPanel(props: {
   signing: Signing;
   /** The code the server refused with, when `signing` is `refused`. */
   refusal: string | undefined;
+  recordInvalid: boolean;
   monthlyNetRentCents: number;
   offer: ApplicationFormProps['offer'];
   onSign: (choice?: PriceChoice) => void;
@@ -320,11 +329,35 @@ function DecisionPanel(props: {
       className="panel h-fit p-6 shadow-xl shadow-black/5 lg:sticky lg:top-24"
     >
       <h3 className="eyebrow">{t('application.decision')}</h3>
-      {decision.status !== 'decided' ? (
-        <p className="mt-2 text-sm">{t('application.remaining')}</p>
+      {decision.status === 'incomplete' ? (
+        <>
+          <p className="mt-2 text-sm">{t('application.remaining')}</p>
+          <a
+            href={`#q-${decision.nextQuestionId}`}
+            className="mt-2 inline-block text-sm font-semibold underline underline-offset-4 hover:text-accent-text"
+          >
+            {t('application.nextQuestion')} <span aria-hidden="true">↓</span>
+          </a>
+        </>
+      ) : decision.status === 'invalid' ? (
+        <p className="mt-2 text-sm font-medium text-danger">
+          {t(props.recordInvalid ? 'application.recordInvalid' : 'application.invalid')}
+        </p>
       ) : (
         <>
-          <p className="mt-2 font-display text-2xl font-bold">{t(`outcome.${decision.outcome}`)}</p>
+          <p
+            className={`mt-2 flex items-center gap-2 font-display text-2xl font-bold ${decision.outcome === 'approved' ? 'text-accent-text' : ''}`}
+          >
+            {decision.outcome === 'approved' ? (
+              <span
+                aria-hidden="true"
+                className="grid size-7 place-items-center rounded-full bg-accent text-base text-on-accent"
+              >
+                ✓
+              </span>
+            ) : null}
+            {t(`outcome.${decision.outcome}`)}
+          </p>
           {decision.outcome === 'approved' && decision.signer.kind === 'applicant' ? (
             <p className="mt-2 text-sm">{t('outcome.approved.text')}</p>
           ) : null}

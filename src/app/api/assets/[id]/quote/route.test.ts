@@ -47,6 +47,17 @@ describe('GET /api/assets/:id/quote', () => {
     });
   });
 
+  it('prices several units together with the quantity parameter', async () => {
+    const { status, body } = await getQuote('ebike-004', 'term=36&quantity=4&on=2026-11-06');
+    expect(status).toBe(200);
+    expect(body.data).toMatchObject({
+      quantity: 4,
+      unit_price_cents: 576_400,
+      base_price_cents: 2_305_600,
+      band: 'C',
+    });
+  });
+
   it('defaults to no down payment and today', async () => {
     const { status, body } = await getQuote('ebike-003', 'term=24');
     expect(status).toBe(200);
@@ -95,6 +106,9 @@ describe('GET /api/assets/:id/quote', () => {
     ['a fraction of a cent', 'term=36&down=0.5'],
     ['a date in the wrong format', 'term=36&on=5.11.2026'],
     ['an unknown parameter', 'term=36&months=12'],
+    ['a quantity of zero', 'term=36&quantity=0'],
+    ['a quantity that is not whole', 'term=36&quantity=1.5'],
+    ['a quantity above the limit', 'term=36&quantity=1001'],
   ])('answers 400 for %s', async (_name, query) => {
     const { status, body } = await getQuote('ebike-003', query);
     expect(status).toBe(400);

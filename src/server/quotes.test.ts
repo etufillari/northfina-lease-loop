@@ -77,6 +77,47 @@ describe('quoteAsset', () => {
     });
   });
 
+  it('prices several units together, so the band follows the total (card 6)', async () => {
+    const one = { ...input, assetId: 'ebike-004', date: '2026-11-06' };
+    expect(await quoteAsset(db, one)).toMatchObject({
+      ok: true,
+      quote: { quantity: 1, base_price_cents: 576_400, band: 'B', monthly_net_rent_cents: 15_899 },
+    });
+    expect(await quoteAsset(db, { ...one, quantity: 4 })).toMatchObject({
+      ok: true,
+      quote: {
+        quantity: 4,
+        unit_price_cents: 576_400,
+        base_price_cents: 2_305_600,
+        financed_cents: 2_305_600,
+        band: 'C',
+        monthly_net_rent_cents: 61_938,
+        buyout_cents: 345_840,
+        down_payment_limits: { min_cents: 0, max_cents: 2_275_600 },
+      },
+    });
+  });
+
+  it('defaults to one unit', async () => {
+    expect(await quoteAsset(db, input)).toMatchObject({
+      ok: true,
+      quote: { quantity: 1, unit_price_cents: 389_000, base_price_cents: 389_000 },
+    });
+  });
+
+  it('applies the limits to the total: four units can go over the maximum', async () => {
+    expect(await quoteAsset(db, { ...input, assetId: 'farm-003', quantity: 1000 })).toMatchObject({
+      ok: false,
+      reason: 'above_maximum',
+    });
+  });
+
+  it('refuses a quantity that is not a positive whole number', async () => {
+    for (const quantity of [0, -1, 1.5]) {
+      await expect(quoteAsset(db, { ...input, quantity })).rejects.toThrow(RangeError);
+    }
+  });
+
   it('reports an asset that does not exist', async () => {
     expect(await quoteAsset(db, { ...input, assetId: 'nope' })).toEqual({
       ok: false,

@@ -83,6 +83,56 @@ export function addMonthsClamped(isoDate: string, monthsToAdd: number): string {
   return `${yStr}-${mStr}-${dStr}`;
 }
 
+/**
+ * Formats a deterministic, human-readable invoice document number from the contract
+ * signing date (`YYYY-MM-DD`) and 1-indexed installment number.
+ *
+ * Example: formatInvoiceNumber('2026-11-05', 1) => 'LL-20261105-01'
+ */
+export function formatInvoiceNumber(signedOn: string, invoiceNumber: number): string {
+  const match = ISO_DATE_PATTERN.exec(signedOn);
+  if (!match) {
+    throw new RangeError(`signedOn must look like YYYY-MM-DD, got "${signedOn}"`);
+  }
+  if (!Number.isInteger(invoiceNumber) || invoiceNumber < 1) {
+    throw new RangeError(`invoiceNumber must be a positive integer, got ${invoiceNumber}`);
+  }
+  const compactDate = `${match[1]}${match[2]}${match[3]}`;
+  return `LL-${compactDate}-${String(invoiceNumber).padStart(2, '0')}`;
+}
+
+/**
+ * Generates a deterministic Finnish banking reference number (viitenumero) with a
+ * valid modulo-10 (weights 7, 3, 1 from right to left) check digit, formatted in
+ * groups of 5 digits from the right.
+ */
+export function generateFinnishReferenceNumber(signedOn: string, invoiceNumber: number): string {
+  const match = ISO_DATE_PATTERN.exec(signedOn);
+  if (!match) {
+    throw new RangeError(`signedOn must look like YYYY-MM-DD, got "${signedOn}"`);
+  }
+  if (!Number.isInteger(invoiceNumber) || invoiceNumber < 1) {
+    throw new RangeError(`invoiceNumber must be a positive integer, got ${invoiceNumber}`);
+  }
+
+  const base = `10${match[1]}${match[2]}${match[3]}${String(invoiceNumber).padStart(3, '0')}`;
+  const weights = [7, 3, 1] as const;
+  let sum = 0;
+  for (let i = 0; i < base.length; i += 1) {
+    const digit = Number(base[base.length - 1 - i]);
+    sum += digit * weights[i % 3]!;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  const full = `${base}${checkDigit}`;
+
+  const groups: string[] = [];
+  for (let end = full.length; end > 0; end -= 5) {
+    const start = Math.max(0, end - 5);
+    groups.unshift(full.slice(start, end));
+  }
+  return groups.join(' ');
+}
+
 export type MonthlyInvoice = {
   /** Invoice number in the contract sequence (1-indexed, 1..termMonths) */
   invoiceNumber: number;

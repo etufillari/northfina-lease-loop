@@ -3,6 +3,8 @@ import type { VatRates } from '@/data/schemas';
 import {
   addMonthsClamped,
   daysInMonth,
+  formatInvoiceNumber,
+  generateFinnishReferenceNumber,
   generateInvoiceSchedule,
   isLeapYear,
 } from './invoice-schedule';
@@ -201,5 +203,33 @@ describe('generateInvoiceSchedule', () => {
     expect(schedule.totalNetRentCents).toBe(computedNet);
     expect(schedule.totalVatCents).toBe(computedVat);
     expect(schedule.totalGrossCents).toBe(computedGross);
+  });
+});
+
+describe('formatInvoiceNumber & generateFinnishReferenceNumber', () => {
+  it('formats a deterministic invoice number', () => {
+    expect(formatInvoiceNumber('2026-11-05', 1)).toBe('LL-20261105-01');
+    expect(formatInvoiceNumber('2026-11-05', 12)).toBe('LL-20261105-12');
+    expect(() => formatInvoiceNumber('bad', 1)).toThrow(RangeError);
+    expect(() => formatInvoiceNumber('2026-11-05', 0)).toThrow(RangeError);
+  });
+
+  it('generates a valid Finnish reference number with modulo-10 (7-3-1) check digit', () => {
+    const ref = generateFinnishReferenceNumber('2026-11-05', 1);
+    const digits = ref.replaceAll(' ', '');
+    expect(digits).toMatch(/^\d{14}$/);
+
+    // Verify 7-3-1 check digit
+    const body = digits.slice(0, -1);
+    const check = Number(digits.slice(-1));
+    const weights = [7, 3, 1];
+    let sum = 0;
+    for (let i = 0; i < body.length; i += 1) {
+      sum += Number(body[body.length - 1 - i]) * weights[i % 3]!;
+    }
+    expect((10 - (sum % 10)) % 10).toBe(check);
+
+    expect(() => generateFinnishReferenceNumber('bad', 1)).toThrow(RangeError);
+    expect(() => generateFinnishReferenceNumber('2026-11-05', 0)).toThrow(RangeError);
   });
 });

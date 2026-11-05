@@ -83,7 +83,8 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
               {t(`category.${asset.category}`)} · {asset.make}
             </p>
             <h1 className="mt-2 font-display text-3xl leading-tight font-extrabold tracking-tight text-balance uppercase sm:text-4xl">
-              {t('lease.title', { name: asset.model })}
+              {/* Only an item you can lease today gets "Lease the …"; a returned one is just named. */}
+              {asset.status === 'available' ? t('lease.title', { name: asset.model }) : asset.model}
             </h1>
             <p className="mt-2 text-sm text-muted">
               <time dateTime={today}>

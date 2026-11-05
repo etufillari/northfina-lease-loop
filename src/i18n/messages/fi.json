@@ -32,5 +32,10 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
+  "application.step": "Hakemus",
+  "application.title": "Kerro hieman itsestäsi",
+  "application.intro": "Kysymme vain leasinghakemuksesi käsittelyyn tarvittavat kysymykset.",
+  "application.comingSoonTitle": "Hakemuskysymykset tulevat seuraavaksi",
+  "application.comingSoonDescription": "Tämä sivu on valmis ohjattua kyselyä varten.",
   "footer.skeleton": "Aloituspohja — korvaa minut"
 }

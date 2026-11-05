@@ -32,5 +32,10 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
+  "application.step": "Application",
+  "application.title": "Tell us a little about yourself",
+  "application.intro": "We will ask only the questions needed to review your lease application.",
+  "application.comingSoonTitle": "Application questions are next",
+  "application.comingSoonDescription": "This page is ready for the guided question flow.",
   "footer.skeleton": "Starter skeleton — replace me"
 }

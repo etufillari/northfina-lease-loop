@@ -32,5 +32,10 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
+  "application.step": "Ansökan",
+  "application.title": "Berätta lite om dig själv",
+  "application.intro": "Vi ställer bara de frågor som behövs för att behandla din leasingansökan.",
+  "application.comingSoonTitle": "Ansökningsfrågorna kommer härnäst",
+  "application.comingSoonDescription": "Den här sidan är klar för det guidade frågeflödet.",
   "footer.skeleton": "Startskelett — byt ut mig"
 }

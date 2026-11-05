@@ -38,6 +38,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-028 | 2026-11-05 | Application | A decline shows as soon as an answer breaks a rule, not when the form is complete  |
 | D-029 | 2026-11-05 | Contract    | End of term: buy, return, or pass on to a named next lessee                        |
 | D-030 | 2026-11-05 | Demo        | A validated "as of" date cookie is the app's only source of today                  |
+| D-031 | 2026-11-05 | Application | A named customer's answers must match their record, or signing is refused          |
 
 ---
 
@@ -252,3 +253,17 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** A cookie survives navigation and reaches pages and API routes alike, so the price shown and the price signed use the same day. One helper means no route can drift back to the real clock.
 - **Consequences:** The cookie is `httpOnly`, `SameSite=Lax`, a session cookie, for this browser only. Setting it is not audited, since it changes no data; asset status changes have no date and carry no `asOf`. The layout reads it, so every page renders per request (the pages already did).
 - **Evidence:** 10 domain tests (range ends, leap day, malformed input) and 6 server tests (cookie wins, Helsinki fallback, tampered cookie ignored); audit tests now assert `asOf`. Against the dev server: 2026-11-05 → ebike-003 107.30 / 134.66 (card 1); 2026-11-06 → price list 2 and the banner; 2026-09-15 → ebike-001 24 m starts 15 Sep 2026, invoices 87.31 and 87.66 (card 3); 2026-01-31 → laptop-001 36 m invoices due 28 Feb 2026 and 29 Feb 2028 (card 4); `2026-02-30` and `2040-01-01` refused. Set and cleared from the header in Finnish in the browser.
+
+## D-031 · A named customer's answers must match their record
+
+- **Context:** Issue #11. `signLease` only checked that a named `customerId` existed, then decided on whatever answers the browser sent. Choosing Mikko and changing his birth date to 1990 signed a contract for a 17-year-old (card 5); choosing Norvi and answering "yes, I can sign" skipped the signatory (card 6).
+- **Decision:** When an application names a data-pack customer, the server compares the answers with that customer's record (`answersNotMatchingCustomer` in `src/domain/persona.ts`) before deciding the application, and refuses any difference with `ANSWERS_DO_NOT_MATCH_CUSTOMER` (422), listing the question ids in `details.questionIds`. Extends D-024.
+  - **Facts on record:** every answer `answersFromCustomer` fills: customer type, name, birth date, email, country, employment, monthly income, business ID, company name, VAT registration, "can you sign for the company?", annual revenue, beneficial owners and PEP status.
+  - **Applicant's own choice:** usage purpose, farm registry number, signatory email and PEP details. The record says nothing about them.
+  - Only answers to questions that apply to the deal are compared (D-022), so a stale answer can't block signing. A missing answer is not a mismatch; the application stays incomplete. Text is compared trimmed, emails without case, lists item by item; a value that fails validation (Typo Trading's `1234567-8`) is compared as it is.
+  - An applicant who names no customer is checked by the rules only, as before.
+  - In the form, the chosen customer's known answers are read-only with "From the customer record"; starting with an empty form frees them. If the server still refuses, the form says the answers don't match the record.
+- **Alternatives:** Overwrite the answers with the record on the server (hides the tampering and decides on answers the person never saw). Lock the form only (the API stays open).
+- **Why:** A persona is a known customer; the record is the truth about them. Refusing with the list of differing questions is explicit and easy to show.
+- **Consequences:** A persona whose real situation changed (new income, new email) can't sign as that persona; they apply as a new applicant until the record is updated.
+- **Evidence:** 10 domain tests (Mikko's birth date, Norvi's can-sign, mismatch order, customer-type switch, answers that no longer apply, missing answers, spacing and email case, the invalid business ID, money sent as text) and 5 server tests against SQLite (Mikko and Norvi refused with no contract, audit row or asset change; Aino still signs; a non-persona applicant with the same answers signs; unknown customer checked first).

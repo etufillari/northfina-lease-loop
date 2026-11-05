@@ -98,6 +98,19 @@ export function downPaymentBounds(
   return { ok: true, minCents, maxCents, stepCents: step };
 }
 
+/**
+ * A typed down payment, moved onto the slider: clamped to the range, then to the nearest step
+ * (a half step rounds up). The bounds' ends are on a step, so the result always is (#34).
+ */
+export function snapDownPayment(
+  bounds: Extract<DownPaymentBounds, { ok: true }>,
+  cents: number
+): number {
+  const { minCents, maxCents, stepCents } = bounds;
+  const clamped = Math.min(maxCents, Math.max(minCents, cents));
+  return Math.floor((clamped + stepCents / 2) / stepCents) * stepCents;
+}
+
 export interface BandEdgeHint {
   downPaymentCents: number;
   monthlyNetRentCents: number;

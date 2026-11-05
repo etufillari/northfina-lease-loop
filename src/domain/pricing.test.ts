@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { bandEdgeHint, downPaymentBounds, quoteLease } from './pricing';
+import { bandEdgeHint, downPaymentBounds, quoteLease, snapDownPayment } from './pricing';
 import { DOWN_PAYMENT_STEP_CENTS } from './pricing-rules';
 
 // Real data pack; every expected value is worked out by hand from it in the comments.
@@ -169,5 +169,34 @@ describe('bandEdgeHint', () => {
     expect(hint(10_000)).toBeNull();
     expect(hint(0)).toBeNull();
     expect(hint(0, 28_900)).toBeNull();
+  });
+});
+
+describe('snapDownPayment', () => {
+  // farm-002 (card 7): 0 € to 144 700 € in 10 € steps.
+  const bounds = { ok: true as const, minCents: 0, maxCents: 14_470_000, stepCents: 1_000 };
+
+  it('keeps an amount already on a step', () => {
+    // Card 7 types exactly 20 000 € = 2 000 000 cents, a multiple of 1 000.
+    expect(snapDownPayment(bounds, 2_000_000)).toBe(2_000_000);
+  });
+
+  it('rounds to the nearest step, a half step up', () => {
+    // 123,45 € = 12 345 c → nearest 1 000 is 12 000; 125,00 € = 12 500 c is the half → 13 000.
+    expect(snapDownPayment(bounds, 12_345)).toBe(12_000);
+    expect(snapDownPayment(bounds, 12_500)).toBe(13_000);
+    expect(snapDownPayment(bounds, 12_499)).toBe(12_000);
+  });
+
+  it('clamps to the slider range', () => {
+    expect(snapDownPayment(bounds, 99_999_999)).toBe(14_470_000);
+    // farm-006 needs at least 10 000 € down: typing 50 € gives the minimum.
+    const farm006 = {
+      ok: true as const,
+      minCents: 1_000_000,
+      maxCents: 25_970_000,
+      stepCents: 1_000,
+    };
+    expect(snapDownPayment(farm006, 5_000)).toBe(1_000_000);
   });
 });

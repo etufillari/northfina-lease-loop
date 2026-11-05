@@ -10,3 +10,18 @@ export function formatEuro(cents: number, locale: string): string {
   }
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
+
+/**
+ * Rounds a computed amount to whole cents, half away from zero. Use it at every rounding
+ * point (rent, VAT, buyout) so the app has exactly one rounding rule.
+ *
+ * Trims float noise first: 163 845 × 0.7 is 114 691.49999… in floating point, but the true
+ * value is an exact half and must round to 114 692.
+ */
+export function roundHalfUp(amount: number): number {
+  if (!Number.isFinite(amount)) {
+    throw new RangeError(`amount must be a finite number, got ${amount}`);
+  }
+  const trimmed = Number(amount.toFixed(6));
+  return Math.sign(trimmed) * Math.round(Math.abs(trimmed));
+}

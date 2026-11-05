@@ -57,5 +57,13 @@
   "assetDetails.backToDetails": "Tagasi toote detailidesse",
   "assetDetails.startLeasing": "Alusta liisingut",
   "assetDetails.leaseIntro": "Alustad selle toote liisingut.",
-  "assetDetails.leaseNextStep": "Taotlusprotsess jätkub siin."
+  "assetDetails.leaseNextStep": "Taotlusprotsess jätkub siin.",
+  "lease.reserve": "Alusta liisimist",
+  "lease.reservationInfo": "Broneering kehtib 15 minutit.",
+  "lease.reserving": "Broneerimine...",
+  "lease.reservationError": "Toode pole enam saadaval. Mine tagasi ja vali teine toode.",
+  "lease.questionStep": "Küsimus {current} / {total}",
+  "lease.why": "Miks me küsime",
+  "lease.continue": "Jätka",
+  "lease.complete": "Sinu vastused on valmis. Saame nüüd liisingutaotlust läbi vaadata."
 }

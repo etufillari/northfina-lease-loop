@@ -1,0 +1,221 @@
+'use client';
+
+import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { Question } from '@/data/schemas';
+import type { Locale } from '@/i18n/locales';
+
+export type LeaseApplicationLabels = {
+  reserve: string;
+  reservationInfo: string;
+  reservationError: string;
+  questionStep: string;
+  why: string;
+  continue: string;
+  complete: string;
+};
+
+type LeaseApplicationContextValue = {
+  reserved: boolean;
+  reserving: boolean;
+  error: string | null;
+  reserve: () => Promise<void>;
+  labels: LeaseApplicationLabels;
+  questions: readonly Question[];
+  answers: Record<string, string>;
+  setAnswers: (answers: Record<string, string>) => void;
+};
+
+const LeaseApplicationContext = createContext<LeaseApplicationContextValue | null>(null);
+
+export function LeaseApplication({
+  assetId,
+  category,
+  financedAmountCents,
+  questions,
+  labels,
+  children,
+}: {
+  assetId: string;
+  category: string;
+  financedAmountCents: number;
+  questions: readonly Question[];
+  labels: LeaseApplicationLabels;
+  children: ReactNode;
+}) {
+  const [reserved, setReserved] = useState(false);
+  const [reserving, setReserving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
+  const visibleQuestions = useMemo(
+    () =>
+      questions.filter((question) =>
+        question.ask_when.every((condition) => {
+          const value = condition.field.startsWith('answers.')
+            ? answers[condition.field.slice('answers.'.length)]
+            : condition.field === 'category'
+              ? category
+              : condition.field === 'financed_amount_cents'
+                ? financedAmountCents
+                : answers.q_customer_type;
+          if (condition.op === 'in') return condition.value.includes(String(value));
+          if (condition.op === 'gte') return typeof value === 'number' && value >= condition.value;
+          return typeof value === 'number' && value <= condition.value;
+        })
+      ),
+    [answers, category, financedAmountCents, questions]
+  );
+
+  async function reserve() {
+    setReserving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/assets/${assetId}/reserve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const result = (await response.json()) as { success: boolean };
+      if (!response.ok || !result.success) {
+        setError(labels.reservationError);
+        return;
+      }
+      setReserved(true);
+    } catch {
+      setError(labels.reservationError);
+    } finally {
+      setReserving(false);
+    }
+  }
+
+  return (
+    <LeaseApplicationContext.Provider
+      value={{
+        reserved,
+        reserving,
+        error,
+        reserve,
+        labels,
+        questions: visibleQuestions,
+        answers,
+        setAnswers,
+      }}
+    >
+      {children}
+    </LeaseApplicationContext.Provider>
+  );
+}
+
+export function LeaseStartButton({ available }: { available: boolean }) {
+  const { reserving, error, reserve, labels } = useLeaseApplicationContext();
+  return (
+    <div className="mt-8 border-t border-stone-200 pt-6 dark:border-stone-800">
+      <button
+        type="button"
+        onClick={reserve}
+        disabled={reserving || !available}
+        className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
+      >
+        {labels.reserve}
+      </button>
+      <p className="mt-2 h-5 text-xs text-stone-500 dark:text-stone-400">
+        {labels.reservationInfo}
+      </p>
+      <div className="mt-1 h-10" aria-live="polite">
+        {error ? (
+          <p className="line-clamp-2 text-sm text-red-700 dark:text-red-300">{error}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function LeaseQuestions({ locale }: { locale: Locale }) {
+  const { reserved, labels, questions, answers, setAnswers } = useLeaseApplicationContext();
+  const [step, setStep] = useState(0);
+  const applicationRef = useRef<HTMLDivElement>(null);
+  const question = questions[step];
+
+  if (!reserved) {
+    return (
+      <div
+        ref={applicationRef}
+        aria-disabled="true"
+        className="mt-8 border-t border-stone-200 pt-6 opacity-50 dark:border-stone-800"
+      >
+        <p className="text-sm font-semibold">{labels.questionStep.replace('{current}', '1')}</p>
+      </div>
+    );
+  }
+  if (!question) {
+    return (
+      <p
+        ref={applicationRef}
+        tabIndex={-1}
+        className="mt-8 border-t border-stone-200 pt-6 text-sm text-emerald-800 outline-none dark:border-stone-800 dark:text-emerald-300"
+      >
+        {labels.complete}
+      </p>
+    );
+  }
+
+  const answer = answers[question.id] ?? '';
+  const questionText = question.text[locale];
+  const whyText = question.why_we_ask[locale] ?? question.why_we_ask.en;
+  return (
+    <div
+      ref={applicationRef}
+      tabIndex={-1}
+      className="mt-8 border-t border-stone-200 pt-6 outline-none dark:border-stone-800"
+    >
+      <p className="text-sm text-stone-600 dark:text-stone-400">
+        {labels.questionStep
+          .replace('{current}', String(step + 1))
+          .replace('{total}', String(questions.length))}
+      </p>
+      <label htmlFor={question.id} className="mt-3 block text-lg font-semibold">
+        {questionText}
+      </label>
+      <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+        <span className="font-medium">{labels.why}:</span> {whyText}
+      </p>
+      {question.type === 'choice' ? (
+        <select
+          id={question.id}
+          value={answer}
+          onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })}
+          className="mt-4 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
+        >
+          <option value="">—</option>
+          {question.options?.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={question.id}
+          type={question.type === 'date' ? 'date' : question.type === 'email' ? 'email' : 'text'}
+          value={answer}
+          onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })}
+          className="mt-4 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
+        />
+      )}
+      <button
+        type="button"
+        disabled={!answer.trim()}
+        onClick={() => setStep(step + 1)}
+        className="mt-5 w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+      >
+        {labels.continue}
+      </button>
+    </div>
+  );
+}
+
+function useLeaseApplicationContext() {
+  const context = useContext(LeaseApplicationContext);
+  if (!context) throw new Error('Lease application components must be rendered together');
+  return context;
+}

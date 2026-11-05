@@ -1,12 +1,12 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset, AssetStatus } from '@/data/schemas';
+import { AssetCardLink } from '@/components/asset-card-link';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { MonthlyRate } from '@/components/catalogue-pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-import Link from 'next/link';
 
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   available: {
@@ -38,59 +38,65 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
   const status = statusStyles[asset.status];
 
   return (
-    <Link
-      href={`/${locale}/assets/${asset.id}`}
-      aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:border-stone-800 dark:bg-stone-900"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
-          <h3 id={headingId} className="text-lg leading-snug font-semibold">
-            {asset.model}
-          </h3>
-        </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
-      </div>
-
-      <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
-        <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
-        <Fact
-          label={t('asset.usage')}
-          value={t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
-        />
-        <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
-      </dl>
-
-      <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
+    <AssetCardLink href={`/${locale}/assets/${asset.id}`}>
+      <article
+        aria-labelledby={headingId}
+        className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:-translate-y-0.5 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      >
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.monthlyRate')}</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">
-              <MonthlyRate listPriceCents={price.ok ? price.priceCents : undefined} />
-            </p>
+          <div className="min-w-0">
+            <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
+            <h3 id={headingId} className="text-lg leading-snug font-semibold">
+              {asset.model}
+            </h3>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.listPrice')}</p>
-            <p className="mt-1 text-sm font-medium tabular-nums">
-              {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
-            </p>
-            {price.ok ? (
-              <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
-                {t('asset.priceListVersion', { version: price.priceListVersion })}
+          <p
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
+          >
+            <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
+            <span className="sr-only">{t('status.label')}: </span>
+            {t(`status.${asset.status}`)}
+          </p>
+        </div>
+
+        <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
+          <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
+          <Fact
+            label={t('asset.usage')}
+            value={t(`usage.${asset.usage.unit}`, {
+              value: formatNumber(asset.usage.value, locale),
+            })}
+          />
+          <Fact
+            label={t('asset.previousLives')}
+            value={formatNumber(asset.previous_lives, locale)}
+          />
+        </dl>
+
+        <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.monthlyRate')}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums">
+                <MonthlyRate listPriceCents={price.ok ? price.priceCents : undefined} />
               </p>
-            ) : null}
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.listPrice')}</p>
+              <p className="mt-1 text-sm font-medium tabular-nums">
+                {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+              </p>
+              {price.ok ? (
+                <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+                  {t('asset.priceListVersion', { version: price.priceListVersion })}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </article>
+    </AssetCardLink>
   );
 }
 

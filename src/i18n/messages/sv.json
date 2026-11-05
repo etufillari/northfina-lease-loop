@@ -57,5 +57,13 @@
   "assetDetails.backToDetails": "Tillbaka till produktdetaljer",
   "assetDetails.startLeasing": "Börja leasa",
   "assetDetails.leaseIntro": "Du är på väg att börja leasa denna produkt.",
-  "assetDetails.leaseNextStep": "Ansökningsprocessen fortsätter här."
+  "assetDetails.leaseNextStep": "Ansökningsprocessen fortsätter här.",
+  "lease.reserve": "Börja leasa",
+  "lease.reservationInfo": "Reserveringen gäller i 15 minuter.",
+  "lease.reserving": "Reserverar...",
+  "lease.reservationError": "Produkten är inte längre tillgänglig. Gå tillbaka och välj en annan produkt.",
+  "lease.questionStep": "Fråga {current} av {total}",
+  "lease.why": "Varför vi frågar",
+  "lease.continue": "Fortsätt",
+  "lease.complete": "Dina svar är klara. Vi kan nu granska din leasingansökan."
 }

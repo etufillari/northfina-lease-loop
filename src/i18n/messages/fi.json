@@ -57,5 +57,13 @@
   "assetDetails.backToDetails": "Takaisin tuotteen tietoihin",
   "assetDetails.startLeasing": "Aloita leasing",
   "assetDetails.leaseIntro": "Olet aloittamassa tämän tuotteen leasingin.",
-  "assetDetails.leaseNextStep": "Hakemusprosessi jatkuu tästä."
+  "assetDetails.leaseNextStep": "Hakemusprosessi jatkuu tästä.",
+  "lease.reserve": "Aloita leasing",
+  "lease.reservationInfo": "Varaus on voimassa 15 minuuttia.",
+  "lease.reserving": "Varataan...",
+  "lease.reservationError": "Tuote ei ole enää saatavilla. Palaa takaisin ja valitse toinen tuote.",
+  "lease.questionStep": "Kysymys {current} / {total}",
+  "lease.why": "Miksi kysymme",
+  "lease.continue": "Jatka",
+  "lease.complete": "Vastauksesi ovat valmiit. Voimme nyt käsitellä leasing-hakemuksesi."
 }

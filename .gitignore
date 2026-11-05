@@ -27,7 +27,7 @@ npm-debug.log*
 .vercel
 
 # local files
-local.md
+local/
 
 # notes
 NOTES.md

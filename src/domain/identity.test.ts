@@ -119,6 +119,7 @@ describe('can', () => {
     expect(can('client', 'application.submit')).toBe(true);
     expect(can('client', 'contract.sign')).toBe(true);
     expect(can('client', 'contract.view_own')).toBe(true);
+    expect(can('client', 'contract.end_term')).toBe(true);
     expect(can('client', 'contract.view_all')).toBe(false);
     expect(can('client', 'asset.change_status')).toBe(false);
     expect(can('client', 'application.decide_manual_review')).toBe(false);
@@ -126,6 +127,7 @@ describe('can', () => {
 
   it('lets a dealer run the operational side but not decide manual review', () => {
     expect(can('dealer', 'contract.view_all')).toBe(true);
+    expect(can('dealer', 'contract.end_term')).toBe(true);
     expect(can('dealer', 'asset.change_status')).toBe(true);
     expect(can('dealer', 'item.view_history')).toBe(true);
     expect(can('dealer', 'second_life.refurbish')).toBe(true);

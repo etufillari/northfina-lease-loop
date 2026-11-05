@@ -84,6 +84,7 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      relist_price_cents: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

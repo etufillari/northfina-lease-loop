@@ -10,7 +10,9 @@ const translations: Record<string, string> = {
   'status.label': 'Status',
   'status.available': 'Available',
   'status.reserved': 'Reserved',
+  'status.leased': 'Leased',
   'status.returned': 'Returned',
+  'status.sold': 'Sold',
 };
 
 const mockTranslate = vi.fn((key: string) => translations[key] ?? key);
@@ -31,9 +33,19 @@ const statuses: {
     variantClass: 'bg-amber-50',
   },
   {
+    status: 'leased',
+    label: 'Leased',
+    variantClass: 'bg-stone-100',
+  },
+  {
     status: 'returned',
     label: 'Returned',
     variantClass: 'bg-sky-50',
+  },
+  {
+    status: 'sold',
+    label: 'Sold',
+    variantClass: 'bg-stone-100',
   },
 ];
 

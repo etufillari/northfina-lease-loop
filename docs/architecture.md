@@ -54,11 +54,11 @@ Create a fully functional lease app for the hackathon. That means a Spine that w
 
 ## 3. Team split
 
-| Person | Role             | Owns                                                                                                                                                                 |
-| ------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A      | Frontend         | All customer pages, sliders, question flow UI, contract/invoice views, early-exit and end-of-term screens, demo date control, translations                           |
-| B      | Backend          | API routes, `question-flow/` + `application/` (#4), `contract/` (signing), `end-of-term/`, `second-life/` flow, integration tests                                    |
-| C      | Database + money | Schema, transactions, test DB helper and fixtures, `money/` (#5), `pricing/`, `early-exit/` (#2), buyout price, `second-life/` pricing + matchmaking, `impact/` (#7) |
+| Person | Role             | Owns                                                                                                                                                                   |
+| ------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A      | Frontend         | All customer pages, sliders, question flow UI, contract/invoice views, early-exit and end-of-term screens, demo date control, translations                             |
+| B      | Backend          | API routes, `question-flow.ts` + `eligibility.ts` (#4, built), application submit route, `contract/` (signing), `end-of-term/`, `second-life/` flow, integration tests |
+| C      | Database + money | Schema, transactions, test DB helper and fixtures, `money/` (#5), `pricing/`, `early-exit/` (#2), buyout price, `second-life/` pricing + matchmaking, `impact/` (#7)   |
 
 - **First ~30 minutes together:** write `src/domain/types.ts` and the API shapes in §11. Then A builds against mocked responses, B builds routes, C builds the money core, in parallel.
 - If C falls behind, move `second-life/` pricing to B.
@@ -89,14 +89,16 @@ The app is one Next.js 16 monolith (App Router, TypeScript, React 19, Prisma 7 +
 
 ### 4.2 Domain modules
 
-Existing code is kept and built on. `contract-pricing.ts` already does the quote (worked example passes). It moves into `pricing/` and switches to the integer arithmetic in §6.1. Its tests must keep passing.
+Existing code is kept and built on. `contract-pricing.ts` already does the quote (worked example passes). It moves into `pricing/` and switches to the integer arithmetic in §6.1. Its tests must keep passing. The question flow and eligibility are **built** as single files (PR #4).
 
 | Module                                                                       | Owner                        | Covers        | Status                                                             |
 | ---------------------------------------------------------------------------- | ---------------------------- | ------------- | ------------------------------------------------------------------ |
 | `money/` (rounding, rates, calendar, schedule generator, allocation)         | C                            | #5 foundation | new                                                                |
 | `pricing/` (quote from list price + term + down payment, VAT lookup, buyout) | C                            | Spine         | exists as `contract-pricing.ts`, `coefficient.ts`, `price-list.ts` |
-| `question-flow/` (visible questions, pruning, validation, Y-tunnus)          | B                            | #4            | new                                                                |
-| `application/` (eligibility decision with reasons)                           | B                            | #4 + Spine    | new                                                                |
+| `question-flow.ts` (visible questions, pruning)                              | B                            | #4            | **built**                                                          |
+| `eligibility.ts` (decision with reasons, `ageOn`)                            | B                            | #4 + Spine    | **built**                                                          |
+| `business-id.ts` (Y-tunnus check digit)                                      | B                            | #4            | **built**                                                          |
+| `date-input.ts` (day/month/year ↔ ISO at the UI edge)                        | A                            | #4 UX         | **built**                                                          |
 | `contract/` (snapshot at signing + generated schedule)                       | B, using C's generator       | Spine         | new                                                                |
 | `early-exit/` (balance, exit quotes with breakdown)                          | C                            | #2            | new                                                                |
 | `end-of-term/` (return / buy out / extend)                                   | B, buyout from C             | Spine         | new                                                                |
@@ -104,7 +106,7 @@ Existing code is kept and built on. `contract-pricing.ts` already does the quote
 | `lifecycle/` (allowed status transitions)                                    | B                            | safeguards    | new                                                                |
 | `impact/` (CO₂ and money saved per life and fleet)                           | C                            | #7            | new                                                                |
 
-Each module is a folder with an `index.ts` and files under 600 lines, every function tested next to it.
+A small module is a single file (as the built ones are). It becomes a folder with an `index.ts` when it grows. Every file stays under 600 lines, and every function is tested next to it.
 
 ### 4.3 Storage approach: snapshot + stored schedule
 
@@ -114,17 +116,17 @@ Rejected: computing everything on the fly (old invoices would change when the lo
 
 ## 5. Data flow (the Spine)
 
-| #   | Step         | Route                                                                                                                      | Domain                         | Saves                                                                       |
-| --- | ------------ | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
-| 1   | Catalogue    | page + `GET /api/assets`                                                                                                   | `pricing.listPriceFor`         | nothing                                                                     |
-| 2   | Price        | `GET /api/quote?assetId&termMonths&downPaymentCents&asOf` (live preview), `POST /api/quotes` (lock)                        | `pricing.quote`                | preview: nothing; lock: `Quote` snapshot                                    |
-| 3   | Application  | `POST /api/applications` (with `quoteId`), `PUT /api/applications/:id/answers/:questionId`                                 | `question-flow`, `application` | application + answers                                                       |
-| 4   | Contract     | `POST /api/contracts`                                                                                                      | `contract.buildContract`       | contract (copies the quote snapshot), invoice rows, asset → `leased`, event |
-| 5   | Invoices     | `GET /api/contracts/:id?asOf`                                                                                              | `money.rowStatus`              | nothing                                                                     |
-| 6a  | Early exit   | `GET /api/contracts/:id/exit-quote?asOf&condition&usage`, `POST /api/contracts/:id/exit`                                   | `early-exit`                   | closing row, contract → `exited`, asset → `returned` or `sold`              |
-| 6b  | End of term  | `GET /api/contracts/:id/end-of-term?asOf`, `POST /api/contracts/:id/end-of-term`                                           | `end-of-term`                  | buyout row or return, contract → `ended`, asset → `returned` / `sold`       |
-| 7   | Second life  | `GET /api/assets/:id/relist-quote?asOf&condition&usage`, `GET /api/assets/:id/matches?asOf`, `POST /api/assets/:id/relist` | `second-life`                  | relist price, asset → `available`                                           |
-| 7b  | Second lease | steps 1–5 again on the same asset                                                                                          | same                           | passport shows every life                                                   |
+| #   | Step         | Route                                                                                                                                  | Domain                               | Saves                                                                       |
+| --- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| 1   | Catalogue    | page + `GET /api/assets`                                                                                                               | `pricing.listPriceFor`               | nothing                                                                     |
+| 2   | Price        | `GET /api/quote?assetId&termMonths&downPaymentCents&asOf` (live preview), `POST /api/quotes` (lock)                                    | `pricing.quote`                      | preview: nothing; lock: `Quote` snapshot                                    |
+| 3   | Application  | `POST /api/applications/evaluate` (**built**, stateless) on every change; `POST /api/applications` (planned, with `quoteId`) to submit | `question-flow.ts`, `eligibility.ts` | evaluate: nothing; submit: application (`yes` / `manual_review`)            |
+| 4   | Contract     | `POST /api/contracts`                                                                                                                  | `contract.buildContract`             | contract (copies the quote snapshot), invoice rows, asset → `leased`, event |
+| 5   | Invoices     | `GET /api/contracts/:id?asOf`                                                                                                          | `money.rowStatus`                    | nothing                                                                     |
+| 6a  | Early exit   | `GET /api/contracts/:id/exit-quote?asOf&condition&usage`, `POST /api/contracts/:id/exit`                                               | `early-exit`                         | closing row, contract → `exited`, asset → `returned` or `sold`              |
+| 6b  | End of term  | `GET /api/contracts/:id/end-of-term?asOf`, `POST /api/contracts/:id/end-of-term`                                                       | `end-of-term`                        | buyout row or return, contract → `ended`, asset → `returned` / `sold`       |
+| 7   | Second life  | `GET /api/assets/:id/relist-quote?asOf&condition&usage`, `GET /api/assets/:id/matches?asOf`, `POST /api/assets/:id/relist`             | `second-life`                        | relist price, asset → `available`                                           |
+| 7b  | Second lease | steps 1–5 again on the same asset                                                                                                      | same                                 | passport shows every life                                                   |
 
 **Price lock.** The price is locked **when a quote is created or a contract is created** (goal-and-requirements). While the customer moves the sliders, `GET /api/quote` only previews. "Lock this price and apply" calls `POST /api/quotes`, which saves a `Quote` snapshot: price list version, list price, down payment, financed amount, band, factor, interest rate, term, monthly net rent and buyout, priced on the quote date. The application points to that quote, and signing copies the snapshot into the contract. **Price lists are never read again** for that quote or contract. Changing the term or down payment creates a new quote at that day's prices.
 
@@ -224,26 +226,43 @@ The UI shows every line. The domain fixes the exact figures; tests pin them.
 
 ## 8. Question flow and eligibility (#4)
 
-### 8.1 Engine
+### 8.1 Engine (built: `question-flow.ts`, `business-id.ts`, `date-input.ts`)
 
-- **Input context:** `{ customerType, category, financedAmountCents, termMonths, answers }`. Customer type is itself the answer to `q_customer_type`. Asset and amount come from the quote saved on the application.
-- `visibleQuestions(questions, ctx)` evaluates `ask_when` (all conditions must hold; ops `in`, `gte`, `lte`; field `answers.<id>`). It runs **to a fixed point**: a hidden question's answer doesn't count, so chains like `q_can_sign → q_signatory_email` and `q_pep → q_pep_details` resolve correctly.
-- `nextQuestion(…)` is the first visible, unanswered question in file order, or `done`.
-- **Changing an answer:** after any change, the server recomputes visibility to a fixed point and **prunes** (deletes) the answers to every question that is no longer visible. They are never used in a decision. If a question becomes visible again, it is asked again. The response lists the pruned question IDs, and the UI says "we no longer need: …".
-- **Blocking answers:** `blocks_application_when` (`age_under 18`, `answer_in ['other']`) stops the flow **straight away** with a decline. A 17-year-old isn't asked for their income first.
-- **Validation per type:** email, ISO date, money (non-negative integer cents, typed in euros and converted at the edge), choice in options, Finnish business ID check digit (weights 7,9,10,5,8,4,2; remainder 0 → 0; 1 → invalid; else 11 − remainder). `1234567-8` fails. Every other ID in `customers.json` passes.
+- **Context:** `FlowContext = { deal: { customer_type?, category, financed_amount_cents, term_months }, answers }`. The customer type is read from `answers.q_customer_type` and never sent separately, so the two can't disagree.
+- `evaluateCondition` / `isAskable` evaluate `ask_when`. All conditions must hold. `in` compares as text, `gte`/`lte` are inclusive and numeric only, and an unknown value never satisfies a condition.
+- `visibleQuestions(questions, ctx)` returns the applicable questions in bank order. It makes **one pass in file order**: conditions only look at earlier questions, and the stored answer of a hidden question is ignored. That's enough for chains like `q_can_sign → q_signatory_email` and `q_pep → q_pep_details`.
+- **No "next question" function.** The form shows every visible question at once. On every change it sends the **whole form state** to `POST /api/applications/evaluate`, and draws what comes back: `questions`, the pruned `answers`, the `dropped` IDs and the `decision`.
+- **Changing an answer:** `pruneAnswers(questions, ctx) → { kept, dropped }` deletes the answers to questions that no longer apply after an earlier answer or the deal (amount, term, customer type) changes. It also drops answers to unknown IDs. Cascades resolve in the same single pass. The UI uses `dropped` to say "we no longer need: …". If a question comes back, it is asked again.
+- **Blocking answers:** `blocks_application_when` (`age_under 18`, `answer_in ['other']`) gives a hard `no` straight away, even while other questions are unanswered (§8.2). A 17-year-old sees the decision as soon as the birth date is in.
+- **Validation:** `isValidBusinessId` checks the Finnish Y-tunnus format and check digit (weights 7, 9, 10, 5, 8, 4, 2; remainder 0 → 0; remainder 1 is never valid; else 11 − remainder). `1234567-8` fails, and every other ID in `customers.json` passes. Dates are typed as day/month/year and converted to ISO at the UI edge (`date-input.ts`). An unusable birth date counts as unanswered. Income answers are whole cents.
 - **Why we ask:** every question shows its `why_we_ask` in the current locale, straight from `questions.json`.
 
-### 8.2 Decision
+### 8.2 Decision (built: `eligibility.ts`)
 
-`decide(ctx, asOf) → { outcome: 'yes' | 'no' | 'manual_review', reasons: ReasonCode[] }`. Reason codes are rule IDs from the data (`min_age`, `residency`, `affordability`, `business_id`, `pep_manual_review`, `financed_limits`) plus `signatory_required`.
+`decideEligibility({ questions, coefficientTable, deal, answers, contractStartDate, monthlyRentInclVatCents? })` returns one of:
 
-Precedence: any `no` beats `manual_review`, and `manual_review` beats `yes`. All reasons are returned, not just the first.
+- `{ decision: 'yes' | 'no' | 'manual_review', reasons }`
+- `{ decision: 'incomplete', missing, reasons }`, while applicable questions are unanswered.
 
-- **Age** is checked on the contract start date (= the signing date). It is checked again at signing.
-- **Affordability [Decision]:** gross rent ≤ 30 % of net monthly income, using the **highest VAT rate in force during the term**, so a known VAT rise can't push a `yes` customer over the limit. It applies only when income was asked (financed ≥ €2,000, consumer).
-- **Signatory (card 6):** `q_can_sign = no` gives outcome `yes` with a `signatory_required` notice. The contract is created as `awaiting_signature`. The signatory gets a signing link (random token; in the demo it is shown on screen instead of emailed). Only that link can sign. **[Decision]**, the alternative being manual review.
-- Responses never echo income, birth date or address. They return reason codes only.
+Each reason is `{ rule, outcome: 'no' | 'manual_review', params }`, never prose, so the UI translates `rule` and fills in `params`. The function prunes stale answers itself before deciding.
+
+**Precedence:** a hard `no` wins immediately, even with questions missing. Only the `no` reasons are returned then. Next comes `incomplete`, then `manual_review` if any reason asks for a person, else `yes`.
+
+| Rule                 | Outcome         | When                                                                                                                                                                                 |
+| -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `min_age`            | `no`            | Age under 18 on `contractStartDate` (`ageOn`: a birthday counts on its own day, 29 Feb births age on 1 Mar)                                                                          |
+| `residency`          | `no`            | `q_country = other`                                                                                                                                                                  |
+| `blocked_answer`     | `no`            | Any other `answer_in` block (beyond the data pack)                                                                                                                                   |
+| `business_id`        | `no`            | Business ID fails the check digit                                                                                                                                                    |
+| `financed_limits`    | `no`            | Financed amount or term not in the coefficient table (`below_minimum`, `above_maximum`, `unknown_term`)                                                                              |
+| `affordability`      | `no`            | Consumer: `rent incl. VAT × 100 > income × 30`, integers only. Rent is the quote's monthly gross rent (VAT on the quote date). Skipped when no rent is passed or income wasn't asked |
+| `pep_manual_review`  | `manual_review` | `q_pep = yes`                                                                                                                                                                        |
+| `signatory_required` | `manual_review` | `q_can_sign = no`: a person contacts the signatory (beyond the data pack)                                                                                                            |
+
+- **Age date:** the evaluate route takes `contract_start_date`, defaulting to `todayIso()`. Planned: default to `resolveAsOf()` (§11), and re-check age at signing.
+- **Trust:** today the evaluate route trusts `financed_amount_cents` and the rent from the caller, because the apply page prices the deal server-side and passes them in. Planned: the evaluate and submit routes take a `quoteId` and read the amounts from the locked quote.
+- **Submit (planned) [Decision]:** `POST /api/applications` with `quoteId` and answers re-runs `decideEligibility` on the server. It stores the application only for `yes` and `manual_review`. A `no` is returned but not stored (data minimisation). Only a stored `yes` can be signed. `manual_review` waits for the phase-2 review view, and the customer sees "a person will check".
+- **Privacy:** the evaluate response echoes the client's own answers and reason params (for example rent and income for `affordability`) back to the same browser only. Nothing is stored or logged. Contract and invoice responses never include income, birth date or address.
 
 ## 9. End of term and second life
 
@@ -291,12 +310,12 @@ Quote        id (uuid), asset_id, created_on (asOf), price_list_version (null if
              list_price_cents, down_payment_cents, financed_cents, band, factor_ppm,
              annual_interest_bp, term_months, monthly_net_rent_cents, buyout_net_cents
 Application  id (uuid), quote_id, created_on (asOf), answers_json (pruned),
-             outcome? (yes|no|manual_review), reasons_json?, status
+             decision (yes|manual_review), reasons_json, status
 Contract     id (uuid), application_id @unique, quote_id, asset_id, status,
              start_date, price_list_version, list_price_cents, down_payment_cents,
              financed_cents, band, factor_ppm, annual_interest_bp, term_months,
              monthly_net_rent_cents, buyout_net_cents, total_net_cents, total_gross_cents,
-             signatory_token? (unique), signed_on?, closed_on?
+             signed_on, closed_on?
 InvoiceRow   id, contract_id, seq, kind (down_payment|rent|exit_return|exit_buyout|buyout),
              invoice_date, period_start, period_end, net_cents, vat_rate_bp, vat_cents,
              gross_cents, cancelled_by_exit (bool)    @@unique([contract_id, seq])
@@ -313,8 +332,8 @@ Asset        + relist_price_cents?, first_lease_date?, first_list_price_cents?
 One table in `domain/lifecycle`:
 
 - **Asset:** `available → leased`, `leased → returned | sold`, `returned → available` (relist), `reserved` is fixed.
-- **Contract:** `awaiting_signature → active`, `active → exited | ended`.
-- **Application:** `in_progress → decided → signed`.
+- **Contract:** `active → exited | ended`.
+- **Application:** `submitted → signed` (only when `decision = yes`).
 
 Every route checks the table. Sign, exit, end-of-term and relist each run inside one `withAudit()` transaction that **re-reads and re-checks status** on `tx`, so double-clicks can't create two contracts or two exit invoices.
 
@@ -326,26 +345,26 @@ Every route checks the table. Sign, exit, end-of-term and relist each run inside
 
 - **`asOf`:** every request may send `asOf` (query string for GET, body field for POST). `resolveAsOf(request)` in `src/server/` validates it as a real calendar date and falls back to `todayIso()`. The demo date picker in the header sets it for every request. **[Decision]** It is allowed in all environments for the hackathon; production would disable it.
 - **Validation:** Zod at the edge for types, ranges, UUIDs and terms in the table. Out-of-range values are **rejected, not clamped**. The UI slider clamps; the API does not.
-- **Errors:** following the domain spec and the existing code, domain functions return `{ ok: false, reason }` with a lower-case `reason` (e.g. `'below_minimum'`). They add extra fields where a caller needs them, such as `reasons: ReasonCode[]` on a decision. Routes map each `reason` to an upper-case code and answer `fail(status, CODE, message)` (`below_minimum` → `BELOW_MINIMUM`): 404 for unknown IDs, 409 for state conflicts (`CONTRACT_NOT_ACTIVE`, `ASSET_NOT_AVAILABLE`, `APPLICATION_NOT_APPROVED`), 422 for business rejections. The UI translates the **code** (`errors.<CODE>` keys), never the message. Unexpected errors go through `handleRoute` as a generic 500.
+- **Errors:** following the domain spec and the existing code, domain functions return `{ ok: false, reason }` with a lower-case `reason` (e.g. `'below_minimum'`). They add extra fields where a caller needs them, such as `reasons: Reason[]` on an eligibility decision. Routes map each `reason` to an upper-case code and answer `fail(status, CODE, message)` (`below_minimum` → `BELOW_MINIMUM`): 404 for unknown IDs, 409 for state conflicts (`CONTRACT_NOT_ACTIVE`, `ASSET_NOT_AVAILABLE`, `APPLICATION_NOT_APPROVED`, `APPLICATION_IN_REVIEW`), 422 for business rejections. The UI translates the **code** (`errors.<CODE>` keys), never the message. Unexpected errors go through `handleRoute` as a generic 500.
 - **Second-life screen:** a minimal customer-side "Second life" page lists returned items, shows the relist quote and matches, and relists. It is the demo path for step 7, **not** the phase-2 admin view.
-- **Audit actions:** `quote.locked`, `application.created`, `application.answered`, `application.decided`, `contract.signed`, `contract.exited`, `contract.ended`, `asset.relisted`, `asset.status_changed`. Details record what changed, never personal data.
+- **Audit actions:** `quote.locked`, `application.submitted`, `contract.signed`, `contract.exited`, `contract.ended`, `asset.relisted`, `asset.status_changed`. Details record what changed, never personal data.
 - **Privacy:** random UUIDs, no list endpoints for applications, contracts or customers, minimal response bodies, nothing personal in URLs or logs.
 - **Dev only:** a "Fill sample data" button (`NODE_ENV !== 'production'`) fills answers from `customers.json`.
 
 ## 12. Scenario card acceptance
 
-| Card               | Expected result in our app                                                                                                                                                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 Happy path       | Rent 10730 net / 13466 gross. Invoices on 5 Nov, 5 Dec, 5 Jan (the 3rd at 26 %: 13520). Total 486612 gross                                                                                                                                                        |
-| 2 Price lock       | The quote saved on 5 Nov locks v1 (349000). Signing on 6 Nov keeps v1, not v2 (321100), and the contract page says "locked by your quote of 5 Nov (price list v1)"                                                                                                |
-| 3 Tax is not price | ebike-001: net 6957 every month. Dec 2026 VAT 1774 (25.5 %), Jan 2027 VAT 1809 (26 %). The UI explains "rent locked, VAT follows the law on the invoice date"                                                                                                     |
-| 4 Calendar traps   | laptop-001 from 31 Jan 2026: invoices on **28 Feb 2026** and **29 Feb 2028**, rent 3432                                                                                                                                                                           |
-| 5 Too young        | Flow stops after the birth date. Outcome `no`, reason `min_age`, kind message with alternatives                                                                                                                                                                   |
-| 6 Who can sign?    | 4 × 549000 = 2,196,000 financed (band C) → PEP question shown. `q_can_sign = no` → signatory email → outcome `yes` + `signatory_required` → `awaiting_signature` with a signing link. Quantity affects pricing and questions only (fleet signing is out of scope) |
-| 7 Big ticket       | financed 12,500,000 (band D): annual revenue, beneficial owners, PEP and PEP details all appear, each with its "why". PEP yes → `manual_review` (`pep_manual_review`)                                                                                             |
-| 8 Early exit       | §7 numbers, both options with a breakdown                                                                                                                                                                                                                         |
-| 9 Second life      | §9: no refurbishment, relist at 92781, `wait-13` excluded (needs good), `wait-02` wins at 5198 net a month for 12 months                                                                                                                                          |
-| 10 Third life      | Passport shows 2 earlier lives + the new lease, with CO₂ and money saved per life and in total                                                                                                                                                                    |
+| Card               | Expected result in our app                                                                                                                                                                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Happy path       | Rent 10730 net / 13466 gross. Invoices on 5 Nov, 5 Dec, 5 Jan (the 3rd at 26 %: 13520). Total 486612 gross                                                                                                                                                      |
+| 2 Price lock       | The quote saved on 5 Nov locks v1 (349000). Signing on 6 Nov keeps v1, not v2 (321100), and the contract page says "locked by your quote of 5 Nov (price list v1)"                                                                                              |
+| 3 Tax is not price | ebike-001: net 6957 every month. Dec 2026 VAT 1774 (25.5 %), Jan 2027 VAT 1809 (26 %). The UI explains "rent locked, VAT follows the law on the invoice date"                                                                                                   |
+| 4 Calendar traps   | laptop-001 from 31 Jan 2026: invoices on **28 Feb 2026** and **29 Feb 2028**, rent 3432                                                                                                                                                                         |
+| 5 Too young        | Flow stops after the birth date. Outcome `no`, reason `min_age`, kind message with alternatives                                                                                                                                                                 |
+| 6 Who can sign?    | 4 × 549000 = 2,196,000 financed (band C) → PEP question shown. `q_can_sign = no` → signatory email asked → `manual_review` (`signatory_required`): a person contacts the signatory. Quantity affects pricing and questions only (fleet signing is out of scope) |
+| 7 Big ticket       | financed 12,500,000 (band D): annual revenue, beneficial owners, PEP and PEP details all appear, each with its "why". PEP yes → `manual_review` (`pep_manual_review`)                                                                                           |
+| 8 Early exit       | §7 numbers, both options with a breakdown                                                                                                                                                                                                                       |
+| 9 Second life      | §9: no refurbishment, relist at 92781, `wait-13` excluded (needs good), `wait-02` wins at 5198 net a month for 12 months                                                                                                                                        |
+| 10 Third life      | Passport shows 2 earlier lives + the new lease, with CO₂ and money saved per life and in total                                                                                                                                                                  |
 
 These become the full-loop integration test and the demo script.
 
@@ -361,15 +380,13 @@ These become the full-loop integration test and the demo script.
 
 1. Together: `types.ts`, API shapes (§11), Prisma models (§10.1) agreed.
 2. C: `money/` (rounding, calendar, schedule, properties) → `pricing/` refactor → migration + test DB helper → `early-exit/` → `second-life/` pricing + matchmaking → `impact/`.
-3. B: quote lock route → `question-flow/` + `application/` → application routes → `POST /api/contracts` → invoices route → exit and end-of-term routes → relist and matches routes.
-4. A: demo date picker → catalogue + sliders (exists) + term comparison → question flow UI → contract and invoices views → exit / end-of-term → second-life page → passport with impact.
+3. B: quote lock route → `quoteId` on the evaluate route + `POST /api/applications` (question flow and eligibility are built) → `POST /api/contracts` → invoices route → exit and end-of-term routes → relist and matches routes.
+4. A: demo date picker → catalogue + sliders (exists) + term comparison → question flow UI (built) → contract and invoices views → exit / end-of-term → second-life page → passport with impact.
 5. Full-loop test, demo rehearsal against §12.
 6. Stretch, in order: extend, refurbishment, admin view (phase 2).
 
 ## 15. Open questions for review
 
 1. Quote validity: does a locked quote expire (for example after 30 days), or hold until signed? Proposed: no expiry in phase 1.
-2. Signatory: `awaiting_signature` + link (proposed), or manual review?
-3. Early return credit: 100 % of net market value, or a remarketing haircut?
-4. Affordability on the highest VAT rate during the term (proposed), or the first invoice's rate?
-5. Due date = invoice date (proposed), or invoice date + 14 days?
+2. Early return credit: 100 % of net market value, or a remarketing haircut?
+3. Due date = invoice date (proposed), or invoice date + 14 days?

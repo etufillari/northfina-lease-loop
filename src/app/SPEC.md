@@ -22,7 +22,7 @@ Owns the Next.js 16 App Router pages (`src/app/[locale]/`), reusable UI componen
 - **Planned (see `docs/architecture.md` §5 and §11):**
   - Pages: price step with term comparison, contract and invoices, early exit, end of term, a minimal second-life page (relist quote, waiting-list matches, relist), and the asset passport with CO₂ and money saved. The admin/back-office view is phase 2.
   - A header "today is…" date picker that sends `asOf` with every request (`resolveAsOf()` on the server, falling back to `todayIso()`).
-  - Routes: `GET /api/quote` (preview), `POST /api/quotes` (locks the price), `POST /api/applications` and `PUT /api/applications/:id/answers/:questionId` (persisted applications, reusing the evaluate logic), `POST /api/contracts`, `GET /api/contracts/:id`, `GET /api/contracts/:id/exit-quote`, `POST /api/contracts/:id/exit`, `GET|POST /api/contracts/:id/end-of-term`, `GET /api/assets/:id/relist-quote`, `GET /api/assets/:id/matches`, `POST /api/assets/:id/relist`.
+  - Routes: `GET /api/quote` (preview), `POST /api/quotes` (locks the price), `POST /api/applications` (submits the final answers with a `quoteId`; re-runs `decideEligibility` server-side and stores `yes` / `manual_review`), `quoteId` on the evaluate route instead of caller-supplied amounts, `POST /api/contracts`, `GET /api/contracts/:id`, `GET /api/contracts/:id/exit-quote`, `POST /api/contracts/:id/exit`, `GET|POST /api/contracts/:id/end-of-term`, `GET /api/assets/:id/relist-quote`, `GET /api/assets/:id/matches`, `POST /api/assets/:id/relist`.
 
 ## Boundary
 

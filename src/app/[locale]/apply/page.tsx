@@ -2,6 +2,7 @@
 // `down` is the net down payment in cents, the same unit the contract configurator uses.
 // The page prices the lease with the contract quote and passes the rent incl. VAT to the form,
 // which asks the questions and shows the decision. Colours are the design tokens from AGENTS.md.
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { z } from 'zod';
@@ -95,7 +96,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
       </div>
       <div className="mt-[32px]">
         <ApplicationForm locale={locale} deal={deal}>
-          <DealSummary t={t} rows={rows} />
+          <DealSummary t={t} rows={rows} changeHref={`/${locale}#asset-${asset.id}`} />
         </ApplicationForm>
       </div>
     </div>
@@ -104,7 +105,15 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
 
 const money = (cents: number, locale: Locale) => formatEuro(cents, intlLocale[locale]);
 
-function DealSummary({ t, rows }: { t: Translate; rows: [string, string][] }) {
+function DealSummary({
+  t,
+  rows,
+  changeHref,
+}: {
+  t: Translate;
+  rows: [string, string][];
+  changeHref: string;
+}) {
   return (
     <section
       aria-labelledby="deal-heading"
@@ -121,6 +130,12 @@ function DealSummary({ t, rows }: { t: Translate; rows: [string, string][] }) {
           </div>
         ))}
       </dl>
+      <Link
+        href={changeHref}
+        className="mt-[16px] inline-block text-[0.875rem] font-semibold text-[#1354a5] underline"
+      >
+        {t('apply.deal.change')}
+      </Link>
     </section>
   );
 }

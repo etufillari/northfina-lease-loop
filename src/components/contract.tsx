@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import type { Asset, CoefficientTable, VatRates } from '@/data/schemas';
 import {
@@ -436,6 +437,16 @@ export function Contract({
           >
             {t('contract.hideButton')}
           </button>
+        ) : null}
+
+        {/* Spine step 3: the application carries the chosen term and net down payment. */}
+        {!isSigned && isAssetAvailable && activeQuote ? (
+          <Link
+            href={`/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`}
+            className="rounded-[8px] border border-[#2877d7] bg-transparent px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#1354a5] transition-colors hover:bg-[#f6f7f8]"
+          >
+            {t('contract.applyButton')}
+          </Link>
         ) : null}
 
         <button

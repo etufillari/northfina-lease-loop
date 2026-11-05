@@ -27,6 +27,7 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 | `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term. |
 | `price-list.ts`  | Worked example: finds the net list price of an asset on a date.          |
 | `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.              |
+| `catalogue.ts`   | Reads catalogue filters from the URL; prices, searches, filters, sorts.  |
 
 ## What teams are expected to add
 

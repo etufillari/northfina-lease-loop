@@ -41,6 +41,7 @@ describe('signContract', () => {
         listPriceCents: 349_000,
         monthlyNetRentCents: 9_627,
         buyoutCents: 52_350, // 15 % of 349 000
+        billing: 'start_day_full_months',
       },
     });
   });

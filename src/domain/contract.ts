@@ -1,6 +1,8 @@
 // Signing turns a valid quote into a contract that locks its price (D-014). Invoices derive from
 // the contract only; later price lists can't touch it.
 import type { CoefficientTable, PriceList } from '@/data/schemas';
+import type { BillingRule } from './invoicing';
+import { DEFAULT_BILLING_RULE } from './pricing-rules';
 import { makeQuote, type Quote } from './quote';
 
 export interface SignatureDetails {
@@ -10,7 +12,9 @@ export interface SignatureDetails {
   startDate: string;
 }
 
-export type Contract = Readonly<Omit<Quote, 'validUntil'> & SignatureDetails>;
+export type Contract = Readonly<
+  Omit<Quote, 'validUntil'> & SignatureDetails & { billing: BillingRule }
+>;
 
 export type SignResult =
   | { ok: true; contract: Contract }
@@ -29,7 +33,10 @@ export function signContract(quote: Quote, details: SignatureDetails): SignResul
   if (details.startDate < details.signDate) return { ok: false, reason: 'starts_before_signing' };
 
   const { validUntil: _validUntil, ...locked } = quote;
-  return { ok: true, contract: Object.freeze({ ...locked, ...details }) };
+  return {
+    ok: true,
+    contract: Object.freeze({ ...locked, ...details, billing: DEFAULT_BILLING_RULE }),
+  };
 }
 
 /**

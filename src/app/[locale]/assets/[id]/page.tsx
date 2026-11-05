@@ -11,6 +11,7 @@ import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load'
 import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn, nextPriceChange } from '@/domain/price-list';
+import { parsePriceSelection } from '@/domain/price-selection';
 import { vatPercentOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -37,7 +38,8 @@ export default async function AssetPage({
   if (!isLocale(locale)) notFound();
   // The catalogue passes its filters along (?q=&category=…). They survive a language switch,
   // so "Back to catalogue" returns to the same search in the language you are using now.
-  const backHref = `/${locale}${catalogueSearchString(parseCatalogueQuery(await searchParams))}`;
+  const search = await searchParams;
+  const backHref = `/${locale}${catalogueSearchString(parseCatalogueQuery(search))}`;
 
   // Render on every request: the price depends on today's date and the item on the database.
   await connection();
@@ -142,6 +144,7 @@ export default async function AssetPage({
           listPriceCents={price.priceCents}
           vatPercent={vatPercent}
           table={table}
+          initial={parsePriceSelection(search, price.priceCents, table)}
           locale={locale}
         />
       ) : null}

@@ -2,10 +2,12 @@
 
 // Spine step 2: pick a term and a down payment with sliders and watch the monthly price update.
 // All maths is in src/domain/pricing.ts; this component only holds the two slider values.
+// They are mirrored into the URL (?term=&down=), so a reload or a language switch keeps them.
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import type { CoefficientTable } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
+import { DEFAULT_TERM_MONTHS, type PriceSelection } from '@/domain/price-selection';
 import { downPaymentRange, leaseTerms, quoteLease, type LeaseQuote } from '@/domain/pricing';
 import { formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
@@ -17,20 +19,38 @@ type PriceCalculatorProps = {
   /** VAT on today's date, looked up by the server. */
   vatPercent: number;
   table: CoefficientTable;
+  /** Slider positions read from the URL by the server, already validated. */
+  initial: PriceSelection;
   locale: Locale;
 };
 
-const DEFAULT_TERM_MONTHS = 36;
+/** Writes the slider positions into the URL, keeping any other params (the catalogue filters). */
+function rememberInUrl(selection: PriceSelection) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('term', String(selection.termMonths));
+  params.set('down', String(selection.downPaymentCents));
+  window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
+}
 
 export function PriceCalculator(props: PriceCalculatorProps) {
-  const { assetId, listPriceCents, vatPercent, table, locale } = props;
+  const { assetId, listPriceCents, vatPercent, table, initial, locale } = props;
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
 
   const terms = leaseTerms(table);
   const range = downPaymentRange(listPriceCents, table);
-  const [termIndex, setTermIndex] = useState(() => Math.max(0, terms.indexOf(DEFAULT_TERM_MONTHS)));
-  const [downPaymentCents, setDownPaymentCents] = useState(range.ok ? range.minCents : 0);
+  const [termIndex, setTermIndex] = useState(() => Math.max(0, terms.indexOf(initial.termMonths)));
+  const [downPaymentCents, setDownPaymentCents] = useState(initial.downPaymentCents);
+
+  function changeTerm(index: number) {
+    setTermIndex(index);
+    rememberInUrl({ termMonths: terms[index] ?? DEFAULT_TERM_MONTHS, downPaymentCents });
+  }
+
+  function changeDownPayment(cents: number) {
+    setDownPaymentCents(cents);
+    rememberInUrl({ termMonths: terms[termIndex] ?? DEFAULT_TERM_MONTHS, downPaymentCents: cents });
+  }
 
   if (!range.ok) {
     const lowest = Math.min(...table.bands.map((b) => b.min_financed_cents));
@@ -74,7 +94,7 @@ export function PriceCalculator(props: PriceCalculatorProps) {
               max={terms.length - 1}
               step={1}
               value={termIndex}
-              onChange={(event) => setTermIndex(Number(event.target.value))}
+              onChange={(event) => changeTerm(Number(event.target.value))}
               aria-valuetext={t('price.months', { months: termMonths })}
               className="mt-3 w-full accent-emerald-700"
             />
@@ -97,7 +117,7 @@ export function PriceCalculator(props: PriceCalculatorProps) {
               step={range.stepCents}
               value={downPaymentCents}
               disabled={fixedDownPayment}
-              onChange={(event) => setDownPaymentCents(Number(event.target.value))}
+              onChange={(event) => changeDownPayment(Number(event.target.value))}
               aria-valuetext={euro(downPaymentCents)}
               className="mt-3 w-full accent-emerald-700 disabled:opacity-50"
             />

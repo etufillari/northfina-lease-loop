@@ -45,6 +45,34 @@ const aino = {
   today: '2026-11-05',
   actor: 'cust-aino',
 };
+// Card 5: Mikko's own record (data/customers.json), on laptop-008.
+const mikko = {
+  ...aino,
+  assetId: 'laptop-008',
+  customerId: 'cust-mikko',
+  actor: 'cust-mikko',
+  answers: {
+    q_customer_type: 'consumer',
+    q_full_name: 'Mikko Laine',
+    q_birth_date: '2009-03-10',
+    q_email: 'mikko.laine@example.com',
+    q_country: 'FI',
+    q_employment: 'student',
+    q_monthly_income: 40_000,
+  },
+};
+// Card 6: Norvi's own record; the applicant may not sign, so a signatory is named.
+const norviAnswers = {
+  q_customer_type: 'company',
+  q_email: 'fleet@norvi.example.com',
+  q_business_id: '3299871-7',
+  q_company_name: 'Norvi Logistics Oy',
+  q_can_sign: 'no',
+  q_signatory_email: 'ceo@norvi.example.com',
+  q_vat_registered: 'yes',
+  q_usage_purpose: 'delivery',
+};
+const norvi = { ...aino, assetId: 'ebike-004', customerId: 'cust-norvi', answers: norviAnswers };
 
 describe('signLease', () => {
   it('prices on the server, stores the frozen contract and reserves the asset (card 1)', async () => {
@@ -136,25 +164,22 @@ describe('signLease and the application', () => {
   });
 
   it('refuses a declined applicant (card 5: Mikko is 17)', async () => {
-    const mikko = { ...ainoAnswers, q_birth_date: '2009-03-10', q_monthly_income: 40_000 };
-    expect(
-      await signLease(db, data, {
-        ...aino,
-        assetId: 'laptop-008',
-        customerId: 'cust-mikko',
-        answers: mikko,
-      })
-    ).toEqual({ ok: false, reason: 'application_declined' });
+    expect(await signLease(db, data, mikko)).toEqual({
+      ok: false,
+      reason: 'application_declined',
+    });
     expect(await db.contract.count()).toBe(0);
   });
 
   it('refuses to auto-sign an application that needs a person to review it', async () => {
     // PEP is only asked from 10 000 € financed: farm-008 is 12 900 € (1 290 000 cents).
+    // A new applicant, not a persona: Aino's record says she is not a PEP.
+    const { customerId: _persona, ...anonymous } = aino;
     const pep = { ...ainoAnswers, q_pep: 'yes', q_pep_details: 'Member of parliament' };
     const { q_usage_purpose: _usage, ...answers } = pep;
     expect(
       await signLease(db, data, {
-        ...aino,
+        ...anonymous,
         assetId: 'farm-008',
         answers: { ...answers, q_farm_registry: 'FR-1' },
       })
@@ -162,24 +187,10 @@ describe('signLease and the application', () => {
   });
 
   it('refuses an applicant who may not sign for their company (card 6)', async () => {
-    const norvi = {
-      q_customer_type: 'company',
-      q_email: 'fleet@norvi.example.com',
-      q_business_id: '3299871-7',
-      q_company_name: 'Norvi Logistics Oy',
-      q_can_sign: 'no',
-      q_signatory_email: 'ceo@norvi.example.com',
-      q_vat_registered: 'yes',
-      q_usage_purpose: 'delivery',
-    };
-    expect(
-      await signLease(db, data, {
-        ...aino,
-        assetId: 'ebike-004',
-        customerId: 'cust-norvi',
-        answers: norvi,
-      })
-    ).toEqual({ ok: false, reason: 'signatory_must_sign' });
+    expect(await signLease(db, data, norvi)).toEqual({
+      ok: false,
+      reason: 'signatory_must_sign',
+    });
   });
 
   it('names a new applicant (not a data-pack persona) by their email', async () => {
@@ -189,6 +200,70 @@ describe('signLease and the application', () => {
       ok: true,
       contract: { customerId: 'email:aino.virtanen@example.com' },
     });
+  });
+});
+
+describe('signLease and the named customer', () => {
+  const nothingWritten = async () => {
+    expect(await db.contract.count()).toBe(0);
+    expect(await listAuditLog(db)).toHaveLength(0);
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'laptop-008' } });
+    expect(asset.status).toBe('available');
+  };
+
+  it('refuses Mikko with a changed birth date, and writes nothing (card 5)', async () => {
+    // Born 1990 he would be approved; his record says 2009-03-10, so he is 17.
+    const result = await signLease(db, data, {
+      ...mikko,
+      answers: { ...mikko.answers, q_birth_date: '1990-03-10' },
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: 'answers_do_not_match_customer',
+      questionIds: ['q_birth_date'],
+    });
+    await nothingWritten();
+  });
+
+  it('refuses Norvi saying the applicant can sign, and writes nothing (card 6)', async () => {
+    const { q_signatory_email: _signatory, ...answers } = norviAnswers;
+    expect(
+      await signLease(db, data, { ...norvi, answers: { ...answers, q_can_sign: 'yes' } })
+    ).toEqual({
+      ok: false,
+      reason: 'answers_do_not_match_customer',
+      questionIds: ['q_can_sign'],
+    });
+    expect(await db.contract.count()).toBe(0);
+    expect(await listAuditLog(db)).toHaveLength(0);
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-004' } });
+    expect(asset.status).toBe('available');
+  });
+
+  it('still signs Aino with her own answers', async () => {
+    expect((await signLease(db, data, aino)).ok).toBe(true);
+  });
+
+  it('lets a new applicant (no customer named) give any answers', async () => {
+    // With cust-aino named, this birth date would be refused (her record says 1997-04-12).
+    const { customerId: _persona, ...anonymous } = aino;
+    const answers = { ...ainoAnswers, q_birth_date: '1990-01-01' };
+    expect(await signLease(db, data, { ...aino, answers })).toMatchObject({
+      ok: false,
+      reason: 'answers_do_not_match_customer',
+    });
+    expect(await signLease(db, data, { ...anonymous, answers })).toMatchObject({
+      ok: true,
+      contract: { customerId: 'email:aino.virtanen@example.com' },
+    });
+  });
+
+  it('checks an unknown customer before the answers', async () => {
+    expect(await signLease(db, data, { ...mikko, customerId: 'cust-nobody' })).toEqual({
+      ok: false,
+      reason: 'unknown_customer',
+    });
+    await nothingWritten();
   });
 });
 

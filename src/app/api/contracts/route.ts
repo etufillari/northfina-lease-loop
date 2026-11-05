@@ -31,6 +31,7 @@ const statusFor: Record<string, number> = {
   application_declined: 403,
   application_needs_review: 403,
   signatory_must_sign: 403,
+  answers_do_not_match_customer: 422,
 };
 
 export const POST = handleRoute(async (request) => {
@@ -47,7 +48,9 @@ export const POST = handleRoute(async (request) => {
     return fail(
       statusFor[result.reason] ?? 422,
       result.reason.toUpperCase(),
-      'The lease cannot be signed'
+      'The lease cannot be signed',
+      // Which answers differ from the named customer's record, so the form can point at them.
+      'questionIds' in result ? { questionIds: result.questionIds } : undefined
     );
   }
   return ok({ id: result.id, contract: result.contract }, { status: 201 });

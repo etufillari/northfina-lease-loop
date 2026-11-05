@@ -5,6 +5,7 @@ import type { AssetCategory } from '@/data/schemas';
 import { signContract, type Contract } from '@/domain/contract';
 import { decideApplication } from '@/domain/eligibility';
 import { invoiceSchedule } from '@/domain/invoicing';
+import { answersNotMatchingCustomer } from '@/domain/persona';
 import type { Answers } from '@/domain/question-flow';
 import { makeQuote } from '@/domain/quote';
 import { withAudit } from './audit';
@@ -27,7 +28,10 @@ export interface SignLeaseInput {
 }
 
 export type SignLeaseResult =
-  { ok: true; id: number; contract: Contract } | { ok: false; reason: string };
+  | { ok: true; id: number; contract: Contract }
+  | { ok: false; reason: string }
+  /** The named customer's record says otherwise for these questions (D-031). */
+  | { ok: false; reason: 'answers_do_not_match_customer'; questionIds: string[] };
 
 /** Thrown inside the transaction to roll it back when the asset was taken meanwhile. */
 class AssetTakenError extends Error {}
@@ -40,9 +44,11 @@ export async function signLease(
   const asset = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!asset) return { ok: false, reason: 'asset_not_found' };
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
-  if (input.customerId !== undefined && !data.customers.some((c) => c.id === input.customerId)) {
-    return { ok: false, reason: 'unknown_customer' };
-  }
+  const customer =
+    input.customerId === undefined
+      ? undefined
+      : data.customers.find((c) => c.id === input.customerId);
+  if (input.customerId !== undefined && !customer) return { ok: false, reason: 'unknown_customer' };
 
   const quoted = makeQuote(data.priceLists, data.coefficientTable, {
     assetId: input.assetId,
@@ -51,6 +57,18 @@ export async function signLease(
     downPaymentCents: input.downPaymentCents,
   });
   if (!quoted.ok) return quoted;
+  if (customer) {
+    // A persona's answers must be the facts on its record, or anyone could sign as Mikko.
+    const deal = {
+      category: asset.category as AssetCategory,
+      financedAmountCents: quoted.quote.financedCents,
+      termMonths: input.termMonths,
+    };
+    const questionIds = answersNotMatchingCustomer(data.questions, deal, customer, input.answers);
+    if (questionIds.length > 0) {
+      return { ok: false, reason: 'answers_do_not_match_customer', questionIds };
+    }
+  }
   const refusal = applicationRefusal(data, input, asset.category, quoted.quote);
   if (refusal) return { ok: false, reason: refusal };
 

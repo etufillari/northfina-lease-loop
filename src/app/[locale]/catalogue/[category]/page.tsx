@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { CatalogueControls } from '@/components/catalogue-controls';
 import { CatalogueGrid } from '@/components/catalogue-grid';
 import { loadPriceLists } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
@@ -42,6 +43,16 @@ export default async function CategoryPage({
           </time>
         </p>
       </div>
+
+      <CatalogueControls
+        locale={locale}
+        labels={{
+          downPayment: t('catalogue.downPayment'),
+          termLength: t('catalogue.termLength'),
+          month: t('catalogue.month'),
+          months: t('catalogue.months'),
+        }}
+      />
 
       {assets.length === 0 ? (
         <p className="mt-10 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

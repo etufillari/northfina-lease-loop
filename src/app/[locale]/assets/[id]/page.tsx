@@ -1,15 +1,18 @@
-// One item in detail: everything we know about it and today's net list price.
-// The monthly price with term and down-payment sliders (Spine step 2) will live here too.
+// One item in detail: what we know about it, today's net list price, the monthly price with
+// term and down-payment sliders (Spine step 2), and the item's history so far.
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { AssetHistoryPanel } from '@/components/asset-history-panel';
+import { PriceCalculator } from '@/components/price-calculator';
 import { StatusBadge } from '@/components/status-badge';
-import { loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn, nextPriceChange } from '@/domain/price-list';
-import { formatIsoDate, formatNumber } from '@/i18n/format';
+import { vatPercentOn } from '@/domain/vat';
+import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
@@ -39,24 +42,24 @@ export default async function AssetPage({
   // Render on every request: the price depends on today's date and the item on the database.
   await connection();
 
-  const [asset, priceLists] = await Promise.all([getAsset(db, id), loadPriceLists()]);
+  const [asset, priceLists, table, vatRates] = await Promise.all([
+    getAsset(db, id),
+    loadPriceLists(),
+    loadCoefficientTable(),
+    loadVatRates(),
+  ]);
   if (!asset) notFound();
 
   const t = getT(locale);
   const today = todayIso();
   const price = listPriceOn(priceLists, asset.id, today);
   const change = nextPriceChange(priceLists, asset.id, today);
+  const vatPercent = vatPercentOn(vatRates, today);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
 
   const facts: [string, string][] = [
     [t('asset.category'), t(`category.${asset.category}`)],
-    [t('condition.label'), t(`condition.${asset.condition}`)],
     [t('asset.modelYear'), String(asset.model_year)],
-    [
-      t('asset.usage'),
-      t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) }),
-    ],
-    [t('asset.previousLives'), formatNumber(asset.previous_lives, locale)],
     [t('asset.serialNumber'), asset.serial_number],
     [t('asset.id'), asset.id],
   ];
@@ -131,6 +134,19 @@ export default async function AssetPage({
           ) : null}
         </section>
       </div>
+
+      {/* Only an available item with a price can be quoted; the status note explains the rest. */}
+      {asset.status === 'available' && price.ok && vatPercent !== null ? (
+        <PriceCalculator
+          assetId={asset.id}
+          listPriceCents={price.priceCents}
+          vatPercent={vatPercent}
+          table={table}
+          locale={locale}
+        />
+      ) : null}
+
+      <AssetHistoryPanel asset={asset} today={today} locale={locale} t={t} />
     </div>
   );
 }

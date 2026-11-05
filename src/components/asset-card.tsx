@@ -6,6 +6,8 @@ import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { AssetStatusBadge } from '@/components/ui/asset-status-badge';
+import { categoryFallbackImages } from '@/data/asset-images';
+import Image from 'next/image';
 
 type AssetCardProps = {
   asset: Asset;
@@ -16,12 +18,22 @@ type AssetCardProps = {
 
 export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
+  const fallbackImage = categoryFallbackImages[asset.category];
 
   return (
     <article
       aria-labelledby={headingId}
       className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
     >
+      <div className="relative mb-4 aspect-[16/9] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
+        <Image
+          src={fallbackImage}
+          alt=""
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          className="object-cover"
+        />
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>

@@ -135,7 +135,8 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
             priceListVersion={price.priceListVersion}
             table={data.coefficientTable}
             bounds={bounds}
-            vatRatePercent={vat.ratePercent}
+            vatRates={data.vatRates}
+            startDate={today}
           />
         )}
       </div>

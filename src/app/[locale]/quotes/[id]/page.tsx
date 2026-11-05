@@ -52,7 +52,14 @@ export default async function QuotePage({ params }: PageProps<'/[locale]/quotes/
       </h1>
 
       <div className="mt-8">
-        <QuoteSummary locale={locale} quote={quote} status={status} contractId={view.contractId} />
+        <QuoteSummary
+          locale={locale}
+          quote={quote}
+          status={status}
+          contractId={view.contractId}
+          vatRates={data.vatRates}
+          today={today}
+        />
       </div>
       {priceCheck ? <PriceCheckNotice locale={locale} quote={quote} check={priceCheck} /> : null}
 

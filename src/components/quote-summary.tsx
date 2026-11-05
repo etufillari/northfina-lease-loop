@@ -1,6 +1,7 @@
 // A stored quote: every amount it showed, how long it can be signed, and what today's price list
 // would change (D-014, D-034). Server-rendered; the application form below it signs.
 import Link from 'next/link';
+import type { VatRates } from '@/data/schemas';
 import type { PriceCheck } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
 import type { Quote } from '@/domain/quote';
@@ -8,12 +9,16 @@ import type { QuoteStatus } from '@/domain/signing';
 import { formatFactor, formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { PriceOverTerm } from './price-over-term';
 
 export function QuoteSummary(props: {
   locale: Locale;
   quote: Quote;
   status: QuoteStatus;
   contractId: number | null;
+  vatRates: VatRates;
+  /** Today: a quote signed today starts today, so its invoices are dated from here. */
+  today: string;
 }) {
   const { locale, quote } = props;
   const t = getT(locale);
@@ -45,6 +50,19 @@ export function QuoteSummary(props: {
         <Fact label={t('lease.buyout')}>{euro(quote.buyoutCents)}</Fact>
         <Fact label={t('lease.totalCost')}>{euro(quote.totalNetCostCents)}</Fact>
       </dl>
+      {props.status === 'open' ? (
+        <div className="max-w-md">
+          <PriceOverTerm
+            locale={locale}
+            vatRates={props.vatRates}
+            startDate={props.today}
+            termMonths={quote.termMonths}
+            monthlyNetRentCents={quote.monthlyNetRentCents}
+            downPaymentCents={quote.downPaymentCents}
+            tone="stage"
+          />
+        </div>
+      ) : null}
       <p className="mt-6 text-sm font-semibold">
         {props.status === 'used' && props.contractId !== null ? (
           <Link href={`/${locale}/contracts/${props.contractId}`} className="underline">

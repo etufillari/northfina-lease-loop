@@ -5,14 +5,15 @@
 // to price and store the quote (D-034); the quote page shows it and signs it.
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
-import type { CoefficientTable } from '@/data/schemas';
+import type { CoefficientTable, VatRates } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import { bandEdgeHint, quoteLease, type DownPaymentBounds } from '@/domain/pricing';
 import { QUOTE_VALID_DAYS } from '@/domain/pricing-rules';
-import { withVat } from '@/domain/vat';
+import { vatRateOn, withVat } from '@/domain/vat';
 import { formatFactor, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { PriceOverTerm, TermComparison } from './price-over-term';
 
 type Bounds = Extract<DownPaymentBounds, { ok: true }>;
 
@@ -23,7 +24,9 @@ export type LeaseCalculatorProps = {
   priceListVersion: number;
   table: CoefficientTable;
   bounds: Bounds;
-  vatRatePercent: number;
+  vatRates: VatRates;
+  /** Today (the demo's as-of date): a lease signed today starts today. */
+  startDate: string;
 };
 
 export function LeaseCalculator(props: LeaseCalculatorProps) {
@@ -149,9 +152,27 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
               <p className="mt-2 text-xs text-muted">{t('lease.totalCostNote')}</p>
             </section>
           ) : null}
+
+          <TermComparison
+            locale={locale}
+            table={table}
+            vatRates={props.vatRates}
+            startDate={props.startDate}
+            listPriceCents={listPriceCents}
+            downPaymentCents={downPaymentCents}
+            terms={terms}
+            selectedTerm={termMonths}
+          />
         </div>
 
-        {quote.ok ? <MonthlyPanel {...props} netCents={quote.monthlyNetRentCents} /> : null}
+        {quote.ok ? (
+          <MonthlyPanel
+            {...props}
+            netCents={quote.monthlyNetRentCents}
+            termMonths={termMonths}
+            downPaymentCents={downPaymentCents}
+          />
+        ) : null}
       </div>
       {quote.ok ? (
         <QuoteButton
@@ -219,10 +240,16 @@ function QuoteButton(props: {
   );
 }
 
-function MonthlyPanel(props: LeaseCalculatorProps & { netCents: number }) {
-  const { locale, vatRatePercent } = props;
+function MonthlyPanel(
+  props: LeaseCalculatorProps & { netCents: number; termMonths: number; downPaymentCents: number }
+) {
+  const { locale } = props;
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  // The page only shows the calculator when today has a VAT rate.
+  const vat = vatRateOn(props.vatRates, props.startDate);
+  if (!vat.ok) return null;
+  const vatRatePercent = vat.ratePercent;
   const monthly = withVat(props.netCents, vatRatePercent);
 
   return (
@@ -241,6 +268,15 @@ function MonthlyPanel(props: LeaseCalculatorProps & { netCents: number }) {
         </Row>
       </dl>
       <p className="mt-3 text-xs text-muted">{t('lease.vatNote')}</p>
+      <PriceOverTerm
+        locale={locale}
+        vatRates={props.vatRates}
+        startDate={props.startDate}
+        termMonths={props.termMonths}
+        monthlyNetRentCents={props.netCents}
+        downPaymentCents={props.downPaymentCents}
+        tone="plain"
+      />
     </aside>
   );
 }

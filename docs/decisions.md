@@ -6,23 +6,25 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 ## Index
 
-| ID    | Date       | Area     | Decision                                                                    |
-| ----- | ---------- | -------- | --------------------------------------------------------------------------- |
-| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win                |
-| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model            |
-| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)            |
-| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                                 |
-| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof          |
-| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code            |
-| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate             |
-| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI          |
-| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                               |
-| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history                 |
-| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date               |
-| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table   |
-| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent         |
-| D-014 | 2026-11-05 | Contract | Signing locks a valid quote; a cheaper price today is offered, never forced |
-| D-015 | 2026-11-05 | Domain   | Dates are ISO strings; calendar maths in UTC in one module                  |
+| ID    | Date       | Area     | Decision                                                                      |
+| ----- | ---------- | -------- | ----------------------------------------------------------------------------- |
+| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win                  |
+| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model              |
+| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)              |
+| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                                   |
+| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof            |
+| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code              |
+| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate               |
+| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI            |
+| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                                 |
+| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history                   |
+| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date                 |
+| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table     |
+| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent           |
+| D-014 | 2026-11-05 | Contract | Signing locks a valid quote; a cheaper price today is offered, never forced   |
+| D-015 | 2026-11-05 | Domain   | Dates are ISO strings; calendar maths in UTC in one module                    |
+| D-016 | 2026-11-05 | Invoices | Bill on the start day in full months; the billing rule is frozen per contract |
+| D-017 | 2026-11-05 | Testing  | Property-based tests prove every schedule adds up exactly                     |
 
 ---
 
@@ -126,3 +128,17 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 - **Decision:** Dates travel as ISO strings (`YYYY-MM-DD`). Arithmetic lives in `src/domain/calendar.ts` and runs in UTC. An impossible date such as 2026-02-30 throws, because it can only come from a bug.
 - **Why:** UTC can't lose or gain a day to time zones or daylight saving. The invoice schedule (31st starts, leap years) will build on the same module.
+
+## D-016 · Start-day billing, frozen per contract
+
+- **Context:** Smart Problem 5 and scenario cards 3 and 4. When is an invoice due for a lease starting on the 15th or the 31st, and is the first month a full month?
+- **Decision:** Contracts store a billing rule, frozen at signing like the price. The first rule, `start_day_full_months`, bills in advance on the start day each month. In a shorter month it moves to the last day (31 Jan → 28 Feb, 29 Feb in 2028) and returns to the 31st afterwards, because every date is counted from the start, never from the previous invoice. Every invoice covers a full month at the same net rent. The invoice date is the due date, and VAT follows it (D-011). `invoiceSchedule` in `src/domain/invoicing.ts` is the only code that decides invoice dates.
+- **Alternatives:** Bill on the 1st with prorated first and last months. It's tidier for a bank's billing run and shows more rounding work, but it costs more time today and is harder to explain on a first bill.
+- **Why:** Same bill every month is the easiest thing for a customer to trust, and the total adds up by construction. Storing the rule per contract means a second rule (billing on the 1st) can be added later without touching signed contracts.
+- **Evidence:** Card 4: due 28 Feb 2026, back on 31 Mar, and 29 Feb 2028. Card 3: the net rent stays 6 957 while VAT moves from 1 774 (Dec 2026) to 1 809 (Jan 2027).
+
+## D-017 · Property-based tests for the schedule
+
+- **Decision:** `fast-check` (dev dependency only) generates random contracts: any start day from Sep 2024 to 2030, any term, any rent up to 10 000 €. For each, the tests check one invoice per month, contiguous periods without gaps or overlaps, net total = rent × term, gross = net + VAT on every invoice, totals equal the sum of the invoices, and the VAT rate matches the year.
+- **Why:** The brief calls property tests the gold standard for Smart Problem 5. They test rules that any billing rule must keep, so a future proration rule must pass the same suite.
+- **Evidence:** Each property runs on 100 random contracts per test run, in CI on every push.

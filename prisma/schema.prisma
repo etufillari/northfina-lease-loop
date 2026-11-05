@@ -95,3 +95,25 @@ model SecondLifeListing {
 
   @@index([asset_id])
 }
+
+// A price shown to a customer and kept for QUOTE_VALID_DAYS (D-014, D-034). `terms_json` is the
+// domain `Quote` from src/domain/quote.ts with every amount shown; it is never edited. The other
+// columns are copies for lookups. `contract_id` is set once, when signing uses the quote (kept, or
+// given up for today's cheaper price), so a quote can't be signed twice.
+model Quote {
+  id                     Int      @id @default(autoincrement())
+  created_at             DateTime @default(now())
+  asset_id               String
+  quote_date             String // ISO date
+  valid_until            String // ISO date, the last day it can be signed
+  price_list_version     Int
+  term_months            Int
+  down_payment_cents     Int
+  monthly_net_rent_cents Int
+  terms_json             String
+  replaces_quote_id      Int? // the quote given up for today's cheaper price at signing
+  contract_id            Int?
+
+  @@index([asset_id])
+  @@index([contract_id])
+}

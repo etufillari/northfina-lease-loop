@@ -6,25 +6,29 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 ## Index
 
-| ID    | Date       | Area     | Decision                                                                      |
-| ----- | ---------- | -------- | ----------------------------------------------------------------------------- |
-| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win                  |
-| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model              |
-| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)              |
-| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                                   |
-| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof            |
-| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code              |
-| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate               |
-| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI            |
-| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                                 |
-| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history                   |
-| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date                 |
-| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table     |
-| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent           |
-| D-014 | 2026-11-05 | Contract | Signing locks a valid quote; a cheaper price today is offered, never forced   |
-| D-015 | 2026-11-05 | Domain   | Dates are ISO strings; calendar maths in UTC in one module                    |
-| D-016 | 2026-11-05 | Invoices | Bill on the start day in full months; the billing rule is frozen per contract |
-| D-017 | 2026-11-05 | Testing  | Property-based tests prove every schedule adds up exactly                     |
+| ID    | Date       | Area     | Decision                                                                           |
+| ----- | ---------- | -------- | ---------------------------------------------------------------------------------- |
+| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win                       |
+| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model                   |
+| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)                   |
+| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                                        |
+| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof                 |
+| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code                   |
+| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate                    |
+| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI                 |
+| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                                      |
+| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history                        |
+| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date                      |
+| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table          |
+| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent                |
+| D-014 | 2026-11-05 | Contract | Signing locks a valid quote; a cheaper price today is offered, never forced        |
+| D-015 | 2026-11-05 | Domain   | Dates are ISO strings; calendar maths in UTC in one module                         |
+| D-016 | 2026-11-05 | Invoices | Bill on the start day in full months; the billing rule is frozen per contract      |
+| D-017 | 2026-11-05 | Testing  | Property-based tests prove every schedule adds up exactly                          |
+| D-018 | 2026-11-05 | UI       | The sliders run the domain pricing in the browser; the server prices again to sign |
+| D-019 | 2026-11-05 | Contract | A signed item becomes `reserved`; the contract is stored as a frozen JSON snapshot |
+| D-020 | 2026-11-05 | Audit    | `withAudit` can build its entry from the result, so new rows are audited by id     |
+| D-021 | 2026-11-05 | Pricing  | The band hint looks for the next band up, not just one slider step back            |
 
 ---
 
@@ -142,3 +146,29 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Decision:** `fast-check` (dev dependency only) generates random contracts: any start day from Sep 2024 to 2030, any term, any rent up to 10 000 €. For each, the tests check one invoice per month, contiguous periods without gaps or overlaps, net total = rent × term, gross = net + VAT on every invoice, totals equal the sum of the invoices, and the VAT rate matches the year.
 - **Why:** The brief calls property tests the gold standard for Smart Problem 5. They test rules that any billing rule must keep, so a future proration rule must pass the same suite.
 - **Evidence:** Each property runs on 100 random contracts per test run, in CI on every push.
+
+## D-018 · One rulebook in the browser and on the server
+
+- **Decision:** The item page's sliders call `quoteLease`, `bandEdgeHint` and `withVat` directly in the browser, so the price updates on every move without a server round trip. Signing posts only the choices (asset, customer, term, down payment) to `POST /api/contracts`, which loads the data pack and prices from scratch.
+- **Alternatives:** An API call per slider move (slower, more moving parts). Trusting the price the browser sends (a tampered request could sign any price).
+- **Why:** The domain is pure, so the same tested code runs on both sides and can't disagree. The server never trusts numbers from the browser.
+
+## D-019 · Signing reserves the item; contracts are frozen snapshots
+
+- **Context:** The starter's asset statuses are available, reserved and returned. There is no "leased".
+- **Decision:** Signing flips the asset from `available` to `reserved` in the same transaction as the contract and its audit row. The flip only succeeds while the asset is still available, so two simultaneous signings can't both win. The contract is stored once as JSON (`terms_json`) with a few copied columns for lookups, and is validated against a schema when read back.
+- **Alternatives:** A new `leased` status (more schema, data and translation changes for the MVP). Columns for every contract field (more migrations each time the contract grows).
+- **Why:** The item disappears from the leasable list at once, and a contract row is never updated after signing, which matches D-014.
+- **Evidence:** Server tests on a real SQLite database cover the reservation, the second signing being refused, and nothing being written when signing is refused.
+
+## D-020 · Audit entries can depend on the result
+
+- **Context:** `withAudit` took its entry before the change ran, but a new contract only gets its id inside the transaction.
+- **Decision:** `withAudit` also accepts a function `(result) => entry`. Existing calls are unchanged.
+- **Why:** The audit row names the contract it created (`contract 1`), not just the asset.
+
+## D-021 · The band hint searches the next band up
+
+- **Context:** Found while trying the app in the browser: laptop-003 with 20 € down costs 56.68 €/month, but 55.17 € with none. The first hint only compared one slider step back (10 € down, still the dearer band), so it said nothing.
+- **Decision:** Within a band, less down payment always means more rent, so the only cheaper option is the next band up. `bandEdgeHint` finds the largest down payment on a slider step that keeps the financed amount in that band and offers it if the rent is lower.
+- **Evidence:** A test for the exact browser case was red, then green.

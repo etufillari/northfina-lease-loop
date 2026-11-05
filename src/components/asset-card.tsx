@@ -7,7 +7,7 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ContractDrawerTrigger } from './contract';
 
-// Available = green check, reserved = amber hourglass, returned = blue check.
+// Available = green check, reserved = amber hourglass, returned = blue loop arrows.
 const statusColors: Record<AssetStatus, string> = {
   available: 'text-emerald-600 dark:text-emerald-400',
   reserved: 'text-amber-600 dark:text-amber-400',
@@ -31,6 +31,14 @@ function StatusIcon({ status }: { status: AssetStatus }) {
           <path d="M6 3h12M6 21h12" />
           <path d="M7 3v3.5a5 5 0 0 0 2 4l3 1.5-3 1.5a5 5 0 0 0-2 4V21" />
           <path d="M17 3v3.5a5 5 0 0 1-2 4L12 12l3 1.5a5 5 0 0 1 2 4V21" />
+        </>
+      ) : status === 'returned' ? (
+        // Two arrows chasing each other, like the logo: back in the loop.
+        <>
+          <path d="M4.5 11a8 8 0 0 1 13.7-4.7L20 8" />
+          <path d="M20 3v5h-5" />
+          <path d="M19.5 13a8 8 0 0 1-13.7 4.7L4 16" />
+          <path d="M4 21v-5h5" />
         </>
       ) : (
         <path d="M4 12.5 9.5 18 20 6.5" />

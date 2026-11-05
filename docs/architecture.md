@@ -1,13 +1,14 @@
 ---
 id: architecture
-type: system-design
+type: architecture-design
 status: draft
-title: Lease Loop Architecture and Spec
+title: Lease Loop — Architecture Design
+parent: goal-and-requirements
 ---
 
 # Lease Loop: architecture and spec
 
-**Status:** draft for team review (5 Nov 2026). Built from [architecture-notes.md](architecture-notes.md), [CHALLENGE.md](../CHALLENGE.md), [RULES.md](../RULES.md), [data/DATA.md](../data/DATA.md) and the starter code. The module specs in `src/*/SPEC.md` point here as their `parent`.
+**Status:** draft for team review (5 Nov 2026). Built from [architecture-notes.md](architecture-notes.md), [CHALLENGE.md](../CHALLENGE.md), [RULES.md](../RULES.md), [data/DATA.md](../data/DATA.md) and the starter code. It also absorbs the earlier root `architecture.md` from the spec graph. This is the single `architecture` node: its parent is [goal-and-requirements.md](../goal-and-requirements.md), and the module specs in `src/*/SPEC.md` point here as their `parent`.
 
 Items marked **[Decision]** were not settled in the notes and are proposed here. Agree or change them in review before the plan is written.
 
@@ -25,19 +26,27 @@ Win the hackathon. That means a Spine that works end to end (all 7 steps, one it
 | Money that adds up    | #5                                                  |
 | Circular impact (CO₂) | #7, **optional**. Nothing in the core depends on it |
 
-**Out of scope for phase 1:** admin/back-office view (review queue, returned-items desk, audit viewer beyond a simple list), login, second-life matchmaking (#3), fleet contracts with more than one physical item.
+**Out of scope for phase 1:** admin/back-office view (review queue, returned-items desk, audit viewer beyond a simple list), second-life matchmaking (#3), fleet contracts with more than one physical item.
 
-**Scenario cards outside our Smart Problems must not crash** (cards 2, 3, 6, 9, 10). §11 says what each one shows.
+**Out of scope entirely:** authentication, user sessions and roles; background jobs and message queues; external payment, bank or identity-provider integrations. All reference data stays in `data/` and local SQLite.
+
+**Scenario cards outside our Smart Problems must not crash** (cards 2, 3, 6, 9, 10). §12 says what each one shows.
+
+### Drivers
+
+- **Explainable, repeatable financial decisions.** Every pricing, eligibility, invoicing and second-life calculation is deterministic and testable without a database, network or clock.
+- **Transactional auditability.** No change to an asset, application, contract or invoice commits without its audit row in the same SQLite transaction.
+- **Boundaries enforced by tooling.** ESLint, the coverage gate and the CI scripts check the module boundaries automatically (`npm run check:all`).
 
 ## 2. Hard constraints (from RULES.md and the starter)
 
-- No AI/ML/LLM in the product. Everything is rules, data and algorithms.
-- Business logic in `src/domain/` as pure functions with co-located Vitest tests. No I/O, no `Date.now()`, `new Date()` or `Math.random()`. ESLint enforces this.
+- No AI/ML/LLM in the product. Everything is rules, data and algorithms. `npm run check:no-ai` fails on an AI package, import or API key in `package.json`, `src/` or `prisma/`.
+- Business logic in `src/domain/` as pure functions with co-located Vitest tests. `eslint.config.mjs` forbids `src/domain/**` from importing `node:*`, `next/*`, `react`, `@prisma/*`, `@/generated/*`, `@/server/*`, `@/data/load` or `@/app/*`, and from using `fetch`, `process`, `Date.now()`, `new Date()` or `Math.random()`.
 - Money is integer euro cents. Rates are integers (see §6). One rounding rule, written down.
-- API routes use `handleRoute()`, `ok()`, `fail()`, `ApiError` and `readJsonBody()` from `src/server/api-response.ts`.
-- Every data change goes through `withAudit(db, entry, (tx) => …)` from `src/server/audit.ts`, with every write on `tx`.
+- API routes use `handleRoute()`, `ok()`, `fail()`, `ApiError` and `readJsonBody()` from `src/server/api-response.ts`. They always answer `{ success: true, data, meta: { timestamp } }` or `{ success: false, error: { code, message, details? }, meta: { timestamp } }`. An unhandled exception becomes a generic `500 INTERNAL_ERROR` and leaks nothing.
+- Every data change goes through `withAudit(db, entry, (tx) => …)` from `src/server/audit.ts`, with every write on `tx`, so the business write and the `AuditLog` row commit or roll back together.
 - Schema changes: edit `prisma/schema.prisma`, then `npm run db:migrate -- --name <what>`. Never hand-write SQL.
-- UI strings in `src/i18n/messages/{en,fi,sv,et}.json`, same keys in all four.
+- UI strings in `src/i18n/messages/{en,fi,sv,et}.json`, same keys in all four. `src/i18n/messages.test.ts` checks this.
 - Source files under 600 lines. Conventional commits. Hooks on. `npm run check:all` green, with at least 60 % coverage on domain, server, data and i18n.
 
 **Stack (verified):** Next.js 16 App Router (read `node_modules/next/dist/docs/` before writing routes), React 19, Prisma 7 on **SQLite** (`@prisma/adapter-better-sqlite3`), Zod 4, Vitest 5, Tailwind 4.
@@ -50,10 +59,25 @@ Win the hackathon. That means a Spine that works end to end (all 7 steps, one it
 | B      | Backend          | API routes, `question-flow/` + `application/` (#4), `contract/` (signing), `end-of-term/`, `second-life/` flow, integration tests                                |
 | C      | Database + money | Schema, transactions, test DB helper and fixtures, `money/` (#5), `pricing/`, `early-exit/` (#2), buyout price, `second-life/` pricing, `impact/` (#7, optional) |
 
-- **First ~30 minutes together:** write `src/domain/types.ts` and the API shapes in §8. Then A builds against mocked responses, B builds routes, C builds the money core, in parallel.
+- **First ~30 minutes together:** write `src/domain/types.ts` and the API shapes in §11. Then A builds against mocked responses, B builds routes, C builds the money core, in parallel.
 - If C falls behind, move `second-life/` pricing to B.
 
 ## 4. Architecture
+
+### 4.0 Topology and module boundaries
+
+The app is one Next.js 16 monolith (App Router, TypeScript, React 19, Prisma 7 + SQLite), split into five modules under `src/`. Each has its own `SPEC.md`.
+
+| Module                                         | Spec     | Role                                                                                     | Depends on                                         |
+| ---------------------------------------------- | -------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `src/data`                                     | `data`   | Zod schemas (`schemas.ts`) and server-side JSON loaders (`load.ts`) for the `data/` pack | `zod`, `node:fs` (`load.ts` only)                  |
+| `src/domain`                                   | `domain` | Pure business rules (§4.2)                                                               | `data` (`schemas.ts` types only)                   |
+| `src/server`                                   | `server` | Prisma client, repositories, `withAudit`, API envelope, clock and `asOf` helpers         | `data` (`schemas.ts`), `@/generated/prisma`, `zod` |
+| `src/i18n`                                     | `i18n`   | Four-locale dictionaries, interpolation, locale-aware date and number formatting         | none (leaf)                                        |
+| `src/app` (+ `src/components`, `src/proxy.ts`) | `app`    | Pages, UI components, locale routing proxy, `/api/*` route handlers                      | `data`, `domain`, `server`, `i18n`                 |
+
+- **Functional core, imperative shell.** Side effects happen only in `server` and `app`: reading the clock (`todayIso()` / `resolveAsOf()`), loading JSON (`src/data/load.ts`) and reading or writing SQLite.
+- **Hybrid storage.** Mutable entities (`Asset`, `AuditLog`, `Application`, `Contract`, `InvoiceRow`, `AssetEvent`) live in SQLite. Immutable reference tables (price lists, coefficient table, VAT rates, questions, residual curves, refurbishment costs, waiting list, CO₂ factors, customers) are read from `data/` and validated by `src/data`.
 
 ### 4.1 Layers (each calls only the one below)
 

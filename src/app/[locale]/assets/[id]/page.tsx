@@ -84,7 +84,9 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
             </p>
             <h1 className="mt-2 font-display text-3xl leading-tight font-extrabold tracking-tight text-balance uppercase sm:text-4xl">
               {/* Only an item you can lease today gets "Lease the …"; a returned one is just named. */}
-              {asset.status === 'available' ? t('lease.title', { name: asset.model }) : asset.model}
+              {asset.status === 'available'
+                ? t('lease.title', { name: keepHyphens(asset.model) })
+                : keepHyphens(asset.model)}
             </h1>
             <p className="mt-2 text-sm text-muted">
               <time dateTime={today}>
@@ -161,4 +163,9 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd className="font-semibold">{value}</dd>
     </div>
   );
+}
+
+/** A word joiner after each hyphen, so "T-140" never splits over two lines in a big heading. */
+function keepHyphens(name: string): string {
+  return name.replace(/-/g, '-\u2060');
 }

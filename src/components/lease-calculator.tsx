@@ -62,7 +62,8 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-[1fr_24rem] lg:gap-12">
-        <div className="space-y-8">
+        {/* min-w-0: the wide comparison table scrolls inside its box instead of widening the page. */}
+        <div className="min-w-0 space-y-8">
           <fieldset>
             <legend className="eyebrow">{t('lease.term')}</legend>
             <div className="mt-3 flex flex-wrap gap-2">

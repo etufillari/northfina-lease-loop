@@ -1,5 +1,6 @@
 // One item: the live lease price with sliders, and signing. Items that can't be leased today
 // still show, with the reason. A returned item shows its second life instead (D-035).
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -21,6 +22,14 @@ import { loadLeaseDataPack } from '@/server/lease-data';
 import { latestListing, priceListsWithListings } from '@/server/listed-prices';
 import { asOfDate } from '@/server/as-of';
 import { loadSecondLifeDataPack, secondLifeView } from '@/server/second-life';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/assets/[id]'>): Promise<Metadata> {
+  const { id } = await params;
+  const asset = await db.asset.findUnique({ where: { id }, select: { make: true, model: true } });
+  return asset ? { title: `${asset.make} ${asset.model}` } : {};
+}
 
 export default async function AssetPage({ params }: PageProps<'/[locale]/assets/[id]'>) {
   const { locale, id } = await params;

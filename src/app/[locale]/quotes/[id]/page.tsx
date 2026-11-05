@@ -1,5 +1,6 @@
 // A stored quote (D-034): the price the customer was shown, how long it holds, what today's
 // price list would change (D-014), and the application that signs it.
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -13,6 +14,13 @@ import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { viewQuote } from '@/server/quotes';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/quotes/[id]'>): Promise<Metadata> {
+  const { locale, id } = await params;
+  return isLocale(locale) ? { title: getT(locale)('quote.title', { id }) } : {};
+}
 
 export default async function QuotePage({ params }: PageProps<'/[locale]/quotes/[id]'>) {
   const { locale, id } = await params;

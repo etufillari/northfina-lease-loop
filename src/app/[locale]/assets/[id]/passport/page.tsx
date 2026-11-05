@@ -1,5 +1,6 @@
 // The item passport (card 10, D-036): every life of one item, how each ended, what it took to get
 // it ready again, and the CO₂ its extra lives avoided, with the method in plain words.
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
@@ -14,6 +15,15 @@ import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { db } from '@/server/db';
 import { passportView } from '@/server/passport';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/assets/[id]/passport'>): Promise<Metadata> {
+  const { locale, id } = await params;
+  if (!isLocale(locale)) return {};
+  const asset = await db.asset.findUnique({ where: { id }, select: { model: true } });
+  return asset ? { title: getT(locale)('passport.title', { name: asset.model }) } : {};
+}
 
 export default async function PassportPage({
   params,

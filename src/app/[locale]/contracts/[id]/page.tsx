@@ -1,4 +1,5 @@
 // A signed contract: the locked price, where it came from, and every invoice.
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { EarlyExitPanel } from '@/components/early-exit-panel';
@@ -18,6 +19,13 @@ import { earlyExitContext } from '@/server/early-exit';
 import { ageClockFor } from '@/server/item-age';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/contracts/[id]'>): Promise<Metadata> {
+  const { locale, id } = await params;
+  return isLocale(locale) ? { title: getT(locale)('contract.title', { id }) } : {};
+}
 
 export default async function ContractPage({ params }: PageProps<'/[locale]/contracts/[id]'>) {
   const { locale, id } = await params;

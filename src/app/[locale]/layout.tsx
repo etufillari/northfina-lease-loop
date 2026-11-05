@@ -30,7 +30,11 @@ export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Pr
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = getT(locale);
-  return { title: t('meta.title'), description: t('meta.description') };
+  // Each page names itself; the brand follows (#34: every tab said "catalogue").
+  return {
+    title: { default: t('meta.title'), template: `%s · ${t('brand.name')}` },
+    description: t('meta.description'),
+  };
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps<'/[locale]'>) {

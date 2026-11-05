@@ -1,10 +1,18 @@
 // Who changed what, and when: the audit log, newest first.
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { listAuditLog } from '@/server/audit';
 import { db } from '@/server/db';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/audit'>): Promise<Metadata> {
+  const { locale } = await params;
+  return isLocale(locale) ? { title: getT(locale)('audit.title') } : {};
+}
 
 export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>) {
   const { locale } = await params;

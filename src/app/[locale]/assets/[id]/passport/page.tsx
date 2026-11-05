@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { HeroLoop } from '@/components/ui/hero-loop';
 import { loadCustomers } from '@/data/load';
 import type { UsageUnit } from '@/data/schemas';
 import type { LeaseLoopLife, Readings } from '@/domain/passport';
@@ -54,15 +55,19 @@ export default async function PassportPage({
 
       <section
         aria-labelledby="co2-total"
-        className="mt-8 rounded-xl bg-stage p-6 text-stage-fg sm:p-8"
+        className="relative mt-8 overflow-hidden rounded-xl bg-stage p-6 text-stage-fg sm:p-8"
       >
-        <h2 id="co2-total" className="font-display text-lg font-bold tracking-tight uppercase">
+        <HeroLoop className="-top-10 -right-10 size-56 sm:-top-16 sm:size-72" />
+        <h2
+          id="co2-total"
+          className="relative font-display text-lg font-bold tracking-tight uppercase"
+        >
           {t('passport.co2Title')}
         </h2>
-        <p className="mt-2 font-display text-4xl font-extrabold">
+        <p className="relative mt-2 font-display text-4xl font-extrabold text-stage-accent sm:text-5xl">
           {t('passport.kg', { kg: formatNumber(passport.avoidedKg, locale) })}
         </p>
-        <p className="mt-1 text-sm opacity-80">
+        <p className="relative mt-1 text-sm text-stage-muted">
           {t('passport.co2Counted', { count: formatNumber(counted, locale) })}
         </p>
       </section>
@@ -76,9 +81,11 @@ export default async function PassportPage({
             {t('passport.noLives')}
           </p>
         ) : null}
-        <ol className="mt-4 flex flex-col gap-3">
+        {/* A timeline: a line down the left, each life a numbered stop on it. */}
+        <ol className="mt-6 ml-4 flex flex-col gap-4 border-l-2 border-line pl-8">
           {passport.earlierLives.map((life) => (
-            <li key={`earlier-${life.number}`} className="panel p-4">
+            <li key={`earlier-${life.number}`} className="relative panel p-4">
+              <LifeStop number={life.number} muted />
               <h3 className="font-semibold">
                 {t('passport.life', { number: life.number })} · {t('passport.beforeLeaseLoop')}
               </h3>
@@ -102,7 +109,8 @@ export default async function PassportPage({
             />
           ))}
           {passport.nextListing ? (
-            <li className="rounded-lg border border-dashed border-line p-4 text-sm">
+            <li className="relative rounded-lg border border-dashed border-accent p-4 text-sm">
+              <LifeStop number={nextNumber} next />
               {t('passport.nextReady', {
                 number: nextNumber,
                 date: formatIsoDate(passport.nextListing.listedOn, locale),
@@ -117,7 +125,9 @@ export default async function PassportPage({
         <h2 id="method" className="font-display text-lg font-bold tracking-tight uppercase">
           {t('passport.methodTitle')}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed">{t('passport.method')}</p>
+        <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted">
+          {t('passport.method')}
+        </p>
       </section>
     </div>
   );
@@ -147,7 +157,8 @@ function LifeCard({
   const percent = (share: number) =>
     new Intl.NumberFormat(intlLocale[locale], { maximumFractionDigits: 1 }).format(share * 100);
   return (
-    <li className="panel p-4">
+    <li className="relative panel p-4">
+      <LifeStop number={life.number} />
       <h3 className="font-semibold">
         {t('passport.life', { number: life.number })} · {lessee}
       </h3>
@@ -212,5 +223,22 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
       <dt className="text-muted">{label}</dt>
       <dd>{children}</dd>
     </div>
+  );
+}
+
+/** A life's numbered stop on the timeline line; an earlier life is muted, the next one dashed. */
+function LifeStop({ number, muted, next }: { number: number; muted?: boolean; next?: boolean }) {
+  const look = next
+    ? 'border-2 border-dashed border-accent bg-bg text-accent-text'
+    : muted
+      ? 'bg-surface-2 text-muted ring-4 ring-bg'
+      : 'bg-accent text-on-accent ring-4 ring-bg';
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute top-3.5 -left-[3.05rem] grid size-8 place-items-center rounded-full font-display text-sm font-bold ${look}`}
+    >
+      {number}
+    </span>
   );
 }

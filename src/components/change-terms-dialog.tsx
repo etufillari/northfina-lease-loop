@@ -53,7 +53,7 @@ export function ChangeTermsDialog({
         type="button"
         aria-haspopup="dialog"
         onClick={() => setIsOpen(true)}
-        className="mt-[16px] inline-block text-[0.875rem] font-semibold text-[#1354a5] underline"
+        className="mt-[16px] inline-block text-[0.875rem] font-semibold text-[#1354a5] underline dark:text-sky-400"
       >
         {t('apply.deal.change')}
       </button>
@@ -63,7 +63,7 @@ export function ChangeTermsDialog({
           role="dialog"
           aria-modal="true"
           aria-label={`${asset.make} ${asset.model}`}
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#353331]/60 p-[16px]"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/60 p-[16px] backdrop-blur-xs dark:bg-black/70"
           onClick={(event) => {
             if (event.target === event.currentTarget) setIsOpen(false);
           }}

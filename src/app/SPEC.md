@@ -11,7 +11,11 @@ depends-on: [data, domain, server, i18n]
 
 Owns the Next.js 16 App Router pages (`src/app/[locale]/`), reusable UI components (`src/components/`), root locale redirect (`src/proxy.ts`), and HTTP API route handlers (`src/app/api/`).
 
-- **Localized UI shell and catalogue:** `src/app/[locale]/layout.tsx` validates the `[locale]` route parameter, sets `<html lang={locale}>`, and renders the header and `LanguageSwitcher`. `src/app/[locale]/page.tsx` opts into dynamic rendering (`await connection()`), reads `todayIso()`, loads assets from SQLite and price lists from `data/`, computes each asset's price via `listPriceOn`, and renders `AssetCard` items grouped by category.
+- **Localized UI shell and pages:**
+  - `src/app/[locale]/layout.tsx` validates the `[locale]` route parameter, sets `<html lang={locale}>`, and renders the header and `LanguageSwitcher`.
+  - `src/app/[locale]/page.tsx` opts into dynamic rendering (`await connection()`), reads `todayIso()`, loads assets from SQLite and price lists/coefficients/VAT from `data/`, computes each asset's price via `listPriceOn`, and renders `AssetCard` items grouped by category with `ContractDrawerTrigger`.
+  - `src/app/[locale]/apply/page.tsx` prices the selected asset, term, and down payment, renders `ApplicationForm` + `DealSummary` + `ChangeTermsDialog`, and enables signing the lease inside `DecisionPanel` when `decision === 'yes'`. Signing marks the asset `'reserved'` via `PATCH /api/assets/[id]/status` and navigates to `/[locale]/invoices`.
+  - `src/app/[locale]/invoices/page.tsx` computes the locked contract quote as of `signedOn` (from `?asset=&term=&down=&signedOn=`) so later price list updates cannot alter the agreed net rent, and renders the signed contract summary card alongside `MonthlyInvoices` (where each row opens `InvoiceBillDialog` with synthetic `Lease Loop Oy` company, SEPA bank, and Finnish reference number details).
 - **HTTP API routes:**
   - `GET /api/assets`: Lists assets with optional `?category=` filtering.
   - `PATCH /api/assets/[id]/status`: Validates `{ status, actor }` and calls `changeAssetStatus` to update status and write an audit entry atomically.

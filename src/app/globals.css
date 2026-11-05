@@ -1,8 +1,61 @@
 @import 'tailwindcss';
-
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Design Tokens — Primary */
+  --color-primary-50: #f6f7f8;
+  --color-primary-100: #eaedf1;
+  --color-primary-200: #ccd7e6;
+  --color-primary-300: #9cb9dd;
+  --color-primary-400: #5f96d8;
+  --color-primary-500: #2877d7;
+  --color-primary-600: #1a65c1;
+  --color-primary-700: #1354a5;
+  --color-primary-800: #14427b;
+  --color-primary-900: #123054;
+  --color-primary: #2877d7;
+
+  /* Design Tokens — Secondary */
+  --color-secondary-50: #f7f8f7;
+  --color-secondary-100: #eaf0ec;
+  --color-secondary-200: #cde5d5;
+  --color-secondary-300: #9edbb4;
+  --color-secondary-400: #63d48b;
+  --color-secondary-500: #2ed167;
+  --color-secondary-600: #20bc56;
+  --color-secondary-700: #17a047;
+  --color-secondary-800: #177839;
+  --color-secondary-900: #14522a;
+  --color-secondary: #2ed167;
+
+  /* Design Tokens — Accent */
+  --color-accent-50: #f8f7f6;
+  --color-accent-100: #f1ede9;
+  --color-accent-200: #e9dac8;
+  --color-accent-300: #e6bf94;
+  --color-accent-400: #e7a150;
+  --color-accent-500: #ed8712;
+  --color-accent-600: #d67505;
+  --color-accent-700: #b76200;
+  --color-accent-800: #884c07;
+  --color-accent-900: #5c360a;
+  --color-accent: #ed8712;
+
+  /* Design Tokens — Neutral */
+  --color-neutral-50: #f7f7f7;
+  --color-neutral-100: #ededed;
+  --color-neutral-200: #dad9d8;
+  --color-neutral-300: #bfbcbb;
+  --color-neutral-400: #a09b98;
+  --color-neutral-500: #857f7a;
+  --color-neutral-600: #736d68;
+  --color-neutral-700: #615b57;
+  --color-neutral-800: #4b4744;
+  --color-neutral-900: #353331;
 }
 
 /* A visible keyboard focus everywhere, in both color schemes. */

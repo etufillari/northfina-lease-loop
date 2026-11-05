@@ -12,9 +12,9 @@ import { messages, type MessageKey, type Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
 const inputClass =
-  'mt-[8px] block w-full rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[12px] py-[8px] text-[1rem] text-[#353331] focus:border-[#2877d7]';
-const mutedClass = 'mt-[4px] text-[0.875rem] text-[#615b57]';
-const labelClass = 'text-[1rem] font-semibold text-[#353331]';
+  'mt-[8px] block w-full rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[12px] py-[8px] text-[1rem] text-[#353331] focus:border-[#2877d7] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:focus:border-sky-500';
+const mutedClass = 'mt-[4px] text-[0.875rem] text-[#615b57] dark:text-stone-400';
+const labelClass = 'text-[1rem] font-semibold text-[#353331] dark:text-stone-200';
 
 /** The label of a choice option. Falls back to the raw value if it has no translation. */
 export function answerLabel(t: Translate, value: string): string {
@@ -52,7 +52,7 @@ export function QuestionField({ question, locale, t, value, onChange }: Question
           {question.options!.map((option) => (
             <label
               key={option}
-              className="flex cursor-pointer items-center gap-[8px] rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[12px] py-[8px] text-[#353331] has-[:checked]:border-[#2877d7] has-[:checked]:bg-[#f6f7f8]"
+              className="flex cursor-pointer items-center gap-[8px] rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[12px] py-[8px] text-[#353331] has-[:checked]:border-[#2877d7] has-[:checked]:bg-[#f6f7f8] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:has-[:checked]:border-sky-500 dark:has-[:checked]:bg-stone-700"
             >
               <input
                 type="radio"
@@ -168,7 +168,7 @@ function MoneyField({
         }}
       />
       {invalid ? (
-        <p role="alert" className="mt-[4px] text-[0.875rem] text-[#DC2626]">
+        <p role="alert" className="mt-[4px] text-[0.875rem] text-[#DC2626] dark:text-red-400">
           {t('apply.money.invalid')}
         </p>
       ) : null}
@@ -231,7 +231,7 @@ function DateField({
         }}
       />
       {invalid ? (
-        <p role="alert" className="mt-[4px] text-[0.875rem] text-[#DC2626]">
+        <p role="alert" className="mt-[4px] text-[0.875rem] text-[#DC2626] dark:text-red-400">
           {t('apply.date.invalid')}
         </p>
       ) : null}

@@ -3,6 +3,7 @@
 // The application form (Spine step 3). It sends the whole form state to
 // POST /api/applications/evaluate after every change and draws what comes back: the questions
 // that apply, a note about answers that were removed, and the decision.
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Question } from '@/data/schemas';
 import type { EligibilityDecision } from '@/domain/eligibility';
@@ -32,23 +33,36 @@ export type ApplicationDeal = {
   monthly_rent_incl_vat_cents?: number;
 };
 
+export type SignTarget = {
+  assetId: string;
+  termMonths: number;
+  downPaymentCents: number;
+  signedOn: string;
+};
+
 /** Wait for typing to pause before asking the server. */
 const DEBOUNCE_MS = 250;
 
 export function ApplicationForm({
   locale,
   deal,
+  signTarget,
   children,
 }: {
   locale: Locale;
   deal: ApplicationDeal;
+  /** Provided when the deal has a valid contract quote that can be signed upon approval. */
+  signTarget?: SignTarget;
   /** Rendered above the decision in the side column: the lease summary. */
   children?: ReactNode;
 }) {
   const t = getT(locale);
+  const router = useRouter();
   const [answers, setAnswers] = useState<Answers>({});
   const [state, setState] = useState<EvaluateState>({ status: 'loading' });
   const [removed, setRemoved] = useState<string[]>([]);
+  const [isSigning, setIsSigning] = useState(false);
+  const [signError, setSignError] = useState<string | null>(null);
   // Question texts seen so far, so a removed answer can be named after its question is gone.
   const seen = useRef(new Map<string, Question>());
 
@@ -88,12 +102,50 @@ export function ApplicationForm({
 
   function change(id: string, value: AnswerValue | undefined) {
     setRemoved([]);
+    setSignError(null);
     setAnswers((current) => {
       const next = { ...current };
       if (value === undefined) delete next[id];
       else next[id] = value;
       return next;
     });
+  }
+
+  async function handleSign() {
+    if (!signTarget || isSigning) return;
+    setIsSigning(true);
+    setSignError(null);
+
+    const rawActor =
+      typeof answers.q_email === 'string' && answers.q_email.trim().length > 0
+        ? answers.q_email.trim()
+        : typeof answers.q_business_id === 'string' && answers.q_business_id.trim().length > 0
+          ? answers.q_business_id.trim()
+          : 'customer';
+    const actor = rawActor.slice(0, 100);
+
+    try {
+      const response = await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'reserved', actor }),
+      });
+      const json = (await response.json()) as { success?: boolean };
+      if (!response.ok || !json.success) {
+        throw new Error('sign failed');
+      }
+
+      const params = new URLSearchParams({
+        asset: signTarget.assetId,
+        term: String(signTarget.termMonths),
+        down: String(signTarget.downPaymentCents),
+        signedOn: signTarget.signedOn,
+      });
+      router.push(`/${locale}/invoices?${params.toString()}`);
+    } catch {
+      setSignError(t('apply.signError'));
+      setIsSigning(false);
+    }
   }
 
   const data = state.status === 'ready' ? state.data : null;
@@ -104,7 +156,7 @@ export function ApplicationForm({
         aria-labelledby="questions-heading"
         aria-busy={state.status === 'loading'}
         onSubmit={(event) => event.preventDefault()}
-        className="space-y-[24px] rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331]"
+        className="space-y-[24px] rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
       >
         <h2 id="questions-heading" className="text-[1.375rem] leading-tight font-bold">
           {t('apply.questions.heading')}
@@ -113,7 +165,7 @@ export function ApplicationForm({
         {removed.length > 0 ? (
           <div
             role="status"
-            className="rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] text-[#123054]"
+            className="rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] text-[#123054] dark:border-sky-950 dark:bg-stone-800/80 dark:text-sky-200"
           >
             <p className="font-semibold">{t('apply.dropped')}</p>
             <ul className="mt-[4px] list-disc pl-[20px]">
@@ -124,9 +176,11 @@ export function ApplicationForm({
           </div>
         ) : null}
 
-        {state.status === 'loading' ? <p>{t('apply.checking')}</p> : null}
+        {state.status === 'loading' ? (
+          <p className="text-[#615b57] dark:text-stone-400">{t('apply.checking')}</p>
+        ) : null}
         {state.status === 'error' ? (
-          <p role="alert" className="text-[#DC2626]">
+          <p role="alert" className="text-[#DC2626] dark:text-red-400">
             {t('apply.error')}
           </p>
         ) : null}
@@ -146,7 +200,16 @@ export function ApplicationForm({
       <aside className="space-y-[24px] lg:sticky lg:top-[24px] lg:self-start">
         {children}
         <div aria-live="polite">
-          {data ? <DecisionPanel decision={data.decision} locale={locale} t={t} /> : null}
+          {data ? (
+            <DecisionPanel
+              decision={data.decision}
+              locale={locale}
+              t={t}
+              onSign={signTarget ? handleSign : undefined}
+              isSigning={isSigning}
+              signError={signError}
+            />
+          ) : null}
         </div>
       </aside>
     </div>

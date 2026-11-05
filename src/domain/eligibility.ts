@@ -1,9 +1,9 @@
 // The eligibility rules from data/questions.json: yes, no or "a person will check", with reasons.
 //
-// A fact can come from the form or the customer record. The form answer wins, and the record
-// fills in when the question was not asked, since q_monthly_income and q_pep only appear for
-// larger deals. So a false answer can pass; the one exception is PEP status, which counts
-// from either source because a PEP must never be auto-approved.
+// A fact can come from the form or the customer record, and the two can disagree. The stricter
+// one wins, so a false answer never helps: an applicant under age or a PEP in either source
+// counts, and income is the lower figure. The record also covers questions that were not
+// asked, since q_monthly_income and q_pep only appear for larger deals.
 import type { Answers, ApplicationDecision, EligibilityReason } from '@/data/lease-schemas';
 import type { Customer, Question } from '@/data/schemas';
 import { ageOn, eligibleFrom } from './age';
@@ -61,10 +61,14 @@ function moneyAnswer(answers: Answers, questionId: string): number | undefined {
   return typeof value === 'number' ? value : undefined;
 }
 
-/** The applicant's birth date: the form answer, else the record. Companies have none. */
+/**
+ * The applicant's birth date. The later date wins, because the younger applicant is the
+ * stricter case, and ISO dates compare correctly as text. Companies have none.
+ */
 export function applicantBirthDate(customer: Customer, answers: Answers): string | null {
   if (customer.type === 'company') return null;
-  return textAnswer(answers, 'q_birth_date') ?? customer.birth_date;
+  const answer = textAnswer(answers, 'q_birth_date') ?? customer.birth_date;
+  return answer > customer.birth_date ? answer : customer.birth_date;
 }
 
 /** Compares in whole numbers: rent ÷ income ≤ 30 % is the same as rent × 100 ≤ income × 30. */
@@ -89,17 +93,23 @@ export function decide(input: EligibilityInput): Eligibility {
     eligible_from = eligibleFrom(birthDate, minAge);
   }
 
-  const country = textAnswer(answers, 'q_country') ?? customer.country;
-  if (!allowedCountries(questions).includes(country)) reasons.push('residency');
+  const allowed = allowedCountries(questions);
+  const answeredCountry = textAnswer(answers, 'q_country') ?? customer.country;
+  if (![answeredCountry, customer.country].every((country) => allowed.includes(country))) {
+    reasons.push('residency');
+  }
 
   if (customer.type === 'consumer' && monthlyRentWithVatCents !== null) {
-    const income = moneyAnswer(answers, 'q_monthly_income') ?? customer.monthly_net_income_cents;
+    const recorded = customer.monthly_net_income_cents;
+    const income = Math.min(moneyAnswer(answers, 'q_monthly_income') ?? recorded, recorded);
     if (!isAffordable(monthlyRentWithVatCents, income)) reasons.push('affordability');
   }
 
   if (customer.type !== 'consumer') {
-    const businessId = textAnswer(answers, 'q_business_id') ?? customer.business_id;
-    if (!isValidBusinessId(businessId)) reasons.push('business_id');
+    const answeredId = textAnswer(answers, 'q_business_id') ?? customer.business_id;
+    if (![answeredId, customer.business_id].every(isValidBusinessId)) {
+      reasons.push('business_id');
+    }
   }
 
   if (monthlyRentWithVatCents === null) reasons.push('financed_limits');

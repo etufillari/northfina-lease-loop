@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadAssets } from '@/data/load';
+import { loadAssets, loadQuestions } from '@/data/load';
 import { seedAssets } from '@/server/assets';
 import type { PrismaClient } from '@/server/prisma-client';
 import { ADMIN, AINO, TEST_SECRET, actAs } from '../../../../../tests/helpers/act-as';
@@ -32,8 +32,8 @@ beforeEach(async () => {
   await db.appSetting.create({ data: { key: 'demo_date', value: '2026-11-05' } });
 });
 
-async function post(body: unknown) {
-  const request = new Request('http://localhost/api/applications/questions', {
+async function post(body: unknown, query = '') {
+  const request = new Request(`http://localhost/api/applications/questions${query}`, {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -44,7 +44,7 @@ async function post(body: unknown) {
 const deal = { asset_id: 'ebike-003', term_months: 36 };
 
 describe('POST /api/applications/questions', () => {
-  it('returns the questions for the logged-in customer, with texts in every language', async () => {
+  it('returns the questions for the logged-in customer', async () => {
     await actAs(AINO);
     const { status, body } = await post(deal);
     expect(status).toBe(200);
@@ -57,9 +57,48 @@ describe('POST /api/applications/questions', () => {
       'q_monthly_income',
       'q_usage_purpose',
     ]);
-    expect(Object.keys(body.data.questions[0].text)).toEqual(['en', 'fi', 'sv', 'et']);
     expect(body.data.unanswered).toHaveLength(7);
     expect(body.data.blocked).toBeNull();
+  });
+
+  it('returns the texts in the requested language', async () => {
+    const { questions } = await loadQuestions();
+    const email = questions.find((q) => q.id === 'q_email');
+    await actAs(AINO);
+
+    for (const locale of ['en', 'fi', 'sv', 'et'] as const) {
+      const { status, body } = await post(deal, `?locale=${locale}`);
+      const question = body.data.questions.find((q: { id: string }) => q.id === 'q_email');
+      expect(status).toBe(200);
+      expect(question.text).toBe(email?.text[locale]);
+    }
+  });
+
+  it('defaults to English', async () => {
+    const { questions } = await loadQuestions();
+    const email = questions.find((q) => q.id === 'q_email');
+    await actAs(AINO);
+
+    const { body } = await post(deal);
+    const question = body.data.questions.find((q: { id: string }) => q.id === 'q_email');
+    expect(question.text).toBe(email?.text.en);
+  });
+
+  it('falls back to English when why_we_ask has no translation yet', async () => {
+    const { questions } = await loadQuestions();
+    const email = questions.find((q) => q.id === 'q_email');
+    await actAs(AINO);
+
+    const { body } = await post(deal, '?locale=fi');
+    const question = body.data.questions.find((q: { id: string }) => q.id === 'q_email');
+    expect(question.why_we_ask).toBe(email?.why_we_ask.fi ?? email?.why_we_ask.en);
+    expect(typeof question.why_we_ask).toBe('string');
+  });
+
+  it('answers 400 for a language the app does not speak, or an unknown parameter', async () => {
+    await actAs(AINO);
+    expect((await post(deal, '?locale=de')).status).toBe(400);
+    expect((await post(deal, '?lang=fi')).status).toBe(400);
   });
 
   it('gives choice questions their options and leaves other questions without', async () => {

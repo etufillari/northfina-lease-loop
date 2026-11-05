@@ -167,6 +167,29 @@ describe('submitApplication: rejected', () => {
     });
   });
 
+  it('is not fooled by a false birth date on a complete form', async () => {
+    const application = await submitOk({
+      customer: customer('cust-mikko'),
+      assetId: 'laptop-008',
+      quantity: 1,
+      termMonths: 36,
+      downPaymentCents: 0,
+      answers: {
+        q_full_name: 'Mikko Laine',
+        q_birth_date: '1990-01-01',
+        q_email: 'mikko@example.com',
+        q_country: 'FI',
+        q_employment: 'employed',
+        q_monthly_income: 900_000,
+      },
+    });
+    expect(application).toMatchObject({
+      decision: 'rejected',
+      reasons: ['min_age'],
+      eligible_from: '2027-03-10',
+    });
+  });
+
   it('lets the same applicant through once the server date reaches the birthday', async () => {
     await setDemoDate(db, { date: '2027-03-10', actor: 'test' });
     const result = await submitApplication(db, {

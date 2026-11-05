@@ -69,9 +69,23 @@ describe('decide: minimum age', () => {
     expect(on('2027-03-10')).toBe('approved');
   });
 
-  it('uses the form answer over the record', () => {
+  it('rejects a form answer that makes the applicant too young', () => {
     const result = decide(input('cust-aino', { answers: { q_birth_date: '2010-01-01' } }));
     expect(result).toMatchObject({ reasons: ['min_age'], eligible_from: '2028-01-01' });
+  });
+
+  it('is not fooled by an older birth date on the form', () => {
+    const result = decide(
+      input('cust-mikko', {
+        answers: { q_birth_date: '1990-01-01' },
+        monthlyRentWithVatCents: 5_000,
+      })
+    );
+    expect(result).toEqual({
+      decision: 'rejected',
+      reasons: ['min_age'],
+      eligible_from: '2027-03-10',
+    });
   });
 
   it('applies to sole traders', () => {
@@ -89,6 +103,14 @@ describe('decide: residency', () => {
   it('rejects a country outside FI, SE and EE', () => {
     const result = decide(input('cust-aino', { answers: { q_country: 'other' } }));
     expect(result).toMatchObject({ decision: 'rejected', reasons: ['residency'] });
+  });
+
+  it('is not fooled by an allowed country on the form', () => {
+    const abroad = { ...customer('cust-aino'), country: 'DE' };
+    const answers = { q_country: 'FI' };
+    expect(decide({ ...input('cust-aino', { answers }), customer: abroad }).reasons).toEqual([
+      'residency',
+    ]);
   });
 
   it('uses the record for a company, which is not asked', () => {
@@ -116,12 +138,24 @@ describe('decide: affordability', () => {
     expect(rent(39_640)).toBe('rejected');
   });
 
-  it('uses the income answer when asked, and the record below that', () => {
+  it('uses the record when the question was not asked', () => {
     // Aino's record says 320 000, so her limit is 96 000.
-    const rent = { monthlyRentWithVatCents: 100_000 };
-    expect(decide(input('cust-aino', rent)).reasons).toEqual(['affordability']);
+    expect(decide(input('cust-aino', { monthlyRentWithVatCents: 96_000 }))).toEqual(approved);
+    expect(decide(input('cust-aino', { monthlyRentWithVatCents: 96_001 })).reasons).toEqual([
+      'affordability',
+    ]);
+  });
+
+  it('is not fooled by a higher income on the form', () => {
     const answers = { q_monthly_income: 500_000 };
-    expect(decide(input('cust-aino', { ...rent, answers })).decision).toBe('approved');
+    const result = decide(input('cust-aino', { answers, monthlyRentWithVatCents: 100_000 }));
+    expect(result.reasons).toEqual(['affordability']);
+  });
+
+  it('uses a lower income from the form', () => {
+    const answers = { q_monthly_income: 100_000 };
+    const result = decide(input('cust-aino', { answers, monthlyRentWithVatCents: 50_000 }));
+    expect(result.reasons).toEqual(['affordability']);
   });
 
   it('rejects any rent on zero income', () => {
@@ -143,13 +177,14 @@ describe('decide: business ID', () => {
     });
   });
 
-  it('uses the form answer over the record', () => {
-    expect(decide(input('cust-broken-id', { answers: { q_business_id: '1234567-1' } }))).toEqual(
-      approved
-    );
-    expect(
-      decide(input('cust-norvi', { answers: { q_business_id: '1234567-8' } })).reasons
-    ).toEqual(['business_id']);
+  it('is not fooled by a valid ID on the form when the record is broken', () => {
+    const answers = { q_business_id: '1234567-1' };
+    expect(decide(input('cust-broken-id', { answers })).reasons).toEqual(['business_id']);
+  });
+
+  it('rejects a broken ID on the form when the record is valid', () => {
+    const answers = { q_business_id: '1234567-8' };
+    expect(decide(input('cust-norvi', { answers })).reasons).toEqual(['business_id']);
   });
 
   it('does not apply to consumers', () => {
@@ -214,10 +249,16 @@ describe('decide: several reasons', () => {
 });
 
 describe('applicantBirthDate', () => {
-  it('prefers the form answer over the record', () => {
+  it('uses the record when the form has no answer', () => {
     expect(applicantBirthDate(customer('cust-aino'), {})).toBe('1997-04-12');
+  });
+
+  it('takes the later date, whichever source it comes from', () => {
     expect(applicantBirthDate(customer('cust-aino'), { q_birth_date: '2000-01-01' })).toBe(
       '2000-01-01'
+    );
+    expect(applicantBirthDate(customer('cust-aino'), { q_birth_date: '1990-01-01' })).toBe(
+      '1997-04-12'
     );
   });
 

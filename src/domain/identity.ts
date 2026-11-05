@@ -9,6 +9,13 @@ import type { Customer, Staff, StaffRole } from '@/data/schemas';
 /** Every customer acts as a client. Staff carry their own role from data/staff.json. */
 export const CLIENT_ROLE = 'client' as const;
 export type Role = typeof CLIENT_ROLE | StaffRole;
+export const ROLES: readonly Role[] = [CLIENT_ROLE, 'dealer', 'admin'];
+
+/** True when `value` is one of the known roles. Used to check a role read from outside
+ *  the app, e.g. a decoded session token, before it is trusted as a `Role`. */
+export function isRole(value: unknown): value is Role {
+  return typeof value === 'string' && (ROLES as readonly string[]).includes(value);
+}
 
 /** One person who can log in, with the role that decides what they may do. */
 export type Identity =

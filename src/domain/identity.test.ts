@@ -5,6 +5,7 @@ import {
   findIdentity,
   identityId,
   identityName,
+  isRole,
   listIdentities,
   PERMISSIONS,
   type Permission,
@@ -131,5 +132,21 @@ describe('can', () => {
   it('is exhaustive: every Permission is a real string in the list', () => {
     const permission: Permission = 'audit_log.view';
     expect(PERMISSIONS).toContain(permission);
+  });
+});
+
+describe('isRole', () => {
+  it('accepts the three known roles', () => {
+    expect(isRole('client')).toBe(true);
+    expect(isRole('dealer')).toBe(true);
+    expect(isRole('admin')).toBe(true);
+  });
+
+  it('rejects unknown strings and non-strings', () => {
+    expect(isRole('superadmin')).toBe(false);
+    expect(isRole('')).toBe(false);
+    expect(isRole(undefined)).toBe(false);
+    expect(isRole(null)).toBe(false);
+    expect(isRole(42)).toBe(false);
   });
 });

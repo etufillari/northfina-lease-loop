@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // Business logic and server code must stay tested; UI pages are not measured.
-      include: ['src/domain/**', 'src/server/**', 'src/data/**', 'src/i18n/**'],
+      include: ['src/domain/**', 'src/server/**', 'src/data/**', 'src/i18n/**', 'src/lib/**'],
       exclude: ['**/*.test.ts', '**/*.json', '**/*.md'],
       reporter: ['text', 'json-summary', 'html'],
       thresholds: { lines: 60, functions: 60, branches: 60, statements: 60 },

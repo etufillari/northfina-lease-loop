@@ -1,10 +1,11 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
-import type { Asset, AssetStatus } from '@/data/schemas';
+import type { Asset, AssetStatus, CoefficientTable, VatRates } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { ContractDrawerTrigger } from './contract';
 
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   available: {
@@ -29,9 +30,20 @@ type AssetCardProps = {
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  coefficientTable?: CoefficientTable;
+  vatRates?: VatRates;
+  isoDate?: string;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  price,
+  locale,
+  t,
+  coefficientTable,
+  vatRates,
+  isoDate,
+}: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
 
@@ -77,6 +89,17 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
       </div>
+
+      {coefficientTable && vatRates && isoDate ? (
+        <ContractDrawerTrigger
+          asset={asset}
+          price={price}
+          coefficientTable={coefficientTable}
+          vatRates={vatRates}
+          isoDate={isoDate}
+          locale={locale}
+        />
+      ) : null}
     </article>
   );
 }

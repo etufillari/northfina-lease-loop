@@ -220,10 +220,10 @@ export async function getApplication(db: PrismaClient, id: string): Promise<Appl
 
 export async function listApplications(
   db: PrismaClient,
-  filter: { decision?: Application['decision'] } = {}
+  filter: { decision?: Application['decision']; customerId?: string } = {}
 ): Promise<Application[]> {
   const rows = await db.application.findMany({
-    where: filter.decision ? { decision: filter.decision } : {},
+    where: { decision: filter.decision, customer_id: filter.customerId },
     orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
   });
   return rows.map(toApplication);

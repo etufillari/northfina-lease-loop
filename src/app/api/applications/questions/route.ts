@@ -25,12 +25,13 @@ export const POST = handleRoute(async (request) => {
   const { questions, ...rest } = result;
   return ok({
     ...rest,
-    questions: questions.map(({ id, type, text, why_we_ask, options }) => ({
+    questions: questions.map(({ id, type, text, why_we_ask, options, validation }) => ({
       id,
       type,
       text,
       why_we_ask,
       ...(options ? { options } : {}),
+      ...(validation ? { hint: validation.hint } : {}),
     })),
   });
 });

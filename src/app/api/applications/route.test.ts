@@ -139,6 +139,12 @@ describe('POST /api/applications', () => {
     ],
     ['a fractional down payment', { down_payment_cents: 0.5 }, 400, 'VALIDATION_ERROR'],
     ['a missing term', { term_months: undefined }, 400, 'VALIDATION_ERROR'],
+    [
+      'an answer that is too long',
+      { answers: { ...ainoEbikeAnswers, q_full_name: 'a'.repeat(1001) } },
+      400,
+      'VALIDATION_ERROR',
+    ],
   ])('answers %s with %i %s', async (_name, change, status, code) => {
     await actAs(AINO);
     const result = await post({ ...card1, ...change });
@@ -195,11 +201,46 @@ describe('GET /api/applications', () => {
     ]);
   });
 
-  it('is closed to clients, dealers and the logged out', async () => {
+  it('shows a client only their own applications', async () => {
+    await applyAsAinoAndHaapala();
+    await actAs(AINO);
+
+    const { status, body } = await list();
+    expect(status).toBe(200);
+    expect(body.data.map((a: { customer_id: string }) => a.customer_id)).toEqual(['cust-aino']);
+  });
+
+  it('keeps a client to their own even when filtering by decision', async () => {
+    await applyAsAinoAndHaapala();
+    await actAs(AINO);
+    expect((await list('?decision=manual_review')).body.data).toEqual([]);
+    expect((await list('?decision=approved')).body.data).toHaveLength(1);
+  });
+
+  it('lets a customer find their application after an admin has decided it', async () => {
+    await applyAsAinoAndHaapala();
+    await db.application.updateMany({
+      where: { customer_id: 'cust-haapala' },
+      data: { decision: 'approved', reviewed_by: 'staff-admin', reviewed_on: '2026-11-05' },
+    });
+    await actAs({ sub: 'cust-haapala', role: 'client' });
+
+    const { body } = await list('?decision=approved');
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject({
+      customer_id: 'cust-haapala',
+      reviewed_by: 'staff-admin',
+    });
+  });
+
+  it('gives a client with no applications an empty list', async () => {
+    await actAs(AINO);
+    expect((await list()).body.data).toEqual([]);
+  });
+
+  it('is closed to dealers and the logged out', async () => {
     await actAs(null);
     expect((await list()).status).toBe(401);
-    await actAs(AINO);
-    expect((await list()).status).toBe(403);
     await actAs(DEALER);
     expect((await list()).status).toBe(403);
   });

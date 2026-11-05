@@ -74,7 +74,14 @@ export type QuoteResult = { ok: true; quote: Quote } | { ok: false; reason: Quot
 // ---------------------------------------------------------------------------
 
 /** One answer: text, a choice or a date as a string, money as cents, a list as strings. */
-export const answerValueSchema = z.union([z.string(), z.number(), z.array(z.string())]);
+const MAX_ANSWER_LENGTH = 1000;
+const MAX_LIST_ITEMS = 50;
+const answerTextSchema = z.string().max(MAX_ANSWER_LENGTH);
+export const answerValueSchema = z.union([
+  answerTextSchema,
+  z.number(),
+  z.array(answerTextSchema).max(MAX_LIST_ITEMS),
+]);
 export type AnswerValue = z.infer<typeof answerValueSchema>;
 
 /** Question id → answer. */

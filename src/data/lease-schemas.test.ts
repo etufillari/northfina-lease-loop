@@ -120,6 +120,14 @@ describe('lease records', () => {
     expect(contractSchema.safeParse({ ...contract, start_on: '5.11.2026' }).success).toBe(false);
   });
 
+  it('limits the size of an answer', () => {
+    expect(answersSchema.safeParse({ q_x: 'a'.repeat(1000) }).success).toBe(true);
+    expect(answersSchema.safeParse({ q_x: 'a'.repeat(1001) }).success).toBe(false);
+    expect(answersSchema.safeParse({ q_x: Array(50).fill('owner') }).success).toBe(true);
+    expect(answersSchema.safeParse({ q_x: Array(51).fill('owner') }).success).toBe(false);
+    expect(answersSchema.safeParse({ q_x: ['a'.repeat(1001)] }).success).toBe(false);
+  });
+
   it('rejects answers to something that is not a question id', () => {
     expect(answersSchema.safeParse({ country: 'FI' }).success).toBe(false);
   });

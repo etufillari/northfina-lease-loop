@@ -1,12 +1,14 @@
 // POST /api/applications   body: { asset_id, quantity?, term_months, down_payment_cents?, answers }
 //   A client applies. The server prices the deal on its own date and decides:
 //   approved, rejected (with reasons) or manual_review.
-// GET /api/applications[?decision=manual_review]   the review queue, for an admin.
+// GET /api/applications[?decision=manual_review]
+//   A client gets their own applications. An admin gets everyone's: the review queue.
 import { z } from 'zod';
 import { applicationDecisionSchema } from '@/data/lease-schemas';
-import { requireCustomer, requireRole } from '@/server/actor';
+import { can } from '@/domain/identity';
+import { requireActor, requireCustomer } from '@/server/actor';
 import { applicationRequestSchema, failureResponse } from '@/server/application-request';
-import { handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { listApplications, submitApplication, viewsOf } from '@/server/applications';
 import { db } from '@/server/db';
 
@@ -29,8 +31,13 @@ export const POST = handleRoute(async (request) => {
 });
 
 export const GET = handleRoute(async (request) => {
-  await requireRole('application.decide_manual_review');
+  const actor = await requireActor();
+  const customerId = actor.kind === 'customer' ? actor.customer.id : undefined;
+  if (customerId === undefined && !can(actor.role, 'application.decide_manual_review')) {
+    throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
+  }
+
   const searchParams = new URL(request.url).searchParams;
   const { decision } = querySchema.parse(Object.fromEntries(searchParams));
-  return ok(await viewsOf(await listApplications(db, { decision })));
+  return ok(await viewsOf(await listApplications(db, { decision, customerId })));
 });

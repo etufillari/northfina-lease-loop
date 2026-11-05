@@ -409,6 +409,12 @@ describe('reading applications', () => {
     expect((await listApplications(db, { decision: 'manual_review' })).map((a) => a.id)).toEqual([
       review.id,
     ]);
+    expect((await listApplications(db, { customerId: 'cust-aino' })).map((a) => a.id)).toEqual([
+      approved.id,
+    ]);
+    expect(
+      await listApplications(db, { customerId: 'cust-aino', decision: 'manual_review' })
+    ).toEqual([]);
   });
 });
 

@@ -70,6 +70,15 @@ describe('POST /api/applications/questions', () => {
     expect(byId.q_full_name).not.toHaveProperty('options');
   });
 
+  it('gives the format hint to a question that has one, and only to that', async () => {
+    await actAs({ sub: 'cust-norvi', role: 'client' });
+    const { body } = await post(deal);
+    const byId = Object.fromEntries(body.data.questions.map((q: { id: string }) => [q.id, q]));
+    expect(byId.q_business_id.hint).toBe('1234567-8 with a valid check digit');
+    expect(byId.q_email).not.toHaveProperty('hint');
+    expect(byId.q_business_id).not.toHaveProperty('validation');
+  });
+
   it('does not leak the internal rules of a question', async () => {
     await actAs(AINO);
     const { body } = await post(deal);

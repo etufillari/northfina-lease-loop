@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { bandEdgeHint, downPaymentBounds, quoteLease, snapDownPayment } from './pricing';
+import {
+  bandEdgeHint,
+  cheaperBandAbove,
+  downPaymentBounds,
+  quoteLease,
+  snapDownPayment,
+} from './pricing';
 import { DOWN_PAYMENT_STEP_CENTS } from './pricing-rules';
 
 // Real data pack; every expected value is worked out by hand from it in the comments.
@@ -198,5 +204,30 @@ describe('snapDownPayment', () => {
       stepCents: 1_000,
     };
     expect(snapDownPayment(farm006, 5_000)).toBe(1_000_000);
+  });
+});
+
+describe('cheaperBandAbove', () => {
+  it('names the next band when its smallest amount costs less a month (laptop-002, #34)', () => {
+    // laptop-002, 36 months, 0 down: band A, 199 999 × 0.028625 = 5 724.97 → 5 725 c (57.25 €).
+    // Band B starts at 200 000: 200 000 × 0.027584 = 5 516.8 → 5 517 c (55.17 €), which is less.
+    expect(cheaperBandAbove(table, 199_999, 36)).toEqual({
+      band: 'B',
+      minFinancedCents: 200_000,
+      annualInterestPercent: 7.9,
+      monthlyNetRentCents: 5_517,
+    });
+  });
+
+  it('is null when the next band costs more at its start', () => {
+    // laptop-003: band B, 200 000; band C's 1 000 000 × 0.026864 = 26 864 c > 5 517 c.
+    expect(cheaperBandAbove(table, 200_000, 36)).toBeNull();
+    // 1 900 € in band A: 190 000 × 0.028625 = 5 438.75 → 5 439 c < band B's 5 517 c.
+    expect(cheaperBandAbove(table, 190_000, 36)).toBeNull();
+  });
+
+  it('is null in the top band and for a term the table lacks', () => {
+    expect(cheaperBandAbove(table, 25_000_000, 36)).toBeNull();
+    expect(cheaperBandAbove(table, 199_999, 60)).toBeNull();
   });
 });

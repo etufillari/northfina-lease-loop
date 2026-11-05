@@ -143,3 +143,40 @@ export function bandEdgeHint(table: CoefficientTable, input: QuoteInput): BandEd
     savingPerMonthCents: current.monthlyNetRentCents - cheaper.monthlyNetRentCents,
   };
 }
+
+export interface CheaperBand {
+  band: string;
+  minFinancedCents: number;
+  annualInterestPercent: number;
+  /** The rent at the next band's smallest financed amount, for the same term. */
+  monthlyNetRentCents: number;
+}
+
+/**
+ * Explains a band edge without a down payment (#34): laptop-002 (1 999.99 €) rents for more than
+ * laptop-003 (2 000.00 €) because band B's rate is lower. Returns the next band up when financing
+ * its smallest amount would cost less a month than this amount does; otherwise null.
+ */
+export function cheaperBandAbove(
+  table: CoefficientTable,
+  financedCents: number,
+  termMonths: number
+): CheaperBand | null {
+  const current = monthlyFactorFor(table, financedCents, termMonths);
+  if (!current.ok) return null;
+  const next = table.bands
+    .filter((b) => b.min_financed_cents > financedCents)
+    .sort((a, b) => a.min_financed_cents - b.min_financed_cents)[0];
+  if (!next) return null;
+  const nextFactor = monthlyFactorFor(table, next.min_financed_cents, termMonths);
+  if (!nextFactor.ok) return null;
+  const rent = roundHalfUp(financedCents * current.factor);
+  const nextRent = roundHalfUp(next.min_financed_cents * nextFactor.factor);
+  if (nextRent >= rent) return null;
+  return {
+    band: next.band,
+    minFinancedCents: next.min_financed_cents,
+    annualInterestPercent: next.annual_interest_percent,
+    monthlyNetRentCents: nextRent,
+  };
+}

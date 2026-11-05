@@ -48,6 +48,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-038 | 2026-11-06 | Hardening   | No route sets an asset status by hand; rules as config; a message per refusal      |
 | D-039 | 2026-11-05 | Contract    | Early exit discounts rent k + n by n − 1 months: rents are billed in advance       |
 | D-040 | 2026-11-05 | Application | An empty form with a customer's email or business ID is held to their record       |
+| D-041 | 2026-11-06 | UI          | A typed down payment snaps to the slider; band edges show a cheaper band           |
 
 ---
 
@@ -411,6 +412,17 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** The email and the business ID are what identify a customer to the bank. Whoever claims them is held to the facts on record, whichever way the form was started.
 - **Consequences:** As in D-031, a persona whose situation changed can't sign, and now can't get around that by starting with an empty form under the same email or business ID either. A new applicant needs their own email (and, for a business, their own business ID). Two server tests that used a persona's identity for a "new applicant" now use their own (`new.applicant@example.com`; `office@newfarm.example.com` with business ID 1572860-0 for card 7).
 - **Evidence:** 5 domain tests (Mikko by email with case and spaces, Norvi by business ID under another email, email first, unknown or blank, non-text answers) and 3 server tests against SQLite: the empty-form Mikko with a 1990 birth date is refused on `q_birth_date` with no contract, audit row or asset change (the issue's repro); the empty-form Norvi with another email and "can sign" is refused on `q_email` and `q_can_sign`; the empty-form Aino with her own answers signs as `cust-aino`.
+
+## D-041 · Demo polish: a typed down payment snaps to the slider, and band edges explain themselves
+
+- **Context:** Issue #20 (design polish) and the UI findings in #34 from running the scenario cards. farm-002's slider runs from 0 € to 144 700 € in 10 € steps, so card 7's exact 20 000 € down was fiddly to hit by mouse in a live demo. laptop-002 (1 999.99 €) rents for 57.25 €/month and laptop-003 (2 000.00 €) for 55.17 € (correct by the table, D-013), but the band tip only appeared after moving the down payment, so a judge comparing the two saw no reason.
+- **Decision:**
+  - **Typed down payment:** a field next to the slider takes an amount (`parseEuros`) and `snapDownPayment` moves it onto the slider: clamped to the range, then to the nearest 10 € step, a half step rounding up. Anything that isn't an amount is undone. The slider stays the source of truth, so the "slider can't lie" property (D-012) still covers every amount the field can set.
+  - **Band-edge note:** `cheaperBandAbove` returns the next band up only when financing that band's smallest amount would cost less a month than the current amount, for the same term. The item page then says so in one line. There is no distance threshold: the note shows exactly for the items whose rent is beaten by the next band's start (36 months: band A items from about 1 927 € to 1 999.99 €), and never when the down-payment tip already explains the edge.
+  - **Smaller polish, no rule changes:** every page has its own translated browser title; the quote button sits in the sticky price panel; the quote leads with the monthly price including today's VAT; a returned item is titled by name, not "Lease the …".
+- **Alternatives:** Snap down instead of to the nearest step (typing 125 € would give 120 €, surprising). Show the note within a fixed distance of the edge, such as 100 € (arbitrary, and wrong for other terms). Say nothing and leave it to Q&A (the brief rewards explaining the number).
+- **Consequences:** The typed field accepts any amount but always shows the snapped one, so what is shown is what gets quoted. The note is information only; the rent never changes because of it.
+- **Evidence:** `pricing.test.ts`: `snapDownPayment` keeps card 7's 20 000 €, rounds 123.45 € to 120 € and 125.00 € to 130 €, and clamps to farm-006's 10 000 € minimum. `cheaperBandAbove` names band B for laptop-002 at 36 months (5 725 c vs 5 517 c, worked by hand) and is null for laptop-003, for 1 900 €, in the top band and for an unknown term.
 
 ## D-042 · One age rule for every valuation of an item
 

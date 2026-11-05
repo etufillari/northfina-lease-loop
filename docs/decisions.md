@@ -47,6 +47,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-037 | 2026-11-05 | Invoices    | The down payment is invoice 0; VAT changes and the gross total show before signing |
 | D-038 | 2026-11-06 | Hardening   | No route sets an asset status by hand; rules as config; a message per refusal      |
 | D-039 | 2026-11-05 | Contract    | Early exit discounts rent k + n by n − 1 months: rents are billed in advance       |
+| D-040 | 2026-11-05 | Application | An empty form with a customer's email or business ID is held to their record       |
 
 ---
 
@@ -275,6 +276,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** A persona is a known customer; the record is the truth about them. Refusing with the list of differing questions is explicit and easy to show.
 - **Consequences:** A persona whose real situation changed (new income, new email) can't sign as that persona; they apply as a new applicant until the record is updated.
 - **Evidence:** 10 domain tests (Mikko's birth date, Norvi's can-sign, mismatch order, customer-type switch, answers that no longer apply, missing answers, spacing and email case, the invalid business ID, money sent as text) and 5 server tests against SQLite (Mikko and Norvi refused with no contract, audit row or asset change; Aino still signs; a non-persona applicant with the same answers signs; unknown customer checked first).
+- **Status:** "An applicant who names no customer is checked by the rules only" is superseded by D-040: an email or business ID on record names the customer.
 
 ## D-032 · Waiting list: who gets a returned item
 
@@ -397,3 +399,15 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** The ending has to compare against what the customer would really have paid, and on our schedule that rent falls due on the effective date. With this fix the bank is as well off as it would be if the customer had stayed, measured on the dates we actually bill.
 - **Consequences:** Early exit costs a little more than under D-033: one month of interest on the remaining rents. The final month is unchanged (no rents are left), so it still equals the D-029 buyout invoice. The properties still hold.
 - **Evidence:** The domain and server tests were re-pinned from the hand calculation before the code changed. Six domain tests and two server tests failed first, then all early-exit tests passed: card 8, month 1, a laptop with one rent left (6 717 cents, not discounted, because it falls due on the exit day), a hand-back valued at its inspected condition (73 295 net), and the final month, which still equals the buyout invoice.
+
+## D-040 · An empty form with a known customer's email or business ID is that customer
+
+- **Context:** Issue #30, found in a review of D-031. The record check ran only when the application sent a `customerId`. Starting with an empty form and typing Mikko's email with a 1990 birth date was approved, and the contract was signed as `email:mikko.laine@example.com`. The same worked for a company: Norvi's business ID under another email, answering "yes, I can sign".
+- **Decision:** When no customer is named, `signLease` looks the applicant up with `customerOnRecord` (`src/domain/persona.ts`) and, if it finds one, treats the application as naming that customer. Extends D-031; supersedes its line "An applicant who names no customer is checked by the rules only".
+  - **Recognised by:** an email equal to a customer's `email` (trimmed, without case), else a business ID equal to a customer's `business_id` (trimmed). Email wins when the two point at different customers; the other's answers then differ from the record and are refused anyway. Blank or non-text answers recognise nobody.
+  - **Then:** the same check as D-031 (`answersNotMatchingCustomer`, refusal `ANSWERS_DO_NOT_MATCH_CUSTOMER` with the question ids), before the application is decided. Answers that match the record sign the contract under the customer's id (`cust-aino`), not `email:…`, so the record and the contract agree however the form was started.
+  - No new refusal code. The `lease.errorRecord` message no longer says "the chosen customer" (an empty-form applicant chose nobody) and tells the person to choose the customer from the list.
+- **Alternatives:** Refuse any empty form that uses a known email or business ID and ask the person to pick the customer (also closes the hole, but refuses Aino typing her own true answers). Recognise by name or birth date too (names aren't unique; it would catch strangers). Fix only the form (the API stays open).
+- **Why:** The email and the business ID are what identify a customer to the bank. Whoever claims them is held to the facts on record, whichever way the form was started.
+- **Consequences:** As in D-031, a persona whose situation changed can't sign, and now can't get around that by starting with an empty form under the same email or business ID either. A new applicant needs their own email (and, for a business, their own business ID). Two server tests that used a persona's identity for a "new applicant" now use their own (`new.applicant@example.com`; `office@newfarm.example.com` with business ID 1572860-0 for card 7).
+- **Evidence:** 5 domain tests (Mikko by email with case and spaces, Norvi by business ID under another email, email first, unknown or blank, non-text answers) and 3 server tests against SQLite: the empty-form Mikko with a 1990 birth date is refused on `q_birth_date` with no contract, audit row or asset change (the issue's repro); the empty-form Norvi with another email and "can sign" is refused on `q_email` and `q_can_sign`; the empty-form Aino with her own answers signs as `cust-aino`.

@@ -49,6 +49,8 @@
   "asset.choosePersona": "Välj vem du är i fältet ovan för att ansöka.",
   "asset.notAvailable": "Denna vara är inte tillgänglig just nu.",
   "price.term": "Leasingtid",
+  "price.quantity": "Antal",
+  "price.quantityNote": "ett avtal, prisklass på totalen",
   "price.months": "{months} mån",
   "price.downPayment": "Handpenning",
   "price.downPaymentMax": "0–30 % av listpriset, högst {max}",
@@ -172,5 +174,15 @@
   "me.viewContract": "Visa avtal",
   "common.loading": "Laddar…",
   "common.error": "Något gick fel",
-  "common.perMonth": "/ mån"
+  "common.perMonth": "/ mån",
+  "passOn.title": "För vidare",
+  "passOn.createLink": "Skapa överlåtelselänk",
+  "passOn.linkHint": "Vem som helst med denna länk kan ansöka om att ta över den återstående leasingen som den är:",
+  "passOn.nominate": "Efterträdarens e-post",
+  "passOn.nominateButton": "Nominera",
+  "passOn.nominated": "Nominerad — hen kan ansöka inom 7 dagar och går före kön.",
+  "transfer.title": "Ta över denna leasing",
+  "transfer.intro": "Du tar över den återstående planen som den är: {rent} / mån (exkl. moms), cirka {months} månader kvar, ingen handpenning.",
+  "transfer.apply": "Ansök om att ta över",
+  "transfer.invalid": "Denna överlåtelselänk är inte längre giltig."
 }

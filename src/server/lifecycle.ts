@@ -213,6 +213,63 @@ export async function endOfTerm(
   return { ok: true };
 }
 
+export type NominateResult =
+  | { ok: true; nomineeCustomerId: string | null }
+  | { ok: false; reason: 'not_found' | 'bad_status' };
+
+/**
+ * "Pass it on", route (b): at (or after) the end of the term the customer names a
+ * successor, who may apply for a new lease on the item and skips the waiting list. The
+ * skip is explicit and logged, so the FCFS fairness story stays honest (docs/DECISIONS.md).
+ */
+export async function nominateSuccessor(
+  db: Db,
+  input: { contractId: string; email: string; actor: string; asOf: string }
+): Promise<NominateResult> {
+  const contract = await db.contract.findUnique({
+    where: { id: input.contractId },
+    include: { assets: true },
+  });
+  if (!contract) return { ok: false, reason: 'not_found' };
+  if (contract.status !== 'active' && contract.status !== 'ended_returned') {
+    return { ok: false, reason: 'bad_status' };
+  }
+  const nominee = await db.customer.findFirst({ where: { email: input.email } });
+
+  await withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: 'contract.successor_nominated',
+      entityType: 'contract',
+      entityId: input.contractId,
+      details: { email: input.email, nomineeCustomerId: nominee?.id ?? null },
+    },
+    async (tx) => {
+      for (const link of contract.assets) {
+        await tx.reservation.create({
+          data: {
+            asset_id: link.asset_id,
+            customer_id: nominee?.id ?? null,
+            kind: 'nomination',
+            until: addDays(input.asOf, 7),
+          },
+        });
+        await tx.assetEvent.create({
+          data: {
+            asset_id: link.asset_id,
+            contract_id: contract.id,
+            type: 'nominated',
+            on_date: input.asOf,
+            details_json: JSON.stringify({ email: input.email, skipsWaitingList: true }),
+          },
+        });
+      }
+    }
+  );
+  return { ok: true, nomineeCustomerId: nominee?.id ?? null };
+}
+
 /** The mid-lease "I want to buy it at the end" opt-in (excluded from affordability). */
 export async function setBuyoutOption(
   db: Db,

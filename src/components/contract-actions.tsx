@@ -47,7 +47,37 @@ export function ContractActions({
   const suffix = asOf ? `?asOf=${asOf}` : '';
   const [preview, setPreview] = useState<ExitBreakdown | null>(null);
   const [busy, setBusy] = useState(false);
+  const [transferToken, setTransferToken] = useState<string | null>(null);
+  const [nomineeEmail, setNomineeEmail] = useState('');
+  const [nominated, setNominated] = useState(false);
   const termOver = today >= endsOn;
+
+  async function createLink() {
+    setBusy(true);
+    const response = await fetch(`/api/contracts/${contractId}/transfer${suffix}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ actor: personaId }),
+    });
+    const body = await response.json();
+    setBusy(false);
+    if (body.success) setTransferToken(body.data.token);
+    else window.alert(body.error?.message ?? t('common.error'));
+  }
+
+  async function nominate() {
+    if (!nomineeEmail) return;
+    setBusy(true);
+    const response = await fetch(`/api/contracts/${contractId}/nominate${suffix}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: nomineeEmail, actor: personaId }),
+    });
+    const body = await response.json();
+    setBusy(false);
+    if (body.success) setNominated(true);
+    else window.alert(body.error?.message ?? t('common.error'));
+  }
 
   async function loadPreview() {
     setBusy(true);
@@ -123,6 +153,55 @@ export function ContractActions({
         {!termOver ? (
           <span className="text-xs text-stone-500">{t('endOfTerm.notYet', { date: endsOn })}</span>
         ) : null}
+      </div>
+
+      <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
+        <h3 className="text-sm font-semibold">{t('passOn.title')}</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {transferToken ? (
+            <p className="text-sm">
+              {t('passOn.linkHint')}{' '}
+              <a
+                href={`/${locale}/transfer/${transferToken}`}
+                className="font-medium break-all text-emerald-800 underline dark:text-emerald-300"
+              >
+                {`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/transfer/${transferToken}`}
+              </a>
+            </p>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={createLink}
+              className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+            >
+              {t('passOn.createLink')}
+            </button>
+          )}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            type="email"
+            value={nomineeEmail}
+            onChange={(event) => setNomineeEmail(event.target.value)}
+            placeholder={t('passOn.nominate')}
+            aria-label={t('passOn.nominate')}
+            className="w-64 rounded-lg border border-stone-300 px-3 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-900"
+          />
+          <button
+            type="button"
+            disabled={busy || !nomineeEmail}
+            onClick={nominate}
+            className="rounded-xl px-4 py-1.5 text-sm font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+          >
+            {t('passOn.nominateButton')}
+          </button>
+          {nominated ? (
+            <span className="text-sm text-emerald-800 dark:text-emerald-300">
+              {t('passOn.nominated')}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {preview ? (

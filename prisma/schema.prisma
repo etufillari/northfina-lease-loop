@@ -92,6 +92,9 @@ model Application {
   decision_reasons_json String?
   signatory_email       String?
   hold_until            String? // ISO date: the 7-day hold after approval
+  // Set when this application takes over an existing contract via a transfer link:
+  // approval + signature transfer that contract instead of creating a new one.
+  transfer_contract_id  String?
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
   contract              Contract?

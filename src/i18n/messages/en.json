@@ -49,6 +49,8 @@
   "asset.choosePersona": "Choose who you are in the top bar to apply.",
   "asset.notAvailable": "This item is not available right now.",
   "price.term": "Lease term",
+  "price.quantity": "Quantity",
+  "price.quantityNote": "one contract, banded on the total",
   "price.months": "{months} mo",
   "price.downPayment": "Down payment",
   "price.downPaymentMax": "0–30 % of the list price, up to {max}",
@@ -172,5 +174,15 @@
   "me.viewContract": "View contract",
   "common.loading": "Loading…",
   "common.error": "Something went wrong",
-  "common.perMonth": "/ month"
+  "common.perMonth": "/ month",
+  "passOn.title": "Pass it on",
+  "passOn.createLink": "Create a transfer link",
+  "passOn.linkHint": "Anyone with this link can apply to take over the remaining lease as it is:",
+  "passOn.nominate": "Successor's email",
+  "passOn.nominateButton": "Nominate",
+  "passOn.nominated": "Nominated — they can apply within 7 days and skip the waiting list.",
+  "transfer.title": "Take over this lease",
+  "transfer.intro": "You take over the remaining schedule exactly as it is: {rent} / month (excl. VAT), about {months} months left, no down payment.",
+  "transfer.apply": "Apply to take over",
+  "transfer.invalid": "This transfer link is no longer valid."
 }

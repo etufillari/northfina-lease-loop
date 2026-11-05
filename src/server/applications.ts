@@ -29,6 +29,7 @@ export type ApplicationState = {
     decisionReasons: unknown;
     signatoryEmail: string | null;
     holdUntil: string | null;
+    isTransfer: boolean;
   };
   quote: {
     id: string;
@@ -142,6 +143,7 @@ async function buildState(
         : null,
       signatoryEmail: rows.application.signatory_email,
       holdUntil: rows.application.hold_until,
+      isTransfer: rows.application.transfer_contract_id !== null,
     },
     quote: {
       id: rows.quote.id,

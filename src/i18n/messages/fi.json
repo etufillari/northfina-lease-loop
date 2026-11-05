@@ -49,6 +49,8 @@
   "asset.choosePersona": "Valitse yläpalkista kuka olet, jotta voit hakea.",
   "asset.notAvailable": "Tämä tuote ei ole juuri nyt saatavilla.",
   "price.term": "Leasing-aika",
+  "price.quantity": "Määrä",
+  "price.quantityNote": "yksi sopimus, hintaluokka kokonaissummasta",
   "price.months": "{months} kk",
   "price.downPayment": "Käsiraha",
   "price.downPaymentMax": "0–30 % listahinnasta, enintään {max}",
@@ -172,5 +174,15 @@
   "me.viewContract": "Näytä sopimus",
   "common.loading": "Ladataan…",
   "common.error": "Jokin meni pieleen",
-  "common.perMonth": "/ kk"
+  "common.perMonth": "/ kk",
+  "passOn.title": "Siirrä eteenpäin",
+  "passOn.createLink": "Luo siirtolinkki",
+  "passOn.linkHint": "Kuka tahansa tällä linkillä voi hakea jäljellä olevan sopimuksen jatkajaksi sellaisenaan:",
+  "passOn.nominate": "Seuraajan sähköposti",
+  "passOn.nominateButton": "Nimeä",
+  "passOn.nominated": "Nimetty — hän voi hakea 7 päivän kuluessa ja ohittaa jonon.",
+  "transfer.title": "Jatka tätä leasingia",
+  "transfer.intro": "Jatkat jäljellä olevaa maksuohjelmaa sellaisenaan: {rent} / kk (ilman ALV:tä), noin {months} kk jäljellä, ei käsirahaa.",
+  "transfer.apply": "Hae jatkajaksi",
+  "transfer.invalid": "Tämä siirtolinkki ei ole enää voimassa."
 }

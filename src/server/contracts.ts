@@ -7,6 +7,7 @@ import { monthlyFactorFor } from '@/domain/coefficient';
 import type { Answers } from '@/domain/question-flow';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
+import { executeTransfer } from '@/server/transfers';
 
 type Db = PrismaClient;
 
@@ -43,6 +44,20 @@ export async function signApplication(
   }
   if (application.hold_until && input.asOf > application.hold_until) {
     return { ok: false, reason: 'hold_expired' };
+  }
+
+  // A transfer application moves the existing contract instead of creating a new one:
+  // the locked rent and the remaining schedule carry over unchanged.
+  if (application.transfer_contract_id) {
+    const transferred = await executeTransfer(db, {
+      applicationId: application.id,
+      contractId: application.transfer_contract_id,
+      newCustomerId: application.customer_id,
+      actor: input.actor,
+      asOf: input.asOf,
+    });
+    if (!transferred.ok) return { ok: false, reason: 'not_signable' };
+    return { ok: true, contractId: transferred.contractId };
   }
 
   const [table, vatRates] = await Promise.all([loadCoefficientTable(), loadVatRates()]);

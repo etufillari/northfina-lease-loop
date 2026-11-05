@@ -49,6 +49,8 @@
   "asset.choosePersona": "Taotlemiseks vali ülaribalt, kes sa oled.",
   "asset.notAvailable": "See ese pole praegu saadaval.",
   "price.term": "Rendiperiood",
+  "price.quantity": "Kogus",
+  "price.quantityNote": "üks leping, hinnaklass kogusumma järgi",
   "price.months": "{months} kuud",
   "price.downPayment": "Sissemakse",
   "price.downPaymentMax": "0–30 % hinnakirjahinnast, kuni {max}",
@@ -172,5 +174,15 @@
   "me.viewContract": "Vaata lepingut",
   "common.loading": "Laadimine…",
   "common.error": "Midagi läks valesti",
-  "common.perMonth": "/ kuu"
+  "common.perMonth": "/ kuu",
+  "passOn.title": "Anna edasi",
+  "passOn.createLink": "Loo üleandmislink",
+  "passOn.linkHint": "Igaüks selle lingiga saab taotleda järelejäänud rendi ülevõtmist sellisena, nagu see on:",
+  "passOn.nominate": "Järglase e-post",
+  "passOn.nominateButton": "Nimeta",
+  "passOn.nominated": "Nimetatud — ta saab taotleda 7 päeva jooksul ja ootejärjekorrast mööda minna.",
+  "transfer.title": "Võta see rent üle",
+  "transfer.intro": "Võtad järelejäänud graafiku üle sellisena, nagu see on: {rent} / kuu (ilma käibemaksuta), umbes {months} kuud jäänud, ilma sissemakseta.",
+  "transfer.apply": "Taotle ülevõtmist",
+  "transfer.invalid": "See üleandmislink ei kehti enam."
 }

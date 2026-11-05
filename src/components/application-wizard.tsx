@@ -25,6 +25,7 @@ type WizardState = {
     decisionReasons: DecisionReason[] | null;
     signatoryEmail: string | null;
     holdUntil: string | null;
+    isTransfer: boolean;
   };
   quote: { assetId: string; monthlyNetRentCents: number; termMonths: number };
   visibleQuestions: Question[];
@@ -213,6 +214,7 @@ export function ApplicationWizard({
         error={error}
         busy={busy}
         onSign={sign}
+        isTransfer={application.isTransfer}
       />
     );
   }

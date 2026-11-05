@@ -24,6 +24,7 @@ export function DecisionScreen({
   error,
   busy,
   onSign,
+  isTransfer,
 }: {
   locale: Locale;
   suffix: string;
@@ -36,6 +37,8 @@ export function DecisionScreen({
   error: string | null;
   busy: boolean;
   onSign: () => void;
+  /** A transfer keeps the original schedule, so there is no start date to pick. */
+  isTransfer?: boolean;
 }) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
@@ -87,7 +90,7 @@ export function DecisionScreen({
         </section>
       ) : null}
 
-      {status === 'approved' ? (
+      {status === 'approved' && !isTransfer ? (
         <div className="mt-6">
           <label htmlFor="sign-start" className="block text-sm font-medium">
             {t('apply.startDate')}

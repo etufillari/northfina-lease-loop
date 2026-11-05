@@ -38,6 +38,8 @@ export type ApplicationFormProps = {
 
 /** What the person typed, per question id. Turned into answers by `toAnswers`. */
 type Drafts = Record<string, string>;
+/** `mismatch`: the server found answers that contradict the chosen customer's record. */
+type Signing = 'idle' | 'busy' | 'error' | 'mismatch';
 
 export function ApplicationForm(props: ApplicationFormProps) {
   const { locale, questions, deal } = props;
@@ -47,8 +49,10 @@ export function ApplicationForm(props: ApplicationFormProps) {
   const [personaId, setPersonaId] = useState('');
   // Answers the person has seen on screen; only those get the "set aside" note when dropped.
   const [shown, setShown] = useState<readonly string[]>([]);
-  const [signing, setSigning] = useState<'idle' | 'busy' | 'error'>('idle');
+  const [signing, setSigning] = useState<Signing>('idle');
   const personaFieldId = useId();
+  // A persona's answers are facts on its record; the server refuses anything else (D-031).
+  const persona = props.personas.find((p) => p.id === personaId);
 
   const all = toAnswers(questions, drafts);
   const { answers, dropped } = relevantAnswers(questions, deal, all);
@@ -73,6 +77,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
 
   function choosePersona(id: string) {
     setPersonaId(id);
+    setSigning('idle');
     const persona = props.personas.find((p) => p.id === id);
     const filled = persona ? toDrafts(persona.answers) : {};
     setDrafts(filled);
@@ -101,12 +106,13 @@ export function ApplicationForm(props: ApplicationFormProps) {
     const body = (await response?.json().catch(() => null)) as {
       success: boolean;
       data?: { id: number };
+      error?: { code: string };
     } | null;
     if (body?.success && body.data) {
       router.push(`/${locale}/contracts/${body.data.id}`);
       return;
     }
-    setSigning('error');
+    setSigning(body?.error?.code === 'ANSWERS_DO_NOT_MATCH_CUSTOMER' ? 'mismatch' : 'error');
   }
 
   return (
@@ -145,6 +151,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
               t={t}
               draft={drafts[question.id] ?? ''}
               answer={answers[question.id]}
+              fromRecord={persona?.answers[question.id] !== undefined}
               onChange={(text) => answer(question.id, text)}
             />
           ))}
@@ -173,13 +180,17 @@ function QuestionField(props: {
   t: Translate;
   draft: string;
   answer: AnswerValue | undefined;
+  /** The chosen customer's record answers this one: shown, but not editable. */
+  fromRecord: boolean;
   onChange: (text: string) => void;
 }) {
-  const { question, locale, t, draft } = props;
+  const { question, locale, t, draft, fromRecord } = props;
   const id = useId();
   const check = props.answer === undefined ? null : validateAnswer(question, props.answer);
   const error = check && !check.ok ? t(`error.${check.reason}`) : null;
-  const describedBy = `${id}-why${error ? ` ${id}-error` : ''}`;
+  const describedBy = [`${id}-why`, fromRecord && `${id}-record`, error && `${id}-error`]
+    .filter(Boolean)
+    .join(' ');
   const field = 'field mt-2';
   const common = {
     id,
@@ -191,7 +202,12 @@ function QuestionField(props: {
   let input;
   if (question.options) {
     input = (
-      <select {...common} value={draft} onChange={(e) => props.onChange(e.target.value)}>
+      <select
+        {...common}
+        disabled={fromRecord}
+        value={draft}
+        onChange={(e) => props.onChange(e.target.value)}
+      >
         <option value="">{t('application.choose')}</option>
         {question.options.map((option) => (
           <option key={option} value={option}>
@@ -204,6 +220,7 @@ function QuestionField(props: {
     input = (
       <textarea
         {...common}
+        readOnly={fromRecord}
         rows={3}
         value={draft}
         placeholder={t('application.listHint')}
@@ -215,6 +232,7 @@ function QuestionField(props: {
     input = (
       <input
         {...common}
+        readOnly={fromRecord}
         type={type}
         inputMode={question.type === 'money' ? 'decimal' : undefined}
         placeholder={question.type === 'money' ? t('application.moneyHint') : undefined}
@@ -234,6 +252,11 @@ function QuestionField(props: {
         <span className="font-medium">{t('application.why')}:</span>{' '}
         {translated(`why.${question.id}`, t) ?? question.why_we_ask.en}
       </p>
+      {fromRecord ? (
+        <p id={`${id}-record`} className="mt-1 text-xs text-muted">
+          {t('application.fromRecord')}
+        </p>
+      ) : null}
       {error ? (
         <p id={`${id}-error`} className="mt-1 text-sm font-medium text-danger">
           {error}
@@ -247,7 +270,7 @@ function DecisionPanel(props: {
   decision: Decision;
   locale: Locale;
   t: Translate;
-  signing: 'idle' | 'busy' | 'error';
+  signing: Signing;
   onSign: () => void;
 }) {
   const { decision, locale, t } = props;
@@ -297,9 +320,9 @@ function DecisionPanel(props: {
         {props.signing === 'busy' ? t('lease.signing') : t('lease.sign')}
       </button>
       <p className="mt-2 text-xs text-muted">{t('lease.signNote')}</p>
-      {props.signing === 'error' ? (
+      {props.signing === 'error' || props.signing === 'mismatch' ? (
         <p role="alert" className="mt-3 text-sm font-medium text-danger">
-          {t('lease.error')}
+          {t(props.signing === 'mismatch' ? 'lease.errorRecord' : 'lease.error')}
         </p>
       ) : null}
     </aside>

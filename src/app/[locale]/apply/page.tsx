@@ -2,11 +2,12 @@
 // `down` is the net down payment in cents, the same unit the contract configurator uses.
 // The page prices the lease with the contract quote and passes the rent incl. VAT to the form,
 // which asks the questions and shows the decision. Colours are the design tokens from AGENTS.md.
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { connection } from 'next/server';
 import { z } from 'zod';
 import { ApplicationForm, type ApplicationDeal } from '@/components/application-form';
+import { ChangeTermsDialog } from '@/components/change-terms-dialog';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { calculateContractQuote } from '@/domain/contract-pricing';
 import { formatEuro } from '@/domain/money';
@@ -96,7 +97,18 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
       </div>
       <div className="mt-[32px]">
         <ApplicationForm locale={locale} deal={deal}>
-          <DealSummary t={t} rows={rows} changeHref={`/${locale}#asset-${asset.id}`} />
+          <DealSummary t={t} rows={rows}>
+            <ChangeTermsDialog
+              asset={asset}
+              price={price}
+              coefficientTable={coefficientTable}
+              vatRates={vatRates}
+              isoDate={today}
+              locale={locale}
+              termMonths={term}
+              downPaymentCents={down}
+            />
+          </DealSummary>
         </ApplicationForm>
       </div>
     </div>
@@ -108,11 +120,11 @@ const money = (cents: number, locale: Locale) => formatEuro(cents, intlLocale[lo
 function DealSummary({
   t,
   rows,
-  changeHref,
+  children,
 }: {
   t: Translate;
   rows: [string, string][];
-  changeHref: string;
+  children: ReactNode;
 }) {
   return (
     <section
@@ -130,12 +142,7 @@ function DealSummary({
           </div>
         ))}
       </dl>
-      <Link
-        href={changeHref}
-        className="mt-[16px] inline-block text-[0.875rem] font-semibold text-[#1354a5] underline"
-      >
-        {t('apply.deal.change')}
-      </Link>
+      {children}
     </section>
   );
 }

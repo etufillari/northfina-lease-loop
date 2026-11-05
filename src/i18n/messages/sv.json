@@ -79,6 +79,7 @@
   "apply.deal.downPayment": "Kontantinsats",
   "apply.deal.financed": "Finansierat belopp",
   "apply.deal.change": "Ändra löptid eller kontantinsats",
+  "apply.useTerms": "Använd de här villkoren",
   "apply.deal.monthlyNetRent": "Månadshyra (exkl. moms)",
   "apply.deal.monthlyGrossRent": "Månadsbetalning (inkl. moms)",
   "apply.questions.heading": "Dina uppgifter",

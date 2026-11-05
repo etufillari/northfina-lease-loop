@@ -35,6 +35,11 @@ export type ContractProps = {
   defaultBreakdownOpen?: boolean;
   onSign?: (signed: SignedContract) => void;
   onClose?: () => void;
+  /**
+   * Set when the configurator is used to change the terms of an application in progress. The
+   * Apply link and Sign are replaced by one "Use these terms" button that reports the choice.
+   */
+  onUseTerms?: (choice: { termMonths: number; downPaymentCents: number }) => void;
 };
 
 const DEFAULT_TERM_MONTHS = 36;
@@ -52,6 +57,7 @@ export function Contract({
   defaultBreakdownOpen = false,
   onSign,
   onClose,
+  onUseTerms,
 }: ContractProps) {
   const t = getT(locale);
   const intlTag = intlLocale[locale];
@@ -439,8 +445,25 @@ export function Contract({
           </button>
         ) : null}
 
+        {onUseTerms ? (
+          <button
+            type="button"
+            disabled={!activeQuote}
+            onClick={() =>
+              activeQuote &&
+              onUseTerms({
+                termMonths: activeQuote.termMonths,
+                downPaymentCents: activeQuote.downPaymentCents,
+              })
+            }
+            className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a]"
+          >
+            {t('apply.useTerms')}
+          </button>
+        ) : null}
+
         {/* Spine step 3: the application carries the chosen term and net down payment. */}
-        {!isSigned && isAssetAvailable && activeQuote ? (
+        {!onUseTerms && !isSigned && isAssetAvailable && activeQuote ? (
           <Link
             href={`/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`}
             className="rounded-[8px] border border-[#2877d7] bg-transparent px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#1354a5] transition-colors hover:bg-[#f6f7f8]"
@@ -449,14 +472,16 @@ export function Contract({
           </Link>
         ) : null}
 
-        <button
-          type="button"
-          disabled={!canSign}
-          onClick={handleSign}
-          className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a]"
-        >
-          {isSigned ? t('contract.signedButton') : t('contract.signButton')}
-        </button>
+        {onUseTerms ? null : (
+          <button
+            type="button"
+            disabled={!canSign}
+            onClick={handleSign}
+            className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a]"
+          >
+            {isSigned ? t('contract.signedButton') : t('contract.signButton')}
+          </button>
+        )}
       </div>
     </section>
   );

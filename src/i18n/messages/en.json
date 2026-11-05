@@ -79,6 +79,7 @@
   "apply.deal.downPayment": "Down payment",
   "apply.deal.financed": "Financed amount",
   "apply.deal.change": "Change term or down payment",
+  "apply.useTerms": "Use these terms",
   "apply.deal.monthlyNetRent": "Monthly rent (excl. VAT)",
   "apply.deal.monthlyGrossRent": "Monthly payment (incl. VAT)",
   "apply.questions.heading": "Your details",

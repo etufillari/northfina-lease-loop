@@ -79,6 +79,7 @@
   "apply.deal.downPayment": "Käsiraha",
   "apply.deal.financed": "Rahoitettava summa",
   "apply.deal.change": "Muuta sopimuskautta tai käsirahaa",
+  "apply.useTerms": "Käytä näitä ehtoja",
   "apply.deal.monthlyNetRent": "Kuukausivuokra (ilman alv:tä)",
   "apply.deal.monthlyGrossRent": "Kuukausimaksu (sis. alv:n)",
   "apply.questions.heading": "Tietosi",

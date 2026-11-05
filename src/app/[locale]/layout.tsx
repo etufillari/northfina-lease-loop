@@ -3,6 +3,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CategoryNavigation } from '@/components/category-navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -43,7 +44,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
+              <CategoryNavigation locale={locale} label={t('nav.categories')} t={t} />
+              <LanguageSwitcher current={locale} label={t('nav.language')} />
+            </div>
           </div>
         </header>
 

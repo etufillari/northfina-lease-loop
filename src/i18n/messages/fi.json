@@ -162,6 +162,7 @@
   "reason.blocked_answer.q_country": "Voimme leasata vain Suomessa, Ruotsissa tai Virossa asuville.",
   "reason.affordability": "Leasingin suurin kuukausierä, {rent}, on yli 30 % nettotuloistasi (enintään {max}). Pidempi kausi tai käsiraha pienentää kuukausivuokraa.",
   "reason.pep_manual_review": "Rahanpesusääntöjen mukaan poliittisesti vaikutusvaltaisten henkilöiden hakemukset tarkistaa aina ihminen.",
+  "reason.affordability_unknown": "Emme pystyneet laskemaan kuukausilaskujasi arvonlisäveroineen, joten ihminen tarkistaa, että vuokra sopii tuloihisi.",
   "signer.signatory": "Vain nimenkirjoitusoikeudellinen voi allekirjoittaa yrityksen puolesta, joten et voi allekirjoittaa tässä. Lähetämme sopimuksen allekirjoitettavaksi osoitteeseen {email}.",
   "footer.note": "Demo Northfina × Hive -hackathoniin, 2026",
   "nav.main": "Päävalikko",

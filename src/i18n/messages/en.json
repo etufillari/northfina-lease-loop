@@ -162,6 +162,7 @@
   "reason.blocked_answer.q_country": "We can only lease to people living in Finland, Sweden or Estonia.",
   "reason.affordability": "The highest monthly total during the lease, {rent}, is more than 30 % of your net income ({max} at most). A longer term or a down payment lowers the monthly rent.",
   "reason.pep_manual_review": "Anti-money-laundering rules say applications from politically exposed persons are always checked by a person.",
+  "reason.affordability_unknown": "We couldn't work out your monthly invoices with VAT, so a person checks that the rent fits your income.",
   "signer.signatory": "Only an authorised signatory can sign for the company, so you can't sign here. We'll send the contract to {email} to sign.",
   "footer.note": "A demo for the Northfina × Hive hackathon, 2026",
   "nav.main": "Main",

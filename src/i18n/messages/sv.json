@@ -162,6 +162,7 @@
   "reason.blocked_answer.q_country": "Vi kan bara leasa till personer som bor i Finland, Sverige eller Estland.",
   "reason.affordability": "Den högsta månadssumman under avtalet, {rent}, är mer än 30 % av din nettoinkomst (högst {max}). En längre avtalstid eller handpenning sänker månadshyran.",
   "reason.pep_manual_review": "Enligt penningtvättsreglerna kontrolleras ansökningar från politiskt exponerade personer alltid av en människa.",
+  "reason.affordability_unknown": "Vi kunde inte räkna ut dina månadsfakturor med moms, så en människa kontrollerar att hyran passar din inkomst.",
   "signer.signatory": "Endast en behörig firmatecknare kan signera för företaget, så du kan inte signera här. Vi skickar avtalet till {email} för underskrift.",
   "footer.note": "En demo för Northfina × Hive-hackathonet, 2026",
   "nav.main": "Huvudmeny",

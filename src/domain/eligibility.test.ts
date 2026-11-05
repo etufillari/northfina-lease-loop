@@ -135,6 +135,25 @@ describe('decideApplication', () => {
     });
   });
 
+  it('fails closed: an unknown monthly total goes to manual review, never approved as 0', () => {
+    // The invoices couldn't be priced (no VAT rate for a date in the term), so affordability
+    // can't be checked for a consumer whose income was asked.
+    const withIncome = { ...aino, q_monthly_income: 100_000 };
+    const deal: Deal = { ...ebike, financedAmountCents: 549_000 };
+    expect(decide({ deal, answers: withIncome, highestMonthlyGrossCents: null })).toMatchObject({
+      outcome: 'manual_review',
+      reasons: [{ rule: 'affordability_unknown' }],
+    });
+  });
+
+  it('does not need the monthly total when affordability does not apply', () => {
+    // No income asked below 2 000 € financed: nothing to check, so nothing unknown.
+    expect(decide({ highestMonthlyGrossCents: null })).toMatchObject({
+      outcome: 'approved',
+      reasons: [],
+    });
+  });
+
   it('declines Sanna’s cargo bike over 12 months: 379.07 € a month is more than 30 % of 900 €', () => {
     // ebike-004 549 000, 12 m band B: 549 000 × 0.054799 = 30 084.65 → 30 085 net;
     // at 26 % VAT (2027 is inside the term) 7 822.1 → 7 822, so 37 907 a month. Cap 27 000.

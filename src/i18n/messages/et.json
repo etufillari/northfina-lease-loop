@@ -162,6 +162,7 @@
   "reason.blocked_answer.q_country": "Saame liisida ainult Soomes, Rootsis või Eestis elavatele inimestele.",
   "reason.affordability": "Liisingu suurim kuumakse, {rent}, ületab 30 % sinu netosissetulekust (kuni {max}). Pikem periood või sissemakse vähendab kuumakset.",
   "reason.pep_manual_review": "Rahapesu tõkestamise reeglite järgi kontrollib riikliku taustaga isikute taotlusi alati inimene.",
+  "reason.affordability_unknown": "Me ei saanud sinu kuuarveid koos käibemaksuga välja arvutada, seega kontrollib inimene, kas rent sobib sinu sissetulekuga.",
   "signer.signatory": "Ettevõtte nimel saab allkirjastada ainult allkirjaõiguslik isik, seega ei saa sa siin allkirjastada. Saadame lepingu allkirjastamiseks aadressile {email}.",
   "footer.note": "Demo Northfina × Hive häkatonile, 2026",
   "nav.main": "Peamenüü",

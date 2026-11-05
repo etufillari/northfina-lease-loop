@@ -78,9 +78,10 @@ export function ApplicationForm(props: ApplicationFormProps) {
     deal,
     answers,
     startDate: props.today,
+    // Unknown, not 0, when the invoices can't be priced: fail closed (D-037).
     highestMonthlyGrossCents: schedule.ok
       ? Math.max(...schedule.invoices.map((i) => i.grossCents))
-      : 0,
+      : null,
   });
 
   function choosePersona(id: string) {
@@ -406,6 +407,8 @@ function reasonText(reason: DecisionReason, locale: Locale, t: Translate): strin
         rent: euro(reason.monthlyGrossCents),
         max: euro(reason.maxMonthlyGrossCents),
       });
+    case 'affordability_unknown':
+      return t('reason.affordability_unknown');
     case 'pep_manual_review':
       return t('reason.pep_manual_review');
   }

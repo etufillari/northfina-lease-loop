@@ -22,15 +22,17 @@ export interface ApplicationInput {
   startDate: string;
   /**
    * The highest monthly invoice total incl. VAT over the term (D-023): a lease that runs into
-   * a VAT rise must stay affordable after it.
+   * a VAT rise must stay affordable after it. `null` when the invoices couldn't be priced:
+   * affordability is then unknown and the application goes to manual review (fail closed, D-037).
    */
-  highestMonthlyGrossCents: number;
+  highestMonthlyGrossCents: number | null;
 }
 
 export type DecisionReason =
   | { rule: 'min_age'; questionId: string; minAge: number; eligibleFrom: string }
   | { rule: 'blocked_answer'; questionId: string; answer: string }
   | { rule: 'affordability'; monthlyGrossCents: number; maxMonthlyGrossCents: number }
+  | { rule: 'affordability_unknown' }
   | { rule: 'pep_manual_review' };
 
 export type Signer = { kind: 'applicant' } | { kind: 'signatory'; email: string };
@@ -68,7 +70,10 @@ export function decideApplication(
   const next = nextQuestion(questions, input.deal, answers);
   if (next && declines.length === 0) return { status: 'incomplete', nextQuestionId: next.id };
 
-  const reviews: DecisionReason[] = answers.q_pep === 'yes' ? [{ rule: 'pep_manual_review' }] : [];
+  const reviews: DecisionReason[] = [
+    ...affordabilityUnknown(answers, input),
+    ...(answers.q_pep === 'yes' ? [{ rule: 'pep_manual_review' as const }] : []),
+  ];
   const outcome =
     declines.length > 0 ? 'declined' : reviews.length > 0 ? 'manual_review' : 'approved';
 
@@ -113,17 +118,31 @@ function blockedBy(
   return reasons;
 }
 
+/** The consumer's monthly net income when affordability applies to them, else null. */
+function affordabilityIncome(answers: Answers): number | null {
+  const income = answers.q_monthly_income;
+  return answers.q_customer_type === 'consumer' && typeof income === 'number' ? income : null;
+}
+
 /** Consumers only, and only when income was asked (from 2 000 € financed). Exactly 30 % passes. */
 function unaffordable(answers: Answers, input: ApplicationInput): DecisionReason[] {
-  const income = answers.q_monthly_income;
-  if (answers.q_customer_type !== 'consumer' || typeof income !== 'number') return [];
+  const income = affordabilityIncome(answers);
+  const highest = input.highestMonthlyGrossCents;
+  if (income === null || highest === null) return [];
   const maxMonthlyGrossCents = Math.floor((income * AFFORDABILITY_PERCENT) / 100);
-  if (input.highestMonthlyGrossCents <= maxMonthlyGrossCents) return [];
+  if (highest <= maxMonthlyGrossCents) return [];
   return [
     {
       rule: 'affordability',
-      monthlyGrossCents: input.highestMonthlyGrossCents,
+      monthlyGrossCents: highest,
       maxMonthlyGrossCents,
     },
   ];
+}
+
+/** Affordability applies but the monthly totals are unknown: never treat that as 0. */
+function affordabilityUnknown(answers: Answers, input: ApplicationInput): DecisionReason[] {
+  return affordabilityIncome(answers) !== null && input.highestMonthlyGrossCents === null
+    ? [{ rule: 'affordability_unknown' }]
+    : [];
 }

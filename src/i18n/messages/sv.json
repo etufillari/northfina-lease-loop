@@ -48,5 +48,6 @@
   "asset.estimatedLeasePrice": "Uppskattad leasingpris",
   "asset.estimatedLeaseVat": "exkl. moms",
   "asset.month": "månad",
-  "asset.leaseDuration": "{months} månader"
+  "asset.leaseDuration": "{months} månader",
+  "navigation.backToCatalogue": "Tillbaka"
 }

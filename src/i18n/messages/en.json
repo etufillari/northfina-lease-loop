@@ -48,5 +48,6 @@
   "asset.estimatedLeasePrice": "Estimated lease price",
   "asset.estimatedLeaseVat": "excl. VAT",
   "asset.month": "month",
-  "asset.leaseDuration": "{months} months"
+  "asset.leaseDuration": "{months} months",
+  "navigation.backToCatalogue": "Back"
 }

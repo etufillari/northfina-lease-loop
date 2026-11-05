@@ -48,5 +48,6 @@
   "asset.estimatedLeasePrice": "Arvestatud liisingu",
   "asset.estimatedLeaseVat": "hind käibemaksuta",
   "asset.month": "kuu",
-  "asset.leaseDuration": "{months} kuud"
+  "asset.leaseDuration": "{months} kuud",
+  "navigation.backToCatalogue": "Tagasi"
 }

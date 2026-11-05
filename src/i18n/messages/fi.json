@@ -48,5 +48,6 @@
   "asset.estimatedLeasePrice": "Arvioitu vuokrasopimuksen",
   "asset.estimatedLeaseVat": "hinta alv 0 %",
   "asset.month": "kuukausi",
-  "asset.leaseDuration": "{months} kuukautta"
+  "asset.leaseDuration": "{months} kuukautta",
+  "navigation.backToCatalogue": "Takaisin"
 }

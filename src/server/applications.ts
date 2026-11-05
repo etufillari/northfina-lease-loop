@@ -6,7 +6,7 @@ import { applicationSchema, type Answers, type Application } from '@/data/lease-
 import { loadCustomers, loadQuestions } from '@/data/load';
 import { assetCategorySchema, type Customer, type Question } from '@/data/schemas';
 import { eligibleFrom } from '@/domain/age';
-import { applicantBirthDate, decide, MIN_AGE } from '@/domain/eligibility';
+import { applicantBirthDate, decide, minimumAge } from '@/domain/eligibility';
 import {
   blockingAnswer,
   invalidAnswers,
@@ -47,6 +47,8 @@ type Prepared = {
   baseCents: number;
   priceListVersion: number | null;
   financedCents: number;
+  /** The whole question bank, which holds the age and country limits. */
+  questionBank: Question[];
   /** Questions the customer sees. */
   questions: Question[];
   unanswered: string[];
@@ -129,6 +131,7 @@ async function prepare(
     baseCents,
     priceListVersion,
     financedCents,
+    questionBank: allQuestions,
     questions: visible(flow.questions),
     unanswered: visible(flow.unanswered).map((question) => question.id),
     answers: flow.answers,
@@ -188,18 +191,24 @@ export function toApplication(row: ApplicationRow): Application {
 /** An application as the screens see it: when a too-young applicant can try again is derived. */
 export type ApplicationView = Application & { eligible_from: string | null };
 
-export function toView(application: Application, customer: Customer | undefined): ApplicationView {
+export function toView(
+  application: Application,
+  customer: Customer | undefined,
+  minAge: number
+): ApplicationView {
   const birthDate = customer ? applicantBirthDate(customer, application.answers) : null;
   const tooYoung = application.reasons.includes('min_age') && birthDate !== null;
-  return { ...application, eligible_from: tooYoung ? eligibleFrom(birthDate, MIN_AGE) : null };
+  return { ...application, eligible_from: tooYoung ? eligibleFrom(birthDate, minAge) : null };
 }
 
 export async function viewsOf(applications: readonly Application[]): Promise<ApplicationView[]> {
-  const customers = await loadCustomers();
+  const [customers, { questions }] = await Promise.all([loadCustomers(), loadQuestions()]);
+  const minAge = minimumAge(questions);
   return applications.map((application) =>
     toView(
       application,
-      customers.find((customer) => customer.id === application.customer_id)
+      customers.find((customer) => customer.id === application.customer_id),
+      minAge
     )
   );
 }
@@ -253,6 +262,7 @@ export async function submitApplication(
   }
 
   const verdict = decide({
+    questions: prepared.questionBank,
     customer: request.customer,
     answers: prepared.answers,
     startOn: prepared.date,
@@ -296,7 +306,9 @@ export async function submitApplication(
       })
   );
 
-  return { ok: true, application: toView(toApplication(row), request.customer) };
+  const application = toApplication(row);
+  const minAge = minimumAge(prepared.questionBank);
+  return { ok: true, application: toView(application, request.customer, minAge) };
 }
 
 // ---------------------------------------------------------------------------

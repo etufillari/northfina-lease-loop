@@ -1,12 +1,21 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadCustomers } from '@/data/load';
-import type { Customer } from '@/data/schemas';
-import { applicantBirthDate, decide, type EligibilityInput } from './eligibility';
+import { loadCustomers, loadQuestions } from '@/data/load';
+import type { Customer, Question } from '@/data/schemas';
+import {
+  allowedCountries,
+  applicantBirthDate,
+  decide,
+  minimumAge,
+  type EligibilityInput,
+} from './eligibility';
+import { blockingAnswer } from './question-flow';
 
 // Tests run against the real data pack, so they also catch a changed customer.
 let customers: Customer[];
+let questions: Question[];
 beforeAll(async () => {
   customers = await loadCustomers();
+  ({ questions } = await loadQuestions());
 });
 
 function customer(id: string): Customer {
@@ -16,6 +25,7 @@ function customer(id: string): Customer {
 }
 
 const input = (id: string, overrides: Partial<EligibilityInput> = {}): EligibilityInput => ({
+  questions,
   customer: customer(id),
   answers: {},
   startOn: '2026-11-05',
@@ -214,5 +224,61 @@ describe('applicantBirthDate', () => {
   it('works for sole traders and gives nothing for companies', () => {
     expect(applicantBirthDate(customer('cust-pekka'), {})).toBe('1988-01-22');
     expect(applicantBirthDate(customer('cust-norvi'), { q_birth_date: '2000-01-01' })).toBeNull();
+  });
+});
+
+describe('limits read from the question bank', () => {
+  const changed = (id: string, change: Partial<Question>) =>
+    questions.map((q) => (q.id === id ? { ...q, ...change } : q));
+
+  it('finds the limits in the real data', () => {
+    expect(minimumAge(questions)).toBe(18);
+    expect(allowedCountries(questions)).toEqual(['FI', 'SE', 'EE']);
+  });
+
+  it('follows a changed age limit, including for a birth date from the record', () => {
+    const over21 = changed('q_birth_date', {
+      blocks_application_when: [{ rule: 'age_under', value: 21 }],
+    });
+    // Sanna is 21 on 2 Nov 2025, so she passes until the limit goes above that.
+    expect(decide(input('cust-sanna', { monthlyRentWithVatCents: 5_000 })).decision).toBe(
+      'approved'
+    );
+    expect(
+      decide(
+        input('cust-sanna', {
+          questions: over21,
+          startOn: '2025-11-01',
+          monthlyRentWithVatCents: 5_000,
+        })
+      )
+    ).toEqual({ decision: 'rejected', reasons: ['min_age'], eligible_from: '2025-11-02' });
+  });
+
+  it('follows a changed country list', () => {
+    const noEstonia = changed('q_country', {
+      blocks_application_when: [{ rule: 'answer_in', value: ['EE', 'other'] }],
+    });
+    expect(decide(input('cust-lena', { questions: noEstonia })).reasons).toEqual(['residency']);
+  });
+
+  it('agrees with the rule that stops the form', () => {
+    const answers = { q_birth_date: '2009-03-10', q_country: 'FI' };
+    const stopped = blockingAnswer(questions, answers, '2026-11-05');
+    const verdict = decide(input('cust-aino', { answers, monthlyRentWithVatCents: 5_000 }));
+    expect(stopped).toMatchObject({ min_age: minimumAge(questions) });
+    expect(verdict.reasons).toEqual(['min_age']);
+  });
+
+  it('fails loudly rather than rejecting everyone if a rule goes missing', () => {
+    expect(() => minimumAge(questions.filter((q) => q.id !== 'q_birth_date'))).toThrow(
+      /q_birth_date/
+    );
+    expect(() => minimumAge(changed('q_birth_date', { blocks_application_when: [] }))).toThrow(
+      /minimum age/
+    );
+    expect(() => allowedCountries(questions.filter((q) => q.id !== 'q_country'))).toThrow(
+      /q_country/
+    );
   });
 });

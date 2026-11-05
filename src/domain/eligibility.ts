@@ -5,15 +5,16 @@
 // larger deals. So a false answer can pass; the one exception is PEP status, which counts
 // from either source because a PEP must never be auto-approved.
 import type { Answers, ApplicationDecision, EligibilityReason } from '@/data/lease-schemas';
-import type { Customer } from '@/data/schemas';
+import type { Customer, Question } from '@/data/schemas';
 import { ageOn, eligibleFrom } from './age';
 import { isValidBusinessId } from './business-id';
 
-export const MIN_AGE = 18;
-const ALLOWED_COUNTRIES = ['FI', 'SE', 'EE'];
+// In the data only as English text, unlike the age and country limits below.
 const MAX_RENT_PERCENT_OF_INCOME = 30;
 
 export type EligibilityInput = {
+  /** The question bank: the age and country limits are read from it. */
+  questions: readonly Question[];
   customer: Customer;
   /** Answers that have passed `invalidAnswers`, with stale ones already dropped. */
   answers: Answers;
@@ -29,6 +30,26 @@ export type Eligibility = {
   /** When someone too young reaches the minimum age, so the UI can say "not yet". */
   eligible_from: string | null;
 };
+
+function blockRules(questions: readonly Question[], questionId: string) {
+  const question = questions.find((q) => q.id === questionId);
+  if (!question) throw new Error(`data/questions.json has no ${questionId} question`);
+  return { options: question.options ?? [], rules: question.blocks_application_when ?? [] };
+}
+
+/** The minimum age, from the rule that stops the form at q_birth_date. */
+export function minimumAge(questions: readonly Question[]): number {
+  const rule = blockRules(questions, 'q_birth_date').rules.find((r) => r.rule === 'age_under');
+  if (rule?.rule !== 'age_under') throw new Error('q_birth_date has no minimum age rule');
+  return rule.value;
+}
+
+/** The q_country options that do not stop the form. */
+export function allowedCountries(questions: readonly Question[]): string[] {
+  const { options, rules } = blockRules(questions, 'q_country');
+  const blocked = rules.flatMap((rule) => (rule.rule === 'answer_in' ? rule.value : []));
+  return options.filter((option) => !blocked.includes(option));
+}
 
 function textAnswer(answers: Answers, questionId: string): string | undefined {
   const value = answers[questionId];
@@ -57,18 +78,19 @@ function isAffordable(rentCents: number, incomeCents: number): boolean {
  * Who may sign for a company is not an eligibility rule: it is checked at signing.
  */
 export function decide(input: EligibilityInput): Eligibility {
-  const { customer, answers, startOn, monthlyRentWithVatCents } = input;
+  const { questions, customer, answers, startOn, monthlyRentWithVatCents } = input;
   const reasons: EligibilityReason[] = [];
   let eligible_from: string | null = null;
 
+  const minAge = minimumAge(questions);
   const birthDate = applicantBirthDate(customer, answers);
-  if (birthDate !== null && ageOn(birthDate, startOn) < MIN_AGE) {
+  if (birthDate !== null && ageOn(birthDate, startOn) < minAge) {
     reasons.push('min_age');
-    eligible_from = eligibleFrom(birthDate, MIN_AGE);
+    eligible_from = eligibleFrom(birthDate, minAge);
   }
 
   const country = textAnswer(answers, 'q_country') ?? customer.country;
-  if (!ALLOWED_COUNTRIES.includes(country)) reasons.push('residency');
+  if (!allowedCountries(questions).includes(country)) reasons.push('residency');
 
   if (customer.type === 'consumer' && monthlyRentWithVatCents !== null) {
     const income = moneyAnswer(answers, 'q_monthly_income') ?? customer.monthly_net_income_cents;

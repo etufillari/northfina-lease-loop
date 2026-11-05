@@ -1,0 +1,26 @@
+---
+id: app
+type: module-design
+status: active
+title: Next.js App Router UI and HTTP API Routes
+parent: architecture
+depends-on: [data, domain, server, i18n]
+---
+
+## Responsibility
+
+Owns the Next.js 16 App Router pages (`src/app/[locale]/`), reusable UI components (`src/components/`), root locale redirect (`src/proxy.ts`), and HTTP API route handlers (`src/app/api/`).
+
+- **Localized UI shell and catalogue:** `src/app/[locale]/layout.tsx` validates the `[locale]` route parameter, sets `<html lang={locale}>`, and renders the header and `LanguageSwitcher`. `src/app/[locale]/page.tsx` opts into dynamic rendering (`await connection()`), reads `todayIso()`, loads assets from SQLite and price lists from `data/`, computes each asset's price via `listPriceOn`, and renders `AssetCard` items grouped by category.
+- **HTTP API routes:**
+  - `GET /api/assets`: Lists assets with optional `?category=` filtering.
+  - `PATCH /api/assets/[id]/status`: Validates `{ status, actor }` and calls `changeAssetStatus` to update status and write an audit entry atomically.
+  - `GET /api/audit-log`: Returns the 50 newest audit log entries.
+
+## Boundary
+
+- **Composition root:** Orchestrates `data` (`@/data/load`, `@/data/schemas`), `domain`, `server`, and `i18n`. Reads the clock (`todayIso()`) once per request and passes the resulting `YYYY-MM-DD` string down to `domain`.
+- **Forbidden reaches:** Must not embed business calculations (pricing formulas, eligibility rules, VAT logic) inline in components or route handlers — those belong in `domain`. Must not bypass `handleRoute()` / `ok()` / `fail()` in `/api/*` routes or bypass `withAudit()` for database writes. All user-facing strings must come from `i18n` (`getT(locale)`) or localized data-pack fields, never hardcoded inline literals.
+- **Known limitations:**
+  - `src/proxy.ts` redirects `/` unconditionally to `/en` without inspecting `Accept-Language`.
+  - Only the catalogue page (`/[locale]`) and asset/audit API routes exist in the starter; UI routes and API endpoints for steps 2–7 of the Spine are not yet built.

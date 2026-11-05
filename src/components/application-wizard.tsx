@@ -34,6 +34,19 @@ type WizardState = {
   blocked: { questionId: string; rule: string; eligibleFrom?: string } | null;
 };
 
+// Basics are confirmed as one batch; income, employment, PEP and signing rights are each
+// confirmed on their own (docs/DECISIONS.md: sensitive answers may be stale).
+const BASIC_PREFILL = new Set([
+  'q_customer_type',
+  'q_full_name',
+  'q_birth_date',
+  'q_email',
+  'q_country',
+  'q_company_name',
+  'q_business_id',
+  'q_vat_registered',
+]);
+
 const OPTION_KEYS = new Set([
   'consumer',
   'sole_trader',
@@ -122,6 +135,23 @@ export function ApplicationWizard({
       setEditingId(null);
       setDraft('');
     }
+  }
+
+  async function confirmBasics(items: Array<{ id: string; value: unknown }>) {
+    setBusy(true);
+    let latest: WizardState | null = null;
+    for (const item of items) {
+      const response = await fetch(`/api/applications/${applicationId}/answers${suffix}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ questionId: item.id, answer: item.value, actor }),
+      });
+      const body = await response.json();
+      if (!body.success) break;
+      latest = body.data;
+    }
+    setBusy(false);
+    if (latest) setState(latest);
   }
 
   async function submit() {
@@ -255,11 +285,54 @@ export function ApplicationWizard({
   }
 
   // ---- the running form -------------------------------------------------------------
+  const batchItems = visibleQuestions
+    .filter(
+      (q) =>
+        application.answers[q.id] === undefined &&
+        prefill[q.id] !== undefined &&
+        BASIC_PREFILL.has(q.id)
+    )
+    .map((q) => ({ question: q, value: prefill[q.id]! }));
+  const showBatch =
+    current !== null && !editingId && batchItems.some((item) => item.question.id === current.id);
+
   return (
     <div>
       <h1 className="text-2xl font-semibold">{t('apply.title')}</h1>
 
-      {current ? (
+      {showBatch ? (
+        <section className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 dark:border-emerald-800 dark:bg-emerald-950/40">
+          <h2 className="text-lg font-medium">{t('apply.prefillBasics')}</h2>
+          <ul className="mt-3 divide-y divide-emerald-100 text-sm dark:divide-emerald-900">
+            {batchItems.map(({ question, value }) => (
+              <li key={question.id} className="flex items-baseline justify-between gap-4 py-2">
+                <span className="text-stone-600 dark:text-stone-400">
+                  {question.text[locale] ?? question.text.en}
+                </span>
+                <span className="font-medium">
+                  {question.type === 'choice'
+                    ? optionLabel(t, String(value))
+                    : Array.isArray(value)
+                      ? value.join(', ')
+                      : String(value)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              confirmBasics(batchItems.map(({ question, value }) => ({ id: question.id, value })))
+            }
+            className="mt-4 rounded-xl bg-emerald-700 px-4 py-2.5 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+          >
+            {t('apply.confirmAll')}
+          </button>
+        </section>
+      ) : null}
+
+      {current && !showBatch ? (
         <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
           <h2 className="text-lg font-medium">{current.text[locale] ?? current.text.en}</h2>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
@@ -305,7 +378,9 @@ export function ApplicationWizard({
             </p>
           ) : null}
         </section>
-      ) : (
+      ) : null}
+
+      {!current && !showBatch ? (
         <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
           <label htmlFor="start" className="block text-sm font-medium">
             {t('apply.startDate')}
@@ -338,7 +413,7 @@ export function ApplicationWizard({
             {t('apply.submit')}
           </button>
         </section>
-      )}
+      ) : null}
 
       <AnsweredList
         t={t}

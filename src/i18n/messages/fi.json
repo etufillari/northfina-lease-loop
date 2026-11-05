@@ -79,6 +79,7 @@
   "apply.submit": "Lähetä hakemus",
   "apply.saveDefaults": "Tallenna vastaukseni ensi kertaa varten",
   "apply.prefillBasics": "Vahvista tallennetut tietosi",
+  "apply.confirmAll": "Vahvista nämä",
   "apply.confirm": "Vahvista",
   "apply.businessIdWarning": "Tarkistusmerkki ei täsmää. Voit korjata sen tai lähettää silti.",
   "apply.blockedAge": "Emme voi vielä tehdä sopimusta kanssasi. Tervetuloa hakemaan {date} alkaen.",

@@ -79,6 +79,7 @@
   "apply.submit": "Esita taotlus",
   "apply.saveDefaults": "Salvesta mu vastused järgmiseks korraks",
   "apply.prefillBasics": "Kinnita oma salvestatud andmed",
+  "apply.confirmAll": "Kinnita need",
   "apply.confirm": "Kinnita",
   "apply.businessIdWarning": "Kontrollnumber ei klapi. Võid selle parandada või siiski esitada.",
   "apply.blockedAge": "Me ei saa veel sinuga lepingut sõlmida. Oled oodatud taotlema alates {date}.",

@@ -79,6 +79,7 @@
   "apply.submit": "Skicka ansökan",
   "apply.saveDefaults": "Spara mina svar till nästa gång",
   "apply.prefillBasics": "Bekräfta dina sparade uppgifter",
+  "apply.confirmAll": "Bekräfta dessa",
   "apply.confirm": "Bekräfta",
   "apply.businessIdWarning": "Kontrollsiffran stämmer inte. Du kan rätta den eller skicka ändå.",
   "apply.blockedAge": "Vi kan inte teckna avtal med dig ännu. Välkommen att ansöka från {date}.",

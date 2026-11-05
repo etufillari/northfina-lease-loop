@@ -79,6 +79,7 @@
   "apply.submit": "Submit application",
   "apply.saveDefaults": "Save my answers for next time",
   "apply.prefillBasics": "Confirm your saved details",
+  "apply.confirmAll": "Confirm these",
   "apply.confirm": "Confirm",
   "apply.businessIdWarning": "The check digit does not match. You can correct it or submit anyway.",
   "apply.blockedAge": "We cannot lease to you yet. You are welcome to apply from {date}.",

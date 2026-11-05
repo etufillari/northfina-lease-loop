@@ -75,6 +75,38 @@ function dealOf(rows: NonNullable<Awaited<ReturnType<typeof loadRows>>>): DealCo
   };
 }
 
+type CustomerRow = NonNullable<Awaited<ReturnType<Db['customer']['findUnique']>>>;
+
+/**
+ * What the profile can answer for a returning customer — shown as prefill the customer
+ * CONFIRMS, never silently submitted (docs/DECISIONS.md). The sensitive answer about income
+ * may be stale, which is exactly why confirming it is a separate step in the UI.
+ */
+function profilePrefill(customer: CustomerRow): Record<string, AnswerValue> {
+  const yesNo = (value: boolean | null) => (value === null ? undefined : value ? 'yes' : 'no');
+  const candidates: Record<string, AnswerValue | null | undefined> = {
+    q_customer_type: customer.type,
+    q_full_name: customer.name,
+    q_birth_date: customer.birth_date,
+    q_email: customer.email === '' ? undefined : customer.email,
+    q_country: customer.country,
+    q_employment: customer.employment,
+    q_monthly_income: customer.monthly_net_income_cents,
+    q_business_id: customer.business_id,
+    q_company_name: customer.type === 'company' ? customer.name : undefined,
+    q_vat_registered: yesNo(customer.vat_registered),
+    q_can_sign: yesNo(customer.applicant_can_sign),
+    q_pep: yesNo(customer.is_pep),
+    q_annual_revenue: customer.annual_revenue_cents,
+    q_beneficial_owners: customer.beneficial_owners_json
+      ? (JSON.parse(customer.beneficial_owners_json) as string[])
+      : undefined,
+  };
+  return Object.fromEntries(
+    Object.entries(candidates).filter(([, value]) => value !== null && value !== undefined)
+  ) as Record<string, AnswerValue>;
+}
+
 async function buildState(
   db: Db,
   rows: NonNullable<Awaited<ReturnType<typeof loadRows>>>,
@@ -86,9 +118,13 @@ async function buildState(
   const visible = visibleQuestions(questions, deal, answers);
 
   const customer = await db.customer.findUnique({ where: { id: rows.application.customer_id } });
-  const defaults = customer?.saved_defaults_json
-    ? (JSON.parse(customer.saved_defaults_json) as Record<string, AnswerValue>)
-    : {};
+  const defaults: Record<string, AnswerValue> = {
+    ...(customer ? profilePrefill(customer) : {}),
+    // Saved answers win over the profile: they are what the customer chose to keep.
+    ...(customer?.saved_defaults_json
+      ? (JSON.parse(customer.saved_defaults_json) as Record<string, AnswerValue>)
+      : {}),
+  };
   const prefill = Object.fromEntries(
     visible
       .filter((q) => answers[q.id] === undefined && defaults[q.id] !== undefined)

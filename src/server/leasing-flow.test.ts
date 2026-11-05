@@ -294,7 +294,7 @@ describe('customers and the waiting list', () => {
     expect(JSON.parse(row!.saved_defaults_json!)).toMatchObject({ q_country: 'FI' });
   });
 
-  it('prefills a new application from the saved defaults', async () => {
+  it('prefills a new application from the customer profile', async () => {
     const customers = await loadCustomers();
     expect(customers.length).toBeGreaterThan(0); // the data pack is seeded
     const started = await startApplication(db, {
@@ -307,8 +307,11 @@ describe('customers and the waiting list', () => {
       asOf: AS_OF,
     });
     if (!started.ok) throw new Error(started.reason);
-    // Aino saved nothing, so the prefill is empty — but the shape is there.
-    expect(started.state.prefill).toEqual({});
+    // A returning customer's profile prefills the visible questions right away.
+    expect(started.state.prefill).toMatchObject({
+      q_customer_type: 'consumer',
+      q_email: 'aino.virtanen@example.com',
+    });
   });
 
   it('seeded the waiting list in first-come order', async () => {

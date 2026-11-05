@@ -9,6 +9,7 @@ import {
 
 const testVatRates: VatRates = {
   country: 'FI',
+  note: 'Test rates',
   rates: [
     {
       rate_percent: 24.0,

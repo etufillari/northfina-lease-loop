@@ -40,7 +40,8 @@ describe('quoteAsset', () => {
         monthly_total_cents: 13_466,
         buyout_percent: 15,
         buyout_cents: 58_350,
-        total_net_cost_cents: 444_630,
+        total_if_returned_cents: 386_280,
+        total_if_bought_cents: 444_630,
       },
     });
   });
@@ -64,10 +65,15 @@ describe('quoteAsset', () => {
     });
   });
 
-  it('counts the down payment in the total net cost', async () => {
+  it('counts the down payment in both totals, and the buyout only in the second', async () => {
     expect(await quoteAsset(db, { ...input, downPaymentCents: 50_000 })).toMatchObject({
       ok: true,
-      quote: { monthly_net_rent_cents: 9_351, total_net_cost_cents: 437_486 },
+      quote: {
+        monthly_net_rent_cents: 9_351,
+        buyout_cents: 50_850,
+        total_if_returned_cents: 386_636,
+        total_if_bought_cents: 437_486,
+      },
     });
   });
 

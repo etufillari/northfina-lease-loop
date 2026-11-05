@@ -42,7 +42,8 @@ describe('GET /api/assets/:id/quote', () => {
       financed_cents: 389_000,
       band: 'B',
       monthly_total_cents: 13_466,
-      total_net_cost_cents: 444_630,
+      total_if_returned_cents: 386_280,
+      total_if_bought_cents: 444_630,
     });
   });
 

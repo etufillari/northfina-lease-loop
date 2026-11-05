@@ -19,7 +19,10 @@ export type AssetQuote = Quote & {
   monthly_vat_cents: number;
   monthly_total_cents: number;
   buyout_percent: number | null;
-  total_net_cost_cents: number;
+  /** Down payment plus every rent: what a customer who returns the item pays. */
+  total_if_returned_cents: number;
+  /** The same plus the buyout: what a customer who keeps the item pays. */
+  total_if_bought_cents: number;
   down_payment_limits: DownPaymentRange;
 };
 
@@ -66,6 +69,8 @@ export async function quoteAsset(
 
   const priced = result.quote;
   const monthlyVatCents = vatCents(priced.monthly_net_rent_cents, vatRate.rateBasisPoints);
+  const totalIfReturned =
+    priced.down_payment_cents + priced.monthly_net_rent_cents * priced.term_months;
 
   return {
     ok: true,
@@ -78,10 +83,8 @@ export async function quoteAsset(
       monthly_vat_cents: monthlyVatCents,
       monthly_total_cents: priced.monthly_net_rent_cents + monthlyVatCents,
       buyout_percent: table.end_of_term_buyout_percent_of_financed[String(termMonths)] ?? null,
-      total_net_cost_cents:
-        priced.down_payment_cents +
-        priced.monthly_net_rent_cents * priced.term_months +
-        priced.buyout_cents,
+      total_if_returned_cents: totalIfReturned,
+      total_if_bought_cents: totalIfReturned + priced.buyout_cents,
       down_payment_limits: range,
     },
   };

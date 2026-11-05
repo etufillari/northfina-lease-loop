@@ -1,11 +1,9 @@
 // Worked example 2: which net list price applies to an asset on a given day.
-import type { PriceList } from '@/data/schemas';
+import { isoDateSchema, type PriceList } from '@/data/schemas';
 
 export type ListPriceResult =
   | { ok: true; priceCents: number; priceListVersion: number }
   | { ok: false; reason: 'unknown_asset' | 'no_price_list_on_date' };
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Returns the net list price (cents, VAT excluded) of `assetId` on `isoDate` (`YYYY-MM-DD`).
@@ -20,8 +18,8 @@ export function listPriceOn(
   assetId: string,
   isoDate: string
 ): ListPriceResult {
-  if (!ISO_DATE.test(isoDate)) {
-    throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
+  if (!isoDateSchema.safeParse(isoDate).success) {
+    throw new RangeError(`isoDate must be a valid ISO date, got "${isoDate}"`);
   }
 
   // ISO dates sort the same way as the days they name, so plain string comparison works.

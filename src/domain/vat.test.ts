@@ -1,11 +1,25 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
-import { vatRateOn, withVat } from './vat';
+import { vatRateOn, vatRateValidFrom, withVat } from './vat';
 
 let rates: VatRates;
 beforeAll(async () => {
   rates = await loadVatRates();
+});
+
+describe('vatRateValidFrom', () => {
+  it('gives the day the rate in force took effect, both ends of a period included', () => {
+    // vat-rates.json: 25.5 % from 2024-09-01 to 2026-12-31, 26 % from 2027-01-01.
+    expect(vatRateValidFrom(rates, '2026-12-31')).toBe('2024-09-01');
+    expect(vatRateValidFrom(rates, '2027-01-01')).toBe('2027-01-01');
+    expect(vatRateValidFrom(rates, '2027-01-05')).toBe('2027-01-01');
+  });
+
+  it('is null before the first rate', () => {
+    // The first rate in the file starts on 2013-01-01.
+    expect(vatRateValidFrom(rates, '2012-12-31')).toBeNull();
+  });
 });
 
 describe('vatRateOn', () => {

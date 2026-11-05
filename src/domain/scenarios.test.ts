@@ -69,6 +69,35 @@ describe('card 7, big ticket: Haapalan Tila leases farm-002, 48 months, 20 000 �
       monthlyNetRentCents: 272_038,
     });
   });
+
+  it('bills the 20 000 € down payment as invoice 0, so the invoices add up to the contract', () => {
+    // Before: the contract said 2 000 000 + 48 × 272 038 = 15 057 824 net, but the 48 invoices
+    // came to 13 057 824 and the down payment was never billed.
+    const { contract, downPayment, invoices, totals } = signedLease(
+      'farm-002',
+      '2026-11-05',
+      48,
+      2_000_000
+    );
+    expect(contract.totalNetCostCents).toBe(15_057_824);
+    // 2 000 000 × 0.255 = 510 000 VAT on 5 Nov 2026, gross 2 510 000.
+    expect(downPayment).toMatchObject({
+      number: 0,
+      invoiceDate: '2026-11-05',
+      netCents: 2_000_000,
+      vatCents: 510_000,
+      grossCents: 2_510_000,
+    });
+    expect(invoices).toHaveLength(48);
+    // Rents: 272 038 × 0.255 = 69 369.69 → 69 370 (Nov, Dec 2026);
+    // × 0.26 = 70 729.88 → 70 730 (46 invoices from Jan 2027). VAT 138 740 + 3 253 580 = 3 392 320.
+    // Total VAT 510 000 + 3 392 320 = 3 902 320; gross 15 057 824 + 3 902 320 = 18 960 144.
+    expect(totals).toEqual({
+      netCents: 15_057_824,
+      vatCents: 3_902_320,
+      grossCents: 18_960_144,
+    });
+  });
 });
 
 describe('data-pack traps on price', () => {

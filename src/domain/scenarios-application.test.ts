@@ -54,6 +54,7 @@ function application(assetId: string, startDate: string, termMonths: number, dow
       startDate,
       termMonths,
       monthlyNetRentCents: made.quote.monthlyNetRentCents,
+      downPaymentCents,
       billing: 'start_day_full_months',
     },
     vatRates

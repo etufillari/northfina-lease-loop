@@ -18,13 +18,22 @@ export function vatRateOn(rates: VatRates, isoDate: string): VatRateResult {
   if (!ISO_DATE.test(isoDate)) {
     throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
   }
-  // ISO dates sort like the days they name, so string comparison is date comparison.
-  const rate = rates.rates.find(
-    (r) => r.valid_from <= isoDate && (r.valid_to === null || isoDate <= r.valid_to)
-  );
+  const rate = rateValidOn(rates, isoDate);
   return rate
     ? { ok: true, ratePercent: rate.rate_percent }
     : { ok: false, reason: 'no_rate_on_date' };
+}
+
+/** The day the VAT rate valid on `isoDate` took effect, or null when no rate covers it. */
+export function vatRateValidFrom(rates: VatRates, isoDate: string): string | null {
+  return rateValidOn(rates, isoDate)?.valid_from ?? null;
+}
+
+function rateValidOn(rates: VatRates, isoDate: string) {
+  // ISO dates sort like the days they name, so string comparison is date comparison.
+  return rates.rates.find(
+    (r) => r.valid_from <= isoDate && (r.valid_to === null || isoDate <= r.valid_to)
+  );
 }
 
 /** Adds VAT to a net amount. VAT is rounded once, half up (D-005); gross = net + VAT exactly. */

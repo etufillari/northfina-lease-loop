@@ -82,6 +82,7 @@
   "contract.invoices": "Laskut",
   "contract.invoicesCancelled": "Sopimus päättyi {date}, joten sen jälkeiset {count} laskua peruttiin. Päättäminen kattoi nuo kuukaudet.",
   "contract.billingRule": "Laskutetaan etukäteen joka kuukauden alkamispäivänä, kuukausi kerrallaan. Lyhyempänä kuukautena eräpäivä on kuun viimeinen päivä.",
+  "contract.downPaymentInvoice": "Käsiraha, osa kokonaiskustannusta",
   "contract.number": "Nro",
   "contract.dueDate": "Eräpäivä",
   "contract.period": "Jakso",

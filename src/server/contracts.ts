@@ -190,6 +190,8 @@ function applicationRefusal(
       startDate: input.today,
       termMonths: quote.termMonths,
       monthlyNetRentCents: quote.monthlyNetRentCents,
+      // Affordability looks at the monthly rents only; the down payment is invoice 0 (D-037).
+      downPaymentCents: 0,
       billing: 'start_day_full_months',
     },
     data.vatRates

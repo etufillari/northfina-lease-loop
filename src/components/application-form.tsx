@@ -68,6 +68,8 @@ export function ApplicationForm(props: ApplicationFormProps) {
       startDate: props.today,
       termMonths: deal.termMonths,
       monthlyNetRentCents: props.monthlyNetRentCents,
+      // Affordability looks at the monthly rents only; the down payment is invoice 0 (D-037).
+      downPaymentCents: 0,
       billing: 'start_day_full_months',
     },
     props.vatRates

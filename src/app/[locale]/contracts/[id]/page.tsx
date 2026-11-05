@@ -128,6 +128,21 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
                 </tr>
               </thead>
               <tbody>
+                {schedule.downPayment ? (
+                  // Invoice 0: the down payment is part of the total cost, so it is billed too.
+                  <InvoiceRows
+                    vatNote={null}
+                    cells={[
+                      String(schedule.downPayment.number),
+                      date(schedule.downPayment.invoiceDate),
+                      t('contract.downPaymentInvoice'),
+                      euro(schedule.downPayment.netCents),
+                      formatNumber(schedule.downPayment.vatRatePercent, locale),
+                      euro(schedule.downPayment.vatCents),
+                      euro(schedule.downPayment.grossCents),
+                    ]}
+                  />
+                ) : null}
                 {schedule.invoices.map((invoice, i) => {
                   const previous = schedule.invoices[i - 1];
                   const vatChanged =

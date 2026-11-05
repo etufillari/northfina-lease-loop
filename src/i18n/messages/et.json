@@ -82,6 +82,7 @@
   "contract.invoices": "Arved",
   "contract.invoicesCancelled": "Leping lõppes {date}, seega tühistati sellele järgnenud {count} arvet. Lõpetamine arveldas need kuud.",
   "contract.billingRule": "Arveldatakse ette iga kuu alguspäeval, terve kuu korraga. Lühemas kuus on maksetähtaeg kuu viimane päev.",
+  "contract.downPaymentInvoice": "Sissemakse, osa kogukulust",
   "contract.number": "Nr",
   "contract.dueDate": "Maksetähtaeg",
   "contract.period": "Periood",

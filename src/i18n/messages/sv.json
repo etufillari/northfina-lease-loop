@@ -82,6 +82,7 @@
   "contract.invoices": "Fakturor",
   "contract.invoicesCancelled": "Avtalet upphörde {date}, så de {count} fakturorna därefter makulerades. Avslutet reglerade de månaderna.",
   "contract.billingRule": "Faktureras i förskott på startdagen varje månad, en hel månad i taget. I en kortare månad förfaller fakturan den sista dagen.",
+  "contract.downPaymentInvoice": "Handpenning, en del av totalkostnaden",
   "contract.number": "Nr",
   "contract.dueDate": "Förfallodag",
   "contract.period": "Period",

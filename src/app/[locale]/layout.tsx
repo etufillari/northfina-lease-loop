@@ -4,10 +4,13 @@ import type { Metadata } from 'next';
 import { Instrument_Sans, Unbounded } from 'next/font/google';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { AsOfControl, AsOfReset } from '@/components/as-of-control';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { LoopMark } from '@/components/ui/loop-mark';
+import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { asOf } from '@/server/as-of';
 import '../globals.css';
 
 // Self-hosted by next/font at build time: no request to Google from the browser.
@@ -34,6 +37,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
+  const when = await asOf(); // the demo date, if one is set (D-030)
 
   return (
     <html lang={locale} className={`${body.variable} ${display.variable}`}>
@@ -68,10 +72,25 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                   {t('nav.audit')}
                 </Link>
               </nav>
+              <AsOfControl key={when.date} locale={locale} date={when.date} />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>
           </div>
         </header>
+
+        {when.isDemo ? (
+          <div className="border-b border-warn-line bg-warn-bg text-warn-fg">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-sm sm:px-6">
+              <p>
+                <strong className="font-semibold">
+                  {t('asOf.banner', { date: formatIsoDate(when.date, locale) })}
+                </strong>{' '}
+                {t('asOf.bannerReal', { date: formatIsoDate(when.realToday, locale) })}
+              </p>
+              <AsOfReset locale={locale} />
+            </div>
+          </div>
+        ) : null}
 
         <main id="main" className="flex-1">
           {children}

@@ -340,6 +340,8 @@ export const secondLifeRequestSchema = z.strictObject({
   min_condition: assetConditionSchema,
   preferred_term_months: z.number().int().positive(),
   needed_by: isoDateSchema,
+  /** When this person joined the waiting list. Matching is first come, first served. */
+  joined_on: isoDateSchema,
   who: z.string(),
 });
 export type SecondLifeRequest = z.infer<typeof secondLifeRequestSchema>;

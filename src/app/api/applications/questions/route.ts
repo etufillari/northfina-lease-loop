@@ -5,10 +5,13 @@
 // (default en), and `why_we_ask` falls back to English where it has no translation.
 import { z } from 'zod';
 import { defaultLocale, locales } from '@/i18n/locales';
-import { requireCustomer } from '@/server/actor';
-import { applicationRequestSchema, failureResponse } from '@/server/application-request';
+import { requireCustomer } from '@/server/auth/actor';
+import {
+  applicationRequestSchema,
+  failureResponse,
+} from '@/server/application/application-request';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { describeQuestions } from '@/server/applications';
+import { describeQuestions } from '@/server/application/applications';
 import { db } from '@/server/db';
 
 const querySchema = z.strictObject({ locale: z.enum(locales).default(defaultLocale) });

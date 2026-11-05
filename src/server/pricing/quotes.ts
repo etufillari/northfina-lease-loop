@@ -3,8 +3,8 @@
 // its own VAT.
 import type { Quote, QuoteFailureReason } from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
-import { listPriceOn } from '@/domain/price-list';
-import { downPaymentLimits, quote } from '@/domain/pricing';
+import { listPriceOn } from '@/domain/pricing/price-list';
+import { downPaymentLimits, quote } from '@/domain/pricing/pricing';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
 

@@ -2,9 +2,9 @@
 // An admin settles an application that is waiting for a person.
 import { z } from 'zod';
 import { identityId } from '@/domain/identity';
-import { requireRole } from '@/server/actor';
+import { requireRole } from '@/server/auth/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { reviewApplication, viewsOf } from '@/server/applications';
+import { reviewApplication, viewsOf } from '@/server/application/applications';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ decision: z.enum(['approved', 'rejected']) });

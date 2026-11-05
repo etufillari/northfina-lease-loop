@@ -3,9 +3,9 @@
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { identityId } from '@/domain/identity';
-import { requireRole } from '@/server/actor';
+import { requireRole } from '@/server/auth/actor';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { getAppDate, setDemoDate } from '@/server/app-date';
+import { getAppDate, setDemoDate } from '@/server/date/app-date';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ date: isoDateSchema.nullable() });

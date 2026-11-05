@@ -6,10 +6,13 @@
 import { z } from 'zod';
 import { applicationDecisionSchema } from '@/data/lease-schemas';
 import { can } from '@/domain/identity';
-import { requireActor, requireCustomer } from '@/server/actor';
-import { applicationRequestSchema, failureResponse } from '@/server/application-request';
+import { requireActor, requireCustomer } from '@/server/auth/actor';
+import {
+  applicationRequestSchema,
+  failureResponse,
+} from '@/server/application/application-request';
 import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { listApplications, submitApplication, viewsOf } from '@/server/applications';
+import { listApplications, submitApplication, viewsOf } from '@/server/application/applications';
 import { db } from '@/server/db';
 
 const querySchema = z.strictObject({ decision: applicationDecisionSchema.optional() });

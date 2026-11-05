@@ -1,9 +1,9 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
-import { createTestDb } from '../../tests/helpers/test-db';
-import { seedAssets } from './assets';
-import type { PrismaClient } from './prisma-client';
+import { createTestDb } from '../../../tests/helpers/test-db';
+import { seedAssets } from '../assets/assets';
+import type { PrismaClient } from '../prisma-client';
 import { quoteAsset } from './quotes';
 
 let db: PrismaClient;

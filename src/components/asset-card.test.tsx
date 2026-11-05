@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AssetCard } from './asset-card';
 import type { Asset } from '@/data/schemas';
-import type { ListPriceResult } from '@/domain/price-list';
+import type { ListPriceResult } from '@/domain/pricing/price-list';
 import type { Locale } from '@/i18n/locales';
 
 vi.mock('next/image', () => ({

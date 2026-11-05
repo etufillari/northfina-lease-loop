@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { loadCustomers, loadStaff } from '@/data/load';
 import { can, findIdentity, type Identity, type Permission } from '@/domain/identity';
 import type { Customer } from '@/data/schemas';
-import { ApiError } from './api-response';
+import { ApiError } from '../api-response';
 import { SESSION_COOKIE_NAME, verifySession } from './session';
 
 /** Reads JWT_SECRET. A missing value is a setup bug (see `.env.example`), not a login

@@ -3,7 +3,7 @@
 // edited by hand will not verify, so a route can trust the role inside one that does.
 //
 // The secret and "now" are arguments, not read from process.env or the clock in here, so
-// this is easy to test. `src/server/actor.ts` is what reads JWT_SECRET and the real clock
+// this is easy to test. `src/server/auth/actor.ts` is what reads JWT_SECRET and the real clock
 // and calls these.
 import { errors as joseErrors, jwtVerify, SignJWT } from 'jose';
 import { isRole, type Role } from '@/domain/identity';

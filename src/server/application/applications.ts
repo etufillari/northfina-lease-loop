@@ -5,8 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { applicationSchema, type Answers, type Application } from '@/data/lease-schemas';
 import { loadCustomers, loadQuestions } from '@/data/load';
 import { assetCategorySchema, type Customer, type Question } from '@/data/schemas';
-import { eligibleFrom } from '@/domain/age';
-import { applicantBirthDate, decide, minimumAge } from '@/domain/eligibility';
+import { eligibleFrom } from '@/domain/application/age';
+import { applicantBirthDate, decide, minimumAge } from '@/domain/application/eligibility';
 import {
   blockingAnswer,
   invalidAnswers,
@@ -14,11 +14,11 @@ import {
   type AnswerError,
   type BlockingAnswer,
   type Deal,
-} from '@/domain/question-flow';
+} from '@/domain/application/question-flow';
 import type { Application as ApplicationRow, PrismaClient } from '@/generated/prisma/client';
-import { currentDate } from './app-date';
-import { withAudit } from './audit';
-import { quoteAsset, type AssetQuote, type QuoteAssetFailureReason } from './quotes';
+import { currentDate } from '../date/app-date';
+import { withAudit } from '../audit';
+import { quoteAsset, type AssetQuote, type QuoteAssetFailureReason } from '../pricing/quotes';
 
 /** Answered by the server from the logged-in customer, so the form never shows it. */
 const CUSTOMER_TYPE_QUESTION = 'q_customer_type';

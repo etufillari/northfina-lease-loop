@@ -1,8 +1,8 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb } from '../../tests/helpers/test-db';
+import { createTestDb } from '../../../tests/helpers/test-db';
 import { currentDate, getAppDate, setDemoDate } from './app-date';
-import type { PrismaClient } from './prisma-client';
+import type { PrismaClient } from '../prisma-client';
 import { todayIso } from './today';
 
 let db: PrismaClient;

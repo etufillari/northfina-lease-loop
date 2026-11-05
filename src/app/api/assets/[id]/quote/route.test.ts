@@ -1,9 +1,9 @@
 // Runs the real handler against a real, migrated SQLite database, only swapping which one.
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadAssets } from '@/data/load';
-import { seedAssets } from '@/server/assets';
+import { seedAssets } from '@/server/assets/assets';
 import type { PrismaClient } from '@/server/prisma-client';
-import { todayIso } from '@/server/today';
+import { todayIso } from '@/server/date/today';
 import { createTestDb } from '../../../../../../tests/helpers/test-db';
 import { GET } from './route';
 

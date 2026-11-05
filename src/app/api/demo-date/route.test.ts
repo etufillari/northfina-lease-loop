@@ -2,8 +2,8 @@
 import { cookies } from 'next/headers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '@/server/prisma-client';
-import { SESSION_COOKIE_NAME, signSession } from '@/server/session';
-import { todayIso } from '@/server/today';
+import { SESSION_COOKIE_NAME, signSession } from '@/server/auth/session';
+import { todayIso } from '@/server/date/today';
 import { createTestDb } from '../../../../tests/helpers/test-db';
 import { GET, PUT } from './route';
 

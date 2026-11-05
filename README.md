@@ -43,8 +43,8 @@ New to TypeScript, Next.js or Prisma? Read these files in this order:
 
 1. **`data/`**: the synthetic data pack. Open `assets.json` and `coefficient-table.json`, then the worked example in [DATA.md](data/DATA.md).
 2. **`src/data/`**: Zod schemas that load and type-check every data file. If you want to know a field's type, look here.
-3. **`src/domain/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
-4. **`src/domain/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
+3. **`src/domain/pricing/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
+4. **`src/domain/pricing/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
 5. **`src/app/[locale]/page.tsx`**: the catalogue page. Next.js App Router: every folder under `src/app/` is a URL.
 6. **`src/app/api/assets/`**: API routes. They use the response envelope (`src/server/api-response.ts`), and the status change writes an audit row in the same transaction (`src/server/audit.ts`).
 7. **`prisma/schema.prisma`**: the database. Add your own models (Contract, Invoice, …) and run `npm run db:migrate`.

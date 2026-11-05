@@ -6,9 +6,9 @@ import {
   ainoEbikeAnswers,
   haapalaFarmAnswers,
   norviEbikeAnswers,
-} from '../../tests/helpers/applicants';
-import { createTestDb } from '../../tests/helpers/test-db';
-import { setDemoDate } from './app-date';
+} from '../../../tests/helpers/applicants';
+import { createTestDb } from '../../../tests/helpers/test-db';
+import { setDemoDate } from '../date/app-date';
 import {
   describeQuestions,
   getApplication,
@@ -17,8 +17,8 @@ import {
   submitApplication,
   type ApplicationRequest,
 } from './applications';
-import { seedAssets } from './assets';
-import type { PrismaClient } from './prisma-client';
+import { seedAssets } from '../assets/assets';
+import type { PrismaClient } from '../prisma-client';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;

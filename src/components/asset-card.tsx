@@ -1,7 +1,7 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/price-list';
+import type { ListPriceResult } from '@/domain/pricing/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';

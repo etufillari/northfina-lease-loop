@@ -4,11 +4,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
 import { ainoEbikeAnswers } from '../../tests/helpers/applicants';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { setDemoDate } from './app-date';
-import { submitApplication } from './applications';
-import { seedAssets } from './assets';
+import { setDemoDate } from './date/app-date';
+import { submitApplication } from './application/applications';
+import { seedAssets } from './assets/assets';
 import type { PrismaClient } from './prisma-client';
-import { quoteAsset } from './quotes';
+import { quoteAsset } from './pricing/quotes';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;

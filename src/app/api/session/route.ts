@@ -4,14 +4,14 @@
 //
 // There is no password: `userId` is any customer or staff id from data/customers.json
 // or data/staff.json. Identity is simulated, but the session token is a real signed
-// JWT, so a route can trust the role it carries (see src/server/session.ts).
+// JWT, so a route can trust the role it carries (see src/server/auth/session.ts).
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { loadCustomers, loadStaff } from '@/data/load';
 import { findIdentity, identitySummary } from '@/domain/identity';
-import { sessionSecret, getActor } from '@/server/actor';
+import { sessionSecret, getActor } from '@/server/auth/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, signSession } from '@/server/session';
+import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, signSession } from '@/server/auth/session';
 
 export const GET = handleRoute(async () => {
   const actor = await getActor();

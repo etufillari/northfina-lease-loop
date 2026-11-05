@@ -4,7 +4,7 @@
 import { cookies } from 'next/headers';
 import { vi } from 'vitest';
 import type { Role } from '@/domain/identity';
-import { SESSION_COOKIE_NAME, signSession } from '@/server/session';
+import { SESSION_COOKIE_NAME, signSession } from '@/server/auth/session';
 
 export const TEST_SECRET = 'test-secret-at-least-this-long';
 

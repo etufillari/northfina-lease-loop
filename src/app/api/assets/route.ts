@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { assetCategorySchema } from '@/data/schemas';
 import { handleRoute, ok } from '@/server/api-response';
-import { listAssets } from '@/server/assets';
+import { listAssets } from '@/server/assets/assets';
 import { db } from '@/server/db';
 
 const querySchema = z.object({ category: assetCategorySchema.optional() });

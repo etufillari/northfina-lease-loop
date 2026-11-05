@@ -3,7 +3,7 @@
 // route and service that needs "today" should call `currentDate`.
 import { isoDateSchema } from '@/data/schemas';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { withAudit } from './audit';
+import { withAudit } from '../audit';
 import { todayIso } from './today';
 
 const DEMO_DATE_KEY = 'demo_date';

@@ -3,7 +3,7 @@
 // customer or staff member, what their role may do is real and checked here.
 //
 // Pure: this file never loads data or reads a session. Callers pass in the customers
-// and staff they already have, and `src/server/session.ts` decides who is acting now.
+// and staff they already have, and `src/server/auth/session.ts` decides who is acting now.
 import type { Customer, Staff, StaffRole } from '@/data/schemas';
 
 /** Every customer acts as a client. Staff carry their own role from data/staff.json. */

@@ -3,7 +3,7 @@
 // price or a customer. The server takes those from its own clock, the data and the session.
 import { z } from 'zod';
 import { answersSchema } from '@/data/lease-schemas';
-import { fail } from './api-response';
+import { fail } from '../api-response';
 import type { RequestFailureReason, SubmitResult } from './applications';
 
 export const applicationRequestSchema = z.strictObject({

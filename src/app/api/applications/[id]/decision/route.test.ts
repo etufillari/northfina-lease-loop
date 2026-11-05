@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
-import { submitApplication } from '@/server/applications';
-import { seedAssets } from '@/server/assets';
+import { submitApplication } from '@/server/application/applications';
+import { seedAssets } from '@/server/assets/assets';
 import type { PrismaClient } from '@/server/prisma-client';
 import { ADMIN, AINO, DEALER, TEST_SECRET, actAs } from '../../../../../../tests/helpers/act-as';
 import { ainoEbikeAnswers, haapalaFarmAnswers } from '../../../../../../tests/helpers/applicants';

@@ -1,12 +1,12 @@
 // PATCH /api/assets/:id/status   body: { "status": "reserved" }
 // Changes the status and writes an audit row in the same transaction. Who made the
-// change comes from the session, not the request body: see src/server/actor.ts.
+// change comes from the session, not the request body: see src/server/auth/actor.ts.
 import { z } from 'zod';
 import { assetStatusSchema } from '@/data/schemas';
 import { identityId } from '@/domain/identity';
-import { requireRole } from '@/server/actor';
+import { requireRole } from '@/server/auth/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { changeAssetStatus } from '@/server/assets';
+import { changeAssetStatus } from '@/server/assets/assets';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ status: assetStatusSchema });

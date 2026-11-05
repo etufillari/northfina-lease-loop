@@ -2,9 +2,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
-import { createTestDb } from '../../tests/helpers/test-db';
+import { createTestDb } from '../../../tests/helpers/test-db';
 import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
-import type { PrismaClient } from './prisma-client';
+import type { PrismaClient } from '../prisma-client';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;

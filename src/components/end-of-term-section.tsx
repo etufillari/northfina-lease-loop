@@ -62,7 +62,13 @@ function EndingSummary(props: EndOfTermSectionProps & { ending: Ending }) {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
   const lessee = props.customers.find((c) => c.id === ending.nextLessee)?.name;
-  const invoice = ending.buyoutInvoice;
+  const early = ending.earlyExit;
+  const earlyPrice = early && (ending.kind === 'early_buy' ? early.buy : early.handBack);
+  const invoice =
+    ending.buyoutInvoice ??
+    (early && earlyPrice
+      ? { invoiceDate: ending.effectiveDate, vatRatePercent: early.vatRatePercent, ...earlyPrice }
+      : undefined);
 
   return (
     <div role="status" className="panel mt-4 max-w-2xl p-5 sm:p-6">
@@ -84,7 +90,11 @@ function EndingSummary(props: EndOfTermSectionProps & { ending: Ending }) {
       ) : null}
       {invoice ? (
         <dl className="mt-4 grid gap-y-1 text-sm tabular-nums">
-          <dt className="eyebrow">{t('end.buyoutInvoice', { date: date(invoice.invoiceDate) })}</dt>
+          <dt className="eyebrow">
+            {t(early ? 'end.exitInvoice' : 'end.buyoutInvoice', {
+              date: date(invoice.invoiceDate),
+            })}
+          </dt>
           <dd className="flex justify-between border-b border-line py-1.5">
             <span className="text-muted">{t('contract.net')}</span>
             {euro(invoice.netCents)}

@@ -7,6 +7,7 @@ import {
   bandInterestPercent,
   earlyExitOn,
   earlyExitQuote,
+  endEarly,
   exitMonthOn,
   itemAgeAtStart,
   type ExitContext,
@@ -224,5 +225,53 @@ describe('itemAgeAtStart', () => {
   it('counts whole months from 1 January of the model year for a used item', () => {
     // ebike-007 (2023) on 6 Nov 2026: 3 years + 10 months = 46 (data-traps note).
     expect(itemAgeAtStart('fair', 2023, '2026-11-06')).toBe(46);
+  });
+});
+
+describe('endEarly', () => {
+  const delivered = { condition: 'new', usageValue: 0 } as const;
+
+  it('buys out early in month 7 (card 8): the ending keeps every line of the price', () => {
+    const result = endEarly(aino, ainoContext(), delivered, { kind: 'early_buy' }, '2027-05-20');
+    expect(result).toMatchObject({
+      ok: true,
+      ending: { kind: 'early_buy', decidedOn: '2027-05-20', effectiveDate: '2027-06-05' },
+    });
+    expect(result.ok && result.ending.earlyExit?.buy.grossCents).toBe(416_639);
+  });
+
+  it('credits a handed-back item at the value it was inspected in', () => {
+    const result = endEarly(
+      aino,
+      ainoContext(),
+      delivered,
+      { kind: 'early_hand_back', condition: 'good', usageValue: 1_200 },
+      '2027-05-20'
+    );
+    // 1 200 km = 1 step, −2 %. Now: 389 000 × 0.80 × 0.85 × 0.98 = 259 229.6 → 259 230.
+    // At the end: 389 000 × 0.40 × 0.85 × 0.98 = 129 614.8 → 129 615, still above the buyout.
+    // 282 427 + 48 239 − 259 230 = 71 436; VAT 26 % = 18 573.36 → 18 573.
+    expect(result.ok && result.ending.earlyExit?.valueNowCents).toBe(259_230);
+    expect(result.ok && result.ending.earlyExit?.handBack).toMatchObject({
+      netCents: 71_436,
+      vatCents: 18_573,
+    });
+    expect(result.ok && result.ending.inspection).toEqual({ condition: 'good', usageValue: 1_200 });
+  });
+
+  it('refuses readings that are better than at delivery', () => {
+    const better = { kind: 'early_hand_back', condition: 'good', usageValue: 0 } as const;
+    const worn = { condition: 'good', usageValue: 500 } as const;
+    expect(endEarly(aino, ainoContext(), worn, better, '2027-05-20')).toEqual({
+      ok: false,
+      reason: 'usage_went_down',
+    });
+  });
+
+  it('refuses outside the term', () => {
+    expect(endEarly(aino, ainoContext(), delivered, { kind: 'early_buy' }, '2029-11-05')).toEqual({
+      ok: false,
+      reason: 'term_over',
+    });
   });
 });

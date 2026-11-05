@@ -11,7 +11,13 @@ import type {
 } from '@/data/schemas';
 import { addMonthsClamped } from './calendar';
 import type { BilledContract } from './invoicing';
-import type { EndedContract } from './end-of-term';
+import {
+  inspectionProblem,
+  type DeliveredState,
+  type EndedContract,
+  type Ending,
+  type Inspection,
+} from './end-of-term';
 import { marketValue } from './market-value';
 import { roundHalfUp } from './money';
 import { vatRateOn, withVat, type VatBreakdown } from './vat';
@@ -169,6 +175,50 @@ export function earlyExitQuote(
         discountCents: remainingRentsCents + contract.buyoutCents - buyNet,
       },
       handBack: { ...withVat(handBackNet, vat.ratePercent), discountCents: 0 },
+    },
+  };
+}
+
+export type EarlyExitChoice = { kind: 'early_buy' } | ({ kind: 'early_hand_back' } & Inspection);
+
+export type EndEarlyResult =
+  | { ok: true; ending: Ending }
+  | {
+      ok: false;
+      reason:
+        'not_started' | 'term_over' | 'no_vat_rate' | 'usage_went_down' | 'condition_improved';
+    };
+
+/**
+ * Decides an early exit made on `today`. A handed-back item is valued in the state it was
+ * inspected in, which can't be better than at delivery (the same check as D-029).
+ */
+export function endEarly(
+  contract: ExitContract,
+  context: ExitContext,
+  delivered: DeliveredState,
+  choice: EarlyExitChoice,
+  today: string
+): EndEarlyResult {
+  let item = context.item;
+  let inspection: Inspection | undefined;
+  if (choice.kind === 'early_hand_back') {
+    inspection = { condition: choice.condition, usageValue: choice.usageValue };
+    const problem = inspectionProblem(delivered, inspection);
+    if (problem) return { ok: false, reason: problem };
+    item = { ...item, ...inspection };
+  }
+  const priced = earlyExitOn(contract, { ...context, item }, today);
+  if (!priced.ok) return priced;
+  const { quote } = priced;
+  return {
+    ok: true,
+    ending: {
+      kind: choice.kind,
+      decidedOn: today,
+      effectiveDate: quote.effectiveDate,
+      earlyExit: quote,
+      ...(inspection ? { inspection } : {}),
     },
   };
 }

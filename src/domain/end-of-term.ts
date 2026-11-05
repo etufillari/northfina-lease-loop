@@ -2,6 +2,7 @@
 // to a named next lessee (D-029). The contract stays frozen; this decides what the ending records.
 import type { AssetCondition, VatRates } from '@/data/schemas';
 import { addDays, addMonthsClamped } from './calendar';
+import type { EarlyExitQuote } from './early-exit';
 import type { BilledContract } from './invoicing';
 import { vatRateOn, withVat, type VatBreakdown } from './vat';
 
@@ -30,19 +31,24 @@ export type EndOfTermChoice =
 
 export type EndOfTermKind = EndOfTermChoice['kind'];
 
+/** Every way a lease can end: at the end of term (D-029) or early (D-030). */
+export type EndingKind = EndOfTermKind | 'early_buy' | 'early_hand_back';
+
 export interface BuyoutInvoice extends VatBreakdown {
   invoiceDate: string;
   vatRatePercent: number;
 }
 
 export interface Ending {
-  kind: EndOfTermKind;
+  kind: EndingKind;
   decidedOn: string;
   /** When ownership passes or the item comes back: the handover date, or later if decided late. */
   effectiveDate: string;
   buyoutInvoice?: BuyoutInvoice;
   inspection?: Inspection;
   nextLessee?: string;
+  /** Every line of an early exit's price, as the customer saw it (D-030). */
+  earlyExit?: EarlyExitQuote;
 }
 
 export type EndOfTermResult =
@@ -70,6 +76,23 @@ const CONDITION_RANK: Record<AssetCondition, number> = {
   fair: 3,
   poor: 4,
 };
+
+/**
+ * Why a returned item's readings can't be right, or null. Usage can't go down and condition
+ * can't be better than at delivery: refurbishment happens after the return, not during the lease.
+ */
+export function inspectionProblem(
+  delivered: DeliveredState,
+  inspection: Inspection
+): 'usage_went_down' | 'condition_improved' | null {
+  const { condition, usageValue } = inspection;
+  if (!Number.isInteger(usageValue) || usageValue < 0) {
+    throw new RangeError(`usageValue must be a whole number ≥ 0, got ${usageValue}`);
+  }
+  if (usageValue < delivered.usageValue) return 'usage_went_down';
+  if (CONDITION_RANK[condition] < CONDITION_RANK[delivered.condition]) return 'condition_improved';
+  return null;
+}
 
 /** Counted from the start date like the invoice schedule, so a 31st never drifts (D-016). */
 export function endOfTermDates(contract: BilledContract): EndOfTermDates {
@@ -119,15 +142,9 @@ export function endOfTerm(
     return { ok: true, ending: { ...base, buyoutInvoice: invoice } };
   }
 
-  const { condition, usageValue } = choice;
-  if (!Number.isInteger(usageValue) || usageValue < 0) {
-    throw new RangeError(`usageValue must be a whole number ≥ 0, got ${usageValue}`);
-  }
-  if (usageValue < delivered.usageValue) return { ok: false, reason: 'usage_went_down' };
-  if (CONDITION_RANK[condition] < CONDITION_RANK[delivered.condition]) {
-    return { ok: false, reason: 'condition_improved' };
-  }
-  const inspection = { condition, usageValue };
+  const inspection = { condition: choice.condition, usageValue: choice.usageValue };
+  const problem = inspectionProblem(delivered, inspection);
+  if (problem) return { ok: false, reason: problem };
 
   if (choice.kind === 'return') return { ok: true, ending: { ...base, inspection } };
   if (choice.nextLessee === contract.customerId) {

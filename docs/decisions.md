@@ -6,18 +6,21 @@ Every product, domain and engineering decision, in the order it was made. It is 
 
 ## Index
 
-| ID    | Date       | Area     | Decision                                                           |
-| ----- | ---------- | -------- | ------------------------------------------------------------------ |
-| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win       |
-| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model   |
-| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)   |
-| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                        |
-| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof |
-| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code   |
-| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate    |
-| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI |
-| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                      |
-| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history        |
+| ID    | Date       | Area     | Decision                                                                  |
+| ----- | ---------- | -------- | ------------------------------------------------------------------------- |
+| D-001 | 2026-11-05 | Strategy | Build in the fork; the starter's tooling and conventions win              |
+| D-002 | 2026-11-05 | Pricing  | Rent comes from the coefficient table, not our own annuity model          |
+| D-003 | 2026-11-05 | Product  | Smart Problems: 1 (VAT), 5 (money adds up), 6 (explain my price)          |
+| D-004 | 2026-11-05 | Product  | No agent or MCP integration                                               |
+| D-005 | 2026-11-05 | Domain   | One rounding rule: `roundHalfUp`, half away from zero, noise-proof        |
+| D-006 | 2026-11-05 | Testing  | Expected values come from hand calculations, never from the code          |
+| D-007 | 2026-11-05 | Testing  | `src/domain` held to 90 % coverage, above the 60 % project gate           |
+| D-008 | 2026-11-05 | Workflow | Protected `main`: every change is a squash-merged PR with green CI        |
+| D-009 | 2026-11-05 | CI       | CI pinned to `ubuntu-24.04` for the hackathon                             |
+| D-010 | 2026-11-05 | Workflow | Rebase-merge PRs so every small commit stays in the history               |
+| D-011 | 2026-11-05 | Pricing  | A quote is net; VAT is added at the rate on each invoice date             |
+| D-012 | 2026-11-05 | Pricing  | Down payment in 10 € steps, bounded so the financed amount fits the table |
+| D-013 | 2026-11-05 | Pricing  | Follow the table at band edges, even when more down raises the rent       |
 
 ---
 
@@ -83,3 +86,27 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Decision:** PRs into the fork's `main` are rebase-merged. Squash and merge commits are turned off in the repo settings. `main` stays protected with a required green `ci` check and linear history.
 - **Alternatives:** Squash (one tidy commit per feature, but the story is lost). Merge commits (keeps commits but breaks linear history).
 - **Why:** Every commit already passes the hooks and commitlint, so each one is safe to land on `main` as it is.
+
+## D-011 · A quote is net; VAT follows the invoice date
+
+- **Context:** Smart Problem 1. The net rent is locked at signing, but Finnish VAT rises from 25.5 % to 26 % on 1 January 2027 (`data/vat-rates.json`).
+- **Decision:** `quoteLease` returns only net amounts: financed amount, band, factor, monthly rent, buyout and totals. `vatRateOn(rates, date)` and `withVat(net, rate)` in `src/domain/vat.ts` add VAT for a given date, rounded once per amount (D-005). The buyout is left out of the total cost because buying is optional.
+- **Alternatives:** Store a gross rent in the quote (wrong as soon as the rate changes during the lease).
+- **Why:** The same net rent produces 13 466 cents gross in 2026 and 13 520 in 2027. Keeping VAT out of the quote makes that impossible to get wrong.
+- **Evidence:** Tests pin both VAT boundaries (2024-08-31/09-01 and 2026-12-31/2027-01-01) and the DATA.md worked example.
+
+## D-012 · Down-payment slider bounds
+
+- **Context:** The data pack sets no down-payment rule, only that the financed amount must fit a band (300 € to 250 000 €).
+- **Decision:** The down payment moves in 10 € steps (`DOWN_PAYMENT_STEP_CENTS`, in `src/domain/pricing-rules.ts`). `downPaymentBounds` allows from max(0, price − 250 000 €) rounded up to a step, to price − 300 € floored to a step. `quoteLease` accepts exactly those values.
+- **Alternatives:** A fixed cap such as 30 % of the price (our prep rule, but nothing in the data supports it).
+- **Why:** The slider can never produce a quote the API would refuse.
+- **Evidence:** A test sweeps every step for six prices and checks the bounds and `quoteLease` agree. The data-pack traps fall out of it: farm-006 (260 000 €) needs at least 10 000 € down; ebike-010 can't be leased on 5 Nov (289 €) but can on 6 Nov, when price list v2 makes it 303 €, with no room for a down payment.
+
+## D-013 · Follow the table at band edges
+
+- **Context:** The factor drops at each band edge. Financing 200 000 cents costs 5 517 a month over 36 months (band B), but 199 999 cents costs 5 725 (band A). So 0.01 € more down payment raises the rent by 2.08 €. laptop-002 and laptop-003 sit on exactly this edge.
+- **Decision:** Price strictly by the table. The price explanation (Smart Problem 6) will tell the customer when a smaller down payment would move them into a cheaper band.
+- **Alternatives:** Quietly charge the cheaper of the two bands (deviates from the bank's own table).
+- **Why:** The table is Northfina's pricing. Our job is to apply it faithfully and make the effect visible.
+- **Evidence:** A test pins both sides of the edge.

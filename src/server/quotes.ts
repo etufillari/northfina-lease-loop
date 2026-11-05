@@ -8,6 +8,7 @@ import { quoteStatus, type QuoteStatus } from '@/domain/signing';
 import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
 import type { PrismaClient } from './prisma-client';
+import { pricingPriceLists } from './pricing-price-lists';
 
 export interface CreateQuoteInput {
   assetId: string;
@@ -72,7 +73,7 @@ export async function createQuote(
   if (!asset) return { ok: false, reason: 'asset_not_found' };
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
 
-  const priced = makeQuote(data.priceLists, data.coefficientTable, {
+  const priced = makeQuote(await pricingPriceLists(db, data), data.coefficientTable, {
     assetId: input.assetId,
     quoteDate: input.today,
     termMonths: input.termMonths,
@@ -132,7 +133,12 @@ export async function viewQuote(
   const status = quoteStatus(stored.quote, today, stored.contractId !== null);
   const priceCheck =
     status === 'open'
-      ? priceCheckAtSigning(data.priceLists, data.coefficientTable, stored.quote, today)
+      ? priceCheckAtSigning(
+          await pricingPriceLists(db, data),
+          data.coefficientTable,
+          stored.quote,
+          today
+        )
       : null;
   return { ...stored, status, priceCheck };
 }

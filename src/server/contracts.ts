@@ -12,8 +12,8 @@ import type { Quote } from '@/domain/quote';
 import { quoteToSign, type PriceChoice, type QuoteToSign } from '@/domain/signing';
 import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
-import { priceListsWithListings } from './listed-prices';
 import type { PrismaClient } from './prisma-client';
+import { pricingPriceLists } from './pricing-price-lists';
 import { getQuote, toQuoteRowData } from './quotes';
 
 export type { LeaseDataPack } from './lease-data';
@@ -64,12 +64,16 @@ export async function signLease(
       : data.customers.find((c) => c.id === input.customerId);
   if (input.customerId !== undefined && !customer) return { ok: false, reason: 'unknown_customer' };
 
-  // A re-listed item is priced from its second-life price, not the new-item price (D-035).
-  const priceLists = await priceListsWithListings(db, data.priceLists);
-  const chosen = quoteToSign(priceLists, data.coefficientTable, stored.quote, input.today, {
-    ...(input.priceChoice === undefined ? {} : { priceChoice: input.priceChoice }),
-    shownMonthlyNetRentCents: input.shownMonthlyNetRentCents,
-  });
+  const chosen = quoteToSign(
+    await pricingPriceLists(db, data),
+    data.coefficientTable,
+    stored.quote,
+    input.today,
+    {
+      ...(input.priceChoice === undefined ? {} : { priceChoice: input.priceChoice }),
+      shownMonthlyNetRentCents: input.shownMonthlyNetRentCents,
+    }
+  );
   if (!chosen.ok) return chosen;
   const { quote, check, priceChoice } = chosen;
 

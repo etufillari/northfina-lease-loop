@@ -26,14 +26,15 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term.                                                                                     |
 | `price-list.ts`  | Worked example: finds the net list price of an asset on a date.                                                                                              |
-| `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.                                                                                                  |
+| `money.ts`       | `roundedDivide` is the one rounding rule. `formatEuro` formats cents for a locale; use it only in the UI.                                                    |
+| `pricing.ts`     | `quote` prices a deal: financed amount, band, monthly net rent and buyout.                                                                                   |
+| `vat.ts`         | The VAT rate on a date, and VAT on a net amount.                                                                                                             |
 | `identity.ts`    | Roles for the no-password "acting as" login: merges customers and staff into one `Identity` list, and `can(role, permission)` decides what each role may do. |
 
 ## What teams are expected to add
 
 Create these as you need them. Do not commit empty files.
 
-- `pricing`: monthly rent, down payment, VAT and the end-of-term buyout price.
 - `question-flow`: which question to ask next, from `data/questions.json`, and what happens
   to answers that stop applying.
 - `contract`: build the contract from an approved application and lock it so it cannot change.

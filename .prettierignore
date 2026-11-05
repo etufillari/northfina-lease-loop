@@ -11,3 +11,7 @@ package-lock.json
 
 # Generated data pack (regenerate rather than reformat)
 data/*.json
+
+# Session logs and transcripts
+*.jsonl
+docs/logs/

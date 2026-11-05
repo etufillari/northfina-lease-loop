@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatEuro, roundHalfUp } from './money';
+import { formatEuro, parseEuros, roundHalfUp } from './money';
 
 // Intl uses no-break spaces; compare with plain spaces so the tests are readable.
 const plain = (text: string) => text.replace(/\s/g, ' ');
@@ -59,5 +59,25 @@ describe('roundHalfUp', () => {
   it('throws on NaN and infinity, which are bugs rather than amounts', () => {
     expect(() => roundHalfUp(Number.NaN)).toThrow(RangeError);
     expect(() => roundHalfUp(Number.POSITIVE_INFINITY)).toThrow(RangeError);
+  });
+});
+
+describe('parseEuros', () => {
+  it('reads whole euros and cents with a dot or a comma, without float maths', () => {
+    expect(parseEuros('3200')).toBe(320_000);
+    expect(parseEuros('3200.5')).toBe(320_050);
+    expect(parseEuros('3200,05')).toBe(320_005);
+    expect(parseEuros('1.10')).toBe(110); // 1.10 × 100 is 110.00000000000001 in floats
+  });
+
+  it('ignores spaces and no-break spaces used as thousands separators', () => {
+    expect(parseEuros(' 3 200,50 ')).toBe(320_050);
+    expect(parseEuros('3\u00a0200')).toBe(320_000);
+  });
+
+  it('refuses anything that is not a plain amount', () => {
+    for (const text of ['', 'abc', '-5', '1.234', '1,2,3', '€5', '1e3']) {
+      expect(parseEuros(text)).toBeNull();
+    }
   });
 });

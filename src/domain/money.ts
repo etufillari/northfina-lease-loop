@@ -25,3 +25,14 @@ export function roundHalfUp(amount: number): number {
   const trimmed = Number(amount.toFixed(6));
   return Math.sign(trimmed) * Math.round(Math.abs(trimmed));
 }
+
+/**
+ * Parses a euro amount typed by a person ("3200", "3 200,50", "1.10") to whole cents using
+ * string arithmetic, so no float ever touches the amount. Returns null for anything else.
+ */
+export function parseEuros(text: string): number | null {
+  const match = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(text.replace(/\s/g, ''));
+  if (!match?.[1]) return null;
+  const cents = Number(match[1]) * 100 + Number((match[2] ?? '').padEnd(2, '0'));
+  return Number.isSafeInteger(cents) ? cents : null;
+}

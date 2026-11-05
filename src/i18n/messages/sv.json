@@ -350,6 +350,7 @@
   "quote.back": "Tillbaka till artikeln",
   "quote.title": "Offert {id}",
   "quote.price": "Ditt offererade pris",
+  "quote.monthlyHow": "{net} + moms {rate} %, i {term}",
   "quote.madeOn": "Offererat {date} enligt prislista {version}. Hyra exkl. moms; moms läggs till enligt satsen på varje fakturadatum.",
   "quote.status.open": "Du kan skriva under offerten till detta pris till och med {date}.",
   "quote.status.expired": "Offerten gällde till och med {date}. Priserna kan ha ändrats, så be om en ny offert.",

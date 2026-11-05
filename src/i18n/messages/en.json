@@ -350,6 +350,7 @@
   "quote.back": "Back to the item",
   "quote.title": "Quote {id}",
   "quote.price": "Your quoted price",
+  "quote.monthlyHow": "{net} + VAT {rate} %, for {term}",
   "quote.madeOn": "Quoted on {date} from price list {version}. Rent excl. VAT; VAT is added at the rate on each invoice date.",
   "quote.status.open": "You can sign this quote at this price until {date}.",
   "quote.status.expired": "This quote was valid until {date}. Prices may have changed, so get a new quote.",

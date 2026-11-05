@@ -350,6 +350,7 @@
   "quote.back": "Takaisin tuotteeseen",
   "quote.title": "Tarjous {id}",
   "quote.price": "Tarjottu hinta",
+  "quote.monthlyHow": "{net} + alv {rate} %, {term}",
   "quote.madeOn": "Tarjottu {date} hinnaston {version} mukaan. Vuokra ilman arvonlisäveroa; ALV lisätään kunkin laskun päivän verokannalla.",
   "quote.status.open": "Voit allekirjoittaa tarjouksen tällä hinnalla {date} asti.",
   "quote.status.expired": "Tarjous oli voimassa {date} asti. Hinnat ovat voineet muuttua, joten pyydä uusi tarjous.",

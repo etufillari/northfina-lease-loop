@@ -6,9 +6,10 @@ import type { PriceCheck } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
 import type { Quote } from '@/domain/quote';
 import type { QuoteStatus } from '@/domain/signing';
-import { formatFactor, formatIsoDate } from '@/i18n/format';
+import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { vatRateOn, withVat } from '@/domain/vat';
 import { PriceOverTerm } from './price-over-term';
 
 export function QuoteSummary(props: {
@@ -24,18 +25,42 @@ export function QuoteSummary(props: {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
+  // The headline: what the first invoice would be if signed today (VAT follows the date, D-011).
+  const vat = vatRateOn(props.vatRates, props.today);
+  const monthly = vat.ok ? withVat(quote.monthlyNetRentCents, vat.ratePercent) : null;
 
   return (
     <section
       aria-labelledby="quoted"
       className="relative overflow-hidden rounded-xl bg-stage p-6 text-stage-fg sm:p-8"
     >
-      <h2 id="quoted" className="font-display text-lg font-bold tracking-tight uppercase">
-        {t('quote.price')}
-      </h2>
-      <p className="mt-1 max-w-2xl text-sm text-stage-muted">
-        {t('quote.madeOn', { date: date(quote.quoteDate), version: quote.priceListVersion })}
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+        <div className="max-w-2xl">
+          <h2 id="quoted" className="font-display text-lg font-bold tracking-tight uppercase">
+            {t('quote.price')}
+          </h2>
+          <p className="mt-1 text-sm text-stage-muted">
+            {t('quote.madeOn', { date: date(quote.quoteDate), version: quote.priceListVersion })}
+          </p>
+        </div>
+        {monthly && vat.ok ? (
+          <div className="text-left sm:text-right">
+            <p className="text-xs font-semibold tracking-[0.08em] text-stage-muted uppercase">
+              {t('lease.monthly')}
+            </p>
+            <p className="font-display text-4xl font-extrabold tracking-tight text-stage-accent tabular-nums">
+              {euro(monthly.grossCents)}
+            </p>
+            <p className="text-sm text-stage-muted">
+              {t('quote.monthlyHow', {
+                net: euro(monthly.netCents),
+                rate: formatNumber(vat.ratePercent, locale),
+                term: t('lease.months', { count: quote.termMonths }),
+              })}
+            </p>
+          </div>
+        ) : null}
+      </div>
       <dl className="mt-6 grid gap-x-10 gap-y-1 text-sm sm:grid-cols-2">
         <Fact label={t('lease.listPrice', { version: quote.priceListVersion })}>
           {euro(quote.listPriceCents)}

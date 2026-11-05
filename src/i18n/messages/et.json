@@ -350,6 +350,7 @@
   "quote.back": "Tagasi toote juurde",
   "quote.title": "Pakkumine {id}",
   "quote.price": "Sinu pakkumise hind",
+  "quote.monthlyHow": "{net} + km {rate} %, {term}",
   "quote.madeOn": "Pakkumine tehtud {date} hinnakirja {version} järgi. Üür ilma käibemaksuta; käibemaks lisatakse iga arve kuupäeval kehtiva määraga.",
   "quote.status.open": "Saad selle pakkumise selle hinnaga allkirjastada kuni {date}.",
   "quote.status.expired": "Pakkumine kehtis kuni {date}. Hinnad võivad olla muutunud, seega küsi uus pakkumine.",

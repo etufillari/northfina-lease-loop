@@ -8,7 +8,6 @@ import { SecondLifeSection } from '@/components/second-life-section';
 import { CategoryArt } from '@/components/ui/category-art';
 import { LivesMeter } from '@/components/ui/lives-meter';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { answersFromCustomer } from '@/domain/persona';
 import { listPriceOn } from '@/domain/price-list';
 import { formatEuro } from '@/domain/money';
 import { downPaymentBounds } from '@/domain/pricing';
@@ -131,15 +130,6 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
             table={data.coefficientTable}
             bounds={bounds}
             vatRatePercent={vat.ratePercent}
-            category={asset.category}
-            questions={data.questions}
-            personas={data.customers.map((c) => ({
-              id: c.id,
-              name: c.name,
-              answers: answersFromCustomer(c),
-            }))}
-            vatRates={data.vatRates}
-            today={today}
           />
         )}
       </div>

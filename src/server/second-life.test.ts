@@ -5,7 +5,8 @@ import { loadAssets } from '@/data/load';
 import { seedAssets } from './assets';
 import { listAuditLog } from './audit';
 import { endLease } from './contract-endings';
-import { getContract, signLease, type LeaseDataPack } from './contracts';
+import { getContract, type LeaseDataPack } from './contracts';
+import { quoteAndSign } from '../../tests/helpers/quote-and-sign';
 import { loadLeaseDataPack } from './lease-data';
 import { listedPrices } from './listed-prices';
 import type { PrismaClient } from './prisma-client';
@@ -51,7 +52,7 @@ const ainoAnswers = {
   q_usage_purpose: 'commuting',
 };
 const signAsAino = (assetId: string, termMonths: number, today = TODAY) =>
-  signLease(db, lease, {
+  quoteAndSign(db, lease, {
     assetId,
     customerId: 'cust-aino',
     termMonths,

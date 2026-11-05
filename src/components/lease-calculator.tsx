@@ -1,17 +1,18 @@
 'use client';
 
 // The live price: term and down-payment sliders, recalculated on every move in the browser
-// with the same pure domain functions the server uses to sign (D-018). The application form
-// below it signs; the API prices again and never trusts the numbers shown here.
+// with the same pure domain functions the server uses (D-018). "Get my quote" asks the server
+// to price and store the quote (D-034); the quote page shows it and signs it.
+import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
-import type { AssetCategory, CoefficientTable, Question, VatRates } from '@/data/schemas';
+import type { CoefficientTable } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import { bandEdgeHint, quoteLease, type DownPaymentBounds } from '@/domain/pricing';
+import { QUOTE_VALID_DAYS } from '@/domain/pricing-rules';
 import { withVat } from '@/domain/vat';
 import { formatFactor, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-import { ApplicationForm, type Persona } from './application-form';
 
 type Bounds = Extract<DownPaymentBounds, { ok: true }>;
 
@@ -23,11 +24,6 @@ export type LeaseCalculatorProps = {
   table: CoefficientTable;
   bounds: Bounds;
   vatRatePercent: number;
-  category: AssetCategory;
-  questions: Question[];
-  personas: Persona[];
-  vatRates: VatRates;
-  today: string;
 };
 
 export function LeaseCalculator(props: LeaseCalculatorProps) {
@@ -158,19 +154,68 @@ export function LeaseCalculator(props: LeaseCalculatorProps) {
         {quote.ok ? <MonthlyPanel {...props} netCents={quote.monthlyNetRentCents} /> : null}
       </div>
       {quote.ok ? (
-        <ApplicationForm
+        <QuoteButton
           locale={locale}
-          questions={props.questions}
-          personas={props.personas}
-          vatRates={props.vatRates}
-          today={props.today}
           assetId={props.assetId}
-          deal={{ category: props.category, financedAmountCents: quote.financedCents, termMonths }}
+          termMonths={termMonths}
           downPaymentCents={downPaymentCents}
-          monthlyNetRentCents={quote.monthlyNetRentCents}
         />
       ) : null}
     </>
+  );
+}
+
+/** Stores the quote on the server and opens it, so it can be signed for the next 7 days. */
+function QuoteButton(props: {
+  locale: Locale;
+  assetId: string;
+  termMonths: number;
+  downPaymentCents: number;
+}) {
+  const { locale } = props;
+  const t = getT(locale);
+  const router = useRouter();
+  const [state, setState] = useState<'idle' | 'busy' | 'error'>('idle');
+
+  async function save() {
+    setState('busy');
+    const response = await fetch('/api/quotes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        assetId: props.assetId,
+        termMonths: props.termMonths,
+        downPaymentCents: props.downPaymentCents,
+      }),
+    }).catch(() => null);
+    const body = (await response?.json().catch(() => null)) as {
+      success: boolean;
+      data?: { id: number };
+    } | null;
+    if (body?.success && body.data) {
+      router.push(`/${locale}/quotes/${body.data.id}`);
+      return;
+    }
+    setState('error');
+  }
+
+  return (
+    <div className="mt-10 max-w-md">
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={state === 'busy'}
+        className="btn-primary w-full py-3.5"
+      >
+        {state === 'busy' ? t('quote.saving') : t('quote.save')}
+      </button>
+      <p className="mt-2 text-xs text-muted">{t('quote.saveNote', { days: QUOTE_VALID_DAYS })}</p>
+      {state === 'error' ? (
+        <p role="alert" className="mt-3 text-sm font-medium text-danger">
+          {t('quote.saveError')}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

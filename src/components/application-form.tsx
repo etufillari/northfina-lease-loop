@@ -30,16 +30,22 @@ export type ApplicationFormProps = {
   personas: Persona[];
   vatRates: VatRates;
   today: string;
-  assetId: string;
+  /** The stored quote being signed (D-034). */
+  quoteId: number;
   deal: Deal;
-  downPaymentCents: number;
   monthlyNetRentCents: number;
+  /** Today's lower rent, when the price list has dropped since the quote (D-014). */
+  offer: { monthlyNetRentCents: number; savingPerMonthCents: number } | null;
 };
 
 /** What the person typed, per question id. Turned into answers by `toAnswers`. */
 type Drafts = Record<string, string>;
-/** `mismatch`: the server found answers that contradict the chosen customer's record. */
-type Signing = 'idle' | 'busy' | 'error' | 'mismatch';
+/**
+ * `mismatch`: the server found answers that contradict the chosen customer's record.
+ * `stale`: the price or the quote changed since this page was drawn; it is redrawn.
+ */
+type Signing = 'idle' | 'busy' | 'error' | 'mismatch' | 'stale';
+type PriceChoice = 'keep_quote' | 'todays_price';
 
 export function ApplicationForm(props: ApplicationFormProps) {
   const { locale, questions, deal } = props;
@@ -90,16 +96,21 @@ export function ApplicationForm(props: ApplicationFormProps) {
     setShown((current) => (current.includes(id) ? current : [...current, id]));
   }
 
-  async function sign() {
+  async function sign(priceChoice?: PriceChoice) {
     setSigning('busy');
+    // The rent next to the pressed button: the server refuses to lock any other (D-034).
+    const shown =
+      priceChoice === 'todays_price' && props.offer
+        ? props.offer.monthlyNetRentCents
+        : props.monthlyNetRentCents;
     const response = await fetch('/api/contracts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        assetId: props.assetId,
+        quoteId: props.quoteId,
         ...(personaId ? { customerId: personaId } : {}),
-        termMonths: deal.termMonths,
-        downPaymentCents: props.downPaymentCents,
+        ...(priceChoice ? { priceChoice } : {}),
+        shownMonthlyNetRentCents: shown,
         answers,
       }),
     }).catch(() => null);
@@ -112,7 +123,13 @@ export function ApplicationForm(props: ApplicationFormProps) {
       router.push(`/${locale}/contracts/${body.data.id}`);
       return;
     }
-    setSigning(body?.error?.code === 'ANSWERS_DO_NOT_MATCH_CUSTOMER' ? 'mismatch' : 'error');
+    const code = body?.error?.code ?? '';
+    if (STALE_CODES.has(code)) {
+      setSigning('stale');
+      router.refresh();
+      return;
+    }
+    setSigning(code === 'ANSWERS_DO_NOT_MATCH_CUSTOMER' ? 'mismatch' : 'error');
   }
 
   return (
@@ -167,7 +184,9 @@ export function ApplicationForm(props: ApplicationFormProps) {
           locale={locale}
           t={t}
           signing={signing}
-          onSign={() => void sign()}
+          monthlyNetRentCents={props.monthlyNetRentCents}
+          offer={props.offer}
+          onSign={(choice) => void sign(choice)}
         />
       </div>
     </section>
@@ -266,14 +285,27 @@ function QuestionField(props: {
   );
 }
 
+/** Errors meaning the page is out of date (the demo date moved, or the quote was used). */
+const STALE_CODES = new Set([
+  'PRICE_CHOICE_REQUIRED',
+  'PRICE_CHANGED',
+  'QUOTE_EXPIRED',
+  'QUOTE_ALREADY_USED',
+  'SIGNED_BEFORE_QUOTE',
+]);
+
 function DecisionPanel(props: {
   decision: Decision;
   locale: Locale;
   t: Translate;
   signing: Signing;
-  onSign: () => void;
+  monthlyNetRentCents: number;
+  offer: ApplicationFormProps['offer'];
+  onSign: (choice?: PriceChoice) => void;
 }) {
   const { decision, locale, t } = props;
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const busy = props.signing === 'busy';
   const canSign =
     decision.status === 'decided' &&
     decision.outcome === 'approved' &&
@@ -311,18 +343,46 @@ function DecisionPanel(props: {
         </>
       )}
 
-      <button
-        type="button"
-        onClick={props.onSign}
-        disabled={!canSign || props.signing === 'busy'}
-        className="btn-primary mt-6 w-full py-3.5"
-      >
-        {props.signing === 'busy' ? t('lease.signing') : t('lease.sign')}
-      </button>
+      {props.offer ? (
+        // Today's rent is lower: the customer chooses, and the choice is recorded (D-014).
+        <div className="mt-6 space-y-3">
+          <button
+            type="button"
+            onClick={() => props.onSign('todays_price')}
+            disabled={!canSign || busy}
+            className="btn-primary w-full py-3.5"
+          >
+            {t('quote.signToday', { rent: euro(props.offer.monthlyNetRentCents) })}
+          </button>
+          <button
+            type="button"
+            onClick={() => props.onSign('keep_quote')}
+            disabled={!canSign || busy}
+            className="w-full rounded-full px-4 py-3 text-sm font-semibold ring-1 ring-line ring-inset hover:ring-fg disabled:opacity-50"
+          >
+            {t('quote.signKeep', { rent: euro(props.monthlyNetRentCents) })}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => props.onSign()}
+          disabled={!canSign || busy}
+          className="btn-primary mt-6 w-full py-3.5"
+        >
+          {busy ? t('lease.signing') : t('lease.sign')}
+        </button>
+      )}
       <p className="mt-2 text-xs text-muted">{t('lease.signNote')}</p>
-      {props.signing === 'error' || props.signing === 'mismatch' ? (
+      {props.signing === 'error' || props.signing === 'mismatch' || props.signing === 'stale' ? (
         <p role="alert" className="mt-3 text-sm font-medium text-danger">
-          {t(props.signing === 'mismatch' ? 'lease.errorRecord' : 'lease.error')}
+          {t(
+            props.signing === 'mismatch'
+              ? 'lease.errorRecord'
+              : props.signing === 'stale'
+                ? 'quote.stale'
+                : 'lease.error'
+          )}
         </p>
       ) : null}
     </aside>

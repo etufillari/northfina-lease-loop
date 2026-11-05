@@ -1,11 +1,12 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { quoteAndSign } from '../../tests/helpers/quote-and-sign';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { loadAssets } from '@/data/load';
 import { listAuditLog } from './audit';
 import { seedAssets } from './assets';
 import { endLease, getContractEnding } from './contract-endings';
-import { getContract, signLease, type LeaseDataPack } from './contracts';
+import { getContract, type LeaseDataPack } from './contracts';
 import { loadLeaseDataPack } from './lease-data';
 import type { PrismaClient } from './prisma-client';
 
@@ -24,11 +25,12 @@ afterAll(async () => {
 beforeEach(async () => {
   await db.contractEnding.deleteMany();
   await db.contract.deleteMany();
+  await db.quote.deleteMany();
   await db.auditLog.deleteMany();
   await db.asset.deleteMany();
   await seedAssets(db, await loadAssets());
   // Card 1: Aino signs ebike-003 (new, 0 km, no earlier lives) for 36 months on 5 Nov 2026.
-  const signed = await signLease(db, data, {
+  const signed = await quoteAndSign(db, data, {
     assetId: 'ebike-003',
     customerId: 'cust-aino',
     termMonths: 36,
@@ -126,7 +128,10 @@ describe('endLease', () => {
     });
     expect(await getContractEnding(db, contractId)).toBeNull();
     expect((await asset()).status).toBe('reserved');
-    expect((await listAuditLog(db)).map((a) => a.action)).toEqual(['contract.signed']);
+    expect((await listAuditLog(db)).map((a) => a.action)).toEqual([
+      'contract.signed',
+      'quote.created',
+    ]);
   });
 
   it('refuses a missing contract', async () => {

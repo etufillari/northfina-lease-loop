@@ -1,5 +1,6 @@
-// Signing a lease and reading contracts back. The server always prices from scratch: numbers
-// sent by the browser are never trusted. Signing and its audit row commit together.
+// Signing a lease and reading contracts back. Signing locks a stored quote (D-014, D-034): the
+// price the customer was shown, never numbers sent by the browser. Signing and its audit row
+// commit together.
 import { z } from 'zod';
 import type { AssetCategory } from '@/data/schemas';
 import { signContract, type Contract } from '@/domain/contract';
@@ -7,42 +8,54 @@ import { decideApplication } from '@/domain/eligibility';
 import { invoiceSchedule } from '@/domain/invoicing';
 import { answersNotMatchingCustomer } from '@/domain/persona';
 import type { Answers } from '@/domain/question-flow';
-import { makeQuote } from '@/domain/quote';
+import type { Quote } from '@/domain/quote';
+import { quoteToSign, type PriceChoice, type QuoteToSign } from '@/domain/signing';
 import { withAudit } from './audit';
 import type { LeaseDataPack } from './lease-data';
 import { priceListsWithListings } from './listed-prices';
 import type { PrismaClient } from './prisma-client';
+import { getQuote, toQuoteRowData } from './quotes';
 
 export type { LeaseDataPack } from './lease-data';
 
 export interface SignLeaseInput {
-  assetId: string;
+  /** The stored quote the customer is signing. */
+  quoteId: number;
   /** A data-pack persona; a new applicant is named by the email they gave. */
   customerId?: string;
   /** The application answers; the server decides them again before signing. */
   answers: Answers;
-  termMonths: number;
-  downPaymentCents: number;
-  /** Quote, signing and start date for an on-the-spot lease (ISO). */
+  /** Needed only when today's rent is lower than the quote's. */
+  priceChoice?: PriceChoice;
+  /** The monthly rent excl. VAT on screen when the customer signed; it must be what locks. */
+  shownMonthlyNetRentCents: number;
+  /** The effective today (D-030): signing and start date. */
   today: string;
   actor: string;
 }
 
 export type SignLeaseResult =
-  | { ok: true; id: number; contract: Contract }
+  | { ok: true; id: number; contract: Contract; quoteId: number }
   | { ok: false; reason: string }
   /** The named customer's record says otherwise for these questions (D-031). */
-  | { ok: false; reason: 'answers_do_not_match_customer'; questionIds: string[] };
+  | { ok: false; reason: 'answers_do_not_match_customer'; questionIds: string[] }
+  /** Today's rent is lower: the customer must choose before anything is signed (D-014). */
+  | Extract<QuoteToSign, { reason: 'price_choice_required' }>;
 
 /** Thrown inside the transaction to roll it back when the asset was taken meanwhile. */
 class AssetTakenError extends Error {}
+/** Thrown inside the transaction to roll it back when the quote was signed meanwhile. */
+class QuoteUsedError extends Error {}
 
 export async function signLease(
   db: PrismaClient,
   data: LeaseDataPack,
   input: SignLeaseInput
 ): Promise<SignLeaseResult> {
-  const asset = await db.asset.findUnique({ where: { id: input.assetId } });
+  const stored = await getQuote(db, input.quoteId);
+  if (!stored) return { ok: false, reason: 'quote_not_found' };
+  if (stored.contractId !== null) return { ok: false, reason: 'quote_already_used' };
+  const asset = await db.asset.findUnique({ where: { id: stored.quote.assetId } });
   if (!asset) return { ok: false, reason: 'asset_not_found' };
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
   const customer =
@@ -53,40 +66,41 @@ export async function signLease(
 
   // A re-listed item is priced from its second-life price, not the new-item price (D-035).
   const priceLists = await priceListsWithListings(db, data.priceLists);
-  const quoted = makeQuote(priceLists, data.coefficientTable, {
-    assetId: input.assetId,
-    quoteDate: input.today,
-    termMonths: input.termMonths,
-    downPaymentCents: input.downPaymentCents,
+  const chosen = quoteToSign(priceLists, data.coefficientTable, stored.quote, input.today, {
+    ...(input.priceChoice === undefined ? {} : { priceChoice: input.priceChoice }),
+    shownMonthlyNetRentCents: input.shownMonthlyNetRentCents,
   });
-  if (!quoted.ok) return quoted;
+  if (!chosen.ok) return chosen;
+  const { quote, check, priceChoice } = chosen;
+
   if (customer) {
     // A persona's answers must be the facts on its record, or anyone could sign as Mikko.
     const deal = {
       category: asset.category as AssetCategory,
-      financedAmountCents: quoted.quote.financedCents,
-      termMonths: input.termMonths,
+      financedAmountCents: quote.financedCents,
+      termMonths: quote.termMonths,
     };
     const questionIds = answersNotMatchingCustomer(data.questions, deal, customer, input.answers);
     if (questionIds.length > 0) {
       return { ok: false, reason: 'answers_do_not_match_customer', questionIds };
     }
   }
-  const refusal = applicationRefusal(data, input, asset.category, quoted.quote);
+  const refusal = applicationRefusal(data, input, asset.category, quote);
   if (refusal) return { ok: false, reason: refusal };
 
-  const signed = signContract(quoted.quote, {
+  const signed = signContract(quote, {
     customerId: input.customerId ?? `email:${String(input.answers.q_email)}`,
     signDate: input.today,
     startDate: input.today,
   });
   if (!signed.ok) return signed;
   const { contract } = signed;
+  const tookTodaysPrice = priceChoice === 'todays_price';
 
   try {
     const row = await withAudit(
       db,
-      (created: { id: number }) => ({
+      (created: { id: number; signedQuoteId: number }) => ({
         actor: input.actor,
         action: 'contract.signed',
         entityType: 'contract',
@@ -96,6 +110,17 @@ export async function signLease(
           customerId: contract.customerId,
           monthlyNetRentCents: contract.monthlyNetRentCents,
           priceListVersion: contract.priceListVersion,
+          quoteId: stored.id,
+          signedQuoteId: created.signedQuoteId,
+          // What the price check found on the signing day and what the customer chose (D-014).
+          priceCheck: check.kind,
+          priceChoice,
+          ...(check.kind === 'cheaper_today'
+            ? { savingPerMonthCents: check.savingPerMonthCents }
+            : {}),
+          ...(check.kind === 'dearer_today'
+            ? { extraPerMonthCents: check.extraPerMonthCents }
+            : {}),
           asOf: input.today, // the effective date, which can be a demo date (D-030)
         },
       }),
@@ -106,7 +131,7 @@ export async function signLease(
           data: { status: 'reserved' },
         });
         if (reserved.count !== 1) throw new AssetTakenError();
-        return tx.contract.create({
+        const created = await tx.contract.create({
           data: {
             asset_id: contract.assetId,
             customer_id: contract.customerId,
@@ -115,11 +140,32 @@ export async function signLease(
             terms_json: JSON.stringify(contract),
           },
         });
+        // Only uses a quote nobody has signed yet, so one quote can't make two contracts.
+        const used = await tx.quote.updateMany({
+          where: { id: stored.id, contract_id: null },
+          data: { contract_id: created.id },
+        });
+        if (used.count !== 1) throw new QuoteUsedError();
+        // Today's cheaper price is stored as a quote of its own, so every contract has one.
+        const signedQuoteId = tookTodaysPrice
+          ? (
+              await tx.quote.create({
+                data: {
+                  ...toQuoteRowData(quote),
+                  replaces_quote_id: stored.id,
+                  contract_id: created.id,
+                },
+                select: { id: true },
+              })
+            ).id
+          : stored.id;
+        return { id: created.id, signedQuoteId };
       }
     );
-    return { ok: true, id: row.id, contract };
+    return { ok: true, id: row.id, contract, quoteId: row.signedQuoteId };
   } catch (error) {
     if (error instanceof AssetTakenError) return { ok: false, reason: 'asset_not_available' };
+    if (error instanceof QuoteUsedError) return { ok: false, reason: 'quote_already_used' };
     throw error;
   }
 }
@@ -133,12 +179,12 @@ function applicationRefusal(
   data: LeaseDataPack,
   input: SignLeaseInput,
   category: string,
-  quote: { financedCents: number; monthlyNetRentCents: number }
+  quote: Pick<Quote, 'financedCents' | 'monthlyNetRentCents' | 'termMonths'>
 ): string | null {
   const schedule = invoiceSchedule(
     {
       startDate: input.today,
-      termMonths: input.termMonths,
+      termMonths: quote.termMonths,
       monthlyNetRentCents: quote.monthlyNetRentCents,
       billing: 'start_day_full_months',
     },
@@ -149,7 +195,7 @@ function applicationRefusal(
     deal: {
       category: category as AssetCategory,
       financedAmountCents: quote.financedCents,
-      termMonths: input.termMonths,
+      termMonths: quote.termMonths,
     },
     answers: input.answers,
     startDate: input.today,

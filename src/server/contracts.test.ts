@@ -1,10 +1,11 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { quoteAndSign as quoteAndSignLease, type Lease } from '../../tests/helpers/quote-and-sign';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { loadAssets } from '@/data/load';
 import { listAuditLog } from './audit';
 import { seedAssets } from './assets';
-import { getContract, signLease, type LeaseDataPack } from './contracts';
+import { getContract, type LeaseDataPack } from './contracts';
 import { loadLeaseDataPack } from './lease-data';
 import type { PrismaClient } from './prisma-client';
 
@@ -20,6 +21,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  await db.quote.deleteMany();
   await db.contract.deleteMany();
   await db.auditLog.deleteMany();
   await db.asset.deleteMany();
@@ -74,9 +76,16 @@ const norviAnswers = {
 };
 const norvi = { ...aino, assetId: 'ebike-004', customerId: 'cust-norvi', answers: norviAnswers };
 
+const quoteAndSign = (lease: Lease) => quoteAndSignLease(db, data, lease);
+
+/** Audit rows other than the quotes made before signing. */
+async function signingAudit() {
+  return (await listAuditLog(db)).filter((entry) => entry.action !== 'quote.created');
+}
+
 describe('signLease', () => {
   it('prices on the server, stores the frozen contract and reserves the asset (card 1)', async () => {
-    const result = await signLease(db, data, aino);
+    const result = await quoteAndSign(aino);
     expect(result).toMatchObject({
       ok: true,
       contract: {
@@ -97,9 +106,9 @@ describe('signLease', () => {
   });
 
   it('writes one audit row naming the new contract, in the same transaction', async () => {
-    const result = await signLease(db, data, aino);
+    const result = await quoteAndSign(aino);
     if (!result.ok) throw new Error(result.reason);
-    const log = await listAuditLog(db);
+    const log = await signingAudit();
     expect(log).toHaveLength(1);
     expect(log[0]).toMatchObject({
       actor: 'cust-aino',
@@ -118,17 +127,17 @@ describe('signLease', () => {
 
   it('refuses an asset that is not available, and changes nothing', async () => {
     // ebike-009 is reserved in the data pack.
-    expect(await signLease(db, data, { ...aino, assetId: 'ebike-009' })).toEqual({
+    expect(await quoteAndSign({ ...aino, assetId: 'ebike-009' })).toEqual({
       ok: false,
       reason: 'asset_not_available',
     });
     expect(await db.contract.count()).toBe(0);
-    expect(await listAuditLog(db)).toHaveLength(0);
+    expect(await signingAudit()).toHaveLength(0);
   });
 
   it('cannot lease the same item twice', async () => {
-    expect((await signLease(db, data, aino)).ok).toBe(true);
-    expect(await signLease(db, data, { ...aino, customerId: 'cust-sanna' })).toEqual({
+    expect((await quoteAndSign(aino)).ok).toBe(true);
+    expect(await quoteAndSign({ ...aino, customerId: 'cust-sanna' })).toEqual({
       ok: false,
       reason: 'asset_not_available',
     });
@@ -136,18 +145,18 @@ describe('signLease', () => {
   });
 
   it('refuses unknown assets and customers', async () => {
-    expect(await signLease(db, data, { ...aino, assetId: 'nope' })).toEqual({
+    expect(await quoteAndSign({ ...aino, assetId: 'nope' })).toEqual({
       ok: false,
       reason: 'asset_not_found',
     });
-    expect(await signLease(db, data, { ...aino, customerId: 'nobody' })).toEqual({
+    expect(await quoteAndSign({ ...aino, customerId: 'nobody' })).toEqual({
       ok: false,
       reason: 'unknown_customer',
     });
   });
 
   it('passes on pricing refusals, such as a down payment off the slider step', async () => {
-    expect(await signLease(db, data, { ...aino, downPaymentCents: 1 })).toEqual({
+    expect(await quoteAndSign({ ...aino, downPaymentCents: 1 })).toEqual({
       ok: false,
       reason: 'down_payment_off_step',
     });
@@ -157,14 +166,14 @@ describe('signLease', () => {
 describe('signLease and the application', () => {
   it('signs only an approved application, deciding it again on the server', async () => {
     const { q_country: _country, ...incomplete } = ainoAnswers;
-    expect(await signLease(db, data, { ...aino, answers: incomplete })).toEqual({
+    expect(await quoteAndSign({ ...aino, answers: incomplete })).toEqual({
       ok: false,
       reason: 'application_incomplete',
     });
   });
 
   it('refuses a declined applicant (card 5: Mikko is 17)', async () => {
-    expect(await signLease(db, data, mikko)).toEqual({
+    expect(await quoteAndSign(mikko)).toEqual({
       ok: false,
       reason: 'application_declined',
     });
@@ -178,7 +187,7 @@ describe('signLease and the application', () => {
     const pep = { ...ainoAnswers, q_pep: 'yes', q_pep_details: 'Member of parliament' };
     const { q_usage_purpose: _usage, ...answers } = pep;
     expect(
-      await signLease(db, data, {
+      await quoteAndSign({
         ...anonymous,
         assetId: 'farm-008',
         answers: { ...answers, q_farm_registry: 'FR-1' },
@@ -187,7 +196,7 @@ describe('signLease and the application', () => {
   });
 
   it('refuses an applicant who may not sign for their company (card 6)', async () => {
-    expect(await signLease(db, data, norvi)).toEqual({
+    expect(await quoteAndSign(norvi)).toEqual({
       ok: false,
       reason: 'signatory_must_sign',
     });
@@ -195,7 +204,7 @@ describe('signLease and the application', () => {
 
   it('names a new applicant (not a data-pack persona) by their email', async () => {
     const { customerId: _persona, ...anonymous } = aino;
-    const result = await signLease(db, data, anonymous);
+    const result = await quoteAndSign(anonymous);
     expect(result).toMatchObject({
       ok: true,
       contract: { customerId: 'email:aino.virtanen@example.com' },
@@ -206,14 +215,14 @@ describe('signLease and the application', () => {
 describe('signLease and the named customer', () => {
   const nothingWritten = async () => {
     expect(await db.contract.count()).toBe(0);
-    expect(await listAuditLog(db)).toHaveLength(0);
+    expect(await signingAudit()).toHaveLength(0);
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'laptop-008' } });
     expect(asset.status).toBe('available');
   };
 
   it('refuses Mikko with a changed birth date, and writes nothing (card 5)', async () => {
     // Born 1990 he would be approved; his record says 2009-03-10, so he is 17.
-    const result = await signLease(db, data, {
+    const result = await quoteAndSign({
       ...mikko,
       answers: { ...mikko.answers, q_birth_date: '1990-03-10' },
     });
@@ -227,39 +236,37 @@ describe('signLease and the named customer', () => {
 
   it('refuses Norvi saying the applicant can sign, and writes nothing (card 6)', async () => {
     const { q_signatory_email: _signatory, ...answers } = norviAnswers;
-    expect(
-      await signLease(db, data, { ...norvi, answers: { ...answers, q_can_sign: 'yes' } })
-    ).toEqual({
+    expect(await quoteAndSign({ ...norvi, answers: { ...answers, q_can_sign: 'yes' } })).toEqual({
       ok: false,
       reason: 'answers_do_not_match_customer',
       questionIds: ['q_can_sign'],
     });
     expect(await db.contract.count()).toBe(0);
-    expect(await listAuditLog(db)).toHaveLength(0);
+    expect(await signingAudit()).toHaveLength(0);
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-004' } });
     expect(asset.status).toBe('available');
   });
 
   it('still signs Aino with her own answers', async () => {
-    expect((await signLease(db, data, aino)).ok).toBe(true);
+    expect((await quoteAndSign(aino)).ok).toBe(true);
   });
 
   it('lets a new applicant (no customer named) give any answers', async () => {
     // With cust-aino named, this birth date would be refused (her record says 1997-04-12).
     const { customerId: _persona, ...anonymous } = aino;
     const answers = { ...ainoAnswers, q_birth_date: '1990-01-01' };
-    expect(await signLease(db, data, { ...aino, answers })).toMatchObject({
+    expect(await quoteAndSign({ ...aino, answers })).toMatchObject({
       ok: false,
       reason: 'answers_do_not_match_customer',
     });
-    expect(await signLease(db, data, { ...anonymous, answers })).toMatchObject({
+    expect(await quoteAndSign({ ...anonymous, answers })).toMatchObject({
       ok: true,
       contract: { customerId: 'email:aino.virtanen@example.com' },
     });
   });
 
   it('checks an unknown customer before the answers', async () => {
-    expect(await signLease(db, data, { ...mikko, customerId: 'cust-nobody' })).toEqual({
+    expect(await quoteAndSign({ ...mikko, customerId: 'cust-nobody' })).toEqual({
       ok: false,
       reason: 'unknown_customer',
     });

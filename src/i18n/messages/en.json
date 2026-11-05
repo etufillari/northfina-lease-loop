@@ -286,5 +286,22 @@
   "secondLife.reason.over_budget": "{rent} a month is over their budget of {budget}",
   "secondLife.listedNote": "Second-life price, set on {date} after a refurbishment of {cost}: {price} instead of {newPrice} for a new one.",
   "asset.secondLifePrice": "Second-life price excl. VAT",
-  "asset.beingRefurbished": "Being prepared"
+  "asset.beingRefurbished": "Being prepared",
+  "quote.save": "Get my quote",
+  "quote.saving": "Saving your quote…",
+  "quote.saveNote": "We save this price as your quote. You can sign it at this price for {days} days, even if prices go up.",
+  "quote.saveError": "The quote could not be saved. Please try again.",
+  "quote.back": "Back to the item",
+  "quote.title": "Quote {id}",
+  "quote.price": "Your quoted price",
+  "quote.madeOn": "Quoted on {date} from price list {version}. Rent excl. VAT; VAT is added at the rate on each invoice date.",
+  "quote.status.open": "You can sign this quote at this price until {date}.",
+  "quote.status.expired": "This quote expired on {date}. Prices may have changed, so get a new quote.",
+  "quote.status.not_yet_valid": "This quote is dated {date}. It can be signed from that day.",
+  "quote.status.used": "This quote has been signed. Open the contract.",
+  "quote.cheaperToday": "Good news: today's price is lower. On price list {version} your rent would be {rent} a month excl. VAT, {saving} less than your quote ({quoted}). You choose which one to sign.",
+  "quote.dearerToday": "Prices have gone up since your quote: today this lease would cost {extra} more a month. Your quote protects you, so you sign at {rent} a month excl. VAT.",
+  "quote.signToday": "Sign at today's price, {rent}/month",
+  "quote.signKeep": "Keep my quote, {rent}/month",
+  "quote.stale": "The price or the quote changed since this page loaded. Check the quote above and sign again."
 }

@@ -15,7 +15,14 @@ export default defineConfig({
       include: ['src/domain/**', 'src/server/**', 'src/data/**', 'src/i18n/**'],
       exclude: ['**/*.test.ts', '**/*.json', '**/*.md'],
       reporter: ['text', 'json-summary', 'html'],
-      thresholds: { lines: 60, functions: 60, branches: 60, statements: 60 },
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 60,
+        statements: 60,
+        // The business rules carry the money, so they are held to a higher bar.
+        'src/domain/**': { lines: 90, functions: 90, branches: 85, statements: 90 },
+      },
     },
   },
 });

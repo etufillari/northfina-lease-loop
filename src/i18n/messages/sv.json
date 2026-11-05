@@ -78,7 +78,7 @@
   "lease.signNote": "Signeringen låser priset för hela avtalstiden. Senare ändringar i prislistan påverkar det inte.",
   "lease.error": "Avtalet kunde inte signeras. Försök igen.",
   "lease.errorTaken": "Någon har just leasat den här varan. Välj en annan.",
-  "lease.errorRecord": "Några svar stämmer inte med den valda kundens uppgifter, så inget signerades. Välj kunden igen för att återställa dem.",
+  "lease.errorRecord": "Några svar stämmer inte med våra uppgifter om den här kunden, så inget signerades. Välj kunden i listan för att använda uppgifterna i registret.",
   "refusal.validation_error": "Något i begäran stämde inte, så inget sparades. Kontrollera uppgifterna och försök igen.",
   "refusal.invalid_json": "Vi kunde inte läsa det som skickades, så inget sparades. Ladda om sidan och försök igen.",
   "refusal.internal_error": "Något gick fel hos oss, så inget sparades. Försök igen om en stund.",

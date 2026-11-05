@@ -78,7 +78,7 @@
   "lease.signNote": "Signing locks this price for the whole lease. Price list changes after today won't affect it.",
   "lease.error": "The contract could not be signed. Please try again.",
   "lease.errorTaken": "Someone has just leased this item. Please choose another.",
-  "lease.errorRecord": "Some answers don't match the chosen customer's record, so nothing was signed. Choose the customer again to restore them.",
+  "lease.errorRecord": "Some answers don't match our record for this customer, so nothing was signed. Choose the customer from the list to use the answers on record.",
   "refusal.validation_error": "Something in the request wasn't right, so nothing was saved. Please check your entries and try again.",
   "refusal.invalid_json": "We couldn't read what was sent, so nothing was saved. Please reload the page and try again.",
   "refusal.internal_error": "Something went wrong on our side, so nothing was saved. Please try again in a moment.",

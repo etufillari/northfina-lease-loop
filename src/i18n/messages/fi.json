@@ -78,7 +78,7 @@
   "lease.signNote": "Allekirjoitus lukitsee hinnan koko sopimuskaudeksi. Hinnaston muutokset eivät vaikuta siihen.",
   "lease.error": "Sopimusta ei voitu allekirjoittaa. Yritä uudelleen.",
   "lease.errorTaken": "Joku ehti juuri leasata tämän tuotteen. Valitse toinen.",
-  "lease.errorRecord": "Osa vastauksista ei vastaa valitun asiakkaan tietoja, joten mitään ei allekirjoitettu. Palauta vastaukset valitsemalla asiakas uudelleen.",
+  "lease.errorRecord": "Osa vastauksista ei vastaa tämän asiakkaan tietoja rekisterissämme, joten mitään ei allekirjoitettu. Valitse asiakas listasta käyttääksesi rekisterin tietoja.",
   "refusal.validation_error": "Pyynnössä oli jotain vialla, joten mitään ei tallennettu. Tarkista tiedot ja yritä uudelleen.",
   "refusal.invalid_json": "Emme saaneet lähetettyä tietoa luettua, joten mitään ei tallennettu. Lataa sivu uudelleen ja yritä uudestaan.",
   "refusal.internal_error": "Meillä meni jotain vikaan, joten mitään ei tallennettu. Yritä hetken päästä uudelleen.",

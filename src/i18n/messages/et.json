@@ -78,7 +78,7 @@
   "lease.signNote": "Allkiri lukustab hinna kogu liisinguperioodiks. Hinnakirja muudatused seda ei mõjuta.",
   "lease.error": "Lepingut ei õnnestunud allkirjastada. Proovi uuesti.",
   "lease.errorTaken": "Keegi liisis selle toote just ära. Vali mõni teine.",
-  "lease.errorRecord": "Mõned vastused ei vasta valitud kliendi andmetele, seega midagi ei allkirjastatud. Vali klient uuesti, et need taastada.",
+  "lease.errorRecord": "Mõned vastused ei vasta meie andmetele selle kliendi kohta, seega midagi ei allkirjastatud. Vali klient loendist, et kasutada registris olevaid andmeid.",
   "refusal.validation_error": "Päringus oli midagi valesti, seega midagi ei salvestatud. Kontrolli andmeid ja proovi uuesti.",
   "refusal.invalid_json": "Saadetut ei õnnestunud lugeda, seega midagi ei salvestatud. Laadi leht uuesti ja proovi veel.",
   "refusal.internal_error": "Meie poolel läks midagi valesti, seega midagi ei salvestatud. Proovi mõne hetke pärast uuesti.",

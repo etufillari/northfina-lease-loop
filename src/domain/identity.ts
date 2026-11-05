@@ -60,6 +60,8 @@ export const PERMISSIONS = [
   'contract.view_all',
   /** Change an asset's status, e.g. available → reserved → returned. */
   'asset.change_status',
+  /** View the full history (passport) of an item across all its lives. */
+  'item.view_history',
   /** Refurbish a returned asset and re-list it for a second life. */
   'second_life.refurbish',
   /** Approve or reject an application sent to manual review. */
@@ -74,6 +76,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 const DEALER_PERMISSIONS: readonly Permission[] = [
   'contract.view_all',
   'asset.change_status',
+  'item.view_history',
   'second_life.refurbish',
   'audit_log.view',
 ];

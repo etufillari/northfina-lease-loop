@@ -85,6 +85,8 @@
   "apply.whyWeAsk": "Varför vi frågar",
   "apply.money.hint": "Belopp i euro, till exempel 2500 eller 2500,50",
   "apply.money.invalid": "Ange ett belopp i euro, till exempel 2500 eller 2500,50.",
+  "apply.date.hint": "Dag/månad/år, till exempel 31/12/1990",
+  "apply.date.invalid": "Ange ett riktigt datum som dag/månad/år, till exempel 31/12/1990.",
   "apply.list.hint": "En rad per post",
   "apply.dropped": "Vi tog bort svar som inte längre gäller:",
   "apply.checking": "Kontrollerar dina svar…",

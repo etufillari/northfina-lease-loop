@@ -85,6 +85,8 @@
   "apply.whyWeAsk": "Miks me küsime",
   "apply.money.hint": "Summa eurodes, näiteks 2500 või 2500,50",
   "apply.money.invalid": "Sisesta summa eurodes, näiteks 2500 või 2500,50.",
+  "apply.date.hint": "Päev/kuu/aasta, näiteks 31.12.1990",
+  "apply.date.invalid": "Sisesta tegelik kuupäev kujul päev/kuu/aasta, näiteks 31.12.1990.",
   "apply.list.hint": "Üks kirje real",
   "apply.dropped": "Eemaldasime vastused, mis enam ei kehti:",
   "apply.checking": "Kontrollime vastuseid…",

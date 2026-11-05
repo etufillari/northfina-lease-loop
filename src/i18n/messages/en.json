@@ -85,6 +85,8 @@
   "apply.whyWeAsk": "Why we ask",
   "apply.money.hint": "Amount in euros, for example 2500 or 2500,50",
   "apply.money.invalid": "Enter an amount in euros, for example 2500 or 2500,50.",
+  "apply.date.hint": "Day/month/year, for example 31/12/1990",
+  "apply.date.invalid": "Enter a real date as day/month/year, for example 31/12/1990.",
   "apply.list.hint": "One entry per line",
   "apply.dropped": "We removed answers that no longer apply:",
   "apply.checking": "Checking your answers…",

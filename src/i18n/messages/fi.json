@@ -85,6 +85,8 @@
   "apply.whyWeAsk": "Miksi kysymme",
   "apply.money.hint": "Summa euroina, esimerkiksi 2500 tai 2500,50",
   "apply.money.invalid": "Anna summa euroina, esimerkiksi 2500 tai 2500,50.",
+  "apply.date.hint": "Päivä/kuukausi/vuosi, esimerkiksi 31.12.1990",
+  "apply.date.invalid": "Anna oikea päivämäärä muodossa päivä/kuukausi/vuosi, esimerkiksi 31.12.1990.",
   "apply.list.hint": "Yksi rivi per merkintä",
   "apply.dropped": "Poistimme vastaukset, jotka eivät enää koske sinua:",
   "apply.checking": "Tarkistetaan vastauksia…",

@@ -5,6 +5,7 @@
 // Styling uses the design tokens from AGENTS.md, the same raw values as contract.tsx.
 import { useState } from 'react';
 import type { Question } from '@/data/schemas';
+import { formatDayMonthYear, parseDayMonthYear } from '@/domain/date-input';
 import { parseEuroToCents } from '@/domain/money';
 import type { AnswerValue } from '@/domain/question-flow';
 import { messages, type MessageKey, type Translate } from '@/i18n/get-t';
@@ -75,6 +76,12 @@ export function QuestionField({ question, locale, t, value, onChange }: Question
     );
   }
 
+  if (question.type === 'date') {
+    return (
+      <DateField {...{ question, label, whyWeAsk, whyId, hintId, inputId, t, value, onChange }} />
+    );
+  }
+
   const common = {
     id: inputId,
     name: question.id,
@@ -100,7 +107,7 @@ export function QuestionField({ question, locale, t, value, onChange }: Question
       ) : (
         <input
           {...common}
-          type={question.type === 'date' ? 'date' : question.type === 'email' ? 'email' : 'text'}
+          type={question.type === 'email' ? 'email' : 'text'}
           autoComplete={question.type === 'email' ? 'email' : 'off'}
         />
       )}
@@ -163,6 +170,69 @@ function MoneyField({
       {invalid ? (
         <p role="alert" className="mt-[4px] text-[0.875rem] text-[#DC2626]">
           {t('apply.money.invalid')}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Dates are typed as day/month/year (31/12/1990) but answered as ISO (1990-12-31). A native date
+ * input would follow the browser's language instead, so this is a text field. The answer is only
+ * set while the text is a real calendar date.
+ */
+function DateField({
+  question,
+  label,
+  whyWeAsk,
+  whyId,
+  hintId,
+  inputId,
+  t,
+  value,
+  onChange,
+}: {
+  question: Question;
+  label: string;
+  whyWeAsk: React.ReactNode;
+  whyId: string;
+  hintId: string;
+  inputId: string;
+  t: Translate;
+  value: AnswerValue | undefined;
+  onChange: (value: AnswerValue | undefined) => void;
+}) {
+  const [text, setText] = useState(typeof value === 'string' ? formatDayMonthYear(value) : '');
+  const invalid = text.trim() !== '' && parseDayMonthYear(text) === null;
+
+  return (
+    <div>
+      <label htmlFor={inputId} className={labelClass}>
+        {label}
+      </label>
+      {whyWeAsk}
+      <p id={hintId} className={mutedClass}>
+        {t('apply.date.hint')}
+      </p>
+      <input
+        id={inputId}
+        name={question.id}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="dd/mm/yyyy"
+        value={text}
+        aria-describedby={`${whyId} ${hintId}`}
+        aria-invalid={invalid}
+        className={inputClass}
+        onChange={(event) => {
+          setText(event.target.value);
+          onChange(parseDayMonthYear(event.target.value) ?? undefined);
+        }}
+      />
+      {invalid ? (
+        <p role="alert" className="mt-[4px] text-[0.875rem] text-[#DC2626]">
+          {t('apply.date.invalid')}
         </p>
       ) : null}
     </div>

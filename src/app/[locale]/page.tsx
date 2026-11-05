@@ -6,12 +6,14 @@ import { SwipeRow } from '@/components/ui/swipe-row';
 import { loadPriceLists } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
 import { listPriceOn } from '@/domain/price-list';
+import { withListedPrices } from '@/domain/second-life';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
 import { asOfDate } from '@/server/as-of';
+import { listedPrices } from '@/server/listed-prices';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -22,7 +24,10 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
 
   const t = getT(locale);
   const today = await asOfDate(); // the demo date or the real one (D-030); domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assets, dataPriceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  // Re-listed items show their second-life price, not the new-item price (D-035).
+  const listed = await listedPrices(db);
+  const priceLists = withListedPrices(dataPriceLists, listed);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
     .filter((group) => group.assets.length > 0);
@@ -92,6 +97,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
                 <AssetCard
                   asset={asset}
                   price={listPriceOn(priceLists, asset.id, today)}
+                  secondLifePrice={asset.id in listed}
                   locale={locale}
                   t={t}
                 />

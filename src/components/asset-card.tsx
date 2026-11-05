@@ -14,11 +14,13 @@ import { StatusBadge } from './ui/status-badge';
 type AssetCardProps = {
   asset: Asset;
   price: ListPriceResult;
+  /** The price is a re-listed item's second-life price (D-035). */
+  secondLifePrice?: boolean;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, secondLifePrice, locale, t }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
 
   return (
@@ -52,9 +54,16 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
         </p>
         <div className="mt-auto flex items-baseline justify-between gap-3 pt-3">
-          <p className="text-xs text-muted">{t('asset.listPrice')}</p>
+          <p className="text-xs text-muted">
+            {t(secondLifePrice ? 'asset.secondLifePrice' : 'asset.listPrice')}
+          </p>
           <p className="font-display text-base font-bold tabular-nums">
-            {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+            {/* A returned item's new-item price is not its price; it is re-priced first. */}
+            {asset.status === 'returned'
+              ? t('asset.beingRefurbished')
+              : price.ok
+                ? formatEuro(price.priceCents, intlLocale[locale])
+                : t('asset.noPrice')}
           </p>
         </div>
       </div>

@@ -13,6 +13,15 @@ export async function listedPrices(db: PrismaClient): Promise<Record<string, num
   return Object.fromEntries(rows.map((row) => [row.asset_id, row.list_price_cents]));
 }
 
+/** The asset's latest re-listing, or null when it never had one. */
+export async function latestListing(db: PrismaClient, assetId: string) {
+  return db.secondLifeListing.findFirst({
+    where: { asset_id: assetId },
+    orderBy: { id: 'desc' },
+    select: { listed_on: true, refurbishment_cents: true, list_price_cents: true },
+  });
+}
+
 /** The price lists with every re-listed item at its second-life price. */
 export async function priceListsWithListings(
   db: PrismaClient,

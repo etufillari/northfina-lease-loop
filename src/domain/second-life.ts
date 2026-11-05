@@ -60,6 +60,14 @@ export type SecondLifeValuation =
     }
   | { ok: false; reason: 'condition_unreachable' };
 
+/** One condition a returned item can be re-listed at, with its valuation and rents. */
+export interface SecondLifeOption {
+  target: AssetCondition;
+  valuation: Extract<SecondLifeValuation, { ok: true }>;
+  /** Rent with no down payment per term in the coefficient table; null when it can't be priced. */
+  rents: { termMonths: number; monthlyNetRentCents: number | null }[];
+}
+
 /**
  * Whole months from 1 January of the model year to `isoDate`, never below zero. The data has
  * only a model year, no first-use date (same convention as early exit, D-033).

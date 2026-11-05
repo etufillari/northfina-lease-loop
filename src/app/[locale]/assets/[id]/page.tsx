@@ -1,23 +1,27 @@
 // One item: the live lease price with sliders, and signing. Items that can't be leased today
-// still show, with the reason.
+// still show, with the reason. A returned item shows its second life instead (D-035).
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
+import { SecondLifeSection } from '@/components/second-life-section';
 import { CategoryArt } from '@/components/ui/category-art';
 import { LivesMeter } from '@/components/ui/lives-meter';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { answersFromCustomer } from '@/domain/persona';
 import { listPriceOn } from '@/domain/price-list';
+import { formatEuro } from '@/domain/money';
 import { downPaymentBounds } from '@/domain/pricing';
 import { vatRateOn } from '@/domain/vat';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
-import { isLocale } from '@/i18n/locales';
+import { intlLocale, isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
+import { latestListing, priceListsWithListings } from '@/server/listed-prices';
 import { asOfDate } from '@/server/as-of';
+import { loadSecondLifeDataPack, secondLifeView } from '@/server/second-life';
 
 export default async function AssetPage({ params }: PageProps<'/[locale]/assets/[id]'>) {
   const { locale, id } = await params;
@@ -31,7 +35,16 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
   const today = await asOfDate();
   const data = await loadLeaseDataPack();
 
-  const price = listPriceOn(data.priceLists, asset.id, today);
+  // A re-listed item is priced from its second-life price (D-035).
+  const priceLists = await priceListsWithListings(db, data.priceLists);
+  const price = listPriceOn(priceLists, asset.id, today);
+  const newPrice = listPriceOn(data.priceLists, asset.id, today);
+  const listing = asset.status === 'available' ? await latestListing(db, asset.id) : null;
+  const secondLifeData = asset.status === 'returned' ? await loadSecondLifeDataPack() : null;
+  const secondLife = secondLifeData
+    ? await secondLifeView(db, secondLifeData, asset.id, today)
+    : null;
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const bounds = price.ok ? downPaymentBounds(data.coefficientTable, price.priceCents) : null;
   const vat = vatRateOn(data.vatRates, today);
 
@@ -88,7 +101,24 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
       </div>
 
       <div className="mt-10 border-t border-line pt-10">
-        {blocked !== null || !price.ok || !vat.ok || !bounds?.ok ? (
+        {listing && price.ok && newPrice.ok ? (
+          <p className="mb-6 rounded-lg bg-warn-bg px-4 py-3 text-sm text-warn-fg">
+            {t('secondLife.listedNote', {
+              date: formatIsoDate(listing.listed_on, locale),
+              cost: euro(listing.refurbishment_cents),
+              price: euro(price.priceCents),
+              newPrice: euro(newPrice.priceCents),
+            })}
+          </p>
+        ) : null}
+        {secondLife && secondLifeData ? (
+          <SecondLifeSection
+            locale={locale}
+            view={secondLife}
+            demand={secondLifeData.demand}
+            names={Object.fromEntries(data.customers.map((c) => [c.id, c.name]))}
+          />
+        ) : blocked !== null || !price.ok || !vat.ok || !bounds?.ok ? (
           <p className="rounded-lg border border-dashed border-line p-6 text-muted">
             {t(blocked ?? 'lease.notLeasable.no_price')}
           </p>

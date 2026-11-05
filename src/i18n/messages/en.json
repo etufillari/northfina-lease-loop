@@ -296,7 +296,7 @@
   "quote.price": "Your quoted price",
   "quote.madeOn": "Quoted on {date} from price list {version}. Rent excl. VAT; VAT is added at the rate on each invoice date.",
   "quote.status.open": "You can sign this quote at this price until {date}.",
-  "quote.status.expired": "This quote expired on {date}. Prices may have changed, so get a new quote.",
+  "quote.status.expired": "This quote was valid until {date}. Prices may have changed, so get a new quote.",
   "quote.status.not_yet_valid": "This quote is dated {date}. It can be signed from that day.",
   "quote.status.used": "This quote has been signed. Open the contract.",
   "quote.cheaperToday": "Good news: today's price is lower. On price list {version} your rent would be {rent} a month excl. VAT, {saving} less than your quote ({quoted}). You choose which one to sign.",

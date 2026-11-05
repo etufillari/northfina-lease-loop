@@ -296,7 +296,7 @@
   "quote.price": "Tarjottu hinta",
   "quote.madeOn": "Tarjottu {date} hinnaston {version} mukaan. Vuokra ilman arvonlisäveroa; ALV lisätään kunkin laskun päivän verokannalla.",
   "quote.status.open": "Voit allekirjoittaa tarjouksen tällä hinnalla {date} asti.",
-  "quote.status.expired": "Tarjous vanheni {date}. Hinnat ovat voineet muuttua, joten pyydä uusi tarjous.",
+  "quote.status.expired": "Tarjous oli voimassa {date} asti. Hinnat ovat voineet muuttua, joten pyydä uusi tarjous.",
   "quote.status.not_yet_valid": "Tarjous on päivätty {date}. Sen voi allekirjoittaa siitä päivästä alkaen.",
   "quote.status.used": "Tarjous on allekirjoitettu. Avaa sopimus.",
   "quote.cheaperToday": "Hyviä uutisia: tämän päivän hinta on edullisempi. Hinnaston {version} mukaan vuokrasi olisi {rent} kuukaudessa ilman ALV:tä, {saving} vähemmän kuin tarjouksessasi ({quoted}). Sinä valitset, kumman allekirjoitat.",

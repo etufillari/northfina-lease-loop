@@ -296,7 +296,7 @@
   "quote.price": "Ditt offererade pris",
   "quote.madeOn": "Offererat {date} enligt prislista {version}. Hyra exkl. moms; moms läggs till enligt satsen på varje fakturadatum.",
   "quote.status.open": "Du kan skriva under offerten till detta pris till och med {date}.",
-  "quote.status.expired": "Offerten gick ut {date}. Priserna kan ha ändrats, så be om en ny offert.",
+  "quote.status.expired": "Offerten gällde till och med {date}. Priserna kan ha ändrats, så be om en ny offert.",
   "quote.status.not_yet_valid": "Offerten är daterad {date}. Den kan skrivas under från den dagen.",
   "quote.status.used": "Offerten har skrivits under. Öppna avtalet.",
   "quote.cheaperToday": "Goda nyheter: dagens pris är lägre. Enligt prislista {version} skulle din hyra vara {rent} i månaden exkl. moms, {saving} mindre än din offert ({quoted}). Du väljer vilken du skriver under.",

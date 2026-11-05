@@ -296,7 +296,7 @@
   "quote.price": "Sinu pakkumise hind",
   "quote.madeOn": "Pakkumine tehtud {date} hinnakirja {version} järgi. Üür ilma käibemaksuta; käibemaks lisatakse iga arve kuupäeval kehtiva määraga.",
   "quote.status.open": "Saad selle pakkumise selle hinnaga allkirjastada kuni {date}.",
-  "quote.status.expired": "Pakkumine aegus {date}. Hinnad võivad olla muutunud, seega küsi uus pakkumine.",
+  "quote.status.expired": "Pakkumine kehtis kuni {date}. Hinnad võivad olla muutunud, seega küsi uus pakkumine.",
   "quote.status.not_yet_valid": "Pakkumise kuupäev on {date}. Seda saab allkirjastada alates sellest päevast.",
   "quote.status.used": "Pakkumine on allkirjastatud. Ava leping.",
   "quote.cheaperToday": "Hea uudis: tänane hind on madalam. Hinnakirja {version} järgi oleks sinu üür {rent} kuus ilma käibemaksuta, {saving} vähem kui sinu pakkumises ({quoted}). Sina valid, kumma allkirjastad.",

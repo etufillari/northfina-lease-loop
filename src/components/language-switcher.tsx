@@ -1,12 +1,30 @@
 'use client';
 
-// Links to the same page in each language: /fi/anything → /en/anything.
-// A client component only because it needs the current path.
+// Links to the same page in each language: /fi/anything?sort=price_asc → /en/anything?sort=price_asc.
+// The query string is kept, so switching language keeps the catalogue filters.
+// A client component only because it needs the current path and query.
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { localeNames, locales, type Locale } from '@/i18n/locales';
 
-export function LanguageSwitcher({ current, label }: { current: Locale; label: string }) {
+type LanguageSwitcherProps = { current: Locale; label: string };
+
+export function LanguageSwitcher(props: LanguageSwitcherProps) {
+  // useSearchParams needs a Suspense boundary; until it resolves, links keep the path only.
+  return (
+    <Suspense fallback={<LanguageLinks {...props} search="" />}>
+      <LanguageLinksWithQuery {...props} />
+    </Suspense>
+  );
+}
+
+function LanguageLinksWithQuery(props: LanguageSwitcherProps) {
+  const query = useSearchParams().toString();
+  return <LanguageLinks {...props} search={query ? `?${query}` : ''} />;
+}
+
+function LanguageLinks({ current, label, search }: LanguageSwitcherProps & { search: string }) {
   const pathname = usePathname();
   const rest = pathname.split('/').slice(2).join('/');
 
@@ -18,7 +36,7 @@ export function LanguageSwitcher({ current, label }: { current: Locale; label: s
           return (
             <li key={locale}>
               <Link
-                href={rest ? `/${locale}/${rest}` : `/${locale}`}
+                href={(rest ? `/${locale}/${rest}` : `/${locale}`) + search}
                 hrefLang={locale}
                 lang={locale}
                 aria-current={active ? 'page' : undefined}

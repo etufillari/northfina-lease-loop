@@ -1,4 +1,4 @@
-// One catalogue item. A server component: it renders to HTML and ships no JavaScript.
+// One catalogue item. Plain markup with no state, rendered inside the CatalogueBrowser.
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';

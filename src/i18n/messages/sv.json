@@ -42,5 +42,8 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
-  "footer.skeleton": "Startskelett — byt ut mig"
+  "footer.skeleton": "Startskelett — byt ut mig",
+  "asset.estimatedLeasePrice": "Uppskattad leasingpris exkl. moms",
+  "asset.month": "månad",
+  "asset.leaseDuration": "{months} månader"
 }

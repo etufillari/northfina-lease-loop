@@ -42,5 +42,8 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
-  "footer.skeleton": "Starter skeleton — replace me"
+  "footer.skeleton": "Starter skeleton — replace me",
+  "asset.estimatedLeasePrice": "Estimated lease price excl. VAT",
+  "asset.month": "month",
+  "asset.leaseDuration": "{months} months"
 }

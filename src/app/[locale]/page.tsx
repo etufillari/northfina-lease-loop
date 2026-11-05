@@ -46,7 +46,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   const counts = Object.fromEntries(
     categories.map((category) => [category, filterCatalogue(items, { ...filter, category }).length])
   ) as Record<AssetCategory, number>;
-  const values = { q: filter.query, min: minText, max: maxText };
+  const values = { q: filter.query, status: filter.status ?? '', min: minText, max: maxText };
   const badPrice =
     (minText !== '' && filter.minCents === null) || (maxText !== '' && filter.maxCents === null);
 

@@ -1,15 +1,17 @@
 // The catalogue's category tabs and filter form. Server components with no JavaScript:
 // the tabs are links and the filter is a plain GET form, so the URL holds the whole state.
 import Link from 'next/link';
-import type { AssetCategory } from '@/data/schemas';
+import { assetStatusSchema, type AssetCategory } from '@/data/schemas';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
-type Values = { q: string; min: string; max: string };
+/** `status` is '' for any status. */
+type Values = { q: string; status: string; min: string; max: string };
 
 function hrefFor(locale: Locale, category: AssetCategory, values: Values): string {
   const params = new URLSearchParams({ category });
   if (values.q) params.set('q', values.q);
+  if (values.status) params.set('status', values.status);
   if (values.min) params.set('min', values.min);
   if (values.max) params.set('max', values.max);
   return `/${locale}?${params.toString()}`;
@@ -78,13 +80,13 @@ export function FilterForm({
   locale: Locale;
   t: Translate;
 }) {
-  const active = values.q !== '' || values.min !== '' || values.max !== '';
+  const active = values.q !== '' || values.status !== '' || values.min !== '' || values.max !== '';
   return (
     <form
       action={`/${locale}`}
       method="get"
       role="search"
-      className="mt-6 grid gap-3 sm:grid-cols-[1fr_8rem_8rem_auto] sm:items-end"
+      className="mt-6 grid gap-3 sm:grid-cols-[1fr_10rem_8rem_8rem_auto] sm:items-end"
     >
       <input type="hidden" name="category" value={category} />
       <label className="block text-sm font-medium">
@@ -97,6 +99,21 @@ export function FilterForm({
           placeholder={t('filter.searchPlaceholder')}
           className={`${inputClass} mt-1 font-normal`}
         />
+      </label>
+      <label className="block text-sm font-medium">
+        {t('filter.status')}
+        <select
+          name="status"
+          defaultValue={values.status}
+          className={`${inputClass} mt-1 font-normal`}
+        >
+          <option value="">{t('filter.statusAll')}</option>
+          {assetStatusSchema.options.map((status) => (
+            <option key={status} value={status}>
+              {t(`status.${status}`)}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="block text-sm font-medium">
         {t('filter.minPrice')}

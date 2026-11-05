@@ -14,6 +14,8 @@
   "catalogue.noMatches": "Mikään laite ei vastaa näitä rajauksia.",
   "filter.search": "Haku",
   "filter.searchPlaceholder": "Merkki, malli tai sarjanumero",
+  "filter.status": "Tila",
+  "filter.statusAll": "Kaikki tilat",
   "filter.minPrice": "Vähimmäishinta (€)",
   "filter.maxPrice": "Enimmäishinta (€)",
   "filter.apply": "Rajaa",

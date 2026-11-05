@@ -14,6 +14,8 @@
   "catalogue.noMatches": "No items match these filters.",
   "filter.search": "Search",
   "filter.searchPlaceholder": "Make, model or serial number",
+  "filter.status": "Status",
+  "filter.statusAll": "Any status",
   "filter.minPrice": "Min price (€)",
   "filter.maxPrice": "Max price (€)",
   "filter.apply": "Filter",

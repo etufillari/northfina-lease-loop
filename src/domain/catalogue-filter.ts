@@ -1,6 +1,11 @@
-// Catalogue filtering: pick one category, then narrow by free text and by list price.
+// Catalogue filtering: pick one category, then narrow by free text, status and list price.
 // Pure: prices are passed in (integer euro cents), nothing is read from the clock or database.
-import type { Asset, AssetCategory } from '@/data/schemas';
+import {
+  assetStatusSchema,
+  type Asset,
+  type AssetCategory,
+  type AssetStatus,
+} from '@/data/schemas';
 import { parseEuroToCents } from './money';
 
 export type CatalogueItem = {
@@ -13,6 +18,8 @@ export type CatalogueFilter = {
   category: AssetCategory;
   /** Free text. Every word must appear in the make, model, model year or serial number. */
   query: string;
+  /** Only items with this status. null = any status. */
+  status: AssetStatus | null;
   /** Inclusive bounds on the list price, in cents. null = no bound. */
   minCents: number | null;
   maxCents: number | null;
@@ -33,16 +40,17 @@ function matchesQuery(asset: Asset, query: string): boolean {
 }
 
 /**
- * Keeps the items of the chosen category that match the text and the price range.
+ * Keeps the items of the chosen category that match the text, the status and the price range.
  * An item with no price never passes a price bound: we cannot say it is within the range.
  */
 export function filterCatalogue<T extends CatalogueItem>(
   items: readonly T[],
   filter: CatalogueFilter
 ): T[] {
-  const { category, query, minCents, maxCents } = filter;
+  const { category, query, status, minCents, maxCents } = filter;
   return items.filter(({ asset, priceCents }) => {
     if (asset.category !== category) return false;
+    if (status !== null && asset.status !== status) return false;
     if (!matchesQuery(asset, query)) return false;
     if (minCents !== null || maxCents !== null) {
       if (priceCents === null) return false;
@@ -70,8 +78,9 @@ export type ParsedCatalogueParams = {
 };
 
 /**
- * Reads `?category=&q=&min=&max=` from the URL. Never throws: an unknown category falls back to
- * `defaultCategory`, and a price that is not an amount is ignored (no bound).
+ * Reads `?category=&q=&status=&min=&max=` from the URL. Never throws: an unknown category falls
+ * back to `defaultCategory`, an unknown status means any status, and a price that is not an
+ * amount is ignored (no bound).
  */
 export function parseCatalogueParams(
   params: Record<string, RawParam>,
@@ -86,6 +95,7 @@ export function parseCatalogueParams(
     filter: {
       category,
       query: first(params.q).trim().slice(0, MAX_QUERY_LENGTH),
+      status: assetStatusSchema.options.find((s) => s === first(params.status)) ?? null,
       minCents: minText === '' ? null : parseEuroToCents(minText),
       maxCents: maxText === '' ? null : parseEuroToCents(maxText),
     },

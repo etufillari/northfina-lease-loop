@@ -14,6 +14,8 @@
   "catalogue.noMatches": "Inga artiklar matchar filtren.",
   "filter.search": "Sök",
   "filter.searchPlaceholder": "Märke, modell eller serienummer",
+  "filter.status": "Status",
+  "filter.statusAll": "Alla statusar",
   "filter.minPrice": "Lägsta pris (€)",
   "filter.maxPrice": "Högsta pris (€)",
   "filter.apply": "Filtrera",

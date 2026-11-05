@@ -12,7 +12,8 @@ function item(
   category: Asset['category'],
   make: string,
   model: string,
-  priceCents: number | null
+  priceCents: number | null,
+  status: Asset['status'] = 'available'
 ): CatalogueItem {
   return {
     priceCents,
@@ -26,15 +27,15 @@ function item(
       condition: 'new',
       usage: { unit: 'km', value: 0 },
       previous_lives: 0,
-      status: 'available',
+      status,
     },
   };
 }
 
 const items = [
   item('b1', 'e_bike', 'Kettu Bikes', 'Urban 1', 189_900),
-  item('b2', 'e_bike', 'Kettu Bikes', 'Urban 2 Step-through', 219_900),
-  item('b3', 'e_bike', 'Nordvolt', 'Cargo Åland', 349_900),
+  item('b2', 'e_bike', 'Kettu Bikes', 'Urban 2 Step-through', 219_900, 'reserved'),
+  item('b3', 'e_bike', 'Nordvolt', 'Cargo Åland', 349_900, 'returned'),
   item('l1', 'laptop', 'Kettu Works', 'Pro 14', 129_900),
   item('f1', 'farm_machine', 'Pellon', 'Tractor T5', null),
 ];
@@ -42,6 +43,7 @@ const items = [
 const all = (overrides: Partial<CatalogueFilter> = {}): CatalogueFilter => ({
   category: 'e_bike',
   query: '',
+  status: null,
   minCents: null,
   maxCents: null,
   ...overrides,
@@ -103,6 +105,20 @@ describe('filterCatalogue', () => {
     const result = filterCatalogue(items, all({ query: 'kettu', maxCents: 200_000 }));
     expect(ids(result)).toEqual(['b1']);
   });
+
+  it('filters by status, and null means any status', () => {
+    expect(ids(filterCatalogue(items, all({ status: 'available' })))).toEqual(['b1']);
+    expect(ids(filterCatalogue(items, all({ status: 'reserved' })))).toEqual(['b2']);
+    expect(ids(filterCatalogue(items, all({ status: 'returned' })))).toEqual(['b3']);
+    expect(filterCatalogue(items, all({ category: 'laptop', status: 'returned' }))).toEqual([]);
+  });
+
+  it('combines status with text and price', () => {
+    expect(filterCatalogue(items, all({ status: 'reserved', query: 'nordvolt' }))).toEqual([]);
+    expect(ids(filterCatalogue(items, all({ status: 'returned', minCents: 300_000 })))).toEqual([
+      'b3',
+    ]);
+  });
 });
 
 describe('parseCatalogueParams', () => {
@@ -114,9 +130,17 @@ describe('parseCatalogueParams', () => {
     expect(parse({}).filter).toEqual({
       category: 'e_bike',
       query: '',
+      status: null,
       minCents: null,
       maxCents: null,
     });
+  });
+
+  it('reads a known status and treats an unknown one as any status', () => {
+    expect(parse({ status: 'reserved' }).filter.status).toBe('reserved');
+    expect(parse({ status: ['returned', 'available'] }).filter.status).toBe('returned');
+    expect(parse({ status: 'sold' }).filter.status).toBeNull();
+    expect(parse({ status: '' }).filter.status).toBeNull();
   });
 
   it('reads category, text and euro prices', () => {
@@ -129,6 +153,7 @@ describe('parseCatalogueParams', () => {
     expect(filter).toEqual({
       category: 'laptop',
       query: 'pro',
+      status: null,
       minCents: 100_050,
       maxCents: 200_000,
     });

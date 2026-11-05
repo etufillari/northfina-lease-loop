@@ -127,18 +127,18 @@ export function Contract({
   return (
     <section
       aria-labelledby={headingId}
-      className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm"
+      className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
     >
       {/* Header: asset identity + draft/signed status */}
-      <div className="flex flex-wrap items-start justify-between gap-[16px] border-b border-[#ededed] pb-[16px]">
+      <div className="flex flex-wrap items-start justify-between gap-[16px] border-b border-[#ededed] pb-[16px] dark:border-stone-800">
         <div>
-          <p className="text-[0.75rem] font-semibold tracking-wider text-[#1354a5] uppercase">
+          <p className="text-[0.75rem] font-semibold tracking-wider text-[#1354a5] uppercase dark:text-sky-400">
             {t('contract.eyebrow')}
           </p>
           <h2 id={headingId} className="mt-[4px] text-[1.375rem] leading-tight font-bold">
             {asset.make} {asset.model} ({asset.model_year})
           </h2>
-          <p className="mt-[4px] text-[0.875rem] text-[#615b57]">
+          <p className="mt-[4px] text-[0.875rem] text-[#615b57] dark:text-stone-400">
             {t('contract.serialNumber', { serial: asset.serial_number })} · {t('condition.label')}:{' '}
             {t(`condition.${asset.condition}`)} · {t('asset.usage')}:{' '}
             {t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
@@ -148,29 +148,32 @@ export function Contract({
         <span
           className={`inline-flex items-center gap-[8px] rounded-full px-[12px] py-[4px] text-[0.75rem] font-semibold ring-1 ring-inset ${
             isSigned
-              ? 'bg-[#eaf0ec] text-[#14522a] ring-[#cde5d5]'
-              : 'bg-[#f6f7f8] text-[#123054] ring-[#ccd7e6]'
+              ? 'bg-[#eaf0ec] text-[#14522a] ring-[#cde5d5] dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800'
+              : 'bg-[#f6f7f8] text-[#123054] ring-[#ccd7e6] dark:bg-stone-800 dark:text-sky-200 dark:ring-stone-700'
           }`}
         >
           <span
             aria-hidden="true"
-            className={`size-[8px] rounded-full ${isSigned ? 'bg-[#16A34A]' : 'bg-[#2877d7]'}`}
+            className={`size-[8px] rounded-full ${isSigned ? 'bg-[#16A34A] dark:bg-emerald-400' : 'bg-[#2877d7] dark:bg-sky-400'}`}
           />
           {isSigned ? t('contract.statusSigned') : t('contract.statusDraft')}
         </span>
       </div>
 
       {/* Sliders: Lease length (term) and Down payment */}
-      <div className="my-[24px] grid gap-[24px] rounded-[8px] bg-[#f7f7f7] p-[16px]">
+      <div className="my-[24px] grid gap-[24px] rounded-[8px] bg-[#f7f7f7] p-[16px] dark:bg-stone-800/60 dark:ring-1 dark:ring-stone-800">
         {/* Term slider */}
         <div className="grid gap-[8px]">
           <div className="flex items-baseline justify-between gap-[8px]">
-            <label htmlFor={termSliderId} className="text-[0.875rem] font-semibold text-[#353331]">
+            <label
+              htmlFor={termSliderId}
+              className="text-[0.875rem] font-semibold text-[#353331] dark:text-stone-200"
+            >
               {t('contract.termLabel')}
             </label>
             <output
               htmlFor={termSliderId}
-              className="font-mono text-[0.875rem] font-semibold text-[#1354a5] tabular-nums"
+              className="font-mono text-[0.875rem] font-semibold text-[#1354a5] tabular-nums dark:text-sky-400"
             >
               {t('contract.termValue', { months: termMonths })}
             </output>
@@ -205,8 +208,8 @@ export function Contract({
                   onClick={() => setSelectedTermMonths(months)}
                   className={`rounded-[4px] px-[8px] py-[4px] text-[0.75rem] font-medium transition-colors ${
                     isSelected
-                      ? 'bg-[#1a65c1] text-[#FFFFFF]'
-                      : 'text-[#615b57] hover:bg-[#ededed] disabled:hover:bg-transparent'
+                      ? 'bg-[#1a65c1] text-[#FFFFFF] dark:bg-sky-600'
+                      : 'text-[#615b57] hover:bg-[#ededed] disabled:hover:bg-transparent dark:text-stone-400 dark:hover:bg-stone-700'
                   } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   {t('contract.termTick', { months })}
@@ -221,13 +224,13 @@ export function Contract({
           <div className="flex items-baseline justify-between gap-[8px]">
             <label
               htmlFor={downPaymentSliderId}
-              className="text-[0.875rem] font-semibold text-[#353331]"
+              className="text-[0.875rem] font-semibold text-[#353331] dark:text-stone-200"
             >
               {t('contract.downPaymentLabel')}
             </label>
             <output
               htmlFor={downPaymentSliderId}
-              className="font-mono text-[0.875rem] font-semibold text-[#1354a5] tabular-nums"
+              className="font-mono text-[0.875rem] font-semibold text-[#1354a5] tabular-nums dark:text-sky-400"
             >
               {formatEuro(downPaymentCents, intlTag)}
             </output>
@@ -248,7 +251,7 @@ export function Contract({
             className="h-[8px] w-full cursor-pointer accent-[#1a65c1] disabled:cursor-not-allowed disabled:opacity-60"
           />
 
-          <div className="flex justify-between text-[0.75rem] text-[#615b57] tabular-nums">
+          <div className="flex justify-between text-[0.75rem] text-[#615b57] tabular-nums dark:text-stone-400">
             <span>
               {t('contract.downPaymentRange', {
                 min: formatEuro(bounds.minCents, intlTag),
@@ -263,7 +266,7 @@ export function Contract({
       {!price.ok ? (
         <div
           role="alert"
-          className="mb-[16px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#5c360a]"
+          className="mb-[16px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
         >
           {t('contract.errorNoPrice', { date: formatIsoDate(isoDate, locale) })}
         </div>
@@ -272,7 +275,7 @@ export function Contract({
       {!isAssetAvailable ? (
         <div
           role="alert"
-          className="mb-[16px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#5c360a]"
+          className="mb-[16px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
         >
           {t('contract.errorUnavailable', { status: t(`status.${asset.status}`) })}
         </div>
@@ -281,7 +284,7 @@ export function Contract({
       {price.ok && liveQuoteResult && !liveQuoteResult.ok ? (
         <div
           role="alert"
-          className="mb-[16px] rounded-[8px] border border-[#DC2626] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#DC2626]"
+          className="mb-[16px] rounded-[8px] border border-[#DC2626] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#DC2626] dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
         >
           {liveQuoteResult.reason === 'below_minimum'
             ? t('contract.errorBelowMinimum', {
@@ -301,34 +304,34 @@ export function Contract({
       {activeQuote ? (
         <div className="grid gap-[16px]">
           {/* Monthly gross rent banner + price lock explanation (always visible) */}
-          <div className="flex flex-wrap items-center justify-between gap-[16px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px]">
+          <div className="flex flex-wrap items-center justify-between gap-[16px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] dark:border-sky-950 dark:bg-stone-800/80">
             <div className="max-w-md">
-              <p className="text-[0.875rem] font-semibold text-[#123054]">
+              <p className="text-[0.875rem] font-semibold text-[#123054] dark:text-sky-300">
                 {t('contract.monthlyGrossRent')}
               </p>
-              <p className="mt-[4px] text-[0.75rem] text-[#615b57]">
+              <p className="mt-[4px] text-[0.75rem] text-[#615b57] dark:text-stone-400">
                 {t('contract.priceLockNote', {
                   netRent: formatEuro(activeQuote.monthlyNetRentCents, intlTag),
                   date: formatIsoDate(activeQuote.isoDate, locale),
                 })}
               </p>
             </div>
-            <p className="font-mono text-[1.75rem] leading-none font-bold text-[#123054] tabular-nums">
+            <p className="font-mono text-[1.75rem] leading-none font-bold text-[#123054] tabular-nums dark:text-sky-200">
               {formatEuro(activeQuote.monthlyGrossRentCents, intlTag)}
             </p>
           </div>
 
           {/* Collapsible breakdown */}
-          <div className="overflow-hidden rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF]">
+          <div className="overflow-hidden rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] dark:border-stone-800 dark:bg-stone-900">
             <button
               type="button"
               aria-expanded={isBreakdownOpen}
               aria-controls={breakdownPanelId}
               onClick={() => setIsBreakdownOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between gap-[12px] bg-[#f7f7f7] px-[16px] py-[12px] text-left text-[0.875rem] font-semibold text-[#353331] transition-colors hover:bg-[#ededed]"
+              className="flex w-full items-center justify-between gap-[12px] bg-[#f7f7f7] px-[16px] py-[12px] text-left text-[0.875rem] font-semibold text-[#353331] transition-colors hover:bg-[#ededed] dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700/80"
             >
               <span>{t('contract.breakdownTitle')}</span>
-              <span className="inline-flex items-center gap-[8px] text-[0.75rem] font-semibold text-[#1354a5]">
+              <span className="inline-flex items-center gap-[8px] text-[0.75rem] font-semibold text-[#1354a5] dark:text-sky-400">
                 <span>
                   {isBreakdownOpen ? t('contract.hideBreakdown') : t('contract.showBreakdown')}
                 </span>
@@ -352,7 +355,7 @@ export function Contract({
             {isBreakdownOpen ? (
               <dl
                 id={breakdownPanelId}
-                className="grid grid-cols-1 gap-x-[24px] gap-y-[12px] border-t border-[#ededed] p-[16px] text-[0.875rem] sm:grid-cols-2"
+                className="grid grid-cols-1 gap-x-[24px] gap-y-[12px] border-t border-[#ededed] p-[16px] text-[0.875rem] sm:grid-cols-2 dark:border-stone-800"
               >
                 <BreakdownRow
                   label={t('contract.listPrice', { version: activeQuote.priceListVersion })}
@@ -408,7 +411,7 @@ export function Contract({
       {signedContract ? (
         <div
           role="status"
-          className="mt-[16px] rounded-[8px] border border-[#cde5d5] bg-[#eaf0ec] p-[16px] text-[#14522a]"
+          className="mt-[16px] rounded-[8px] border border-[#cde5d5] bg-[#eaf0ec] p-[16px] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
         >
           <p className="text-[0.875rem] font-semibold">
             {t('contract.signedBannerTitle', {
@@ -432,7 +435,7 @@ export function Contract({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[8px] border border-[#bfbcbb] bg-transparent px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#353331] transition-colors hover:bg-[#f7f7f7]"
+            className="rounded-[8px] border border-[#bfbcbb] bg-transparent px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#353331] transition-colors hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
           >
             {t('contract.hideButton')}
           </button>
@@ -442,7 +445,7 @@ export function Contract({
           type="button"
           disabled={!canSign}
           onClick={handleSign}
-          className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a]"
+          className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a] dark:bg-sky-600 dark:hover:bg-sky-500 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
         >
           {isSigned ? t('contract.signedButton') : t('contract.signButton')}
         </button>
@@ -454,8 +457,10 @@ export function Contract({
 function BreakdownRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-[12px]">
-      <dt className="text-[#615b57]">{label}</dt>
-      <dd className="font-mono font-semibold text-[#353331] tabular-nums">{value}</dd>
+      <dt className="text-[#615b57] dark:text-stone-400">{label}</dt>
+      <dd className="font-mono font-semibold text-[#353331] tabular-nums dark:text-stone-200">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -491,10 +496,10 @@ export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
         aria-expanded={isOpen}
         className={`w-full rounded-[8px] px-[16px] py-[8px] text-[0.875rem] font-semibold transition-colors ${
           signedContract
-            ? 'border border-[#cde5d5] bg-[#eaf0ec] text-[#14522a]'
+            ? 'border border-[#cde5d5] bg-[#eaf0ec] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
             : isOpen
-              ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7]'
-              : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5]'
+              ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
+              : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500'
         }`}
       >
         {signedContract
@@ -509,7 +514,7 @@ export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
           role="dialog"
           aria-modal="true"
           aria-label={`${props.asset.make} ${props.asset.model}`}
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#353331]/60 p-[16px]"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/60 p-[16px] backdrop-blur-xs dark:bg-black/70"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setIsOpen(false);

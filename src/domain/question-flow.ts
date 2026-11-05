@@ -161,11 +161,14 @@ export function pruneIrrelevantAnswers(
 /**
  * Validates an individual question's answer against format rules and blocking criteria.
  */
+/** Why an answer is not accepted, so the UI can explain it in the customer's language. */
+export type AnswerErrorCode = 'invalid_business_id' | 'under_age' | 'answer_not_accepted';
+
 export function validateQuestionAnswer(
   question: Question,
   value: string | undefined,
   context: QuestionFlowContext
-): { valid: boolean; error?: string } {
+): { valid: boolean; code?: AnswerErrorCode; error?: string } {
   if (!value || value.trim() === '') {
     return { valid: true };
   }
@@ -175,6 +178,7 @@ export function validateQuestionAnswer(
     if (!isValidFinnishBusinessId(value)) {
       return {
         valid: false,
+        code: 'invalid_business_id',
         error: 'Invalid Finnish business ID (format must be 1234567-8 with a valid check digit)',
       };
     }
@@ -188,6 +192,7 @@ export function validateQuestionAnswer(
         if (age < block.value) {
           return {
             valid: false,
+            code: 'under_age',
             error: `Applicant must be at least ${block.value} years old (calculated age: ${age})`,
           };
         }
@@ -196,6 +201,7 @@ export function validateQuestionAnswer(
         if (block.value.includes(value)) {
           return {
             valid: false,
+            code: 'answer_not_accepted',
             error: `The answer "${value}" is not accepted for this lease`,
           };
         }
@@ -208,8 +214,17 @@ export function validateQuestionAnswer(
 
 export type EligibilityStatus = 'approved' | 'rejected' | 'manual_review' | 'incomplete';
 
+export type EligibilityRuleId =
+  | 'financed_limits'
+  | 'min_age'
+  | 'residency'
+  | 'affordability'
+  | 'business_id'
+  | 'pep_manual_review'
+  | 'signatory_authorization';
+
 export type EligibilityReason = {
-  ruleId: string;
+  ruleId: EligibilityRuleId;
   level: 'reject' | 'manual_review';
   message: string;
 };

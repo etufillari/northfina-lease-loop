@@ -192,6 +192,20 @@ describe('validateQuestionAnswer', () => {
     expect(validateQuestionAnswer(qBirth, '1997-04-12', getContext()).valid).toBe(true);
     expect(validateQuestionAnswer(qBirth, '2009-03-10', getContext()).valid).toBe(false);
   });
+
+  it('returns a code for each kind of refusal, so the UI can translate it', () => {
+    const find = (id: string) => questionsFile.questions.find((q) => q.id === id)!;
+    expect(validateQuestionAnswer(find('q_business_id'), '1234567-8', getContext()).code).toBe(
+      'invalid_business_id'
+    );
+    expect(validateQuestionAnswer(find('q_birth_date'), '2009-03-10', getContext()).code).toBe(
+      'under_age'
+    );
+    expect(validateQuestionAnswer(find('q_country'), 'other', getContext()).code).toBe(
+      'answer_not_accepted'
+    );
+    expect(validateQuestionAnswer(find('q_country'), 'FI', getContext())).toEqual({ valid: true });
+  });
 });
 
 describe('evaluateEligibility with real scenarios', () => {

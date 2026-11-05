@@ -32,7 +32,6 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
-  "footer.skeleton": "Aloituspohja — korvaa minut",
   "nav.catalogue": "Valikoima",
   "nav.audit": "Muutosloki",
   "asset.lease": "Katso leasinghinta",
@@ -151,5 +150,15 @@
   "reason.blocked_answer.q_country": "Voimme leasata vain Suomessa, Ruotsissa tai Virossa asuville.",
   "reason.affordability": "Leasingin suurin kuukausierä, {rent}, on yli 30 % nettotuloistasi (enintään {max}). Pidempi kausi tai käsiraha pienentää kuukausivuokraa.",
   "reason.pep_manual_review": "Rahanpesusääntöjen mukaan poliittisesti vaikutusvaltaisten henkilöiden hakemukset tarkistaa aina ihminen.",
-  "signer.signatory": "Vain nimenkirjoitusoikeudellinen voi allekirjoittaa yrityksen puolesta, joten et voi allekirjoittaa tässä. Lähetämme sopimuksen allekirjoitettavaksi osoitteeseen {email}."
+  "signer.signatory": "Vain nimenkirjoitusoikeudellinen voi allekirjoittaa yrityksen puolesta, joten et voi allekirjoittaa tässä. Lähetämme sopimuksen allekirjoitettavaksi osoitteeseen {email}.",
+  "footer.note": "Demo Northfina × Hive -hackathoniin, 2026",
+  "nav.main": "Päävalikko",
+  "catalogue.heroTitle": "Jokaisella laitteella on monta elämää",
+  "catalogue.browse": "Selaa valikoimaa",
+  "catalogue.statItems": "laitetta",
+  "catalogue.statSecondLife": "toisessa elämässään tai pidemmällä",
+  "catalogue.statCategories": "kategoriaa",
+  "catalogue.scrollBack": "Selaa taaksepäin: {category}",
+  "catalogue.scrollForward": "Selaa eteenpäin: {category}",
+  "asset.life": "{number}. elämä"
 }

@@ -32,7 +32,6 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
-  "footer.skeleton": "Starter skeleton — replace me",
   "nav.catalogue": "Catalogue",
   "nav.audit": "Audit trail",
   "asset.lease": "See lease price",
@@ -151,5 +150,15 @@
   "reason.blocked_answer.q_country": "We can only lease to people living in Finland, Sweden or Estonia.",
   "reason.affordability": "The highest monthly total during the lease, {rent}, is more than 30 % of your net income ({max} at most). A longer term or a down payment lowers the monthly rent.",
   "reason.pep_manual_review": "Anti-money-laundering rules say applications from politically exposed persons are always checked by a person.",
-  "signer.signatory": "Only an authorised signatory can sign for the company, so you can't sign here. We'll send the contract to {email} to sign."
+  "signer.signatory": "Only an authorised signatory can sign for the company, so you can't sign here. We'll send the contract to {email} to sign.",
+  "footer.note": "A demo for the Northfina × Hive hackathon, 2026",
+  "nav.main": "Main",
+  "catalogue.heroTitle": "Every item has more than one life",
+  "catalogue.browse": "Browse the catalogue",
+  "catalogue.statItems": "items",
+  "catalogue.statSecondLife": "on a second life or more",
+  "catalogue.statCategories": "categories",
+  "catalogue.scrollBack": "Scroll back through {category}",
+  "catalogue.scrollForward": "Scroll forward through {category}",
+  "asset.life": "Life {number}"
 }

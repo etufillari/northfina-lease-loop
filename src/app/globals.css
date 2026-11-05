@@ -1,12 +1,240 @@
 @import 'tailwindcss';
 
-@theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+/*
+ * "Second Life" design tokens (D-026). Colours are semantic CSS variables that switch with the
+ * colour scheme, so components write `bg-surface text-fg` once instead of pairing every class
+ * with a `dark:` twin. Dark is the main look; light is a paper-white version of it.
+ */
+:root {
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #ebe9e3;
+  --line: #d9d6ce;
+  --fg: #11131c;
+  --muted: #545764;
+  --accent: #d9481f;
+  --accent-hover: #bf3c16;
+  --on-accent: #ffffff;
+  --accent-text: #b13a14;
+  --stage: #11131c;
+  --stage-fg: #f6f5f2;
+  --stage-muted: #b9bccb;
+  --stage-accent: #ff7a59;
+  --tile-e-bike: #cfe5e1;
+  --tile-laptop: #dcd9f3;
+  --tile-farm-machine: #f1d9c8;
+  --tile-ink: #11131c;
+  --warn-bg: #fff3d6;
+  --warn-fg: #5c3b00;
+  --warn-line: #f0cf7a;
+  --danger: #b42318;
 }
 
-/* A visible keyboard focus everywhere, in both color schemes. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11131c;
+    --surface: #1a1d29;
+    --surface-2: #262a3a;
+    --line: #2f3447;
+    --fg: #f3f1ec;
+    --muted: #a7abbb;
+    --accent: #ff7a59;
+    --accent-hover: #ff9677;
+    --on-accent: #1a0d08;
+    --accent-text: #ff9677;
+    --stage: #1a1d29;
+    --stage-fg: #f3f1ec;
+    --stage-muted: #b9bccb;
+    --stage-accent: #ff7a59;
+    --tile-e-bike: #1d3b3a;
+    --tile-laptop: #2a2550;
+    --tile-farm-machine: #4a2a1d;
+    --tile-ink: #f3f1ec;
+    --warn-bg: #3a2c0c;
+    --warn-fg: #ffe2a3;
+    --warn-line: #6b5216;
+    --danger: #ff8a7a;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-unbounded), var(--font-body), ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-text: var(--accent-text);
+  --color-stage: var(--stage);
+  --color-stage-fg: var(--stage-fg);
+  --color-stage-muted: var(--stage-muted);
+  --color-stage-accent: var(--stage-accent);
+  --color-tile-e-bike: var(--tile-e-bike);
+  --color-tile-laptop: var(--tile-laptop);
+  --color-tile-farm-machine: var(--tile-farm-machine);
+  --color-tile-ink: var(--tile-ink);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --color-warn-line: var(--warn-line);
+  --color-danger: var(--danger);
+}
+
+/* A visible keyboard focus everywhere, in both colour schemes. */
 :focus-visible {
-  outline: 2px solid var(--color-emerald-600);
-  outline-offset: 2px;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Shared building blocks, so new pages (the application flow) look the same without copying classes. */
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    background-color 150ms,
+    transform 150ms;
+  &:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px currentColor;
+  transition: background-color 150ms;
+  &:hover {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+}
+
+@utility panel {
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+@utility eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@utility field {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* The range slider: a filled track up to the thumb. The fill comes from --fill, set inline. */
+@utility range {
+  appearance: none;
+  width: 100%;
+  height: 2rem;
+  background: transparent;
+  cursor: pointer;
+  &::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      var(--accent) var(--fill, 50%),
+      var(--surface-2) var(--fill, 50%)
+    );
+  }
+  &::-moz-range-track {
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--surface-2);
+  }
+  &::-moz-range-progress {
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--accent);
+  }
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: -0.5rem;
+    border-radius: 9999px;
+    background: var(--surface);
+    border: 4px solid var(--accent);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+    transition: transform 150ms;
+  }
+  &::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: var(--surface);
+    border: 4px solid var(--accent);
+  }
+  &:active::-webkit-slider-thumb {
+    transform: scale(1.12);
+  }
+}
+
+/* Horizontal swipe rows: native scrolling with snap points. */
+@utility rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(72vw, 16.5rem);
+  gap: 1rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  padding: 0.25rem 0.25rem 1rem;
+}
+
+/* Fades the right edge to hint there is more; dropped once the row is scrolled to the end. */
+@utility rail-fade {
+  mask-image: linear-gradient(90deg, #000 calc(100% - 4rem), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }

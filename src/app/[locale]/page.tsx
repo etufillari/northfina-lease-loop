@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import type { ZodType } from 'zod';
 import { AssetCard } from '@/components/asset-card';
+import { AccountAccess } from '@/components/account-access';
 import { CataloguePricing } from '@/components/catalogue-pricing';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
@@ -72,20 +73,33 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           {t('catalogue.title')}
         </h1>
-        {activeUserData ? (
-          <DevUserSwitcher
-            users={activeUserData[0]}
-            activeUserId={activeUserData[1]?.id ?? null}
-            buttonLabel={t('dev.mode')}
-            label={t('dev.activeUser')}
-            resetLabel={t('dev.noActiveUser')}
-            customerTypeLabels={{
-              consumer: t('customerType.consumer'),
-              sole_trader: t('customerType.sole_trader'),
-              company: t('customerType.company'),
+        <div className="flex flex-col items-end gap-2">
+          {activeUserData ? (
+            <DevUserSwitcher
+              users={activeUserData[0]}
+              activeUserId={activeUserData[1]?.id ?? null}
+              buttonLabel={t('dev.mode')}
+              label={t('dev.activeUser')}
+              resetLabel={t('dev.noActiveUser')}
+              customerTypeLabels={{
+                consumer: t('customerType.consumer'),
+                sole_trader: t('customerType.sole_trader'),
+                company: t('customerType.company'),
+              }}
+            />
+          ) : null}
+          <AccountAccess
+            locale={locale}
+            devMode={process.env.NODE_ENV === 'development'}
+            labels={{
+              account: t('account.access'),
+              login: t('account.login'),
+              loginTitle: t('account.loginTitle'),
+              loginMessage: t('account.loginMessage'),
+              close: t('account.close'),
             }}
           />
-        ) : null}
+        </div>
       </div>
       <div className="max-w-2xl">
         <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>

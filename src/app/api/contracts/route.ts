@@ -1,0 +1,38 @@
+// POST /api/contracts   body: { "applicationId": "…", "signerName": "Aino Virtanen" }
+// Signs the contract for an approved application and locks its price; see
+// src/server/contracts.ts.
+import { z } from 'zod';
+import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { signContract } from '@/server/contracts';
+import { db } from '@/server/db';
+import { todayIso } from '@/server/today';
+
+const signSchema = z.strictObject({
+  applicationId: z.string().trim().min(1).max(64),
+  /** Typing your full name is the signature. */
+  signerName: z.string().trim().min(2).max(100),
+});
+
+const failures = {
+  application_not_found: [404, 'NOT_FOUND', 'Application not found'],
+  already_signed: [409, 'ALREADY_SIGNED', 'This application has already been signed'],
+  not_approved: [409, 'NOT_APPROVED', 'This application cannot be signed online'],
+  quote_expired: [409, 'QUOTE_EXPIRED', 'The quote has expired; please apply again'],
+  signed_before_quote: [409, 'QUOTE_IN_FUTURE', 'The quote date is after today'],
+  asset_not_available: [409, 'ASSET_NOT_AVAILABLE', 'This item has already been leased'],
+} as const;
+
+export const POST = handleRoute(async (request) => {
+  const body = await readJsonBody(request, signSchema);
+  const result = await signContract(db, body, todayIso());
+  if (!result.ok) {
+    const [status, code, message] = failures[result.reason];
+    return fail(
+      status,
+      code,
+      message,
+      result.contractId ? { contractId: result.contractId } : undefined
+    );
+  }
+  return ok(result.contract, { status: 201 });
+});

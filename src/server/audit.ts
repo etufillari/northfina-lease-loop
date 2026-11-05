@@ -26,18 +26,20 @@ export type TransactionClient = Prisma.TransactionClient;
  */
 export async function withAudit<T>(
   db: PrismaClient,
-  entry: AuditEntry,
+  entry: AuditEntry | ((result: T) => AuditEntry),
   work: (tx: TransactionClient) => Promise<T>
 ): Promise<T> {
   return db.$transaction(async (tx) => {
     const result = await work(tx);
+    // An entry can depend on the result, e.g. the id of a row the change just created.
+    const audit = typeof entry === 'function' ? entry(result) : entry;
     await tx.auditLog.create({
       data: {
-        actor: entry.actor,
-        action: entry.action,
-        entity_type: entry.entityType,
-        entity_id: entry.entityId,
-        details_json: entry.details === undefined ? null : JSON.stringify(entry.details),
+        actor: audit.actor,
+        action: audit.action,
+        entity_type: audit.entityType,
+        entity_id: audit.entityId,
+        details_json: audit.details === undefined ? null : JSON.stringify(audit.details),
       },
     });
     return result;

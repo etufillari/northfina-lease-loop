@@ -65,6 +65,18 @@ describe('withAudit', () => {
     });
   });
 
+  it('can build the entry from the result, for rows whose id the write creates', async () => {
+    await withAudit(
+      db,
+      (asset) => ({ ...entry, entityId: asset.id, details: { status: asset.status } }),
+      reserve
+    );
+    expect(await db.auditLog.findFirstOrThrow()).toMatchObject({
+      entity_id: 'ebike-001',
+      details_json: '{"status":"reserved"}',
+    });
+  });
+
   it('stores no details as null', async () => {
     await withAudit(db, { ...entry, details: undefined }, reserve);
     expect((await db.auditLog.findFirstOrThrow()).details_json).toBeNull();

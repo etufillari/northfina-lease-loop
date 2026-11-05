@@ -5,7 +5,9 @@ import { Badge, type BadgeVariant } from '@/components/ui/badge';
 const statusVariants: Record<AssetStatus, BadgeVariant> = {
   available: 'success',
   reserved: 'warning',
+  leased: 'neutral',
   returned: 'info',
+  sold: 'neutral',
 };
 
 type AssetStatusBadgeProps = {

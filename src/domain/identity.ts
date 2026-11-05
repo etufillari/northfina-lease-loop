@@ -77,6 +77,8 @@ export const PERMISSIONS = [
   'contract.view_own',
   /** See every contract, not only your own. */
   'contract.view_all',
+  /** End a contract at the end of its term: buy out, return or pass on. */
+  'contract.end_term',
   /** Change an asset's status, e.g. available → reserved → returned. */
   'asset.change_status',
   /** View the full history (passport) of an item across all its lives. */
@@ -94,6 +96,7 @@ export type Permission = (typeof PERMISSIONS)[number];
  *  dealer permission never has to be added to admin by hand. */
 const DEALER_PERMISSIONS: readonly Permission[] = [
   'contract.view_all',
+  'contract.end_term',
   'asset.change_status',
   'item.view_history',
   'second_life.refurbish',
@@ -101,7 +104,7 @@ const DEALER_PERMISSIONS: readonly Permission[] = [
 ];
 
 const GRANTS: Record<Role, readonly Permission[]> = {
-  client: ['application.submit', 'contract.sign', 'contract.view_own'],
+  client: ['application.submit', 'contract.sign', 'contract.view_own', 'contract.end_term'],
   dealer: DEALER_PERMISSIONS,
   admin: [...DEALER_PERMISSIONS, 'application.decide_manual_review'],
 };

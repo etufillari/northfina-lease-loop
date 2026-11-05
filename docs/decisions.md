@@ -34,6 +34,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-024 | 2026-11-05 | Application | Only an approved applicant who may sign can sign; the server decides again         |
 | D-025 | 2026-11-05 | Application | Reasons and "why we ask" are translated in the app, not the data pack              |
 | D-026 | 2026-11-05 | UI          | "Second Life" visual design with swipeable category rows                           |
+| D-028 | 2026-11-05 | Application | A decline shows as soon as an answer breaks a rule, not when the form is complete  |
 
 ---
 
@@ -219,3 +220,11 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** The slot already gave every card the same shape, so swapping its content changes no layout. Contain plus a matching backdrop works for both the portrait card and the wide detail tile.
 - **Consequences:** Visual only. All items in a category share one picture, so a per-item photo needs an `image` field on the asset later.
 - **Evidence:** Checked the catalogue rows and an item page in the browser; format, lint, typecheck and 249 tests pass.
+
+## D-028 · Decline as soon as an answer breaks a rule
+
+- **Context:** Customer walkthrough (5 Nov): with a 2009 birth date nothing happened until the unrelated usage question was answered. `decideApplication` returned `incomplete` before checking any rule.
+- **Decision:** Validate the answers, then check the decline rules (age, blocked answers, affordability) on the answers given so far. Any decline ends the application at once with its reasons; otherwise it stays `incomplete` until every question that applies is answered. Manual review (PEP) and approval still need the complete form. Extends D-022 and D-024; the server decides with the same function.
+- **Alternatives:** A separate early check in the form only (the form and server would disagree). Keep waiting for the full form (the reported problem).
+- **Why:** A question only depends on earlier answers (pinned by a test, D-022), so later answers can never un-ask the question that broke a rule: an early decline is final.
+- **Evidence:** Tests for under-18 and a blocked country with later questions unanswered, affordability before the usage question, and an invalid answer still reported before a decline.

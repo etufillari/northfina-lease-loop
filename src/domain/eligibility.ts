@@ -62,10 +62,12 @@ export function decideApplication(
     const check = validateAnswer(question, answer);
     if (!check.ok) return { status: 'invalid', questionId: question.id, reason: check.reason };
   }
-  const next = nextQuestion(questions, input.deal, answers);
-  if (next) return { status: 'incomplete', nextQuestionId: next.id };
-
+  // A decline on the answers given so far is final: a question only depends on earlier answers,
+  // so later answers can't un-ask the question that broke a rule (D-028). Decline at once.
   const declines = [...blockedBy(asked, answers, input.startDate), ...unaffordable(answers, input)];
+  const next = nextQuestion(questions, input.deal, answers);
+  if (next && declines.length === 0) return { status: 'incomplete', nextQuestionId: next.id };
+
   const reviews: DecisionReason[] = answers.q_pep === 'yes' ? [{ rule: 'pep_manual_review' }] : [];
   const outcome =
     declines.length > 0 ? 'declined' : reviews.length > 0 ? 'manual_review' : 'approved';

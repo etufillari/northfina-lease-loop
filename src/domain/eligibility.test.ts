@@ -46,6 +46,51 @@ describe('decideApplication', () => {
     });
   });
 
+  it('declines as soon as an answer breaks a rule, without waiting for the rest of the form', () => {
+    // Mikko, born 10 Mar 2009, is 17 on 5 Nov 2026; country, employment and usage are unanswered.
+    const early = {
+      q_customer_type: 'consumer',
+      q_full_name: 'Mikko Laine',
+      q_birth_date: '2009-03-10',
+    };
+    expect(decide({ answers: early })).toEqual({
+      status: 'decided',
+      outcome: 'declined',
+      reasons: [
+        { rule: 'min_age', questionId: 'q_birth_date', minAge: 18, eligibleFrom: '2027-03-10' },
+      ],
+      signer: { kind: 'applicant' },
+    });
+    // A country outside FI/SE/EE declines before employment and usage are answered.
+    const { q_employment: _e, q_usage_purpose: _u, ...partial } = aino;
+    expect(decide({ answers: { ...partial, q_country: 'other' } })).toMatchObject({
+      status: 'decided',
+      outcome: 'declined',
+      reasons: [{ rule: 'blocked_answer', questionId: 'q_country' }],
+    });
+  });
+
+  it('declines on affordability as soon as income is known, before later questions', () => {
+    // Income is asked from 2 000 € financed. 900 € net → 30 % cap 270.00 €; 379.07 € breaks it.
+    const { q_usage_purpose: _u, ...partial } = aino;
+    expect(
+      decide({
+        deal: { ...ebike, financedAmountCents: 549_000 },
+        answers: { ...partial, q_monthly_income: 90_000 },
+        highestMonthlyGrossCents: 37_907,
+      })
+    ).toMatchObject({
+      status: 'decided',
+      outcome: 'declined',
+      reasons: [{ rule: 'affordability', maxMonthlyGrossCents: 27_000 }],
+    });
+  });
+
+  it('still reports an invalid answer before an early decline', () => {
+    const early = { q_customer_type: 'consumer', q_birth_date: '2009-03-10', q_email: 'nope' };
+    expect(decide({ answers: early })).toMatchObject({ status: 'invalid', questionId: 'q_email' });
+  });
+
   it('reports an invalid answer instead of deciding on it', () => {
     expect(decide({ answers: { ...aino, q_email: 'not-an-email' } })).toEqual({
       status: 'invalid',

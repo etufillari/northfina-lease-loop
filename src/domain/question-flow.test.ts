@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadQuestions } from '@/data/load';
 import type { AskWhenCondition, Question } from '@/data/schemas';
-import { invalidAnswers, questionsToAsk, type Deal } from './question-flow';
+import { blockingAnswer, invalidAnswers, questionsToAsk, type Deal } from './question-flow';
 
 // Tests run against the real data pack, so they also catch a changed question.
 let questions: Question[];
@@ -233,5 +233,50 @@ describe('invalidAnswers', () => {
   it('reports every problem, and skips questions with no answer', () => {
     const errors = invalidAnswers(questions, { q_country: 'DE', q_email: 'nope' });
     expect(errors.map((error) => error.question_id).sort()).toEqual(['q_country', 'q_email']);
+  });
+});
+
+describe('blockingAnswer', () => {
+  const startOn = '2026-11-05';
+
+  it('blocks a birth date that makes the applicant under 18 on the start date', () => {
+    expect(blockingAnswer(questions, { q_birth_date: '2009-03-10' }, startOn)).toEqual({
+      question_id: 'q_birth_date',
+      rule: 'age_under',
+      min_age: 18,
+    });
+  });
+
+  it('judges age on the date it is given, so the same answer can pass later', () => {
+    const answers = { q_birth_date: '2009-03-10' };
+    expect(blockingAnswer(questions, answers, '2027-03-09')).not.toBeNull();
+    expect(blockingAnswer(questions, answers, '2027-03-10')).toBeNull();
+  });
+
+  it('blocks a country outside the allowed list', () => {
+    expect(blockingAnswer(questions, { q_country: 'other' }, startOn)).toEqual({
+      question_id: 'q_country',
+      rule: 'answer_in',
+    });
+  });
+
+  it('lets valid answers through', () => {
+    const answers = { q_birth_date: '1997-04-12', q_country: 'EE' };
+    expect(blockingAnswer(questions, answers, startOn)).toBeNull();
+  });
+
+  it('returns the first block, in the order of the questions', () => {
+    const answers = { q_country: 'other', q_birth_date: '2009-03-10' };
+    expect(blockingAnswer(questions, answers, startOn)?.question_id).toBe('q_birth_date');
+  });
+
+  it('skips unanswered questions, and a date that is not real', () => {
+    expect(blockingAnswer(questions, {}, startOn)).toBeNull();
+    expect(blockingAnswer(questions, { q_birth_date: '2026-02-30' }, startOn)).toBeNull();
+  });
+
+  it('ignores a non-text answer, and questions it was not given', () => {
+    expect(blockingAnswer(questions, { q_country: 5 }, startOn)).toBeNull();
+    expect(blockingAnswer([], { q_country: 'other' }, startOn)).toBeNull();
   });
 });

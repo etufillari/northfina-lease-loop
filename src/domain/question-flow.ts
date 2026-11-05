@@ -2,6 +2,7 @@
 // holds the rules; this file only reads them, so a new question needs no code.
 import type { Answers, AnswerValue } from '@/data/lease-schemas';
 import type { AskWhenCondition, AssetCategory, Customer, Question } from '@/data/schemas';
+import { ageOn } from './age';
 
 export type Deal = {
   customer_type: Customer['type'];
@@ -130,4 +131,34 @@ export function invalidAnswers(questions: readonly Question[], answers: Answers)
     const reason = answerProblem(question, value);
     return reason === null ? [] : [{ question_id: question.id, reason }];
   });
+}
+
+export type BlockingAnswer =
+  | { question_id: string; rule: 'age_under'; min_age: number }
+  | { question_id: string; rule: 'answer_in' };
+
+/**
+ * The first answer that stops the application, so the form can stop asking and say why.
+ * Pass only the questions that apply. Age is judged on `onDate`, the planned contract start.
+ * A date that is not real is skipped here, because `invalidAnswers` reports it.
+ */
+export function blockingAnswer(
+  questions: readonly Question[],
+  answers: Answers,
+  onDate: string
+): BlockingAnswer | null {
+  for (const question of questions) {
+    const value = answers[question.id];
+    if (typeof value !== 'string') continue;
+
+    for (const block of question.blocks_application_when ?? []) {
+      if (block.rule === 'answer_in' && block.value.includes(value)) {
+        return { question_id: question.id, rule: 'answer_in' };
+      }
+      if (block.rule === 'age_under' && isRealDate(value) && ageOn(value, onDate) < block.value) {
+        return { question_id: question.id, rule: 'age_under', min_age: block.value };
+      }
+    }
+  }
+  return null;
 }

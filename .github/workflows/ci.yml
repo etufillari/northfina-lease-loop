@@ -64,6 +64,9 @@ jobs:
       - name: No AI/ML in the app
         run: npm run check:no-ai
 
+      - name: Every schema change has a migration
+        run: npm run check:migrations
+
       - name: Tests with coverage
         run: npm run test:coverage
 

@@ -75,52 +75,55 @@ export function MonthlyInvoices({
   return (
     <section
       aria-labelledby={headingId}
-      className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm"
+      className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
     >
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-[16px] border-b border-[#ededed] pb-[16px]">
+      <div className="flex flex-wrap items-start justify-between gap-[16px] border-b border-[#ededed] pb-[16px] dark:border-stone-800">
         <div>
-          <p className="text-[0.75rem] font-semibold tracking-wider text-[#1354a5] uppercase">
+          <p className="text-[0.75rem] font-semibold tracking-wider text-[#1354a5] uppercase dark:text-sky-400">
             {t('invoices.eyebrow')}
           </p>
           <h2 id={headingId} className="mt-[4px] text-[1.375rem] leading-tight font-bold">
             {title ?? t('invoices.title')}
           </h2>
-          <p className="mt-[4px] text-[0.875rem] text-[#615b57]">
+          <p className="mt-[4px] text-[0.875rem] text-[#615b57] dark:text-stone-400">
             {t('invoices.intro', {
               netRent: formatEuro(schedule.monthlyNetRentCents, intlTag),
             })}
           </p>
         </div>
 
-        <span className="inline-flex items-center gap-[8px] rounded-full bg-[#f6f7f8] px-[12px] py-[4px] text-[0.75rem] font-semibold text-[#123054] ring-1 ring-[#ccd7e6] ring-inset">
-          <span aria-hidden="true" className="size-[8px] rounded-full bg-[#2877d7]" />
+        <span className="inline-flex items-center gap-[8px] rounded-full bg-[#f6f7f8] px-[12px] py-[4px] text-[0.75rem] font-semibold text-[#123054] ring-1 ring-[#ccd7e6] ring-inset dark:bg-stone-800 dark:text-sky-200 dark:ring-stone-700">
+          <span
+            aria-hidden="true"
+            className="size-[8px] rounded-full bg-[#2877d7] dark:bg-sky-400"
+          />
           {t('invoices.priceLockedBadge')}
         </span>
       </div>
 
       {/* Schedule Summary Banner */}
-      <div className="my-[20px] grid grid-cols-1 gap-[16px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] sm:grid-cols-3">
+      <div className="my-[20px] grid grid-cols-1 gap-[16px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] sm:grid-cols-3 dark:border-sky-950 dark:bg-stone-800/80">
         <div>
-          <p className="text-[0.75rem] font-medium text-[#615b57]">
+          <p className="text-[0.75rem] font-medium text-[#615b57] dark:text-stone-400">
             {t('invoices.summaryTotalNet')}
           </p>
-          <p className="mt-[2px] font-mono text-[1.125rem] font-bold text-[#123054] tabular-nums">
+          <p className="mt-[2px] font-mono text-[1.125rem] font-bold text-[#123054] tabular-nums dark:text-sky-200">
             {formatEuro(schedule.totalNetRentCents, intlTag)}
           </p>
-          <p className="text-[0.75rem] text-[#615b57]">
+          <p className="text-[0.75rem] text-[#615b57] dark:text-stone-400">
             {schedule.termMonths} × {formatEuro(schedule.monthlyNetRentCents, intlTag)}
           </p>
         </div>
 
         <div>
-          <p className="text-[0.75rem] font-medium text-[#615b57]">
+          <p className="text-[0.75rem] font-medium text-[#615b57] dark:text-stone-400">
             {t('invoices.summaryTotalVat')}
           </p>
-          <p className="mt-[2px] font-mono text-[1.125rem] font-bold text-[#123054] tabular-nums">
+          <p className="mt-[2px] font-mono text-[1.125rem] font-bold text-[#123054] tabular-nums dark:text-sky-200">
             {formatEuro(schedule.totalVatCents, intlTag)}
           </p>
-          <p className="text-[0.75rem] text-[#615b57]">
+          <p className="text-[0.75rem] text-[#615b57] dark:text-stone-400">
             {schedule.signingVatRatePercent}%
             {(() => {
               const changedRates = Array.from(
@@ -136,22 +139,22 @@ export function MonthlyInvoices({
         </div>
 
         <div>
-          <p className="text-[0.75rem] font-medium text-[#615b57]">
+          <p className="text-[0.75rem] font-medium text-[#615b57] dark:text-stone-400">
             {t('invoices.summaryTotalGross')}
           </p>
-          <p className="mt-[2px] font-mono text-[1.125rem] font-bold text-[#123054] tabular-nums">
+          <p className="mt-[2px] font-mono text-[1.125rem] font-bold text-[#123054] tabular-nums dark:text-sky-200">
             {formatEuro(schedule.totalGrossCents, intlTag)}
           </p>
-          <p className="text-[0.75rem] text-[#615b57]">
+          <p className="text-[0.75rem] text-[#615b57] dark:text-stone-400">
             {t('invoices.summaryTotalInvoiced', { months: schedule.termMonths })}
           </p>
         </div>
       </div>
 
       {/* Invoice Table */}
-      <div className="overflow-x-auto rounded-[8px] border border-[#dad9d8]">
+      <div className="overflow-x-auto rounded-[8px] border border-[#dad9d8] dark:border-stone-800">
         <table className="w-full border-collapse text-left text-[0.875rem]">
-          <thead className="border-b border-[#dad9d8] bg-[#f7f7f7] text-[0.75rem] font-semibold text-[#615b57] uppercase">
+          <thead className="border-b border-[#dad9d8] bg-[#f7f7f7] text-[0.75rem] font-semibold text-[#615b57] uppercase dark:border-stone-800 dark:bg-stone-800 dark:text-stone-400">
             <tr>
               <th scope="col" className="px-[16px] py-[10px]">
                 {t('invoices.tableHeaderNumber')}
@@ -173,44 +176,44 @@ export function MonthlyInvoices({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#ededed] bg-[#FFFFFF]">
+          <tbody className="divide-y divide-[#ededed] bg-[#FFFFFF] dark:divide-stone-800 dark:bg-stone-900">
             {visibleInvoices.map((inv) => (
               <tr
                 key={inv.invoiceNumber}
-                className={`transition-colors hover:bg-[#f7f7f7] ${
-                  inv.isVatChangedFromSigning ? 'bg-[#f8f7f6]' : ''
+                className={`transition-colors hover:bg-[#f7f7f7] dark:hover:bg-stone-800/60 ${
+                  inv.isVatChangedFromSigning ? 'bg-[#f8f7f6] dark:bg-amber-950/20' : ''
                 }`}
               >
-                <td className="px-[16px] py-[12px] font-mono font-medium text-[#353331]">
+                <td className="px-[16px] py-[12px] font-mono font-medium text-[#353331] dark:text-stone-200">
                   #{inv.invoiceNumber}
                 </td>
-                <td className="px-[16px] py-[12px] whitespace-nowrap text-[#353331]">
+                <td className="px-[16px] py-[12px] whitespace-nowrap text-[#353331] dark:text-stone-200">
                   <div>
                     <span className="font-medium">{formatIsoDate(inv.dueDate, locale)}</span>
-                    <span className="ml-[8px] font-mono text-[0.75rem] text-[#615b57]">
+                    <span className="ml-[8px] font-mono text-[0.75rem] text-[#615b57] dark:text-stone-400">
                       ({inv.dueDate})
                     </span>
                   </div>
                 </td>
-                <td className="px-[16px] py-[12px] text-right font-mono text-[#353331] tabular-nums">
+                <td className="px-[16px] py-[12px] text-right font-mono text-[#353331] tabular-nums dark:text-stone-200">
                   {formatEuro(inv.netRentCents, intlTag)}
                 </td>
                 <td className="px-[16px] py-[12px] text-center">
                   <div className="inline-flex flex-col items-center gap-[2px]">
-                    <span className="font-mono text-[0.875rem] font-medium text-[#353331]">
+                    <span className="font-mono text-[0.875rem] font-medium text-[#353331] dark:text-stone-200">
                       {inv.vatRatePercent.toFixed(1)}%
                     </span>
                     {inv.isVatChangedFromSigning ? (
-                      <span className="inline-flex items-center rounded-full bg-[#f8f7f6] px-[8px] py-[2px] text-[0.6875rem] font-semibold text-[#b76200] ring-1 ring-[#e9dac8] ring-inset">
+                      <span className="inline-flex items-center rounded-full bg-[#f8f7f6] px-[8px] py-[2px] text-[0.6875rem] font-semibold text-[#b76200] ring-1 ring-[#e9dac8] ring-inset dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900/60">
                         {t('invoices.vatChangeBadge', { rate: inv.vatRatePercent })}
                       </span>
                     ) : null}
                   </div>
                 </td>
-                <td className="px-[16px] py-[12px] text-right font-mono text-[#615b57] tabular-nums">
+                <td className="px-[16px] py-[12px] text-right font-mono text-[#615b57] tabular-nums dark:text-stone-400">
                   {formatEuro(inv.vatCents, intlTag)}
                 </td>
-                <td className="px-[16px] py-[12px] text-right font-mono font-bold text-[#123054] tabular-nums">
+                <td className="px-[16px] py-[12px] text-right font-mono font-bold text-[#123054] tabular-nums dark:text-sky-200">
                   {formatEuro(inv.grossTotalCents, intlTag)}
                 </td>
               </tr>
@@ -222,7 +225,7 @@ export function MonthlyInvoices({
       {/* Expand / Collapse Controls */}
       {canToggle ? (
         <div className="mt-[16px] flex flex-wrap items-center justify-between gap-[12px]">
-          <p className="text-[0.75rem] text-[#615b57]">
+          <p className="text-[0.75rem] text-[#615b57] dark:text-stone-400">
             {!isExpanded
               ? t('invoices.firstThreeNotice')
               : t('invoices.summaryTotalInvoiced', { months: schedule.termMonths })}
@@ -231,7 +234,7 @@ export function MonthlyInvoices({
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#1354a5] transition-colors hover:bg-[#ededed]"
+            className="rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#1354a5] transition-colors hover:bg-[#ededed] dark:border-stone-700 dark:bg-stone-800 dark:text-sky-400 dark:hover:bg-stone-700"
           >
             {isExpanded
               ? t('invoices.showFirstThreeButton')

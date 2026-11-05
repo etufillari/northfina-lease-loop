@@ -90,29 +90,31 @@ export default async function InvoicesPage({
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-[16px] py-[32px] text-[#353331] sm:px-[24px] sm:py-[48px]">
+    <div className="mx-auto max-w-6xl px-[16px] py-[32px] text-[#353331] sm:px-[24px] sm:py-[48px] dark:text-stone-100">
       <div>
         <Link
           href={`/${locale}`}
-          className="inline-flex items-center gap-[8px] text-[0.875rem] font-semibold text-[#1354a5] underline"
+          className="inline-flex items-center gap-[8px] text-[0.875rem] font-semibold text-[#1354a5] underline dark:text-sky-400"
         >
           ← {t('invoices.backToCatalogue')}
         </Link>
         <h1 className="mt-[16px] text-[2.25rem] leading-tight font-bold">
           {t('invoices.pageTitle')}
         </h1>
-        <p className="mt-[8px] text-[1.125rem] text-[#615b57]">{t('invoices.pageIntro')}</p>
+        <p className="mt-[8px] text-[1.125rem] text-[#615b57] dark:text-stone-400">
+          {t('invoices.pageIntro')}
+        </p>
       </div>
 
       <div className="mt-[32px] space-y-[32px]">
         {/* Signed contract summary card */}
         <section
           aria-labelledby="contract-summary-heading"
-          className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm"
+          className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
         >
-          <div className="flex flex-wrap items-start justify-between gap-[16px] border-b border-[#ededed] pb-[16px]">
+          <div className="flex flex-wrap items-start justify-between gap-[16px] border-b border-[#ededed] pb-[16px] dark:border-stone-800">
             <div>
-              <p className="text-[0.75rem] font-semibold tracking-wider text-[#1354a5] uppercase">
+              <p className="text-[0.75rem] font-semibold tracking-wider text-[#1354a5] uppercase dark:text-sky-400">
                 {t('contract.eyebrow')}
               </p>
               <h2
@@ -121,21 +123,24 @@ export default async function InvoicesPage({
               >
                 {t('invoices.contractSummaryTitle')}
               </h2>
-              <p className="mt-[4px] text-[0.875rem] text-[#615b57]">
+              <p className="mt-[4px] text-[0.875rem] text-[#615b57] dark:text-stone-400">
                 {asset.make} {asset.model} ·{' '}
                 {t('contract.serialNumber', { serial: asset.serial_number })}
               </p>
             </div>
 
-            <span className="inline-flex items-center gap-[8px] rounded-full bg-[#eaf0ec] px-[8px] py-[4px] text-[0.75rem] font-semibold text-[#14522a] ring-1 ring-[#cde5d5] ring-inset">
-              <span aria-hidden="true" className="size-[8px] rounded-full bg-[#16A34A]" />
+            <span className="inline-flex items-center gap-[8px] rounded-full bg-[#eaf0ec] px-[8px] py-[4px] text-[0.75rem] font-semibold text-[#14522a] ring-1 ring-[#cde5d5] ring-inset dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+              <span
+                aria-hidden="true"
+                className="size-[8px] rounded-full bg-[#16A34A] dark:bg-emerald-400"
+              />
               {t('contract.statusSigned')}
             </span>
           </div>
 
           <div
             role="status"
-            className="mt-[16px] rounded-[8px] border border-[#cde5d5] bg-[#eaf0ec] p-[16px] text-[#14522a]"
+            className="mt-[16px] rounded-[8px] border border-[#cde5d5] bg-[#eaf0ec] p-[16px] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
           >
             <p className="text-[0.875rem] font-semibold">
               {t('contract.signedBannerTitle', { date: formattedSignedDate })}
@@ -154,10 +159,12 @@ export default async function InvoicesPage({
             {summaryRows.map(([label, value]) => (
               <div
                 key={label}
-                className="flex items-baseline justify-between gap-[16px] border-b border-[#ededed] pb-[8px]"
+                className="flex items-baseline justify-between gap-[16px] border-b border-[#ededed] pb-[8px] dark:border-stone-800"
               >
-                <dt className="text-[#615b57]">{label}</dt>
-                <dd className="font-mono font-semibold text-[#353331] tabular-nums">{value}</dd>
+                <dt className="text-[#615b57] dark:text-stone-400">{label}</dt>
+                <dd className="font-mono font-semibold text-[#353331] tabular-nums dark:text-stone-200">
+                  {value}
+                </dd>
               </div>
             ))}
           </dl>
@@ -182,11 +189,11 @@ function Message({ locale, text }: { locale: Locale; text: string }) {
     <div className="mx-auto max-w-6xl px-[16px] py-[32px] sm:px-[24px] sm:py-[48px]">
       <Link
         href={`/${locale}`}
-        className="inline-flex items-center gap-[8px] text-[0.875rem] font-semibold text-[#1354a5] underline"
+        className="inline-flex items-center gap-[8px] text-[0.875rem] font-semibold text-[#1354a5] underline dark:text-sky-400"
       >
         ← {t('invoices.backToCatalogue')}
       </Link>
-      <p className="mt-[16px] rounded-[12px] border border-[#e9dac8] bg-[#f8f7f6] p-[24px] text-[#5c360a]">
+      <p className="mt-[16px] rounded-[12px] border border-[#e9dac8] bg-[#f8f7f6] p-[24px] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
         {text}
       </p>
     </div>

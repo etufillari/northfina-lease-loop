@@ -156,7 +156,7 @@ export function ApplicationForm({
         aria-labelledby="questions-heading"
         aria-busy={state.status === 'loading'}
         onSubmit={(event) => event.preventDefault()}
-        className="space-y-[24px] rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331]"
+        className="space-y-[24px] rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
       >
         <h2 id="questions-heading" className="text-[1.375rem] leading-tight font-bold">
           {t('apply.questions.heading')}
@@ -165,7 +165,7 @@ export function ApplicationForm({
         {removed.length > 0 ? (
           <div
             role="status"
-            className="rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] text-[#123054]"
+            className="rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] text-[#123054] dark:border-sky-950 dark:bg-stone-800/80 dark:text-sky-200"
           >
             <p className="font-semibold">{t('apply.dropped')}</p>
             <ul className="mt-[4px] list-disc pl-[20px]">
@@ -176,9 +176,11 @@ export function ApplicationForm({
           </div>
         ) : null}
 
-        {state.status === 'loading' ? <p>{t('apply.checking')}</p> : null}
+        {state.status === 'loading' ? (
+          <p className="text-[#615b57] dark:text-stone-400">{t('apply.checking')}</p>
+        ) : null}
         {state.status === 'error' ? (
-          <p role="alert" className="text-[#DC2626]">
+          <p role="alert" className="text-[#DC2626] dark:text-red-400">
             {t('apply.error')}
           </p>
         ) : null}

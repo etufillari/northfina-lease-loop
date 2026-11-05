@@ -90,10 +90,12 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 text-[#353331] sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-10 text-[#353331] sm:px-6 sm:py-14 dark:text-stone-100">
       <div className="max-w-2xl">
         <h1 className="text-[2.25rem] leading-tight font-bold">{t('apply.title')}</h1>
-        <p className="mt-[12px] text-[1.125rem] text-[#615b57]">{t('apply.intro')}</p>
+        <p className="mt-[12px] text-[1.125rem] text-[#615b57] dark:text-stone-400">
+          {t('apply.intro')}
+        </p>
       </div>
       <div className="mt-[32px]">
         <ApplicationForm
@@ -142,7 +144,7 @@ function DealSummary({
   return (
     <section
       aria-labelledby="deal-heading"
-      className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331]"
+      className="rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
     >
       <h2 id="deal-heading" className="text-[1.375rem] leading-tight font-bold">
         {t('apply.deal.heading')}
@@ -150,7 +152,7 @@ function DealSummary({
       <dl className="mt-[12px] space-y-[8px] text-[0.875rem]">
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-[16px]">
-            <dt className="text-[#615b57]">{label}</dt>
+            <dt className="text-[#615b57] dark:text-stone-400">{label}</dt>
             <dd className="text-right font-semibold">{value}</dd>
           </div>
         ))}
@@ -163,7 +165,7 @@ function DealSummary({
 function Message({ text }: { text: string }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <p className="rounded-[12px] border border-[#e9dac8] bg-[#f8f7f6] p-[24px] text-[#5c360a]">
+      <p className="rounded-[12px] border border-[#e9dac8] bg-[#f8f7f6] p-[24px] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
         {text}
       </p>
     </div>

@@ -21,6 +21,7 @@ import {
 import { formatIsoDate } from '@/i18n/format';
 import { getT, messages, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { refusalText } from '@/i18n/refusals';
 
 export type Persona = { id: string; name: string; answers: Answers };
 
@@ -40,11 +41,8 @@ export type ApplicationFormProps = {
 
 /** What the person typed, per question id. Turned into answers by `toAnswers`. */
 type Drafts = Record<string, string>;
-/**
- * `mismatch`: the server found answers that contradict the chosen customer's record.
- * `stale`: the price or the quote changed since this page was drawn; it is redrawn.
- */
-type Signing = 'idle' | 'busy' | 'error' | 'mismatch' | 'stale';
+/** `refused`: the server said no; its code picks the message (D-038). */
+type Signing = 'idle' | 'busy' | 'refused';
 type PriceChoice = 'keep_quote' | 'todays_price';
 
 export function ApplicationForm(props: ApplicationFormProps) {
@@ -56,6 +54,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
   // Answers the person has seen on screen; only those get the "set aside" note when dropped.
   const [shown, setShown] = useState<readonly string[]>([]);
   const [signing, setSigning] = useState<Signing>('idle');
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
   const personaFieldId = useId();
   // A persona's answers are facts on its record; the server refuses anything else (D-031).
   const persona = props.personas.find((p) => p.id === personaId);
@@ -126,13 +125,11 @@ export function ApplicationForm(props: ApplicationFormProps) {
       router.push(`/${locale}/contracts/${body.data.id}`);
       return;
     }
-    const code = body?.error?.code ?? '';
-    if (STALE_CODES.has(code)) {
-      setSigning('stale');
-      router.refresh();
-      return;
-    }
-    setSigning(code === 'ANSWERS_DO_NOT_MATCH_CUSTOMER' ? 'mismatch' : 'error');
+    const code = body?.error?.code;
+    setRefusal(code);
+    setSigning('refused');
+    // The page is out of date: redraw it with the current quote and prices; the message stays.
+    if (code !== undefined && STALE_CODES.has(code)) router.refresh();
   }
 
   return (
@@ -187,6 +184,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
           locale={locale}
           t={t}
           signing={signing}
+          refusal={refusal}
           monthlyNetRentCents={props.monthlyNetRentCents}
           offer={props.offer}
           onSign={(choice) => void sign(choice)}
@@ -302,6 +300,8 @@ function DecisionPanel(props: {
   locale: Locale;
   t: Translate;
   signing: Signing;
+  /** The code the server refused with, when `signing` is `refused`. */
+  refusal: string | undefined;
   monthlyNetRentCents: number;
   offer: ApplicationFormProps['offer'];
   onSign: (choice?: PriceChoice) => void;
@@ -377,15 +377,9 @@ function DecisionPanel(props: {
         </button>
       )}
       <p className="mt-2 text-xs text-muted">{t('lease.signNote')}</p>
-      {props.signing === 'error' || props.signing === 'mismatch' || props.signing === 'stale' ? (
+      {props.signing === 'refused' ? (
         <p role="alert" className="mt-3 text-sm font-medium text-danger">
-          {t(
-            props.signing === 'mismatch'
-              ? 'lease.errorRecord'
-              : props.signing === 'stale'
-                ? 'quote.stale'
-                : 'lease.error'
-          )}
+          {refusalText(t, props.refusal, 'lease.error')}
         </p>
       ) : null}
     </aside>

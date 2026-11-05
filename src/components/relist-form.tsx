@@ -11,6 +11,7 @@ import type { SecondLifeOption, ValueLine } from '@/domain/second-life';
 import { formatNumber } from '@/i18n/format';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { refusalText } from '@/i18n/refusals';
 
 export type RelistFormProps = {
   locale: Locale;
@@ -29,6 +30,8 @@ export function RelistForm(props: RelistFormProps) {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const [target, setTarget] = useState<AssetCondition>(props.suggested);
   const [saving, setSaving] = useState<'idle' | 'busy' | 'error'>('idle');
+  // The code the server refused with picks the message (D-038).
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
   const option = options.find((o) => o.target === target) ?? options[0];
   if (!option) return null;
   const { valuation } = option;
@@ -42,11 +45,15 @@ export function RelistForm(props: RelistFormProps) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ target }),
     }).catch(() => null);
-    const body = (await response?.json().catch(() => null)) as { success: boolean } | null;
+    const body = (await response?.json().catch(() => null)) as {
+      success: boolean;
+      error?: { code: string };
+    } | null;
     if (body?.success) {
       router.refresh();
       return;
     }
+    setRefusal(body?.error?.code);
     setSaving('error');
   }
 
@@ -171,7 +178,7 @@ export function RelistForm(props: RelistFormProps) {
       </button>
       {saving === 'error' ? (
         <p role="alert" className="mt-2 text-sm text-warn-fg">
-          {t('secondLife.relistError')}
+          {refusalText(t, refusal, 'secondLife.relistError')}
         </p>
       ) : null}
     </div>

@@ -13,6 +13,7 @@ import { vatRateOn, withVat } from '@/domain/vat';
 import { formatFactor, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { refusalText } from '@/i18n/refusals';
 import { PriceOverTerm, TermComparison } from './price-over-term';
 
 type Bounds = Extract<DownPaymentBounds, { ok: true }>;
@@ -197,6 +198,8 @@ function QuoteButton(props: {
   const t = getT(locale);
   const router = useRouter();
   const [state, setState] = useState<'idle' | 'busy' | 'error'>('idle');
+  // The code the server refused with picks the message (D-038).
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
   async function save() {
     setState('busy');
@@ -212,11 +215,13 @@ function QuoteButton(props: {
     const body = (await response?.json().catch(() => null)) as {
       success: boolean;
       data?: { id: number };
+      error?: { code: string };
     } | null;
     if (body?.success && body.data) {
       router.push(`/${locale}/quotes/${body.data.id}`);
       return;
     }
+    setRefusal(body?.error?.code);
     setState('error');
   }
 
@@ -233,7 +238,7 @@ function QuoteButton(props: {
       <p className="mt-2 text-xs text-muted">{t('quote.saveNote', { days: QUOTE_VALID_DAYS })}</p>
       {state === 'error' ? (
         <p role="alert" className="mt-3 text-sm font-medium text-danger">
-          {t('quote.saveError')}
+          {refusalText(t, refusal, 'quote.saveError')}
         </p>
       ) : null}
     </div>

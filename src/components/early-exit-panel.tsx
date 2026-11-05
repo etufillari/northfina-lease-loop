@@ -19,6 +19,7 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { refusalText } from '@/i18n/refusals';
 
 type Kind = EarlyExitChoice['kind'];
 
@@ -46,6 +47,8 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
   const [condition, setCondition] = useState<AssetCondition>(delivered.condition);
   const [usage, setUsage] = useState(String(delivered.usageValue));
   const [saving, setSaving] = useState<'idle' | 'busy' | 'error'>('idle');
+  // The code the server refused with picks the message (D-038).
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
   const usageValue = /^\d+$/.test(usage) ? Number(usage) : null;
   const handingBack = kind === 'early_hand_back';
@@ -72,11 +75,15 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(choice),
     }).catch(() => null);
-    const body = (await response?.json().catch(() => null)) as { success: boolean } | null;
+    const body = (await response?.json().catch(() => null)) as {
+      success: boolean;
+      error?: { code: string };
+    } | null;
     if (body?.success) {
       router.refresh();
       return;
     }
+    setRefusal(body?.error?.code);
     setSaving('error');
   }
 
@@ -203,7 +210,7 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
       </button>
       {saving === 'error' ? (
         <p role="alert" className="mt-2 text-sm text-warn-fg">
-          {t('end.error')}
+          {refusalText(t, refusal, 'end.error')}
         </p>
       ) : null}
     </div>

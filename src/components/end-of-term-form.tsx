@@ -22,6 +22,7 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { refusalText } from '@/i18n/refusals';
 
 export type EndOfTermFormProps = {
   locale: Locale;
@@ -51,6 +52,8 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
   const [lessee, setLessee] = useState(props.personas[0]?.id ?? '');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState<'idle' | 'busy' | 'error'>('idle');
+  // The code the server refused with picks the message (D-038).
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
   const dates = endOfTermDates(contract);
   const preview = buyoutInvoice(contract, props.vatRates, dates.handoverDate);
@@ -79,11 +82,15 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(choice),
     }).catch(() => null);
-    const body = (await response?.json().catch(() => null)) as { success: boolean } | null;
+    const body = (await response?.json().catch(() => null)) as {
+      success: boolean;
+      error?: { code: string };
+    } | null;
     if (body?.success) {
       router.refresh();
       return;
     }
+    setRefusal(body?.error?.code);
     setSaving('error');
   }
 
@@ -221,7 +228,7 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
       </button>
       {saving === 'error' ? (
         <p role="alert" className="mt-2 text-sm text-warn-fg">
-          {t('end.error')}
+          {refusalText(t, refusal, 'end.error')}
         </p>
       ) : null}
     </div>

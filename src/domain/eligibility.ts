@@ -2,6 +2,7 @@
 // (rules in data/questions.json). Decides only on answers whose questions still apply.
 import type { Question } from '@/data/schemas';
 import { addMonthsClamped } from './calendar';
+import { AFFORDABILITY_PERCENT, MANUAL_REVIEW_WHEN } from './pricing-rules';
 import {
   askedQuestions,
   nextQuestion,
@@ -11,9 +12,6 @@ import {
   type Answers,
   type Deal,
 } from './question-flow';
-
-/** Rent incl. VAT may be at most this share of a consumer's monthly net income. */
-const AFFORDABILITY_PERCENT = 30;
 
 export interface ApplicationInput {
   deal: Deal;
@@ -72,7 +70,9 @@ export function decideApplication(
 
   const reviews: DecisionReason[] = [
     ...affordabilityUnknown(answers, input),
-    ...(answers.q_pep === 'yes' ? [{ rule: 'pep_manual_review' as const }] : []),
+    ...MANUAL_REVIEW_WHEN.filter((rule) => answers[rule.questionId] === rule.answer).map(
+      (rule) => ({ rule: rule.reason })
+    ),
   ];
   const outcome =
     declines.length > 0 ? 'declined' : reviews.length > 0 ? 'manual_review' : 'approved';

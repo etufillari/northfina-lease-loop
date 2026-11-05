@@ -4,6 +4,7 @@
 // this deal, drops answers that stop applying when an earlier answer changes, and shows the
 // decision (yes, no, or "a person will check") live as the customer answers. The server
 // makes the same decision again when the application is sent.
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import type { Question } from '@/data/schemas';
 import { decideApplication } from '@/domain/application';
@@ -78,6 +79,14 @@ export function ApplicationForm({ questions, context, deal, locale }: Applicatio
         <p className="mt-2">{t('apply.successMessage', { id: submitted.id.slice(0, 8) })}</p>
         {submitted.decision !== 'rejected' ? (
           <p className="mt-2">{t(`apply.successNext.${submitted.decision}`)}</p>
+        ) : null}
+        {submitted.decision === 'approved' ? (
+          <Link
+            href={`/${locale}/applications/${submitted.id}`}
+            className="mt-4 inline-block rounded-lg bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-emerald-800"
+          >
+            {t('apply.toContract')}
+          </Link>
         ) : null}
       </section>
     );

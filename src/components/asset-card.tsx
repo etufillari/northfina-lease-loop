@@ -1,59 +1,45 @@
 // One catalogue item. Plain markup with no state, rendered inside the CatalogueBrowser.
-import type { Asset, AssetStatus } from '@/data/schemas';
+// The whole card is clickable: the title link stretches over it (see `after:inset-0`), which
+// keeps a single, properly named link for keyboard and screen-reader users.
+import Link from 'next/link';
+import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-
-const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
-  available: {
-    badge:
-      'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
-    dot: 'bg-emerald-600 dark:bg-emerald-400',
-  },
-  reserved: {
-    badge:
-      'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800',
-    dot: 'bg-amber-500 dark:bg-amber-400',
-  },
-  returned: {
-    badge:
-      'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
-    dot: 'bg-sky-600 dark:bg-sky-400',
-  },
-};
+import { StatusBadge } from './status-badge';
 
 type AssetCardProps = {
   asset: Asset;
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  /** The catalogue's current filters (`?category=…`), passed on so the item page can link back. */
+  catalogueSearch?: string;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, locale, t, catalogueSearch = '' }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
-  const status = statusStyles[asset.status];
 
   return (
     <article
       aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      className="relative flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-emerald-600 hover:border-emerald-300 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 dark:hover:border-emerald-800"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
           <h3 id={headingId} className="text-lg leading-snug font-semibold">
-            {asset.model}
+            <Link
+              href={`/${locale}/assets/${asset.id}${catalogueSearch}`}
+              className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
+            >
+              {asset.model}
+            </Link>
           </h3>
         </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
+        <StatusBadge status={asset.status} t={t} />
       </div>
 
       <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">

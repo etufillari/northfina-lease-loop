@@ -69,7 +69,7 @@ export function addMonthsClamped(isoDate: string, monthsToAdd: number): string {
   const origMonth = Number(match[2]);
   const origDay = Number(match[3]);
 
-  const totalMonths = (origYear * 12 + (origMonth - 1)) + monthsToAdd;
+  const totalMonths = origYear * 12 + (origMonth - 1) + monthsToAdd;
   const targetYear = Math.floor(totalMonths / 12);
   const targetMonth = (totalMonths % 12) + 1;
 
@@ -150,7 +150,9 @@ export function generateInvoiceSchedule(input: GenerateInvoiceScheduleInput): In
     throw new RangeError(`termMonths must be a positive integer, got ${termMonths}`);
   }
   if (!Number.isInteger(monthlyNetRentCents) || monthlyNetRentCents < 0) {
-    throw new RangeError(`monthlyNetRentCents must be a non-negative integer, got ${monthlyNetRentCents}`);
+    throw new RangeError(
+      `monthlyNetRentCents must be a non-negative integer, got ${monthlyNetRentCents}`
+    );
   }
 
   const signingVat = vatRateOn(vatRates, signedOn);

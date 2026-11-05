@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { loadCoefficientTable } from '@/data/load';
-import { checkSignable, contractPeriod } from '@/domain/contract';
+import { checkSignable, contractPeriod, contractStage } from '@/domain/contract';
 import { percentOfCents } from '@/domain/money';
 import { getApplication } from './applications';
 import { withAudit } from './audit';
@@ -30,6 +30,7 @@ export type Contract = {
   monthlyNetCents: number;
   buyoutCents: number;
   status: string;
+  returnedDate: string | null;
 };
 
 function toContract(row: ContractRow): Contract {
@@ -54,12 +55,19 @@ function toContract(row: ContractRow): Contract {
     monthlyNetCents: row.monthly_net_cents,
     buyoutCents: row.buyout_cents,
     status: row.status,
+    returnedDate: row.returned_date,
   };
 }
 
 export async function getContract(db: PrismaClient, id: string): Promise<Contract | null> {
   const row = await db.contract.findUnique({ where: { id } });
   return row ? toContract(row) : null;
+}
+
+/** Every contract, newest first. */
+export async function listContracts(db: PrismaClient): Promise<Contract[]> {
+  const rows = await db.contract.findMany({ orderBy: { created_at: 'desc' } });
+  return rows.map(toContract);
 }
 
 /** The contract signed from an application, if there is one. */
@@ -174,5 +182,48 @@ export async function signContract(
     throw error;
   });
   if (!row) return { ok: false, reason: 'asset_not_available' };
+  return { ok: true, contract: toContract(row) };
+}
+
+export type ReturnContractResult =
+  | { ok: true; contract: Contract }
+  | { ok: false; reason: 'not_found' | 'not_ended' | 'already_returned' };
+
+/**
+ * End of term: the customer returns the item. Allowed only after the lease's last day. In one
+ * transaction the contract is marked returned, the item becomes `returned` (ready for a check
+ * and a second life) with one more completed lease, and a `contract.returned` audit row is
+ * written.
+ */
+export async function returnContract(
+  db: PrismaClient,
+  input: { contractId: string; actor: string },
+  todayIso: string
+): Promise<ReturnContractResult> {
+  const contract = await getContract(db, input.contractId);
+  if (!contract) return { ok: false, reason: 'not_found' };
+  if (contract.status === 'returned') return { ok: false, reason: 'already_returned' };
+  if (contractStage(contract, todayIso) !== 'ended') return { ok: false, reason: 'not_ended' };
+
+  const row = await withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: 'contract.returned',
+      entityType: 'contract',
+      entityId: contract.id,
+      details: { assetId: contract.assetId, endDate: contract.endDate, returnedDate: todayIso },
+    },
+    async (tx) => {
+      await tx.asset.update({
+        where: { id: contract.assetId },
+        data: { status: 'returned', previous_lives: { increment: 1 } },
+      });
+      return tx.contract.update({
+        where: { id: contract.id },
+        data: { status: 'returned', returned_date: todayIso },
+      });
+    }
+  );
   return { ok: true, contract: toContract(row) };
 }

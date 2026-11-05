@@ -80,3 +80,18 @@ export function checkSignable(input: {
   if (age > QUOTE_VALID_DAYS) return { ok: false, reason: 'quote_expired', quoteValidUntil };
   return { ok: true, quoteValidUntil };
 }
+
+export type ContractStage = 'not_started' | 'active' | 'ended';
+
+/**
+ * Where a contract is on `today`: before its start (possible when travelling back in time),
+ * running, or past its last day. A lease that ends on 4 Nov has ended on 5 Nov.
+ */
+export function contractStage(
+  contract: { startDate: string; endDate: string },
+  today: string
+): ContractStage {
+  if (today < contract.startDate) return 'not_started';
+  if (today > contract.endDate) return 'ended';
+  return 'active';
+}

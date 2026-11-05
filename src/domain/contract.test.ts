@@ -4,6 +4,7 @@ import {
   addMonths,
   checkSignable,
   contractPeriod,
+  contractStage,
   daysBetween,
   QUOTE_VALID_DAYS,
 } from './contract';
@@ -88,5 +89,22 @@ describe('checkSignable', () => {
     expect(
       checkSignable({ decision: 'approved', quoteDate: '2026-11-05', signDate: '2026-11-04' })
     ).toMatchObject({ ok: false, reason: 'signed_before_quote' });
+  });
+});
+
+describe('contractStage', () => {
+  const lease = { startDate: '2026-11-05', endDate: '2029-11-04' };
+
+  it('is not started before the first day', () => {
+    expect(contractStage(lease, '2026-11-04')).toBe('not_started');
+  });
+
+  it('is active from the first to the last day, both included', () => {
+    expect(contractStage(lease, '2026-11-05')).toBe('active');
+    expect(contractStage(lease, '2029-11-04')).toBe('active');
+  });
+
+  it('has ended from the day after the last day', () => {
+    expect(contractStage(lease, '2029-11-05')).toBe('ended');
   });
 });

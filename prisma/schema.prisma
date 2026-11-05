@@ -96,7 +96,8 @@ model Contract {
   financed_cents     Int
   monthly_net_cents  Int
   buyout_cents       Int
-  status             String // active
+  status             String // active | returned
+  returned_date      String? // YYYY-MM-DD the item came back at the end of the term
 
   @@index([asset_id])
 }

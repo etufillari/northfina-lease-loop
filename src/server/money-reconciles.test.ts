@@ -54,8 +54,15 @@ describe('card 7, the big ticket, signed', () => {
   });
 
   it('bills invoice 0 for the down payment, so the invoices add up to the contract total', async () => {
-    // The same deal for a new company applicant who is not a PEP, so it can be signed.
-    const answers = { ...haapalaAnswers(), q_pep: 'no' };
+    // The same deal for a new company applicant who is not a PEP, so it can be signed. Its own
+    // email and business ID (1572860-0: weighted sum 220, mod 11 = 0), or it would be held to
+    // Haapala's record (D-040).
+    const answers = {
+      ...haapalaAnswers(),
+      q_email: 'office@newfarm.example.com',
+      q_business_id: '1572860-0',
+      q_pep: 'no',
+    };
     const signed = await quoteAndSign(db, data, { ...card7, answers });
     if (!signed.ok) throw new Error(signed.reason);
     const found = await getContract(db, signed.id);

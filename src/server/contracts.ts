@@ -6,7 +6,7 @@ import type { AssetCategory } from '@/data/schemas';
 import { signContract, type Contract, type SignResult } from '@/domain/contract';
 import { decideApplication } from '@/domain/eligibility';
 import { invoiceSchedule } from '@/domain/invoicing';
-import { answersNotMatchingCustomer } from '@/domain/persona';
+import { answersNotMatchingCustomer, customerOnRecord } from '@/domain/persona';
 import type { Answers } from '@/domain/question-flow';
 import type { Quote } from '@/domain/quote';
 import { quoteToSign, type PriceChoice, type QuoteToSign } from '@/domain/signing';
@@ -83,9 +83,11 @@ export async function signLease(
   const asset = await db.asset.findUnique({ where: { id: stored.quote.assetId } });
   if (!asset) return { ok: false, reason: 'asset_not_found' };
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
+  // A named customer must exist; an unnamed one may still be on record by email or business
+  // ID, and is then held to that record too (D-031, D-040).
   const customer =
     input.customerId === undefined
-      ? undefined
+      ? customerOnRecord(data.customers, input.answers)
       : data.customers.find((c) => c.id === input.customerId);
   if (input.customerId !== undefined && !customer) return { ok: false, reason: 'unknown_customer' };
 
@@ -118,7 +120,7 @@ export async function signLease(
   if (refusal) return { ok: false, reason: refusal };
 
   const signed = signContract(quote, {
-    customerId: input.customerId ?? `email:${String(input.answers.q_email)}`,
+    customerId: customer?.id ?? `email:${String(input.answers.q_email)}`,
     signDate: input.today,
     startDate: input.today,
   });

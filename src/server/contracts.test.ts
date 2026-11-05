@@ -185,7 +185,12 @@ describe('signLease and the application', () => {
     // PEP is only asked from 10 000 € financed: farm-008 is 12 900 € (1 290 000 cents).
     // A new applicant, not a persona: Aino's record says she is not a PEP.
     const { customerId: _persona, ...anonymous } = aino;
-    const pep = { ...ainoAnswers, q_pep: 'yes', q_pep_details: 'Member of parliament' };
+    const pep = {
+      ...ainoAnswers,
+      q_email: 'new.applicant@example.com',
+      q_pep: 'yes',
+      q_pep_details: 'Member of parliament',
+    };
     const { q_usage_purpose: _usage, ...answers } = pep;
     expect(
       await quoteAndSign({
@@ -205,10 +210,11 @@ describe('signLease and the application', () => {
 
   it('names a new applicant (not a data-pack persona) by their email', async () => {
     const { customerId: _persona, ...anonymous } = aino;
-    const result = await quoteAndSign(anonymous);
+    const answers = { ...ainoAnswers, q_email: 'new.applicant@example.com' };
+    const result = await quoteAndSign({ ...anonymous, answers });
     expect(result).toMatchObject({
       ok: true,
-      contract: { customerId: 'email:aino.virtanen@example.com' },
+      contract: { customerId: 'email:new.applicant@example.com' },
     });
   });
 });
@@ -252,7 +258,7 @@ describe('signLease and the named customer', () => {
     expect((await quoteAndSign(aino)).ok).toBe(true);
   });
 
-  it('lets a new applicant (no customer named) give any answers', async () => {
+  it('lets a new applicant (no customer on record) give any answers', async () => {
     // With cust-aino named, this birth date would be refused (her record says 1997-04-12).
     const { customerId: _persona, ...anonymous } = aino;
     const answers = { ...ainoAnswers, q_birth_date: '1990-01-01' };
@@ -260,9 +266,43 @@ describe('signLease and the named customer', () => {
       ok: false,
       reason: 'answers_do_not_match_customer',
     });
-    expect(await quoteAndSign({ ...anonymous, answers })).toMatchObject({
+    const fresh = { ...answers, q_email: 'new.applicant@example.com' };
+    expect(await quoteAndSign({ ...anonymous, answers: fresh })).toMatchObject({
       ok: true,
-      contract: { customerId: 'email:aino.virtanen@example.com' },
+      contract: { customerId: 'email:new.applicant@example.com' },
+    });
+  });
+
+  it("refuses an empty form with Mikko's email and a 1990 birth date (#30)", async () => {
+    // No customerId: the email alone names Mikko, whose record says 2009-03-10 (D-040).
+    const { customerId: _persona, ...emptyForm } = mikko;
+    const answers = { ...mikko.answers, q_birth_date: '1990-03-10' };
+    expect(await quoteAndSign({ ...emptyForm, answers })).toEqual({
+      ok: false,
+      reason: 'answers_do_not_match_customer',
+      questionIds: ['q_birth_date'],
+    });
+    await nothingWritten();
+  });
+
+  it("refuses an empty form with Norvi's business ID under another email (#30)", async () => {
+    const { customerId: _persona, ...emptyForm } = norvi;
+    const { q_signatory_email: _signatory, ...rest } = norviAnswers;
+    const answers = { ...rest, q_email: 'me@elsewhere.example.com', q_can_sign: 'yes' };
+    expect(await quoteAndSign({ ...emptyForm, answers })).toEqual({
+      ok: false,
+      reason: 'answers_do_not_match_customer',
+      questionIds: ['q_email', 'q_can_sign'],
+    });
+    expect(await db.contract.count()).toBe(0);
+    expect(await signingAudit()).toHaveLength(0);
+  });
+
+  it("signs an empty form with Aino's own answers as Aino, not as an email (#30)", async () => {
+    const { customerId: _persona, ...emptyForm } = aino;
+    expect(await quoteAndSign(emptyForm)).toMatchObject({
+      ok: true,
+      contract: { customerId: 'cust-aino' },
     });
   });
 

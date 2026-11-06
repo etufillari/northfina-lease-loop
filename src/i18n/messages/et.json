@@ -282,7 +282,6 @@
   "contract.invoiceKind.rent": "Rent",
   "contract.invoiceKind.down_payment": "Sissemakse",
   "contract.invoiceKind.buyout": "Väljaost",
-  "contract.noInvoices": "Maksegraafikus ei ole arveid."
   "contract.noInvoices": "Maksegraafikus ei ole arveid.",
   "account.invoices.title": "Arved",
   "account.contracts.title": "Lepingud",

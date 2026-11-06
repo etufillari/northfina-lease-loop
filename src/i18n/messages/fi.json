@@ -282,7 +282,6 @@
   "contract.invoiceKind.rent": "Vuokra",
   "contract.invoiceKind.down_payment": "Käsiraha",
   "contract.invoiceKind.buyout": "Lunastus",
-  "contract.noInvoices": "Maksuaikataulussa ei ole laskuja."
   "contract.noInvoices": "Maksuaikataulussa ei ole laskuja.",
   "account.invoices.title": "Laskut",
   "account.contracts.title": "Sopimukset",

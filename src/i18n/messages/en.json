@@ -282,7 +282,6 @@
   "contract.invoiceKind.rent": "Rent",
   "contract.invoiceKind.down_payment": "Down payment",
   "contract.invoiceKind.buyout": "Buyout",
-  "contract.noInvoices": "No invoices in the payment schedule."
   "contract.noInvoices": "No invoices in the payment schedule.",
   "account.invoices.title": "Invoices",
   "account.contracts.title": "Contracts",

@@ -282,7 +282,6 @@
   "contract.invoiceKind.rent": "Hyra",
   "contract.invoiceKind.down_payment": "Första förhöjd hyra",
   "contract.invoiceKind.buyout": "Utköp",
-  "contract.noInvoices": "Det finns inga fakturor i betalningsplanen."
   "contract.noInvoices": "Det finns inga fakturor i betalningsplanen.",
   "account.invoices.title": "Fakturor",
   "account.contracts.title": "Avtal",

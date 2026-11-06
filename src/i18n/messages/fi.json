@@ -530,7 +530,7 @@
   "secondLife.skipped.still_not_listable": "Ei nostoa: {from} → {to} maksaisi itsensä takaisin, mutta kuntoluokassa {to} sitä ei vieläkään voi listata eikä kukaan jonossa ota sitä – joten se siirretään varaosiksi.",
   "secondLife.factors": "Ikä {months} kk → {age} % · {condition} × {multiplier} · {usage} → {usagePercent} %",
   "secondLife.inspection.title": "Palautustarkastus",
-  "secondLife.inspection.suggestion": "Lähti kuntoluokassa {out}, tällä vuokrauksella käyttöä {used}. Ehdotus: {suggested} – käytetty tuote on parhaimmillaan kuin uusi, ja se laskee yhden luokan jokaista {step} kohden.",
+  "secondLife.inspection.suggestion": "Lähti kuntoluokassa {out}; tällä vuokrauksella {lease}, yhteensä {used} siitä kun se oli viimeksi {baseline}. Kuluminen lasketaan vuokrausten yli: käytetty tuote on parhaimmillaan kuin uusi ja laskee yhden luokan jokaista {step} kohden. Ehdotus: {suggested}.",
   "secondLife.inspection.pending": "Ei vielä tarkastettu: alla oleva päätös käyttää ehdotusta, ja sen toteuttaminen hyväksyy sen.",
   "secondLife.inspection.done": "Tarkastettu: {condition}.",
   "secondLife.inspection.grade": "Kunto",

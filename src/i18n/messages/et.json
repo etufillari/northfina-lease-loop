@@ -530,7 +530,7 @@
   "secondLife.skipped.still_not_listable": "Tõstmist pole: {from} → {to} tasuks end ära, kuid seisukorras {to} ei saa seda ikka nimekirja panna ja keegi järjekorrast seda ei võta – seega läheb see varuosadeks.",
   "secondLife.factors": "Vanus {months} kuud → {age} % · {condition} × {multiplier} · {usage} → {usagePercent} %",
   "secondLife.inspection.title": "Tagastuse ülevaatus",
-  "secondLife.inspection.suggestion": "Läks välja seisukorras {out}, selle rendiga kasutust {used}. Soovitus: {suggested} – kasutatud ese on parimal juhul nagu uus ja langeb ühe astme iga {step} kohta.",
+  "secondLife.inspection.suggestion": "Läks välja seisukorras {out}; selle rendiga {lease}, kokku {used} alates sellest, kui see oli viimati {baseline}. Kulumist arvestatakse üle rentide: kasutatud ese on parimal juhul nagu uus ja langeb ühe astme iga {step} kohta. Soovitus: {suggested}.",
   "secondLife.inspection.pending": "Veel üle vaatamata: allolev otsus kasutab soovitust ja selle täitmine kinnitab soovituse.",
   "secondLife.inspection.done": "Üle vaadatud: {condition}.",
   "secondLife.inspection.grade": "Seisukord",

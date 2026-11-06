@@ -80,10 +80,15 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   − net already paid + a handling fee of one month of the re-priced tier's rent, capped at
   the remaining contract payments, floored at 0, plus VAT at the exit date. At k = term the
   cost is 0 (a plain return). The full calculation is always shown.
-- **Return inspection:** a wear charge only for abnormal use — expected residual value
-  (age curve × "good" × normal usage) versus actual. **Delivery use** (from
-  `q_usage_purpose`) doubles the allowed usage before wear counts as abnormal; a battery
-  past its threshold is refurbishment, not a customer charge.
+- **Return inspection (designed, deferred — not in the code):** the usage purpose from
+  `q_usage_purpose` is locked on the contract at signing, and the monthly price is never
+  adjusted for a self-declared purpose. Wear is internalized through second-life
+  re-pricing instead: a returned item's new financed amount is its market value from
+  `data/residual-curves.json`, so actual km lower what the next customer pays and the
+  residual risk stays with Northfina. The full inspection — a wear charge only for
+  abnormal use (expected residual value, age curve × "good" × normal usage, versus
+  actual), **delivery use** doubling the allowed usage, battery wear counted as
+  refurbishment and never a customer charge — is designed but not implemented.
 - **Pass it on:** (a) mid-lease transfer — the lessee shares a link; the recipient goes
   through the normal question flow against the remaining schedule (no down payment, locked
   rent carries over) and the contract transfers on approval; (b) end-of-term nomination —

@@ -160,36 +160,40 @@ export function AssetCard({
           />
         </dl>
 
-        <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
-          {monthly ? (
-            <>
-              <p className="flex flex-wrap items-baseline gap-x-1">
-                <span className="text-2xl font-semibold tabular-nums">
-                  {euro(showGross ? monthly.grossCents : monthly.netCents)}
-                </span>
-                <span className="text-sm text-stone-600 dark:text-stone-400">
-                  {t('common.perMonth')}
-                </span>
-              </p>
-              <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
-                <span className="whitespace-nowrap">
+        {/* Monthly price bottom left; the list price is its own column on the right, each
+            with its own VAT note so neither amount is ever ambiguous. */}
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
+          <div>
+            {monthly ? (
+              <>
+                <p className="flex flex-wrap items-baseline gap-x-1">
+                  <span className="text-2xl font-semibold tabular-nums">
+                    {euro(showGross ? monthly.grossCents : monthly.netCents)}
+                  </span>
+                  <span className="text-sm text-stone-600 dark:text-stone-400">
+                    {t('common.perMonth')}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
                   {t('catalogue.payments', { count: termMonths })}
-                </span>
-                {' · '}
-                <span className="whitespace-nowrap">{vatNote}</span>
-              </p>
-            </>
-          ) : (
-            <p className="text-xl font-semibold">{t('asset.noPrice')}</p>
-          )}
-          <p className="mt-3 flex items-baseline justify-between gap-3 text-sm">
-            <span className="text-stone-600 dark:text-stone-400">
+                </p>
+                <p className="text-xs text-stone-600 dark:text-stone-400">{vatNote}</p>
+              </>
+            ) : (
+              <p className="text-xl font-semibold">{t('asset.noPrice')}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-stone-600 dark:text-stone-400">
               {secondLife ? t('asset.secondLifePrice') : t('catalogue.listPrice')}
-            </span>
-            <span className="font-medium tabular-nums">
+            </p>
+            <p className="font-medium tabular-nums">
               {listCents !== null ? euro(listCents) : t('asset.noPrice')}
-            </span>
-          </p>
+            </p>
+            {listCents !== null ? (
+              <p className="text-xs text-stone-600 dark:text-stone-400">{vatNote}</p>
+            ) : null}
+          </div>
         </div>
       </div>
     </article>

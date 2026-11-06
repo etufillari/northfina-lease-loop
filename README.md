@@ -55,19 +55,19 @@ has: **who you are** (a customer persona or Staff, instead of a login) and **the
 travel, instead of the calendar). Press **Reset demo** to start from 1 Jan 2026. Time only moves
 forward, so the cards run in date order:
 
-| Date (jump to) | Persona            | Card                                                                                           |
-| -------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| 31 Jan 2026    | Aino Virtanen      | **4** — lease laptop-001 for 36 months; the contract lists due dates 28 Feb 2026 … 29 Feb 2028 |
-| 15 Sep 2026    | Aino Virtanen      | **3** — lease ebike-001 for 24 months; December at 25.5 % VAT, January 2027 at 26 %            |
-| 05 Nov 2026    | Aino Virtanen      | **1** — ebike-003, 36 months, no down payment: rent net/with VAT, invoices, total              |
-| 05 Nov 2026    | Aino → +1 day      | **2** — quote laptop-004 on Thursday (v1), sign Friday (v2 live): v1 stays locked              |
-| 05 Nov 2026    | Mikko Laine        | **5** — laptop-008: the form stops at the birth date and says when he can apply                |
-| 05 Nov 2026    | Norvi Logistics Oy | **6** — ebike-004: approved, waiting for the company's signatory (see Known limits)            |
-| 05 Nov 2026    | Haapalan Tila Oy   | **7** — farm-002, 48 months, €20,000 down: company and ownership questions, manual review      |
-| 05 Nov 2026    | Staff              | **7** cont. — approve Haapala on the staff desk                                                |
-| 05 Nov 2026    | Staff              | **9, 10** — Second-life desk: ebike-007 → wait-02 at €64.97/month; ebike-008 → wait-01         |
-| 05 Nov 2026    | Sanna Mäkelä       | **10** cont. — accept the ebike-008 offer on the waiting list, apply, sign; open its passport  |
-| 06 May 2027    | Aino Virtanen      | **8** — card 1's contract, month 7: early-exit calculation, then confirm                       |
+| Date (jump to) | Persona            | Card                                                                                                 |
+| -------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| 31 Jan 2026    | Aino Virtanen      | **4** — lease laptop-001 for 36 months; the contract lists due dates 28 Feb 2026 … 29 Feb 2028       |
+| 15 Sep 2026    | Aino Virtanen      | **3** — lease ebike-001 for 24 months; December at 25.5 % VAT, January 2027 at 26 %                  |
+| 05 Nov 2026    | Aino Virtanen      | **1** — ebike-003, 36 months, no down payment: rent net/with VAT, invoices, total                    |
+| 05 Nov 2026    | Aino → +1 day      | **2** — quote laptop-004 on Thursday (v1), sign Friday (v2 live): v1 stays locked                    |
+| 05 Nov 2026    | Mikko Laine        | **5** — laptop-008: the form stops at the birth date and says when he can apply                      |
+| 05 Nov 2026    | Norvi Logistics Oy | **6** — ebike-004: approved, the contract sent to the company's signatory, waiting for the signature |
+| 05 Nov 2026    | Haapalan Tila Oy   | **7** — farm-002, 48 months, €20,000 down: company and ownership questions, manual review            |
+| 05 Nov 2026    | Staff              | **7** cont. — approve Haapala on the staff desk                                                      |
+| 05 Nov 2026    | Staff              | **9, 10** — Second-life desk: ebike-007 → wait-02 at €64.97/month; ebike-008 → wait-01               |
+| 05 Nov 2026    | Sanna Mäkelä       | **10** cont. — accept the ebike-008 offer on the waiting list, apply, sign; open its passport        |
+| 06 May 2027    | Aino Virtanen      | **8** — card 1's contract, month 7: early-exit calculation, then confirm                             |
 
 The same cards run as automated tests in
 [src/server/scenario-cards.test.ts](src/server/scenario-cards.test.ts), and the data pack's
@@ -91,9 +91,6 @@ the real date and nobody is signed in until a real login replaces the body of
 
 ## Known limits
 
-- **A company's signatory signs alone**, and the app has no persona or e-mail signing link for
-  them yet, so card 6 ends at "waiting for the signatory" in the browser. The scenario test
-  signs as the signatory on the server.
 - **No wear charge:** wear lowers the next customer's price; a charge for abnormal use is
   designed in DECISIONS.md but not built.
 - **No real login or payments:** the persona picker stands in for sign-in, and invoices are

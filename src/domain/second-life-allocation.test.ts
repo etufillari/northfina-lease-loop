@@ -99,8 +99,9 @@ describe('allocateDesk: pooling for a multi-item waiter', () => {
     );
     expect(outcomes(result)).toEqual({
       'laptop-006': { kind: 'complete_pool', waiterId: 'wait-08', quantity: 3 },
-      // wait-08 is served; laptop-007 (fair) is upgraded for wait-09, next who fits.
-      'laptop-007': { kind: 'offer', waiterId: 'wait-09' },
+      // wait-08 is served; laptop-007 (fair) is upgraded to good, which fits wait-06's budget
+      // and wait-06 joined before the identical wait-14 and wait-09.
+      'laptop-007': { kind: 'offer', waiterId: 'wait-06' },
     });
     expect(result[1]!.decision.upgrade).toMatchObject({ from: 'fair', to: 'good' });
   });

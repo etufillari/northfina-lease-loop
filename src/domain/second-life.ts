@@ -133,15 +133,40 @@ export function matchWaitingList(
   return { winner, considered };
 }
 
+/** The smallest amount a lease can finance (band A minimum, docs/DECISIONS.md). */
+export const MIN_FINANCED_CENTS = 30_000;
+
+export type UpgradeReason =
+  /** Without it nobody on the waiting list accepts the item. */
+  | 'serve_waiter'
+  /** Without it the item cannot be listed (below 'good'); with it, it pays for its work. */
+  | 'reach_listing'
+  /** Listable already, but the value it adds is more than it costs. */
+  | 'pays_for_itself';
+
 export type SecondLifeDecision = {
   requiredItems: RefurbishmentItem[];
   requiredTotalCents: number;
   usageAfterRefurb: number;
+  /** Market value exactly as it came back: its condition and its usage before any work. */
+  valueAsReturnedCents: number;
+  /** Market value after the mandatory work (a new battery resets the usage), no upgrade. */
   valueAsIsCents: number;
-  upgrade: { from: AssetCondition; to: AssetCondition; costCents: number } | null;
+  upgrade: {
+    from: AssetCondition;
+    to: AssetCondition;
+    costCents: number;
+    reason: UpgradeReason;
+  } | null;
   /** Market value at the condition the item ends up in. */
   valueFinalCents: number;
-  /** valueFinal + all refurbishment spent: the financed amount of the next lease. */
+  /** Everything Northfina spends on the item: mandatory work + any upgrade. */
+  workTotalCents: number;
+  /**
+   * The financed amount of the next lease: the market value after the work. Northfina pays
+   * for the work itself — the customer pays for what the item is worth, never twice for a
+   * new battery (once in the higher value and again as a cost).
+   */
   financedCents: number;
   action: 'lease_to_waiter' | 'list_available' | 'parts_bin';
   winnerId: string | null;
@@ -149,12 +174,19 @@ export type SecondLifeDecision = {
 };
 
 /**
- * The whole second-life call for one returned asset, as one deterministic decision:
- * 1. Mandatory work is always done (and may reset the usage counter).
+ * The whole second-life call for one returned asset, as one deterministic decision. The
+ * item is priced at its market value after the work; Northfina pays for the work, so every
+ * piece of work has to pay for itself against the alternative:
+ * 1. Mandatory work is always part of a relisting (and may reset the usage counter). An item
+ *    whose value after it does not exceed its cost goes to parts.
  * 2. As-is first: 'fair' may go to a waiter who accepts fair; 'good' or better to anyone.
- * 3. Otherwise one condition upgrade (never more per return) — to serve a waiter, or to
- *    reach the 'good' needed for a public listing when the value gain covers the cost.
- * 4. An item that still cannot be listed, or would finance under €300, goes to parts.
+ * 3. At most one condition upgrade per return, only when it pays for itself:
+ *    - the item is listable already ('good' or better, at least €300): the value it adds must
+ *      exceed its cost — a good item nobody takes can become like-new if that is worth it;
+ *    - the item is not listable without it: the value after all the work must exceed
+ *      everything spent on it and reach €300 — otherwise parts is the better deal.
+ *    A worthwhile upgrade serves a waiter first, else the catalogue.
+ * 4. Anything else that can be listed is; the rest goes to parts.
  */
 export function secondLifeDecision(
   input: { asset: Asset; originalListPriceCents: number; asOfDate: string },
@@ -169,110 +201,106 @@ export function secondLifeDecision(
   const required = requiredRefurbishments(asset, data.costs);
   const usageAfterRefurb = required.resetsUsage ? 0 : asset.usage.value;
   const ageMonths = ageInMonths(asset.model_year, asOfDate);
-  const valueAt = (condition: AssetCondition) =>
+  const valueAt = (condition: AssetCondition, usageValue: number) =>
     marketValueCents(
-      {
-        originalListPriceCents,
-        category: asset.category,
-        condition,
-        usageValue: usageAfterRefurb,
-        ageMonths,
-      },
+      { originalListPriceCents, category: asset.category, condition, usageValue, ageMonths },
       data.curves
     );
+  const match = (condition: AssetCondition, financedCents: number) =>
+    matchWaitingList(
+      { category: asset.category, condition, financedCents, asOfDate },
+      data.demand,
+      data.table
+    );
 
-  const valueAsIsCents = valueAt(asset.condition);
-  const financedAsIs = valueAsIsCents + required.totalCents;
+  const valueAsIsCents = valueAt(asset.condition, usageAfterRefurb);
   const base = {
     requiredItems: required.items,
     requiredTotalCents: required.totalCents,
     usageAfterRefurb,
+    valueAsReturnedCents: valueAt(asset.condition, asset.usage.value),
     valueAsIsCents,
   };
-
-  // Step 1: as-is to a waiter ('poor' is never leased as-is).
-  if (rank(asset.condition) >= rank('fair')) {
-    const match = matchWaitingList(
-      {
-        category: asset.category,
-        condition: asset.condition,
-        financedCents: financedAsIs,
-        asOfDate,
-      },
-      data.demand,
-      data.table
-    );
-    if (match.winner) {
-      return {
-        ...base,
-        upgrade: null,
-        valueFinalCents: valueAsIsCents,
-        financedCents: financedAsIs,
-        action: 'lease_to_waiter',
-        winnerId: match.winner.id,
-        considered: match.considered,
-      };
-    }
-    // Step 2a: already listable as-is.
-    if (rank(asset.condition) >= rank('good') && financedAsIs >= 30_000) {
-      return {
-        ...base,
-        upgrade: null,
-        valueFinalCents: valueAsIsCents,
-        financedCents: financedAsIs,
-        action: 'list_available',
-        winnerId: null,
-        considered: match.considered,
-      };
-    }
-  }
-
-  // Step 2b: one upgrade, if the data prices it.
-  const to = nextConditionUp(asset.condition);
-  const upgradeCost = to
-    ? data.costs[asset.category].condition_upgrades[`${asset.condition}->${to}`]
-    : undefined;
-  if (to !== undefined && to !== null && upgradeCost !== undefined) {
-    const valueUpgraded = valueAt(to);
-    const financedUpgraded = valueUpgraded + required.totalCents + upgradeCost;
-    const upgrade = { from: asset.condition, to, costCents: upgradeCost };
-    const match = matchWaitingList(
-      { category: asset.category, condition: to, financedCents: financedUpgraded, asOfDate },
-      data.demand,
-      data.table
-    );
-    if (match.winner) {
-      return {
-        ...base,
-        upgrade,
-        valueFinalCents: valueUpgraded,
-        financedCents: financedUpgraded,
-        action: 'lease_to_waiter',
-        winnerId: match.winner.id,
-        considered: match.considered,
-      };
-    }
-    const gainCoversCost = valueUpgraded - valueAsIsCents > upgradeCost;
-    if (rank(to) >= rank('good') && financedUpgraded >= 30_000 && gainCoversCost) {
-      return {
-        ...base,
-        upgrade,
-        valueFinalCents: valueUpgraded,
-        financedCents: financedUpgraded,
-        action: 'list_available',
-        winnerId: null,
-        considered: match.considered,
-      };
-    }
-  }
-
-  return {
+  const asIs = {
     ...base,
     upgrade: null,
     valueFinalCents: valueAsIsCents,
-    financedCents: financedAsIs,
+    workTotalCents: required.totalCents,
+    financedCents: valueAsIsCents,
+  };
+  const parts: SecondLifeDecision = {
+    ...asIs,
     action: 'parts_bin',
     winnerId: null,
     considered: [],
   };
+  const asIsPays = valueAsIsCents > required.totalCents;
+  const listableAsIs =
+    rank(asset.condition) >= rank('good') && valueAsIsCents >= MIN_FINANCED_CENTS && asIsPays;
+
+  // Step 2: as-is to a waiter ('poor' is never leased as-is).
+  const asIsMatch =
+    rank(asset.condition) >= rank('fair') && asIsPays
+      ? match(asset.condition, valueAsIsCents)
+      : null;
+  if (asIsMatch?.winner) {
+    return {
+      ...asIs,
+      action: 'lease_to_waiter',
+      winnerId: asIsMatch.winner.id,
+      considered: asIsMatch.considered,
+    };
+  }
+
+  // Step 3: one upgrade, if the data prices it and it pays for itself.
+  const to = nextConditionUp(asset.condition);
+  const upgradeCost = to
+    ? data.costs[asset.category].condition_upgrades[`${asset.condition}->${to}`]
+    : undefined;
+  if (to && upgradeCost !== undefined) {
+    const valueUpgraded = valueAt(to, usageAfterRefurb);
+    const workTotalCents = required.totalCents + upgradeCost;
+    const pays = listableAsIs
+      ? valueUpgraded - valueAsIsCents > upgradeCost
+      : valueUpgraded > workTotalCents && valueUpgraded >= MIN_FINANCED_CENTS;
+    if (pays) {
+      const upgraded = {
+        ...base,
+        valueFinalCents: valueUpgraded,
+        workTotalCents,
+        financedCents: valueUpgraded,
+      };
+      const upgradedMatch = match(to, valueUpgraded);
+      const upgrade = { from: asset.condition, to, costCents: upgradeCost };
+      if (upgradedMatch.winner) {
+        return {
+          ...upgraded,
+          upgrade: { ...upgrade, reason: listableAsIs ? 'pays_for_itself' : 'serve_waiter' },
+          action: 'lease_to_waiter',
+          winnerId: upgradedMatch.winner.id,
+          considered: upgradedMatch.considered,
+        };
+      }
+      if (rank(to) >= rank('good')) {
+        return {
+          ...upgraded,
+          upgrade: { ...upgrade, reason: listableAsIs ? 'pays_for_itself' : 'reach_listing' },
+          action: 'list_available',
+          winnerId: null,
+          considered: upgradedMatch.considered,
+        };
+      }
+    }
+  }
+
+  // Step 4: listable as it is, or parts.
+  if (listableAsIs) {
+    return {
+      ...asIs,
+      action: 'list_available',
+      winnerId: null,
+      considered: asIsMatch?.considered ?? [],
+    };
+  }
+  return parts;
 }

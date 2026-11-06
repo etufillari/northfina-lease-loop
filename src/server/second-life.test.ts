@@ -83,7 +83,9 @@ describe('scenario card 9: ebike-007', () => {
     expect(decision.usageAfterRefurb).toBe(0);
     expect(decision.upgrade).toBeNull();
     expect(decision.action).toBe('lease_to_waiter');
-    expect(decision.financedCents).toBe(decision.valueFinalCents + 39_500);
+    // Market value after the work: Northfina pays the €395, the customer does not pay twice.
+    expect(decision.financedCents).toBe(decision.valueFinalCents);
+    expect(decision.financedCents).toBe(115_976);
 
     expect(winner?.id).toBe('wait-02');
     expect(winnerQuote?.termMonths).toBe(12);

@@ -138,6 +138,20 @@ describe('browseCatalogue', () => {
     expect(ids({ status: 'reserved' })).toEqual(['bike-b']);
   });
 
+  it('hides sold items unless the sold status is picked', () => {
+    const sold = asset({ id: 'bike-s', make: 'Kettu', model: 'Urban 1', status: 'sold' });
+    const browse = (query: Partial<CatalogueQuery>) =>
+      browseCatalogue([...all, sold], priceLists, '2026-11-05', {
+        ...defaultCatalogueQuery,
+        ...query,
+      }).map((item) => item.asset.id);
+    expect(browse({})).not.toContain('bike-s');
+    expect(browse({ category: 'e_bike', search: 'kettu' })).toEqual(['bike-a']);
+    expect(browse({ status: 'sold' })).toEqual(['bike-s']);
+    // Reserved items still show by default.
+    expect(browse({})).toContain('bike-b');
+  });
+
   it('combines filters and search', () => {
     expect(ids({ category: 'e_bike', status: 'available', search: 'kettu' })).toEqual(['bike-a']);
     expect(ids({ category: 'laptop', search: 'kettu' })).toEqual([]);

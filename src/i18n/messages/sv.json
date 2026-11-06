@@ -137,5 +137,19 @@
   "application.progress.label": "Ansökans förlopp",
   "application.progress.questions": "Frågor",
   "application.progress.review": "Granskning",
-  "application.progress.result": "Resultat"
+  "application.progress.result": "Resultat",
+  "account.applications.loading": "Laddar ansökningar…",
+  "account.applications.error": "Det gick inte att ladda ansökningarna.",
+  "account.applications.errorTitle": "Något gick fel",
+  "account.applications.applicationId": "Ansöknings-ID",
+  "account.applications.status.approved": "Godkänd",
+  "account.applications.status.rejected": "Avslagen",
+  "account.applications.status.manualReview": "Under granskning",
+  "account.applications.term": "Leasingperiod",
+  "account.applications.months": "månader",
+  "account.applications.quantity": "Antal",
+  "account.applications.financedAmount": "Finansierat belopp",
+  "account.applications.contractAvailable": "Avtal tillgängligt",
+  "account.applications.manualReviewDescription": "Din ansökan väntar på manuell granskning.",
+  "account.applications.continueToContract": "Fortsätt till avtalet"
 }

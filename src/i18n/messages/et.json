@@ -137,5 +137,19 @@
   "application.progress.label": "Taotluse edenemine",
   "application.progress.questions": "Küsimused",
   "application.progress.review": "Ülevaatus",
-  "application.progress.result": "Tulemus"
+  "application.progress.result": "Tulemus",
+  "account.applications.loading": "Laaditakse taotlusi…",
+  "account.applications.error": "Taotluste laadimine ebaõnnestus.",
+  "account.applications.errorTitle": "Midagi läks valesti",
+  "account.applications.applicationId": "Taotluse ID",
+  "account.applications.status.approved": "Heaks kiidetud",
+  "account.applications.status.rejected": "Tagasi lükatud",
+  "account.applications.status.manualReview": "Läbivaatamisel",
+  "account.applications.term": "Liisinguperiood",
+  "account.applications.months": "kuud",
+  "account.applications.quantity": "Kogus",
+  "account.applications.financedAmount": "Finantseeritav summa",
+  "account.applications.contractAvailable": "Leping on saadaval",
+  "account.applications.manualReviewDescription": "Sinu taotlus ootab käsitsi läbivaatamist.",
+  "account.applications.continueToContract": "Jätka lepingu juurde"
 }

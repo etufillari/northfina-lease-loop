@@ -18,6 +18,10 @@
       "value": "cust-aino"
     },
     {
+      "key": "applicationId",
+      "value": "application-id-from-previous-response"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -160,6 +164,28 @@
               }
             },
             "url": "{{baseUrl}}/api/applications"
+          }
+        },
+        {
+          "name": "Sign approved application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\",\n  \"signedOn\": \"2026-11-06\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts"
           }
         }
       ]

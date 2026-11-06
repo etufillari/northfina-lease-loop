@@ -8,15 +8,15 @@ import { connection } from 'next/server';
 import { z } from 'zod';
 import { ApplicationForm, type ApplicationDeal } from '@/components/application-form';
 import { ChangeTermsDialog } from '@/components/change-terms-dialog';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { calculateContractQuote } from '@/domain/contract-pricing';
 import { calculateQuoteWithOffer, remainingOfferDays } from '@/domain/offer';
 import { formatEuro } from '@/domain/money';
-import { listPriceOn } from '@/domain/price-list';
+import { effectiveAssetPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
+import { readCoefficientTable, readPriceLists, readVatRates } from '@/server/reference-read';
 import { getActiveReservation } from '@/server/reservations';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
@@ -45,9 +45,9 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
 
   const [assets, priceLists, coefficientTable, vatRates] = await Promise.all([
     listAssets(db),
-    loadPriceLists(),
-    loadCoefficientTable(),
-    loadVatRates(),
+    readPriceLists(db),
+    readCoefficientTable(db),
+    readVatRates(db),
   ]);
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message text={t('apply.notFound')} />;
@@ -64,7 +64,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   } else if (asset.status !== 'available') {
     return <Message text={t('apply.unavailable')} />;
   }
-  const price = listPriceOn(priceLists, asset.id, today);
+  const price = effectiveAssetPriceOn(priceLists, asset, today);
   if (!price.ok) return <Message text={t('asset.noPrice')} />;
 
   const isOffer = activeReservation?.reservationType === 'offer';

@@ -6,11 +6,13 @@ import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ContractDrawerTrigger } from './contract';
+import type { SecondLifeData } from './second-life-panel';
 
 // Available = green check, reserved = amber hourglass, returned = blue loop arrows, sold = stone check.
 const statusColors: Record<AssetStatus, string> = {
   available: 'text-emerald-600 dark:text-emerald-400',
   reserved: 'text-amber-600 dark:text-amber-400',
+  leased: 'text-blue-600 dark:text-blue-400',
   returned: 'text-sky-600 dark:text-sky-400',
   sold: 'text-stone-600 dark:text-stone-400',
 };
@@ -77,6 +79,7 @@ type AssetCardProps = {
   coefficientTable?: CoefficientTable;
   vatRates?: VatRates;
   isoDate?: string;
+  secondLife?: SecondLifeData;
 };
 
 export function AssetCard({
@@ -87,6 +90,7 @@ export function AssetCard({
   coefficientTable,
   vatRates,
   isoDate,
+  secondLife,
 }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
 
@@ -119,7 +123,11 @@ export function AssetCard({
         <div className="text-xs text-stone-600 dark:text-stone-400">
           <p>{t('asset.listPrice')}</p>
           {price.ok ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
+            <p>
+              {price.isRelisted
+                ? t('secondLife.relistPriceLabel')
+                : t('asset.priceListVersion', { version: price.priceListVersion })}
+            </p>
           ) : null}
         </div>
         <p className="text-right text-xl font-semibold tabular-nums">
@@ -135,6 +143,7 @@ export function AssetCard({
           vatRates={vatRates}
           isoDate={isoDate}
           locale={locale}
+          secondLife={secondLife}
         />
       ) : null}
     </article>

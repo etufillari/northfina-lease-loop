@@ -16,6 +16,7 @@ import type { ListPriceResult } from '@/domain/price-list';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { SecondLifePanel, type SecondLifeData } from './second-life-panel';
 
 export type ContractProps = {
   asset: Asset;
@@ -24,6 +25,7 @@ export type ContractProps = {
   vatRates: VatRates;
   isoDate: string;
   locale: Locale;
+  secondLife?: SecondLifeData;
   initialTermMonths?: number;
   initialDownPaymentCents?: number;
   defaultBreakdownOpen?: boolean;
@@ -44,6 +46,7 @@ export function Contract({
   vatRates,
   isoDate,
   locale,
+  secondLife,
   initialTermMonths,
   initialDownPaymentCents = 0,
   defaultBreakdownOpen = false,
@@ -58,6 +61,9 @@ export function Contract({
   const downPaymentSliderId = useId();
   const breakdownPanelId = useId();
 
+  const [currentStatus, setCurrentStatus] = useState<Asset['status']>(asset.status);
+  const [effectivePrice, setEffectivePrice] = useState<ListPriceResult>(price);
+
   const terms = availableTermsFromTable(coefficientTable);
   const defaultTerm =
     initialTermMonths !== undefined && terms.includes(initialTermMonths)
@@ -66,7 +72,10 @@ export function Contract({
         ? DEFAULT_TERM_MONTHS
         : (terms[0] ?? DEFAULT_TERM_MONTHS);
 
-  const bounds = downPaymentBoundsFor(coefficientTable, price.ok ? price.priceCents : 0);
+  const bounds = downPaymentBoundsFor(
+    coefficientTable,
+    effectivePrice.ok ? effectivePrice.priceCents : 0
+  );
 
   const [selectedTermMonths, setSelectedTermMonths] = useState<number>(defaultTerm);
   const [rawDownPaymentCents, setRawDownPaymentCents] = useState<number>(() =>
@@ -78,10 +87,10 @@ export function Contract({
 
   const termMonths = selectedTermMonths;
   const downPaymentCents = clampDownPaymentCents(rawDownPaymentCents, bounds);
-  const liveQuoteResult = price.ok
+  const liveQuoteResult = effectivePrice.ok
     ? calculateContractQuote({
-        listPriceCents: price.priceCents,
-        priceListVersion: price.priceListVersion,
+        listPriceCents: effectivePrice.priceCents,
+        priceListVersion: effectivePrice.priceListVersion,
         downPaymentCents,
         termMonths,
         isoDate,
@@ -92,7 +101,7 @@ export function Contract({
 
   const activeQuote: ContractQuote | null = liveQuoteResult?.ok ? liveQuoteResult.quote : null;
 
-  const isAssetAvailable = asset.status === 'available';
+  const isAssetAvailable = currentStatus === 'available';
 
   const termIndex = Math.max(0, terms.indexOf(termMonths));
   const lowestMinFinancedCents = Math.min(
@@ -167,6 +176,30 @@ export function Contract({
           {t('contract.statusDraft')}
         </span>
       </div>
+
+      {/* Second-life valuation, waiting-list matchmaking, passport & relist action */}
+      {secondLife ? (
+        <SecondLifePanel
+          assetId={asset.id}
+          status={currentStatus}
+          previousLives={asset.previous_lives}
+          secondLife={secondLife}
+          locale={locale}
+          isoDate={isoDate}
+          onRelisted={(relistPriceCents, preferredTerm) => {
+            setCurrentStatus('available');
+            setEffectivePrice({
+              ok: true,
+              priceCents: relistPriceCents,
+              priceListVersion: effectivePrice.ok ? effectivePrice.priceListVersion : 1,
+              isRelisted: true,
+            });
+            if (preferredTerm && terms.includes(preferredTerm)) {
+              setSelectedTermMonths(preferredTerm);
+            }
+          }}
+        />
+      ) : null}
 
       {/* Sliders: Lease length (term) and Down payment */}
       <div className="my-[24px] grid gap-[24px] rounded-[8px] bg-[#f7f7f7] p-[16px] dark:bg-stone-800/60 dark:ring-1 dark:ring-stone-800">
@@ -250,7 +283,7 @@ export function Contract({
             max={bounds.maxCents}
             step={bounds.stepCents}
             value={downPaymentCents}
-            disabled={!price.ok || bounds.maxCents === 0}
+            disabled={!effectivePrice.ok || bounds.maxCents === 0}
             aria-valuetext={formatEuro(downPaymentCents, intlTag)}
             onChange={(event) => {
               setRawDownPaymentCents(Number(event.target.value));
@@ -270,7 +303,7 @@ export function Contract({
       </div>
 
       {/* Validation / status warnings */}
-      {!price.ok ? (
+      {!effectivePrice.ok ? (
         <div
           role="alert"
           className="mb-[16px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
@@ -284,11 +317,11 @@ export function Contract({
           role="alert"
           className="mb-[16px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
         >
-          {t('contract.errorUnavailable', { status: t(`status.${asset.status}`) })}
+          {t('contract.errorUnavailable', { status: t(`status.${currentStatus}`) })}
         </div>
       ) : null}
 
-      {price.ok && liveQuoteResult && !liveQuoteResult.ok ? (
+      {effectivePrice.ok && liveQuoteResult && !liveQuoteResult.ok ? (
         <div
           role="alert"
           className="mb-[16px] rounded-[8px] border border-[#DC2626] bg-[#f8f7f6] p-[16px] text-[0.875rem] text-[#DC2626] dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"

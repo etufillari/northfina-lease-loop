@@ -9,14 +9,6 @@ import { z } from 'zod';
 import { EarlyExitOptions } from '@/components/early-exit-options';
 import { EndOfTermOptions } from '@/components/end-of-term-options';
 import { MonthlyInvoices } from '@/components/monthly-invoices';
-import {
-  loadCo2Factors,
-  loadCoefficientTable,
-  loadPriceLists,
-  loadResidualCurves,
-  loadSecondLifeDemand,
-  loadVatRates,
-} from '@/data/load';
 import { assetConditionSchema, isoDateSchema } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
 import { earlyExitForContract } from '@/domain/early-exit';
@@ -28,12 +20,21 @@ import {
 } from '@/domain/end-of-term';
 import { addMonthsClamped } from '@/domain/invoice-schedule';
 import { formatEuro } from '@/domain/money';
-import { listPriceOn } from '@/domain/price-list';
+import { effectiveAssetPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
+import { findPersistedContract } from '@/server/contracts';
 import { db } from '@/server/db';
+import {
+  readCo2Factors,
+  readCoefficientTable,
+  readPriceLists,
+  readResidualCurves,
+  readSecondLifeDemand,
+  readVatRates,
+} from '@/server/reference-read';
 import { todayIso } from '@/server/today';
 
 const querySchema = z.object({
@@ -46,6 +47,7 @@ const querySchema = z.object({
   exitMonth: z.coerce.number().int().min(1).optional(),
   condition: assetConditionSchema.optional(),
   token: z.string().optional(),
+  contractId: z.string().optional(),
 });
 
 export default async function InvoicesPage({
@@ -83,16 +85,24 @@ export default async function InvoicesPage({
     co2Factors,
   ] = await Promise.all([
     listAssets(db),
-    loadPriceLists(),
-    loadCoefficientTable(),
-    loadVatRates(),
-    loadResidualCurves(),
-    loadSecondLifeDemand(),
-    loadCo2Factors(),
+    readPriceLists(db),
+    readCoefficientTable(db),
+    readVatRates(db),
+    readResidualCurves(db),
+    readSecondLifeDemand(db),
+    readCo2Factors(db),
   ]);
 
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message locale={locale} text={t('apply.notFound')} />;
+
+  const persisted = await findPersistedContract(db, {
+    contractId: query.data.contractId,
+    assetId,
+    termMonths: term,
+    downPaymentCents: down,
+    signedOn: query.data.signedOn,
+  });
 
   const effectiveOfferedOn = offerReservation?.offered_on ?? null;
   const offerPrice =
@@ -105,10 +115,10 @@ export default async function InvoicesPage({
           priceListVersion: offerReservation.price_list_version,
         }
       : null;
-  const cataloguePriceOnSigned = listPriceOn(priceLists, asset.id, signedOn);
+  const cataloguePriceOnSigned = effectiveAssetPriceOn(priceLists, asset, signedOn);
 
   const price = offerPrice ?? cataloguePriceOnSigned;
-  if (!price.ok) return <Message locale={locale} text={t('asset.noPrice')} />;
+  if (!persisted && !price.ok) return <Message locale={locale} text={t('asset.noPrice')} />;
 
   const hasOfferPriceProtection = Boolean(
     effectiveOfferedOn &&
@@ -119,22 +129,25 @@ export default async function InvoicesPage({
   const validOfferPrice = hasOfferPriceProtection && offerPrice ? offerPrice : null;
   const validCataloguePrice =
     hasOfferPriceProtection && cataloguePriceOnSigned.ok ? cataloguePriceOnSigned : null;
-  const result = calculateContractQuote({
-    listPriceCents: price.priceCents,
-    priceListVersion: price.priceListVersion,
-    downPaymentCents: down,
-    termMonths: term,
-    isoDate: signedOn,
-    coefficientTable,
-    vatRates,
-  });
+  const computedResult = price.ok
+    ? calculateContractQuote({
+        listPriceCents: price.priceCents,
+        priceListVersion: price.priceListVersion,
+        downPaymentCents: down,
+        termMonths: term,
+        isoDate: signedOn,
+        coefficientTable,
+        vatRates,
+      })
+    : null;
 
-  if (!result.ok) {
+  const computedQuote = computedResult && computedResult.ok ? computedResult.quote : null;
+  const quote = persisted ? persisted.quote : computedQuote;
+  if (!quote) {
     return <Message locale={locale} text={t('apply.invalidDeal')} />;
   }
-
-  const { quote } = result;
-  const formattedSignedDate = formatIsoDate(signedOn, locale);
+  const effectiveSignedOn = persisted ? persisted.signedOn : signedOn;
+  const formattedSignedDate = formatIsoDate(effectiveSignedOn, locale);
 
   const buyoutSettlement = calculateBuyoutSettlement({
     buyoutNetCents: quote.buyoutNetCents,
@@ -313,10 +326,11 @@ export default async function InvoicesPage({
 
         {/* Monthly invoice schedule */}
         <MonthlyInvoices
-          signedOn={signedOn}
+          signedOn={effectiveSignedOn}
           termMonths={quote.termMonths}
           monthlyNetRentCents={quote.monthlyNetRentCents}
           vatRates={vatRates}
+          schedule={persisted?.schedule}
           locale={locale}
           asset={{
             make: asset.make,

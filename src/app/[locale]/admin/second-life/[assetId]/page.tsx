@@ -20,7 +20,6 @@ import { isLocale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
 import { getAsset, getAssetExtras } from '@/server/assets';
 import { listContractsForAsset } from '@/server/contracts';
-import { currentViewer } from '@/server/current-viewer';
 import { db } from '@/server/db';
 import { listRefurbishments, originalListPrice } from '@/server/second-life';
 import { effectiveVatRates } from '@/server/vat';
@@ -45,7 +44,6 @@ export default async function WorkbenchPage({
     table,
     vatRates,
     customers,
-    viewer,
     contracts,
     refurbishments,
   ] = await Promise.all([
@@ -57,7 +55,6 @@ export default async function WorkbenchPage({
     loadCoefficientTable(),
     effectiveVatRates(db),
     loadCustomers(),
-    currentViewer(),
     listContractsForAsset(db, asset.id),
     listRefurbishments(db, asset.id),
   ]);
@@ -112,7 +109,6 @@ export default async function WorkbenchPage({
             vatPercent={vatPercent}
             today={today}
             heldForName={customers.find((c) => c.id === extras?.reservedFor)?.name ?? null}
-            isStaff={viewer.kind === 'staff'}
             locale={locale}
           />
         ) : (

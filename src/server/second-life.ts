@@ -4,9 +4,21 @@ import { loadPriceLists, loadRefurbishmentCosts, loadSecondLifeDemand } from '@/
 import type { AssetCondition, PriceList } from '@/data/schemas';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { applySecondLifePrices } from '@/domain/price-list';
+import { repairLines, type CustomRepair } from '@/domain/repair-catalogue';
 import { leasableCondition, refurbishmentPlan } from '@/domain/second-life';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+
+/** One line of a refurbishment: a required job, a standard repair, or a custom repair. */
+export type RefurbishmentLine = {
+  kind: 'required' | 'preset' | 'custom';
+  /** The job or preset id; null for a custom line. */
+  id: string | null;
+  /** The name typed in for a custom line. */
+  label: string | null;
+  /** null for refurbishments saved before costs were kept per line. */
+  costCents: number | null;
+};
 
 export type Refurbishment = {
   id: number;
@@ -16,12 +28,22 @@ export type Refurbishment = {
   conditionAfter: string;
   usageBefore: number;
   usageAfter: number;
-  steps: string[];
+  lines: RefurbishmentLine[];
   costCents: number;
   priceCents: number;
   notes: string | null;
   actor: string;
 };
+
+/** Reads the stored lines; early refurbishments stored just a list of job ids. */
+function parseLines(json: string): RefurbishmentLine[] {
+  const parsed = JSON.parse(json) as unknown[];
+  return parsed.map((line) =>
+    typeof line === 'string'
+      ? { kind: 'required', id: line, label: null, costCents: null }
+      : (line as RefurbishmentLine)
+  );
+}
 
 /** The refurbishments of one item, oldest first. */
 export async function listRefurbishments(
@@ -40,7 +62,7 @@ export async function listRefurbishments(
     conditionAfter: row.condition_after,
     usageBefore: row.usage_before,
     usageAfter: row.usage_after,
-    steps: JSON.parse(row.steps_json) as string[],
+    lines: parseLines(row.steps_json),
     costCents: row.cost_cents,
     priceCents: row.price_cents,
     notes: row.notes,
@@ -71,11 +93,18 @@ export async function originalListPrice(assetId: string): Promise<number | null>
   return lists[0]?.prices[assetId] ?? null;
 }
 
+export const MAX_USAGE = 10_000_000;
+
 export type RefurbishInput = {
   assetId: string;
+  /** What the check found: the condition and usage reading when it came back. */
+  conditionFound: AssetCondition;
+  usageFound: number;
   conditionAfter: AssetCondition;
-  /** Optional extra repairs, net cents, on top of the planned jobs. */
-  extraCostCents: number;
+  /** Standard repairs done (ids from REPAIR_PRESETS), priced from that list. */
+  presetIds: string[];
+  /** Any other repairs, each with its own name and net price. */
+  customRepairs: CustomRepair[];
   priceCents: number;
   notes: string | null;
   actor: string;
@@ -88,17 +117,21 @@ export type RefurbishResult =
       reason:
         | 'not_found'
         | 'not_returned'
+        | 'invalid_usage'
         | 'cannot_downgrade'
         | 'cannot_reach_new'
         | 'condition_too_low'
+        | 'invalid_repairs'
         | 'invalid_price';
     };
 
 /**
- * Refurbishes a returned item for its next life. The planned jobs follow from the data
- * (refurbishmentPlan); the item gets its new condition, usage and second-life price, and goes
- * back as available, or as reserved for the customer it was passed on to. The refurbishment
- * and an `asset.refurbished` audit row are written in the same transaction.
+ * Refurbishes a returned item for its next life. The check records the condition and usage it
+ * came back in (any condition: a "new" item can come back "good"). The required jobs follow from
+ * the data (refurbishmentPlan); standard and custom repairs are added on top. The item gets its
+ * new condition, usage and second-life price, and goes back as available, or reserved for the
+ * customer it was passed on to. The refurbishment, with every line and its cost, and an
+ * `asset.refurbished` audit row are written in the same transaction.
  */
 export async function refurbishItem(
   db: PrismaClient,
@@ -108,14 +141,17 @@ export async function refurbishItem(
   const row = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!row) return { ok: false, reason: 'not_found' };
   if (row.status !== 'returned') return { ok: false, reason: 'not_returned' };
+  if (!Number.isInteger(input.usageFound) || input.usageFound < 0 || input.usageFound > MAX_USAGE) {
+    return { ok: false, reason: 'invalid_usage' };
+  }
   const asset = toAsset(row);
   const [costs, demand] = await Promise.all([loadRefurbishmentCosts(), loadSecondLifeDemand()]);
   const plan = refurbishmentPlan(
     {
       category: asset.category,
-      before: asset.condition,
+      before: input.conditionFound,
       after: input.conditionAfter,
-      usage: asset.usage.value,
+      usage: input.usageFound,
     },
     costs
   );
@@ -123,10 +159,27 @@ export async function refurbishItem(
   if (!leasableCondition(input.conditionAfter, asset.category, demand, todayIso)) {
     return { ok: false, reason: 'condition_too_low' };
   }
+  const repairs = repairLines(asset.category, input.presetIds, input.customRepairs);
+  if (!repairs.ok) return { ok: false, reason: 'invalid_repairs' };
   if (!Number.isInteger(input.priceCents) || input.priceCents <= 0) {
     return { ok: false, reason: 'invalid_price' };
   }
-  const costCents = plan.costCents + input.extraCostCents;
+
+  const lines: RefurbishmentLine[] = [
+    ...plan.steps.map((step) => ({
+      kind: 'required' as const,
+      id: step.id,
+      label: null,
+      costCents: step.costCents,
+    })),
+    ...repairs.lines.map((line) => ({
+      kind: line.presetId ? ('preset' as const) : ('custom' as const),
+      id: line.presetId,
+      label: line.label,
+      costCents: line.costCents,
+    })),
+  ];
+  const costCents = plan.costCents + repairs.costCents;
   const status = row.reserved_for ? 'reserved' : 'available';
 
   await withAudit(
@@ -137,9 +190,9 @@ export async function refurbishItem(
       entityType: 'asset',
       entityId: asset.id,
       details: {
-        from: asset.condition,
+        found: { condition: input.conditionFound, usage: input.usageFound },
         to: input.conditionAfter,
-        steps: plan.steps.map((step) => step.id),
+        lines,
         costCents,
         priceCents: input.priceCents,
         status,
@@ -150,11 +203,11 @@ export async function refurbishItem(
         data: {
           asset_id: asset.id,
           refurbished_date: todayIso,
-          condition_before: asset.condition,
+          condition_before: input.conditionFound,
           condition_after: input.conditionAfter,
-          usage_before: asset.usage.value,
+          usage_before: input.usageFound,
           usage_after: plan.usageAfter,
-          steps_json: JSON.stringify(plan.steps.map((step) => step.id)),
+          steps_json: JSON.stringify(lines),
           cost_cents: costCents,
           price_cents: input.priceCents,
           notes: input.notes,

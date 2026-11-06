@@ -33,8 +33,11 @@ const TODAY = '2026-11-06';
 // ebike-007 came back in fair condition with 18,400 km (scenario card 9)
 const ebike007 = (overrides: Partial<RefurbishInput> = {}): RefurbishInput => ({
   assetId: 'ebike-007',
+  conditionFound: 'fair',
+  usageFound: 18_400,
   conditionAfter: 'good',
-  extraCostCents: 0,
+  presetIds: [],
+  customRepairs: [],
   priceCents: 172_700,
   notes: 'New battery, brake pads replaced',
   actor: 'Lease Loop staff',
@@ -60,7 +63,11 @@ describe('refurbishItem', () => {
         conditionBefore: 'fair',
         conditionAfter: 'good',
         usageBefore: 18_400,
-        steps: ['fair->good', 'battery_replacement', 'safety_inspection'],
+        lines: [
+          { kind: 'required', id: 'fair->good', label: null, costCents: 12_000 },
+          { kind: 'required', id: 'battery_replacement', label: null, costCents: 35_000 },
+          { kind: 'required', id: 'safety_inspection', label: null, costCents: 4_500 },
+        ],
         notes: 'New battery, brake pads replaced',
       }),
     ]);
@@ -72,9 +79,41 @@ describe('refurbishItem', () => {
     expect(await originalListPrice('ebike-007')).toBe(549_000);
   });
 
-  it('adds extra repairs to the cost', async () => {
-    expect(await refurbishItem(db, ebike007({ extraCostCents: 2_000 }), TODAY)).toMatchObject({
-      costCents: 53_500,
+  it('adds standard and custom repairs, each with its price', async () => {
+    const result = await refurbishItem(
+      db,
+      ebike007({
+        presetIds: ['tyres'],
+        customRepairs: [{ label: 'New saddle', costCents: 2_500 }],
+      }),
+      TODAY
+    );
+    expect(result).toMatchObject({ costCents: 51_500 + 6_000 + 2_500 });
+    const [refurbishment] = await listRefurbishments(db, 'ebike-007');
+    expect(refurbishment?.lines.slice(-2)).toEqual([
+      { kind: 'preset', id: 'tyres', label: null, costCents: 6_000 },
+      { kind: 'custom', id: null, label: 'New saddle', costCents: 2_500 },
+    ]);
+  });
+
+  it('lets the check find a “new” item in a worse condition after its lease', async () => {
+    // ebike-001 is new in the data pack; it comes back after a lease, checked as like new
+    await db.asset.update({ where: { id: 'ebike-001' }, data: { status: 'returned' } });
+    const result = await refurbishItem(
+      db,
+      ebike007({
+        assetId: 'ebike-001',
+        conditionFound: 'like_new',
+        usageFound: 2_300,
+        conditionAfter: 'like_new',
+        priceCents: 140_000,
+      }),
+      TODAY
+    );
+    expect(result).toEqual({ ok: true, status: 'available', costCents: 4_500 });
+    expect(await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).toMatchObject({
+      condition: 'like_new',
+      usage_value: 2_300,
     });
   });
 
@@ -109,6 +148,14 @@ describe('refurbishItem', () => {
     expect(await refurbishItem(db, ebike007({ priceCents: 0 }), TODAY)).toEqual({
       ok: false,
       reason: 'invalid_price',
+    });
+    expect(await refurbishItem(db, ebike007({ usageFound: -5 }), TODAY)).toEqual({
+      ok: false,
+      reason: 'invalid_usage',
+    });
+    expect(await refurbishItem(db, ebike007({ presetIds: ['screen_glass'] }), TODAY)).toEqual({
+      ok: false,
+      reason: 'invalid_repairs',
     });
     expect(await db.refurbishment.count()).toBe(0);
   });

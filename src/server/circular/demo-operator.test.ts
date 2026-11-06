@@ -16,6 +16,12 @@ describe('demo company operator', () => {
     });
   });
 
+  it('requires company operations mode before operator APIs are available', () => {
+    expect(() => demoCompanyOperator(operatorRequest(false))).toThrow(
+      expect.objectContaining({ status: 403, code: 'FORBIDDEN' })
+    );
+  });
+
   it('rejects operations outside development', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(() => demoCompanyOperator(operatorRequest())).toThrow(
@@ -35,9 +41,13 @@ describe('demo company operator', () => {
   });
 });
 
-function operatorRequest(): Request {
+function operatorRequest(companyMode = true): Request {
   return new Request('http://localhost/api/circular', {
     method: 'POST',
-    headers: { host: 'localhost', origin: 'http://localhost' },
+    headers: {
+      host: 'localhost',
+      origin: 'http://localhost',
+      ...(companyMode ? { cookie: 'lease-loop-company-mode=1' } : {}),
+    },
   });
 }

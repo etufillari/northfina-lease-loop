@@ -14,3 +14,13 @@ export function filterAssets(assets: readonly Asset[], filters: AssetFilters = {
       (!filters.condition || asset.condition === filters.condition)
   );
 }
+
+export function filterCustomerCatalogueAssets(
+  assets: readonly Asset[],
+  filters: AssetFilters = {}
+): Asset[] {
+  return filterAssets(
+    assets.filter((asset) => asset.status === 'available'),
+    filters
+  );
+}

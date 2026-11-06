@@ -1,15 +1,29 @@
 'use client';
+
 import { formatEuro } from '@/domain/money';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { WorkPlan } from '@/domain/circular/refurbishment';
+
+type Receipt = {
+  id: string;
+  status: string;
+  planJson: string | null;
+  receivedOn: string | null;
+  requestedOn: string | null;
+  reviewReason: string | null;
+  offerNetCents: number | null;
+};
+
 export function CircularActions({
   assetId,
   leaseId,
   receivedOn,
+  currentDate,
   receipt,
   condition,
   usage,
+  usageUnit,
   labels,
   moneyLocale,
   grades,
@@ -21,13 +35,21 @@ export function CircularActions({
   assetId: string;
   leaseId: string | null;
   receivedOn: string;
-  receipt: { id: string; status: string; planJson: string | null; receivedOn: string } | null;
+  currentDate: string;
+  receipt: Receipt | null;
   condition: string;
   usage: number;
+  usageUnit: string;
   labels: {
     receive: string;
+    confirmReceipt: string;
     inspect: string;
     finish: string;
+    approve: string;
+    reject: string;
+    rejectReason: string;
+    pendingApproval: string;
+    rejected: string;
     condition: string;
     usage: string;
     confirm: string;
@@ -42,7 +64,9 @@ export function CircularActions({
   const [grade, setGrade] = useState(condition);
   const [value, setValue] = useState(usage);
   const [checked, setChecked] = useState<string[]>([]);
+  const [reason, setReason] = useState('');
   const plan: WorkPlan | null = receipt?.planJson ? JSON.parse(receipt.planJson) : null;
+
   async function send(input: Record<string, unknown>, key: string) {
     if (busy) return;
     setBusy(true);
@@ -65,11 +89,13 @@ export function CircularActions({
       setBusy(false);
     }
   }
+
   const button = 'rounded bg-emerald-700 px-3 py-2 text-white disabled:opacity-50';
   return (
     <div className="mt-4 space-y-3">
       {!receipt && (
         <button
+          type="button"
           className={button}
           disabled={busy}
           onClick={() =>
@@ -82,6 +108,21 @@ export function CircularActions({
           {busy ? labels.busy : labels.receive}
         </button>
       )}
+      {receipt?.status === 'REQUESTED' && (
+        <button
+          type="button"
+          className={button}
+          disabled={busy}
+          onClick={() =>
+            void send(
+              { action: 'receive', returnId: receipt.id, receivedOn: currentDate },
+              `receive:${receipt.id}`
+            )
+          }
+        >
+          {busy ? labels.busy : labels.confirmReceipt}
+        </button>
+      )}
       {receipt?.status === 'RECEIVED' && (
         <>
           <label className="block">
@@ -89,26 +130,28 @@ export function CircularActions({
             <select
               className="ml-3 rounded border p-2"
               value={grade}
-              onChange={(e) => setGrade(e.target.value)}
+              onChange={(event) => setGrade(event.target.value)}
             >
-              {['new', 'like_new', 'good', 'fair', 'poor'].map((v) => (
-                <option key={v} value={v}>
-                  {grades[v] ?? v}
+              {['new', 'like_new', 'good', 'fair', 'poor'].map((value) => (
+                <option key={value} value={value}>
+                  {grades[value] ?? value}
                 </option>
               ))}
             </select>
           </label>
           <label className="block">
             {labels.usage}
+            <span className="ml-2 text-sm text-stone-600 dark:text-stone-400">{usageUnit}</span>
             <input
               className="ml-3 w-32 rounded border p-2"
               type="number"
               min={usage}
               value={value}
-              onChange={(e) => setValue(Number(e.target.value))}
+              onChange={(event) => setValue(Number(event.target.value))}
             />
           </label>
           <button
+            type="button"
             className={button}
             disabled={busy}
             onClick={() =>
@@ -131,9 +174,9 @@ export function CircularActions({
                 type="checkbox"
                 className="mr-2"
                 checked={checked.includes(step.id)}
-                onChange={(e) =>
+                onChange={(event) =>
                   setChecked(
-                    e.target.checked
+                    event.target.checked
                       ? [...checked, step.id]
                       : checked.filter((id) => id !== step.id)
                   )
@@ -143,6 +186,7 @@ export function CircularActions({
             </label>
           ))}
           <button
+            type="button"
             className={button}
             disabled={busy || checked.length !== plan.steps.length}
             onClick={() =>
@@ -151,7 +195,7 @@ export function CircularActions({
                   action: 'finish',
                   returnId: receipt.id,
                   completedWorkIds: checked,
-                  completedOn: receipt.receivedOn,
+                  completedOn: currentDate,
                 },
                 `finish:${receipt.id}`
               )
@@ -160,6 +204,65 @@ export function CircularActions({
             {busy ? labels.busy : labels.finish}
           </button>
         </>
+      )}
+      {receipt?.status === 'PENDING_APPROVAL' && (
+        <>
+          <p role="status" className="text-sm">
+            {labels.pendingApproval}
+          </p>
+          <button
+            type="button"
+            className={button}
+            disabled={busy}
+            onClick={() =>
+              void send(
+                {
+                  action: 'review',
+                  returnId: receipt.id,
+                  decision: 'APPROVE',
+                  reviewedOn: currentDate,
+                },
+                `review:${receipt.id}:approve`
+              )
+            }
+          >
+            {busy ? labels.busy : labels.approve}
+          </button>
+          <label className="block text-sm">
+            {labels.rejectReason}
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="mt-1 block w-full rounded border p-2 text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              maxLength={500}
+              required
+            />
+          </label>
+          <button
+            type="button"
+            className="rounded border border-stone-400 px-3 py-2 disabled:opacity-50"
+            disabled={busy || reason.trim().length === 0}
+            onClick={() =>
+              void send(
+                {
+                  action: 'review',
+                  returnId: receipt.id,
+                  decision: 'REJECT',
+                  reason: reason.trim(),
+                  reviewedOn: currentDate,
+                },
+                `review:${receipt.id}:reject:${reason.trim()}`
+              )
+            }
+          >
+            {busy ? labels.busy : labels.reject}
+          </button>
+        </>
+      )}
+      {receipt?.status === 'REJECTED' && (
+        <p role="status" className="text-sm">
+          {labels.rejected} {receipt.reviewReason}
+        </p>
       )}
       {error && (
         <p role="alert" className="text-red-700">

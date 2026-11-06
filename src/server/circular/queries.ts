@@ -6,7 +6,9 @@ import { impactGrams, matchSecondLife } from '@/domain/circular/valuation';
 export async function circularDashboard(db: PrismaClient) {
   const [assets, returns, offers, leases, factors, demand, table] = await Promise.all([
     db.asset.findMany({ orderBy: { id: 'asc' } }),
-    db.assetReturn.findMany({ orderBy: [{ receivedOn: 'desc' }, { id: 'desc' }] }),
+    db.assetReturn.findMany({
+      orderBy: [{ requestedOn: 'desc' }, { receivedOn: 'desc' }, { id: 'desc' }],
+    }),
     db.circularOffer.findMany({ orderBy: [{ publishedOn: 'desc' }, { id: 'desc' }] }),
     db.engineLease.findMany({ orderBy: { startDate: 'asc' } }),
     loadCo2Factors(),
@@ -18,12 +20,14 @@ export async function circularDashboard(db: PrismaClient) {
     .map((row) => {
       const asset = toAsset(row);
       let receipt = returns.find((r) => r.assetId === asset.id) ?? null;
-      const offer = offers.find((o) => o.assetId === asset.id) ?? null;
       const history = leases.filter((l) => l.assetId === asset.id);
       const active = history.find((l) => l.status === 'ACTIVE');
       const completed =
         history.filter((l) => ['COMPLETED', 'TERMINATED'].includes(l.status)).at(-1) ?? null;
       if (completed && receipt?.leaseId !== completed.id) receipt = null;
+      const offer = receipt
+        ? (offers.find((o) => o.returnId === receipt.id) ?? null)
+        : (offers.find((o) => o.assetId === asset.id) ?? null);
       const relatedIds = new Set([
         asset.id,
         ...returns.filter((r) => r.assetId === asset.id).map((r) => r.id),

@@ -10,7 +10,8 @@ export async function auditedCommand<T>(
   operation: string,
   entityId: string,
   payload: unknown,
-  work: (tx: TransactionClient) => Promise<T>
+  work: (tx: TransactionClient) => Promise<T>,
+  auditDetails: Readonly<Record<string, unknown>> = {}
 ): Promise<T> {
   const { actor, idempotencyKey: key } = contextSchema.parse(context);
   const payloadHash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
@@ -27,7 +28,7 @@ export async function auditedCommand<T>(
               ? 'contract'
               : 'lease',
           entityId,
-          details: { idempotencyKey: key },
+          details: { ...auditDetails, idempotencyKey: key },
         },
         async (tx) => {
           const receipt = await tx.engineCommandReceipt.findUnique({

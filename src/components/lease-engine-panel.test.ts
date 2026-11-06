@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   settlement: vi.fn(),
   contract: vi.fn(),
   lease: vi.fn(),
+  assetReturn: vi.fn(),
+  asset: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({
@@ -14,6 +16,8 @@ vi.mock('@/server/db', () => ({
     leaseSettlement: { findUnique: mocks.settlement },
     contract: { findUnique: mocks.contract },
     engineLease: { findUnique: mocks.lease },
+    assetReturn: { findUnique: mocks.assetReturn },
+    asset: { findUnique: mocks.asset },
   },
 }));
 vi.mock('@/server/lease-engine/invoices', () => ({ listLeaseInvoices: mocks.listInvoices }));
@@ -37,6 +41,8 @@ describe('active lease demo controls', () => {
     mocks.settlement.mockResolvedValue(null);
     mocks.contract.mockResolvedValue({ financed_cents: 0, asset_id: 'ebike-003' });
     mocks.lease.mockResolvedValue({ assetId: 'ebike-003', terminatedOn: null });
+    mocks.assetReturn.mockResolvedValue(null);
+    mocks.asset.mockResolvedValue({ usage_value: 1200, usage_unit: 'km' });
 
     const markup = renderToStaticMarkup(
       await LeaseEnginePanel({
@@ -50,5 +56,28 @@ describe('active lease demo controls', () => {
     expect(markup).toContain('engine.generate');
     expect(markup).toContain('engine.complete');
     expect(markup).toContain('end.early');
+  });
+
+  it('lets a completed lease submit a usage reading before a return receipt exists', async () => {
+    mocks.listInvoices.mockResolvedValue([]);
+    mocks.schedule.mockResolvedValue(null);
+    mocks.settlement.mockResolvedValue(null);
+    mocks.contract.mockResolvedValue({ financed_cents: 0, asset_id: 'ebike-003' });
+    mocks.lease.mockResolvedValue({ assetId: 'ebike-003', terminatedOn: null });
+    mocks.assetReturn.mockResolvedValue(null);
+    mocks.asset.mockResolvedValue({ usage_value: 18400, usage_unit: 'km' });
+
+    const markup = renderToStaticMarkup(
+      await LeaseEnginePanel({
+        contractId: 'contract-aino-1',
+        leaseId: 'lease-aino-1',
+        status: 'COMPLETED',
+        locale: 'en',
+      })
+    );
+
+    expect(markup).toContain('return.title');
+    expect(markup).toContain('18400');
+    expect(markup).toContain('return.submit');
   });
 });

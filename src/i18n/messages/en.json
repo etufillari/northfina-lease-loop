@@ -333,6 +333,7 @@
   "invoices.state.paidAtSigning": "Paid at signing",
   "contract.firstMonth": "The first month’s rent is paid when you sign the contract. Invoices to pay start from month 2.",
   "nav.admin": "Admin",
+  "nav.darkMode": "Dark mode",
   "footer.note": "Lease Loop is a hackathon demo: the data is synthetic and no real money or contracts are involved.",
   "admin.title": "Admin",
   "admin.intro": "A control room for demonstrations, on the app’s date ({date}): totals, VAT changes, every contract and the audit log.",

@@ -333,6 +333,7 @@
   "invoices.state.paidAtSigning": "Betald vid underskrift",
   "contract.firstMonth": "Den första månadens hyra betalas när du skriver under avtalet. Fakturor att betala börjar från månad 2.",
   "nav.admin": "Admin",
+  "nav.darkMode": "Mörkt läge",
   "footer.note": "Lease Loop är en hackathon-demo: uppgifterna är påhittade och inga riktiga pengar eller avtal är inblandade.",
   "admin.title": "Admin",
   "admin.intro": "Ett kontrollrum för demonstrationer, på appens datum ({date}): summor, momsändringar, alla avtal och granskningsloggen.",

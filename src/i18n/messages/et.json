@@ -333,6 +333,7 @@
   "invoices.state.paidAtSigning": "Tasutud allkirjastamisel",
   "contract.firstMonth": "Esimese kuu rent tasutakse lepingu allkirjastamisel. Tasumisele kuuluvad arved algavad 2. kuust.",
   "nav.admin": "Admin",
+  "nav.darkMode": "Tume režiim",
   "footer.note": "Lease Loop on häkatoni demo: andmed on väljamõeldud ning päris raha ega lepinguid pole kaasatud.",
   "admin.title": "Admin",
   "admin.intro": "Juhtpaneel esitluste jaoks rakenduse kuupäeval ({date}): kokkuvõtted, käibemaksu muudatused, kõik lepingud ja auditilogi.",

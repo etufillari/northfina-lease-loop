@@ -333,6 +333,7 @@
   "invoices.state.paidAtSigning": "Maksettu allekirjoitettaessa",
   "contract.firstMonth": "Ensimmäisen kuukauden vuokra maksetaan, kun allekirjoitat sopimuksen. Maksettavat laskut alkavat kuukaudesta 2.",
   "nav.admin": "Ylläpito",
+  "nav.darkMode": "Tumma tila",
   "footer.note": "Lease Loop on hackathon-demo: tiedot ovat keksittyjä, eikä mukana ole oikeaa rahaa tai oikeita sopimuksia.",
   "admin.title": "Ylläpito",
   "admin.intro": "Ohjauspaneeli esittelyjä varten sovelluksen päivämääränä ({date}): yhteenvedot, alv-muutokset, kaikki sopimukset ja tapahtumaloki.",

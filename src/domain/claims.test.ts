@@ -37,25 +37,30 @@ describe('canClaim', () => {
     );
   });
 
-  it('a nomination of someone without an account blocks everyone else', () => {
-    expect(canClaim({ status: 'returned' }, [hold('nomination', null)], 'aino', TODAY)).toEqual({
+  it('a hold for someone without an account blocks everyone else', () => {
+    expect(canClaim({ status: 'reserved' }, [hold('nomination', null)], 'aino', TODAY)).toEqual({
       ok: false,
       reason: 'held_for_someone_else',
     });
   });
 
-  it('a returned item is in maintenance — except for the successor nominated for it', () => {
+  it('a returned item is at the desk: nobody can claim it, not even the nominee', () => {
     expect(canClaim({ status: 'returned' }, [], 'sanna', TODAY)).toEqual({
       ok: false,
       reason: 'in_maintenance',
     });
     expect(canClaim({ status: 'returned' }, [hold('nomination', 'sanna')], 'sanna', TODAY)).toEqual(
-      { ok: true }
+      { ok: false, reason: 'in_maintenance' }
     );
-    // Her own approval hold is not a nomination: it does not open a returned item.
-    expect(
-      canClaim({ status: 'returned' }, [hold('approval_hold', 'sanna')], 'sanna', TODAY)
-    ).toEqual({ ok: false, reason: 'in_maintenance' });
+  });
+
+  it('once the desk holds it for the nominee, only the nominee can claim it', () => {
+    const held = [hold('nomination', 'sanna')];
+    expect(canClaim({ status: 'reserved' }, held, 'sanna', TODAY)).toEqual({ ok: true });
+    expect(canClaim({ status: 'reserved' }, held, 'aino', TODAY)).toEqual({
+      ok: false,
+      reason: 'held_for_someone_else',
+    });
   });
 
   it('a reserved item with no hold for this customer is not theirs', () => {

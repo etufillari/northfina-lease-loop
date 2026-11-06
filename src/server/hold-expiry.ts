@@ -4,7 +4,8 @@
 //   (releaseExpiredHolds);
 // - a waiting-list offer nobody answered → the person leaves the list and the items go to the
 //   next person in line, whose own offer can lapse in turn (expireOffer);
-// - an end-of-term nomination nobody used → the reservation ends.
+// - an end-of-term nomination nobody used → it ends; an item the desk already held for the
+//   nominee goes to the waiting list (or the catalogue).
 // In the demo the clock is the time-travel bar, so moving it forward runs the overnight job
 // for each day on which something lapses, in date order and dated that day: what happens
 // is what would have happened had the days passed one by one. Days with nothing lapsing are
@@ -13,7 +14,8 @@ import { lapsesOn } from '@/domain/holds';
 import { addDays } from '@/domain/calendar';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from './audit';
-import { OFFER_RESERVATION } from './second-life-offers';
+import { NOMINATION_RESERVATION } from './nominations';
+import { OFFER_RESERVATION, passItemsOn } from './second-life-offers';
 import { EXPIRABLE_STATUSES, releaseExpiredHolds } from './staff-holds';
 import { expireOffer, listExpiredOffers } from './waitlist-actions';
 
@@ -21,7 +23,6 @@ type Db = PrismaClient;
 
 /** Who the audit log names for what lapses on its own. */
 export const SYSTEM_ACTOR = 'system';
-const NOMINATION = 'nomination';
 
 export type LapseSummary = {
   /** The days the overnight job ran on, in order. */
@@ -44,7 +45,7 @@ async function nextLapseDay(
     db.reservation.findMany({
       where: {
         active: true,
-        kind: { in: [OFFER_RESERVATION, NOMINATION] },
+        kind: { in: [OFFER_RESERVATION, NOMINATION_RESERVATION] },
         until: { lt: input.to },
       },
       select: { until: true },
@@ -75,7 +76,7 @@ async function runDay(db: Db, day: string, actor: string, summary: LapseSummary)
     if (result.ok) summary.offers.push({ day, entryId: offer.entry.id, assetIds: offer.assetIds });
   }
   const nominations = await db.reservation.findMany({
-    where: { active: true, kind: NOMINATION, until: { lt: day } },
+    where: { active: true, kind: NOMINATION_RESERVATION, until: { lt: day } },
     orderBy: { asset_id: 'asc' },
   });
   for (const hold of nominations) {
@@ -88,7 +89,22 @@ async function runDay(db: Db, day: string, actor: string, summary: LapseSummary)
         entityId: hold.asset_id,
         details: { until: hold.until, customerId: hold.customer_id },
       },
-      (tx) => tx.reservation.update({ where: { id: hold.id }, data: { active: false } })
+      async (tx) => {
+        await tx.reservation.update({ where: { id: hold.id }, data: { active: false } });
+        // Already through the desk and held for the nominee: it goes to the waiting list
+        // now. Still at the desk (or still on lease): nothing else changes.
+        const asset = await tx.asset.findUnique({ where: { id: hold.asset_id } });
+        const others = await tx.reservation.count({
+          where: { asset_id: hold.asset_id, active: true },
+        });
+        if (asset?.status === 'reserved' && others === 0) {
+          await passItemsOn(tx, {
+            assetIds: [hold.asset_id],
+            asOf: day,
+            reason: 'nomination_lapsed',
+          });
+        }
+      }
     );
     summary.nominations.push({ day, assetId: hold.asset_id });
   }

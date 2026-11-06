@@ -34,10 +34,22 @@ export function eventDetail(locale: Locale, event: PassportEvent): string | null
     case 'returned':
     case 'bought': {
       const used = num(d.usedMonths);
-      if (d.reason === 'early_exit' && used !== null) {
-        return t('passport.detail.earlyExit', { months: used });
-      }
-      return d.reason === 'end_of_term' ? t('passport.detail.endOfTerm') : null;
+      const why =
+        d.reason === 'early_exit' && used !== null
+          ? t('passport.detail.earlyExit', { months: used })
+          : d.reason === 'end_of_term'
+            ? t('passport.detail.endOfTerm')
+            : null;
+      const reading = num(d.usageReading);
+      const added = num(d.usageAdded);
+      const meter =
+        reading !== null && added !== null
+          ? t('passport.detail.reading', {
+              reading: formatNumber(reading, locale),
+              added: formatNumber(added, locale),
+            })
+          : null;
+      return [why, meter].filter(Boolean).join(' · ') || null;
     }
     case 'refurbished': {
       const items = Array.isArray(d.items) ? d.items : [];

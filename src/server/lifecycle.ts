@@ -5,6 +5,13 @@ import { loadCoefficientTable, loadVatRates } from '@/data/load';
 import { BUYOUT_PAYMENT_DAYS } from '@/domain/buyout';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
 import { holdUntil } from '@/domain/holds';
+import { endNominations, NOMINATION_RESERVATION, startNominationClock } from './nominations';
+import {
+  applyReadings,
+  checkReadings,
+  readingDetails,
+  type ReadingFailure,
+} from './usage-readings';
 import { earlyExitQuote, type EarlyExitBreakdown } from '@/domain/early-exit';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -43,7 +50,8 @@ export type ExitPreviewResult =
         | 'term_already_over'
         | 'no_vat_rate_on_date'
         | 'unpriceable_amount'
-        | 'bad_used_months';
+        | 'bad_used_months'
+        | ReadingFailure;
     };
 
 /** The card-8 calculation, shown to the customer BEFORE they confirm anything. */
@@ -77,16 +85,30 @@ export async function earlyExitPreview(
   return { ok: true, preview: { breakdown: result.breakdown, termEndsOn: termEndsOn(contract) } };
 }
 
-/** Confirms the exit: ends the contract, issues the exit invoice, returns the asset. */
+/**
+ * Confirms the exit: ends the contract, issues the exit invoice, returns the asset with its
+ * meter reading (asset id → lifetime reading, one per item).
+ */
 export async function executeEarlyExit(
   db: Db,
-  input: { contractId: string; actor: string; asOf: string }
+  input: {
+    contractId: string;
+    actor: string;
+    asOf: string;
+    usageReadings?: Record<string, number>;
+  }
 ): Promise<ExitPreviewResult> {
   const previewed = await earlyExitPreview(db, input.contractId, input.asOf);
   if (!previewed.ok) return previewed;
   const { breakdown } = previewed.preview;
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
+  const readings = await checkReadings(
+    db,
+    loaded.contract.assets.map((link) => link.asset_id),
+    input.usageReadings
+  );
+  if (!readings.ok) return readings;
 
   await withAudit(
     db,
@@ -121,6 +143,11 @@ export async function executeEarlyExit(
           },
         });
       }
+      await startNominationClock(tx, {
+        assetIds: row.assets.map((link) => link.asset_id),
+        returnedOn: input.asOf,
+      });
+      await applyReadings(tx, readings.updates);
       for (const link of row.assets) {
         await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'returned' } });
         await tx.assetEvent.create({
@@ -132,6 +159,7 @@ export async function executeEarlyExit(
             details_json: JSON.stringify({
               reason: 'early_exit',
               usedMonths: breakdown.usedMonths,
+              ...readingDetails(readings.updates, link.asset_id),
             }),
           },
         });
@@ -143,20 +171,37 @@ export async function executeEarlyExit(
 
 export type EndOfTermResult =
   | { ok: true }
-  | { ok: false; reason: 'not_found' | 'not_active' | 'term_not_ended' | 'no_vat_rate_on_date' };
+  | {
+      ok: false;
+      reason:
+        'not_found' | 'not_active' | 'term_not_ended' | 'no_vat_rate_on_date' | ReadingFailure;
+    };
 
 /**
  * At (or after) the term's end the customer buys the item or returns it. Buying issues the
  * buyout invoice with 30 days to pay; it never counts against the 30 % affordability rule.
+ * A return records each item's meter reading (asset id → lifetime reading).
  */
 export async function endOfTerm(
   db: Db,
-  input: { contractId: string; action: 'buy' | 'return'; actor: string; asOf: string }
+  input: {
+    contractId: string;
+    action: 'buy' | 'return';
+    actor: string;
+    asOf: string;
+    usageReadings?: Record<string, number>;
+  }
 ): Promise<EndOfTermResult> {
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
   const { contract } = loaded;
   if (input.asOf < termEndsOn(contract)) return { ok: false, reason: 'term_not_ended' };
+  const assetIds = contract.assets.map((link) => link.asset_id);
+  const readings =
+    input.action === 'return'
+      ? await checkReadings(db, assetIds, input.usageReadings)
+      : ({ ok: true, updates: [] } as const);
+  if (!readings.ok) return readings;
 
   const vatRates = await loadVatRates();
   const vat = vatRateOn(vatRates, input.asOf);
@@ -181,15 +226,6 @@ export async function endOfTerm(
         },
       });
       if (input.action === 'buy') {
-        // A bought item cannot pass to a nominated successor.
-        await tx.reservation.updateMany({
-          where: {
-            asset_id: { in: contract.assets.map((a) => a.asset_id) },
-            kind: 'nomination',
-            active: true,
-          },
-          data: { active: false },
-        });
         const net = contract.buyout_net_cents;
         await tx.invoice.create({
           data: {
@@ -204,6 +240,9 @@ export async function endOfTerm(
           },
         });
       }
+      if (input.action === 'buy') await endNominations(tx, assetIds);
+      else await startNominationClock(tx, { assetIds, returnedOn: input.asOf });
+      await applyReadings(tx, readings.updates);
       for (const link of contract.assets) {
         await tx.asset.update({
           where: { id: link.asset_id },
@@ -215,7 +254,10 @@ export async function endOfTerm(
             contract_id: input.contractId,
             type: input.action === 'buy' ? 'bought' : 'returned',
             on_date: input.asOf,
-            details_json: JSON.stringify({ reason: 'end_of_term' }),
+            details_json: JSON.stringify({
+              reason: 'end_of_term',
+              ...readingDetails(readings.updates, link.asset_id),
+            }),
           },
         });
       }
@@ -228,24 +270,17 @@ export type NominateResult =
   | { ok: true; nomineeCustomerId: string }
   | {
       ok: false;
-      reason:
-        | 'not_found'
-        | 'bad_status'
-        | 'term_not_ended'
-        | 'buying'
-        | 'unknown_nominee'
-        | 'self_nomination';
+      reason: 'not_found' | 'bad_status' | 'buying' | 'unknown_nominee' | 'self_nomination';
     };
 
 /**
- * "Pass it on", route (b): at (or after) the end of the term the customer names a
- * successor, who may apply for a new lease on the item and skips the waiting list. The
- * skip is explicit and logged, so the FCFS fairness story stays honest (docs/DECISIONS.md).
+ * "Pass it on", route (b): the customer names a successor, who may apply for a new lease
+ * on the item when it comes back and skips the waiting list. The skip is explicit and
+ * logged, so the FCFS fairness story stays honest (docs/DECISIONS.md).
  *
- * Only from the last day of the term (a 7-day nomination made mid-term would lapse years
- * before it could be used), never for an item the lessee has chosen to buy, only for an
- * existing customer other than the lessee, and one at a time: nominating again replaces
- * the earlier nomination.
+ * During the lease or after the return; never for an item the lessee has chosen to buy,
+ * only for an existing customer other than the lessee, and one at a time: nominating again
+ * replaces the earlier nomination.
  */
 export async function nominateSuccessor(
   db: Db,
@@ -259,14 +294,10 @@ export async function nominateSuccessor(
   if (contract.status !== 'active' && contract.status !== 'ended_returned') {
     return { ok: false, reason: 'bad_status' };
   }
-  if (contract.status === 'active' && input.asOf < termEndsOn(contract)) {
-    return { ok: false, reason: 'term_not_ended' };
-  }
   if (contract.purchase_at_end) return { ok: false, reason: 'buying' };
   const nominee = await db.customer.findFirst({ where: { email: input.email } });
   if (!nominee) return { ok: false, reason: 'unknown_nominee' };
   if (nominee.id === contract.customer_id) return { ok: false, reason: 'self_nomination' };
-  const assetIds = contract.assets.map((a) => a.asset_id);
 
   await withAudit(
     db,
@@ -278,19 +309,29 @@ export async function nominateSuccessor(
       details: { email: input.email, nomineeCustomerId: nominee.id },
     },
     async (tx) => {
-      await tx.reservation.updateMany({
-        where: { asset_id: { in: assetIds }, kind: 'nomination', active: true },
-        data: { active: false },
-      });
+      // The 7 days start when the item comes back (src/server/nominations.ts): during the
+      // lease this is provisional, from the term's end, and restarts on the actual return.
+      const returned = contract.status === 'ended_returned';
+      const until = holdUntil('nomination', returned ? input.asOf : termEndsOn(contract));
       for (const link of contract.assets) {
+        // A new nomination replaces an earlier one.
+        await tx.reservation.updateMany({
+          where: { asset_id: link.asset_id, kind: NOMINATION_RESERVATION, active: true },
+          data: { active: false },
+        });
         await tx.reservation.create({
           data: {
             asset_id: link.asset_id,
             customer_id: nominee.id,
-            kind: 'nomination',
-            until: holdUntil('nomination', input.asOf),
+            kind: NOMINATION_RESERVATION,
+            until,
           },
         });
+        // Already through the desk and listed: it is now held for the nominee.
+        const asset = await tx.asset.findUnique({ where: { id: link.asset_id } });
+        if (returned && asset?.status === 'available') {
+          await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'reserved' } });
+        }
         await tx.assetEvent.create({
           data: {
             asset_id: link.asset_id,

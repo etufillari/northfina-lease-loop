@@ -29,10 +29,13 @@ export default async function AssetPage({
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
-  // A returned item is in maintenance — except for the successor nominated for it.
+  // After the desk's work a nominated item is held (reserved) for its nominee alone.
   const nominatedForMe =
-    asset.status === 'returned' &&
+    asset.status === 'reserved' &&
     persona !== null &&
+    (await db.reservation.count({
+      where: { asset_id: asset.id, kind: 'nomination', active: true, customer_id: persona },
+    })) > 0 &&
     (await checkClaim(db, { assetIds: [asset.id], customerId: persona, asOf })).ok;
 
   return (
@@ -69,6 +72,14 @@ export default async function AssetPage({
           <AssetFact label={t('asset.modelYear')} value={String(asset.model_year)} />
           <AssetFact
             label={t('asset.usage')}
+            value={t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
+              value: formatNumber(asset.usage_total, locale),
+            })}
+          />
+          <AssetFact
+            label={t(
+              asset.usage_unit === 'engine_hours' ? 'usage.sinceService' : 'usage.sinceBattery'
+            )}
             value={t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
               value: formatNumber(asset.usage_value, locale),
             })}

@@ -72,6 +72,54 @@ describe('requiredRefurbishments', () => {
     expect(result.items.map((i) => i.id)).toEqual(['certified_data_wipe']);
     expect(result.resetsUsage).toBe(false);
   });
+
+  it('a farm machine gets one major service per started 1000 hours since the last one', () => {
+    const farm = (sinceService: number) =>
+      requiredRefurbishments(
+        { category: 'farm_machine', usage: { unit: 'engine_hours', value: sinceService } },
+        costs
+      );
+    // farm-005: 4,200 h in total, serviced on schedule, so 200 h since the last service.
+    expect(farm(200).items).toEqual([
+      { id: 'major_service', costCents: 150_000, resetsUsage: true },
+      { id: 'safety_inspection', costCents: 40_000, resetsUsage: false },
+    ]);
+    expect(farm(2200).items[0]).toEqual({
+      id: 'major_service',
+      costCents: 450_000,
+      resetsUsage: true,
+    });
+    expect(farm(1000).items[0]?.costCents).toBe(150_000);
+    expect(farm(0).items.map((i) => i.id)).toEqual(['safety_inspection']);
+  });
+});
+
+describe('secondLifeDecision: which usage the value reads', () => {
+  const decide = (asset: Asset) => {
+    const v1 = listPriceOn(priceLists, asset.id, '2026-01-01');
+    if (!v1.ok) throw new Error('no v1 price');
+    return secondLifeDecision(
+      { asset, originalListPriceCents: v1.priceCents, asOfDate: '2026-11-05' },
+      { curves, costs, demand: [], table }
+    );
+  };
+
+  it('a serviced farm machine keeps the value of its lifetime hours', () => {
+    const farm005 = assets.find((a) => a.id === 'farm-005')!;
+    const serviced = decide({ ...farm005, usage: { ...farm005.usage, value: 200, total: 4200 } });
+    const fresh = decide({ ...farm005, usage: { ...farm005.usage, value: 200, total: 200 } });
+    expect(serviced.usageAfterRefurb).toBe(0);
+    // The engine's 4,200 h still count after the service: worth less than a 200 h machine.
+    expect(serviced.valueAsIsCents).toBeLessThan(fresh.valueAsIsCents);
+  });
+
+  it('a new battery wipes the e-bike’s km from its value, whatever its lifetime total', () => {
+    const ebike007 = assets.find((a) => a.id === 'ebike-007')!;
+    const a = decide({ ...ebike007, usage: { ...ebike007.usage, total: 18_400 } });
+    const b = decide({ ...ebike007, usage: { ...ebike007.usage, total: 60_000 } });
+    expect(a.usageAfterRefurb).toBe(0);
+    expect(a.valueAsIsCents).toBe(b.valueAsIsCents);
+  });
 });
 
 describe('matchWaitingList', () => {

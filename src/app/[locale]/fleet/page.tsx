@@ -46,7 +46,7 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
         condition: asset.condition,
         modelYear: asset.model_year,
         usageUnit: asset.usage.unit,
-        usageValue: asset.usage.value,
+        usageValue: asset.usage.total ?? asset.usage.value,
         previousLives: asset.previous_lives,
         imageUrl: images[asset.id] ?? null,
         // A refurbished item is priced at the desk's re-price, not the new-item price list.

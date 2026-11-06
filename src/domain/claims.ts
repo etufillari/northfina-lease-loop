@@ -4,7 +4,8 @@
 // - a leased or sold item is never claimable;
 // - an active hold for SOMEONE ELSE blocks everyone else (an approval, a signatory wait, a
 //   waiting-list offer, a nomination — whatever its kind);
-// - a returned item is in maintenance: only the successor nominated for it may claim it;
+// - a returned item is in maintenance at the second-life desk: nobody can claim it, not even
+//   a nominated successor — the desk refurbishes it first, then holds it for them;
 // - a reserved item is claimable only by the customer a hold names.
 // Holds whose last day has passed no longer count, even before the lapse job has run.
 import { isLapsed } from './holds';
@@ -30,16 +31,12 @@ export function canClaim(
   if (asset.status === 'leased' || asset.status === 'sold') {
     return { ok: false, reason: 'leased_or_sold' };
   }
+  if (asset.status === 'returned') return { ok: false, reason: 'in_maintenance' };
   const live = activeHolds.filter((hold) => !isLapsed(hold.until, asOf));
   if (live.some((hold) => hold.customerId !== customerId)) {
     return { ok: false, reason: 'held_for_someone_else' };
   }
   const mine = live.filter((hold) => hold.customerId === customerId);
-  if (asset.status === 'returned') {
-    return mine.some((hold) => hold.kind === 'nomination')
-      ? { ok: true }
-      : { ok: false, reason: 'in_maintenance' };
-  }
   if (asset.status === 'reserved' && mine.length === 0) {
     return { ok: false, reason: 'held_for_someone_else' };
   }

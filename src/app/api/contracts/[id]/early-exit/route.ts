@@ -1,5 +1,5 @@
 // GET  /api/contracts/:id/early-exit  [?asOf=] — the full card-8 calculation as a preview.
-// POST /api/contracts/:id/early-exit  body: { actor } — confirm: end the contract, issue
+// POST /api/contracts/:id/early-exit  body: { actor, usageReadings } — confirm: end the contract, issue
 // the exit invoice (30 days to pay) and return the asset.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
@@ -15,6 +15,12 @@ const failures: Record<string, [number, string, string]> = {
   no_vat_rate_on_date: [422, 'NO_VAT_RATE', 'No VAT rate is known for this date'],
   unpriceable_amount: [422, 'NOT_PRICEABLE', 'This amount can no longer be priced'],
   bad_used_months: [422, 'BAD_MONTHS', 'No months of use to price'],
+  usage_reading_missing: [422, 'USAGE_READING_MISSING', 'Enter the meter reading for every item'],
+  usage_reading_below_total: [
+    422,
+    'USAGE_READING_TOO_LOW',
+    'A reading cannot be below the lifetime total',
+  ],
 };
 
 export const GET = handleRoute(
@@ -29,7 +35,11 @@ export const GET = handleRoute(
   }
 );
 
-const bodySchema = z.strictObject({ actor: z.string().trim().min(1).max(100) });
+const bodySchema = z.strictObject({
+  actor: z.string().trim().min(1).max(100),
+  /** Asset id → the lifetime meter reading at the return (km, cycles or hours). */
+  usageReadings: z.record(z.string(), z.number().int().nonnegative()).optional(),
+});
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/early-exit'>) => {
@@ -39,6 +49,7 @@ export const POST = handleRoute(
       contractId: id,
       actor: body.actor,
       asOf: asOfFrom(request),
+      usageReadings: body.usageReadings,
     });
     if (!result.ok) {
       const [status, code, message] = failures[result.reason]!;

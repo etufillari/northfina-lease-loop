@@ -2,13 +2,12 @@
 // the normal question flow — same locked rent, no down payment — and the nomination route.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
-import { addDays } from '@/domain/calendar';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { answerQuestion, startApplication, submitApplication } from './applications';
 import { seedAssets } from './assets';
 import { getContract, signApplication } from './contracts';
 import { seedCustomers } from './customers';
-import { nominateSuccessor, termEndsOn } from './lifecycle';
+import { nominateSuccessor } from './lifecycle';
 import { createTransferLink, getTransferOffer, startTransferApplication } from './transfers';
 
 let db: Awaited<ReturnType<typeof createTestDb>>['db'];
@@ -150,27 +149,17 @@ describe('mid-lease transfer', () => {
     expect(await getTransferOffer(db, token)).toBeNull();
   });
 
-  it('nominates a successor by email from the last day of the term, skipping the waiting list on the record', async () => {
-    // Mid-term a 7-day nomination would lapse years before it could be used.
-    const tooEarly = await nominateSuccessor(db, {
+  it('nominates a successor by email, skipping the waiting list on the record', async () => {
+    const result = await nominateSuccessor(db, {
       contractId,
       email: 'olavi.niemi@example.com',
       actor: 'cust-lena',
       asOf: AS_OF,
     });
-    expect(tooEarly).toEqual({ ok: false, reason: 'term_not_ended' });
-
-    const contract = await getContract(db, contractId);
-    const lastDay = termEndsOn(contract!);
-    const result = await nominateSuccessor(db, {
-      contractId,
-      email: 'olavi.niemi@example.com',
-      actor: 'cust-lena',
-      asOf: lastDay,
-    });
     if (!result.ok) throw new Error(result.reason);
     const reservations = await db.reservation.findMany({ where: { kind: 'nomination' } });
     expect(reservations).toHaveLength(1);
-    expect(reservations[0]).toMatchObject({ until: addDays(lastDay, 7), active: true });
+    // Provisional until the item comes back: 7 days after the term ends (2029-11-04).
+    expect(reservations[0]).toMatchObject({ until: '2029-11-11' });
   });
 });

@@ -16,7 +16,7 @@ import { seedAssets } from './assets';
 import { getContract, signApplication } from './contracts';
 import { seedCustomers } from './customers';
 import { endOfTerm, nominateSuccessor, setBuyoutOption, termEndsOn } from './lifecycle';
-import { listReturnedDecisions, previewSecondLife } from './second-life';
+import { executeSecondLife, previewSecondLife } from './second-life';
 import { createTransferLink, startTransferApplication } from './transfers';
 
 let db: Awaited<ReturnType<typeof createTestDb>>['db'];
@@ -238,16 +238,12 @@ describe('end of term: buying, nominating and the second-life desk', () => {
   let contractId = '';
   let lastDay = '';
 
-  it('nominations follow the rules: not mid-term, not yourself, not a stranger, not while buying', async () => {
+  it('nominations follow the rules: not yourself, not a stranger, not while buying', async () => {
     contractId = await lease('ebike-006', 'cust-aino');
     lastDay = termEndsOn((await getContract(db, contractId))!);
-    const nominate = (email: string, asOf = lastDay) =>
+    const nominate = (email: string, asOf = AS_OF) =>
       nominateSuccessor(db, { contractId, email, actor: 'cust-aino', asOf });
 
-    expect(await nominate('olavi.niemi@example.com', AS_OF)).toEqual({
-      ok: false,
-      reason: 'term_not_ended',
-    });
     expect(await nominate('aino.virtanen@example.com')).toEqual({
       ok: false,
       reason: 'self_nomination',
@@ -260,18 +256,15 @@ describe('end of term: buying, nominating and the second-life desk', () => {
   });
 
   it('nominating again replaces the earlier nomination, and blocks "buy at the end"', async () => {
-    await nominateSuccessor(db, {
-      contractId,
-      email: 'olavi.niemi@example.com',
-      actor: 'cust-aino',
-      asOf: lastDay,
-    });
-    await nominateSuccessor(db, {
-      contractId,
-      email: 'sanna.makela@example.com',
-      actor: 'cust-aino',
-      asOf: lastDay,
-    });
+    for (const email of ['olavi.niemi@example.com', 'sanna.makela@example.com']) {
+      const result = await nominateSuccessor(db, {
+        contractId,
+        email,
+        actor: 'cust-aino',
+        asOf: AS_OF,
+      });
+      expect(result.ok).toBe(true);
+    }
     const active = await db.reservation.findMany({
       where: { asset_id: 'ebike-006', kind: 'nomination', active: true },
     });
@@ -282,37 +275,39 @@ describe('end of term: buying, nominating and the second-life desk', () => {
     });
   });
 
-  it('after the return the item is held for the nominee: not for others, and not for the desk', async () => {
+  it('after the return: nobody can lease it at the desk; after the work it is the nominee’s alone', async () => {
     expect(
-      await endOfTerm(db, { contractId, action: 'return', actor: 'cust-aino', asOf: lastDay })
+      await endOfTerm(db, {
+        contractId,
+        action: 'return',
+        actor: 'cust-aino',
+        asOf: lastDay,
+        usageReadings: { 'ebike-006': 900 },
+      })
     ).toEqual({ ok: true });
+    const tryLease = (customerId: string) =>
+      startApplication(db, {
+        assetIds: ['ebike-006'],
+        downPaymentCents: 0,
+        termMonths: 12,
+        customerId,
+        actor: customerId,
+        asOf: lastDay,
+      });
+    // At the desk, in maintenance: not even the nominee yet.
+    expect(await tryLease('cust-sanna')).toEqual({ ok: false, reason: 'asset_unavailable' });
 
-    const desk = await listReturnedDecisions(db, lastDay);
-    expect(desk.map((d) => d.assetId)).not.toContain('ebike-006');
-    expect(await previewSecondLife(db, 'ebike-006', lastDay)).toEqual({
-      ok: false,
-      reason: 'nominated',
-    });
-
-    const other = await startApplication(db, {
-      assetIds: ['ebike-006'],
-      downPaymentCents: 0,
-      termMonths: 12,
-      customerId: 'cust-lena',
-      actor: 'cust-lena',
+    const desk = await previewSecondLife(db, 'ebike-006', lastDay);
+    expect(desk.ok && desk.preview.outcome.kind).toBe('nominee');
+    const executed = await executeSecondLife(db, {
+      assetId: 'ebike-006',
+      actor: 'staff',
       asOf: lastDay,
     });
-    expect(other).toEqual({ ok: false, reason: 'asset_unavailable' });
+    expect(executed.ok && executed.applied).toBe('nominee');
 
-    const nominee = await startApplication(db, {
-      assetIds: ['ebike-006'],
-      downPaymentCents: 0,
-      termMonths: 12,
-      customerId: 'cust-sanna',
-      actor: 'cust-sanna',
-      asOf: lastDay,
-    });
-    expect(nominee.ok).toBe(true);
+    expect(await tryLease('cust-lena')).toEqual({ ok: false, reason: 'asset_unavailable' });
+    expect((await tryLease('cust-sanna')).ok).toBe(true);
   });
 
   it('buying at the end ends any nomination: a sold item cannot pass to a successor', async () => {

@@ -9,6 +9,7 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { BuyoutPurchase } from './buyout-purchase';
+import { parsedReadings, UsageReadingFields, type ReturnItem } from './usage-reading-fields';
 
 type ExitBreakdown = {
   usedMonths: number;
@@ -36,6 +37,7 @@ export function ContractActions({
   pricesInclVat,
   purchaseAtEnd,
   termMonthsTotal,
+  returnItems,
 }: {
   locale: Locale;
   contractId: string;
@@ -49,6 +51,8 @@ export function ContractActions({
   pricesInclVat: boolean;
   purchaseAtEnd: boolean;
   termMonthsTotal: number;
+  /** The items a return hands back, each needing its meter reading. */
+  returnItems: ReturnItem[];
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -60,6 +64,16 @@ export function ContractActions({
   const [nomineeEmail, setNomineeEmail] = useState('');
   const [nominated, setNominated] = useState(false);
   const termOver = today >= endsOn;
+  const [typedReadings, setTypedReadings] = useState<Record<string, string>>({});
+  const usageReadings = parsedReadings(returnItems, typedReadings);
+  const readingFields = (
+    <UsageReadingFields
+      locale={locale}
+      items={returnItems}
+      typed={typedReadings}
+      onChange={(assetId, value) => setTypedReadings((all) => ({ ...all, [assetId]: value }))}
+    />
+  );
 
   async function createLink() {
     setBusy(true);
@@ -92,7 +106,6 @@ export function ContractActions({
       UNKNOWN_NOMINEE: 'passOn.error.unknownNominee',
       SELF_NOMINATION: 'passOn.error.self',
       BUYING: 'passOn.buyingNote',
-      TERM_NOT_ENDED: 'passOn.error.termNotEnded',
     };
     const key = known[body.error?.code as string];
     window.alert(key ? t(key) : (body.error?.message ?? t('common.error')));
@@ -161,28 +174,29 @@ export function ContractActions({
             {t('exit.button')}
           </button>
         ) : (
-          <>
+          <div className="w-full">
+            {readingFields}
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || usageReadings === null}
               onClick={() => {
                 if (window.confirm(t('endOfTerm.confirmReturn'))) {
-                  void post('end-of-term', { action: 'return' });
+                  void post('end-of-term', { action: 'return', usageReadings });
                 }
               }}
               className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
             >
               {t('endOfTerm.return')}
             </button>
-          </>
+          </div>
         )}
       </div>
 
       <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
         <h3 className="text-sm font-semibold">{t('passOn.title')}</h3>
-        {/* During the term the lease can be taken over; from its last day a successor can
-            be nominated instead — unless the customer is buying the item. */}
-        {termOver && purchaseAtEnd ? (
+        {/* During the term the lease can be taken over; a successor can be nominated for when
+            the item comes back — unless the customer is buying the item. */}
+        {purchaseAtEnd ? (
           <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
             {t('passOn.buyingNote')}
           </p>
@@ -209,9 +223,7 @@ export function ContractActions({
             </button>
           )}
         </div>
-        <div
-          className={`mt-3 flex-wrap items-center gap-2 ${termOver && !purchaseAtEnd ? 'flex' : 'hidden'}`}
-        >
+        <div className={`mt-3 flex-wrap items-center gap-2 ${!purchaseAtEnd ? 'flex' : 'hidden'}`}>
           <input
             type="email"
             value={nomineeEmail}
@@ -273,11 +285,12 @@ export function ContractActions({
               bold
             />
           </dl>
+          {readingFields}
           <div className="mt-4 flex gap-3">
             <button
               type="button"
-              disabled={busy}
-              onClick={() => post('early-exit', {})}
+              disabled={busy || usageReadings === null}
+              onClick={() => post('early-exit', { usageReadings })}
               className="rounded-xl bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800 disabled:opacity-50"
             >
               {t('exit.confirm')}

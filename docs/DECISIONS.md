@@ -104,15 +104,32 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   through the normal question flow against the remaining schedule (no down payment, locked
   rent carries over) and the contract transfers on approval; (b) end-of-term nomination —
   the named person may apply for a new lease on that item, skipping the waiting list, and
-  the skip is logged as "nominated by previous lessee".
+  the skip is logged as "nominated by previous lessee". Their 7 days start when the item
+  **comes back** (6 Nov): nominated during the lease, the hold is provisional to 7 days
+  after the term ends and restarts on the actual return day (end of term or early exit);
+  nominated after the return, 7 days from then; a buyout ends it. The item still goes
+  through the second-life desk (mandatory work, re-price), which then holds it for the
+  nominee instead of matching the waiting list. Unused, it goes to the waiting list.
 
 ## Second life
 
 - **Residual value:** original price = the asset's price in price list v1; age counted from
   1 Jan of `model_year`; linear interpolation between curve points, last value held; times
   the condition multiplier; usage adjustment capped — all per `data/residual-curves.json`.
+- **Usage: two counters** (6 Nov, `src/domain/usage.ts`). Every item keeps its **lifetime**
+  km / battery cycles / engine hours (never reset; the catalogue and passport show it) and
+  its usage **since the last reset** — a new battery for e-bikes and laptops, a major
+  service for farm machines. Thresholds read the since-reset counter. Market value reads
+  the counter the wear follows: since the last battery where the data says battery work
+  resets usage (e-bikes, laptops), the lifetime hours otherwise (an engine does not get
+  younger with a service). Usage grows at every return: the customer enters each item's
+  meter reading (never below its lifetime total) and the difference is added to both
+  counters and noted on the passport. The data pack gives one number per item: it is the
+  lifetime total, and farm machines are assumed serviced on schedule (farm-005: 4,200 h,
+  200 since the last service).
 - **Refurbishment:** mandatory items always (safety inspection, data wipe, battery past its
-  threshold; a new battery resets the usage counter, so its usage factor is back to 1.00×).
+  threshold — a new battery resets the since-reset counter, so its usage factor is back to
+  1.00× — and a farm machine's major service, one per started 1,000 hours since the last).
   Northfina pays for the work, so every piece of it must pay for itself against the
   alternative (6 Nov, replacing "gain exceeds cost" only):
   - an item worth less after its mandatory work than that work costs → kept for parts;

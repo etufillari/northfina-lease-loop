@@ -26,11 +26,6 @@ export const POST = handleRoute(
       const failures: Record<typeof result.reason, [number, string, string]> = {
         not_found: [404, 'CONTRACT_NOT_FOUND', 'No such contract'],
         bad_status: [409, 'BAD_STATUS', 'Nomination is for active or returned leases'],
-        term_not_ended: [
-          409,
-          'TERM_NOT_ENDED',
-          'A successor can be nominated from the last day of the term',
-        ],
         buying: [409, 'BUYING', 'You chose to buy this item at the end of the term'],
         unknown_nominee: [
           404,

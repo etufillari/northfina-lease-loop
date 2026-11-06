@@ -51,7 +51,13 @@ export const assetSchema = z.strictObject({
   model_year: z.number().int(),
   serial_number: z.string().min(1),
   condition: assetConditionSchema,
-  usage: z.strictObject({ unit: usageUnitSchema, value: z.number().int().nonnegative() }),
+  usage: z.strictObject({
+    unit: usageUnitSchema,
+    /** Since the last reset (a new battery; a farm machine's major service). */
+    value: z.number().int().nonnegative(),
+    /** App-side lifetime counter (never resets); the data pack does not have it. */
+    total: z.number().int().nonnegative().optional(),
+  }),
   /** How many lease contracts this item has already been through. */
   previous_lives: z.number().int().nonnegative(),
   status: assetStatusSchema,

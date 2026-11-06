@@ -295,7 +295,7 @@
   "admin.tile.due": "Fakturor att betala",
   "admin.tile.paid": "Betalda fakturor",
   "admin.tile.count": "{count} faktura/fakturor",
-  "admin.items": "Artiklar: {available} tillgängliga · {reserved} leasade eller reserverade · {returned} återlämnade · {sold} sålda.",
+  "admin.items": "Artiklar: {available} tillgängliga · {leased} leasade · {reserved} reserverade · {returned} återlämnade · {sold} sålda.",
   "admin.staffOnly": "För att ändra moms behövs ”Lease Loops personal” under ”Agerar som”. Demon har ingen riktig inloggning, så vem som helst kan byta.",
   "admin.becomeStaff": "Agera som Lease Loops personal",
   "admin.vat.title": "Momssatser",
@@ -347,8 +347,6 @@
   "end.buy.net": "Inlösen exkl. moms",
   "end.buy.vat": "Moms {percent} %",
   "end.buy.total": "Totalt",
-  "end.buy.unpaid": "{count} faktura/fakturor är fortfarande obetalda ({total}). Betala dem först, sedan kan du köpa artikeln.",
-  "end.buy.toInvoices": "Gå till fakturorna",
   "end.buy.button": "Köp den för {total}",
   "end.buy.demo": "Demonstration: inga pengar flyttas och inga bankuppgifter efterfrågas.",
   "end.return.title": "Lämna tillbaka",
@@ -362,5 +360,11 @@
   "end.failed": "Det gick inte. Försök igen.",
   "end.notYet": "Du kan välja när avtalet har tagit slut, från dagen efter {date}.",
   "end.decided": "Vad som händer med den här artikeln är redan bestämt.",
-  "invoices.payAll": "Betala alla {count} ({total})"
+  "invoices.payAll": "Betala alla {count} ({total})",
+  "status.leased": "Leasad",
+  "asset.statusNote.leased": "Den här artikeln är ute på leasing just nu. När den har kommit tillbaka och kontrollerats erbjuds den igen.",
+  "asset.statusNote.reservedForYou": "Den här artikeln fördes vidare till dig och är reserverad för dig: du kan leasa den.",
+  "asset.statusNote.heldFor": "Den här artikeln hålls för {name}, som den fördes vidare till.",
+  "history.nextLife.leased": "Leasing {number}: ute på leasing nu",
+  "end.unpaid": "{count} faktura/fakturor är fortfarande obetalda ({total}). Vad du än väljer måste avtalet först vara betalt."
 }

@@ -26,7 +26,7 @@ export async function notificationsFor(
     // Only a customer can receive an item; staff see every pending handover.
     viewer.kind === 'guest'
       ? Promise.resolve([])
-      : pendingHandovers(db, viewer.kind === 'staff' ? null : viewer.customer.id),
+      : pendingHandovers(db, viewer.kind === 'staff' ? null : viewer.customer.id, todayIso),
   ]);
   const endedLeases = contracts.filter(
     (contract) => contract.status === 'active' && contractStage(contract, todayIso) === 'ended'

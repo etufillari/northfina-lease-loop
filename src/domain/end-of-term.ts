@@ -2,10 +2,10 @@
 //
 // Rules:
 // - A choice can be made from the day after the last day of the lease, once.
-// - Buying needs every invoice paid first, because ownership passes to the customer. The
-//   buyout price excl. VAT was fixed at signing; VAT is added at the rate on the buying day,
-//   like an invoice, and rounded once to the cent.
-// - Returning and passing on can be chosen with invoices still open: those stay owed.
+// - Whatever the choice (buy, return or pass on), the lease must be settled first: every
+//   invoice paid. That keeps the end clean: nothing is owed on an item that has moved on.
+// - The buyout price excl. VAT was fixed at signing; VAT is added at the rate on the buying
+//   day, like an invoice, and rounded once to the cent.
 import type { VatRates } from '@/data/schemas';
 import { contractStage } from './contract';
 import type { InvoiceWithStatus } from './invoicing';
@@ -38,8 +38,8 @@ export type EndOfTermChoice = {
   reason: 'not_ended' | 'already_decided' | null;
   unpaidCount: number;
   unpaidCents: number;
-  /** Buying also needs all invoices paid. */
-  canBuy: boolean;
+  /** No unpaid invoices: needed for every choice. */
+  settled: boolean;
 };
 
 export function endOfTermChoice(
@@ -57,5 +57,5 @@ export function endOfTermChoice(
         ? 'not_ended'
         : null;
   const canDecide = reason === null;
-  return { canDecide, reason, unpaidCount, unpaidCents, canBuy: canDecide && unpaidCount === 0 };
+  return { canDecide, reason, unpaidCount, unpaidCents, settled: unpaidCount === 0 };
 }

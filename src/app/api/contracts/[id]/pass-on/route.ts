@@ -19,6 +19,7 @@ const failures = {
   not_found: [404, 'NOT_FOUND', 'Contract not found'],
   not_ended: [409, 'NOT_ENDED', 'The lease has not ended yet'],
   already_decided: [409, 'ALREADY_DECIDED', 'The end of this lease has already been decided'],
+  unpaid_invoices: [409, 'UNPAID_INVOICES', 'Pay the remaining invoices first'],
   invalid_recipient: [422, 'INVALID_RECIPIENT', 'Choose another customer to pass it on to'],
 } as const;
 

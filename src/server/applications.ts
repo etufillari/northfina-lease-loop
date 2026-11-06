@@ -11,7 +11,8 @@ import { listPriceOn } from '@/domain/price-list';
 import { quoteLease, type LeaseQuote } from '@/domain/pricing';
 import type { EligibilityRuleId, EligibilityStatus } from '@/domain/question-flow';
 import { vatPercentOn } from '@/domain/vat';
-import { getAsset } from './assets';
+import { canBeLeasedBy } from '@/domain/availability';
+import { getAsset, getAssetExtras } from './assets';
 import { withAudit } from './audit';
 
 export type SubmitApplicationInput = {
@@ -65,7 +66,12 @@ export async function submitApplication(
     loadQuestions(),
   ]);
   if (!asset) return { ok: false, reason: 'asset_not_found' };
-  if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
+  const extras = await getAssetExtras(db, asset.id);
+  const leasable = canBeLeasedBy(
+    { status: asset.status, reservedFor: extras?.reservedFor ?? null },
+    input.customerId ?? null
+  );
+  if (!leasable) return { ok: false, reason: 'asset_not_available' };
 
   const price = listPriceOn(priceLists, asset.id, todayIso);
   const vatPercent = vatPercentOn(vatRates, todayIso);

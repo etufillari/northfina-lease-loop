@@ -49,23 +49,22 @@ describe('endOfTermChoice', () => {
     expect(endOfTermChoice(lease, invoices(allPaid, '2027-11-04'), '2027-11-04')).toMatchObject({
       canDecide: false,
       reason: 'not_ended',
-      canBuy: false,
     });
   });
 
-  it('can buy from the day after the last day when every invoice is paid', () => {
+  it('can decide from the day after the last day when every invoice is paid', () => {
     expect(endOfTermChoice(lease, invoices(allPaid, '2027-11-05'), '2027-11-05')).toEqual({
       canDecide: true,
       reason: null,
       unpaidCount: 0,
       unpaidCents: 0,
-      canBuy: true,
+      settled: true,
     });
   });
 
-  it('can return or pass on, but not buy, with invoices still open', () => {
+  it('is not settled while invoices are still open', () => {
     const choice = endOfTermChoice(lease, invoices([2, 3], '2027-11-05'), '2027-11-05');
-    expect(choice).toMatchObject({ canDecide: true, canBuy: false, unpaidCount: 9 });
+    expect(choice).toMatchObject({ canDecide: true, settled: false, unpaidCount: 9 });
     expect(choice.unpaidCents).toBeGreaterThan(0);
   });
 

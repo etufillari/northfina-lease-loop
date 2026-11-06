@@ -92,3 +92,16 @@ export async function seedAssets(
   }
   return { created: missing.length, skipped: assets.length - missing.length };
 }
+
+/** The parts of an asset row that the data-pack shape doesn't have. */
+export type AssetExtras = { reservedFor: string | null; secondLifePriceCents: number | null };
+
+export async function getAssetExtras(db: PrismaClient, id: string): Promise<AssetExtras | null> {
+  const row = await db.asset.findUnique({
+    where: { id },
+    select: { reserved_for: true, second_life_price_cents: true },
+  });
+  return row
+    ? { reservedFor: row.reserved_for, secondLifePriceCents: row.second_life_price_cents }
+    : null;
+}

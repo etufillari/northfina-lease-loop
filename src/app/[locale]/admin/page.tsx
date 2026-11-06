@@ -76,6 +76,7 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
       <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
         {t('admin.items', {
           available: overview.assets.available,
+          leased: overview.assets.leased,
           reserved: overview.assets.reserved,
           returned: overview.assets.returned,
           sold: overview.assets.sold,

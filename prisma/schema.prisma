@@ -15,19 +15,24 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned | sold
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  usage_value             Int
+  previous_lives          Int
+  status                  String // available | leased | reserved | returned | sold
+  // Who a reserved item is held for (a data pack customer id): someone it was passed on to.
+  reserved_for            String?
+  // Set when the item is refurbished for a new life: its net list price from then on, in place
+  // of the price lists (the item is used now, so its original list price no longer applies).
+  second_life_price_cents Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   @@index([category])
 }
@@ -145,4 +150,24 @@ model Handover {
   decided_date   String?
 
   @@index([to_customer_id])
+}
+
+// A returned item checked and refurbished for its next life (admin, Second life). Together
+// with the contracts this is the item's passport: every life and every fix.
+model Refurbishment {
+  id               Int      @id @default(autoincrement())
+  created_at       DateTime @default(now())
+  asset_id         String
+  refurbished_date String // YYYY-MM-DD, the app's date
+  condition_before String
+  condition_after  String
+  usage_before     Int
+  usage_after      Int
+  steps_json       String // JSON array of the refurbishment step ids that were done
+  cost_cents       Int // what the refurbishment cost (net)
+  price_cents      Int // the new net list price for the next life
+  notes            String?
+  actor            String
+
+  @@index([asset_id])
 }

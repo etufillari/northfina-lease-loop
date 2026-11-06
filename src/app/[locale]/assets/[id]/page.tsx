@@ -7,7 +7,7 @@ import { connection } from 'next/server';
 import { AssetHistoryPanel } from '@/components/asset-history-panel';
 import { PriceCalculator } from '@/components/price-calculator';
 import { StatusBadge } from '@/components/status-badge';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadCustomers, loadPriceLists } from '@/data/load';
 import { effectiveVatRates } from '@/server/vat';
 import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
@@ -17,7 +17,10 @@ import { vatPercentOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
-import { getAsset } from '@/server/assets';
+import { getAsset, getAssetExtras } from '@/server/assets';
+import { currentViewer } from '@/server/current-viewer';
+import { viewerCustomerId } from '@/server/viewer';
+import { canBeLeasedBy } from '@/domain/availability';
 import { db } from '@/server/db';
 import { appDate } from '@/server/app-date';
 
@@ -54,7 +57,16 @@ export default async function AssetPage({
   if (!asset) notFound();
 
   const t = getT(locale);
-  const { today } = await appDate();
+  const [{ today }, viewer, extras, customers] = await Promise.all([
+    appDate(),
+    currentViewer(),
+    getAssetExtras(db, asset.id),
+    loadCustomers(),
+  ]);
+  const reservedFor = extras?.reservedFor ?? null;
+  const heldForName = customers.find((c) => c.id === reservedFor)?.name ?? null;
+  // Available to anyone, or reserved for the viewer (an item passed on to them).
+  const leasable = canBeLeasedBy({ status: asset.status, reservedFor }, viewerCustomerId(viewer));
   const price = listPriceOn(priceLists, asset.id, today);
   const change = nextPriceChange(priceLists, asset.id, today);
   const vatPercent = vatPercentOn(vatRates, today);
@@ -87,7 +99,11 @@ export default async function AssetPage({
 
       {asset.status !== 'available' ? (
         <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
-          {t(`asset.statusNote.${asset.status}`)}
+          {leasable
+            ? t('asset.statusNote.reservedForYou')
+            : heldForName
+              ? t('asset.statusNote.heldFor', { name: heldForName })
+              : t(`asset.statusNote.${asset.status}`)}
         </p>
       ) : null}
 
@@ -139,7 +155,7 @@ export default async function AssetPage({
       </div>
 
       {/* Only an available item with a price can be quoted; the status note explains the rest. */}
-      {asset.status === 'available' && price.ok && vatPercent !== null ? (
+      {leasable && price.ok && vatPercent !== null ? (
         <PriceCalculator
           assetId={asset.id}
           listPriceCents={price.priceCents}

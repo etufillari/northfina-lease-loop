@@ -295,7 +295,7 @@
   "admin.tile.due": "Invoices to be paid",
   "admin.tile.paid": "Invoices paid",
   "admin.tile.count": "{count} invoice(s)",
-  "admin.items": "Items: {available} available · {reserved} leased or reserved · {returned} returned · {sold} sold.",
+  "admin.items": "Items: {available} available · {leased} leased · {reserved} reserved · {returned} returned · {sold} sold.",
   "admin.staffOnly": "Changing VAT needs “Lease Loop staff” in “Acting as”. This demo has no real login, so anyone can switch.",
   "admin.becomeStaff": "Act as Lease Loop staff",
   "admin.vat.title": "VAT rates",
@@ -347,8 +347,6 @@
   "end.buy.net": "Buyout excl. VAT",
   "end.buy.vat": "VAT {percent} %",
   "end.buy.total": "Total",
-  "end.buy.unpaid": "{count} invoice(s) are still open ({total}). Pay them first, then you can buy the item.",
-  "end.buy.toInvoices": "Go to invoices",
   "end.buy.button": "Buy it for {total}",
   "end.buy.demo": "Demonstration: no money moves and no bank details are asked for.",
   "end.return.title": "Return it",
@@ -362,5 +360,11 @@
   "end.failed": "That didn’t work. Please try again.",
   "end.notYet": "You can choose once the lease has ended, from the day after {date}.",
   "end.decided": "What happens to this item has already been decided.",
-  "invoices.payAll": "Pay all {count} ({total})"
+  "invoices.payAll": "Pay all {count} ({total})",
+  "status.leased": "Leased",
+  "asset.statusNote.leased": "This item is out on a lease right now. Once it comes back and has been checked, it will be offered again.",
+  "asset.statusNote.reservedForYou": "This item was passed on to you and is reserved for you: you can lease it.",
+  "asset.statusNote.heldFor": "This item is held for {name}, who it was passed on to.",
+  "history.nextLife.leased": "Lease {number}: out on a lease now",
+  "end.unpaid": "{count} invoice(s) are still open ({total}). Whatever you choose, the lease has to be settled first."
 }

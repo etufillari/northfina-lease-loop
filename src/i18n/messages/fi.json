@@ -295,7 +295,7 @@
   "admin.tile.due": "Maksettavat laskut",
   "admin.tile.paid": "Maksetut laskut",
   "admin.tile.count": "{count} laskua",
-  "admin.items": "Tuotteet: {available} saatavilla · {reserved} vuokrattu tai varattu · {returned} palautettu · {sold} myyty.",
+  "admin.items": "Tuotteet: {available} saatavilla · {leased} vuokralla · {reserved} varattu · {returned} palautettu · {sold} myyty.",
   "admin.staffOnly": "Alv:n muuttaminen vaatii valinnan ”Lease Loopin henkilöstö” kohdassa ”Käyttäjänä”. Demossa ei ole oikeaa kirjautumista, joten kuka tahansa voi vaihtaa.",
   "admin.becomeStaff": "Toimi Lease Loopin henkilöstönä",
   "admin.vat.title": "Alv-kannat",
@@ -347,8 +347,6 @@
   "end.buy.net": "Lunastushinta ilman alv:tä",
   "end.buy.vat": "Alv {percent} %",
   "end.buy.total": "Yhteensä",
-  "end.buy.unpaid": "{count} laskua on vielä maksamatta ({total}). Maksa ne ensin, sitten voit lunastaa tuotteen.",
-  "end.buy.toInvoices": "Siirry laskuihin",
   "end.buy.button": "Lunasta hintaan {total}",
   "end.buy.demo": "Esittely: rahaa ei siirry, eikä pankkitietoja kysytä.",
   "end.return.title": "Palauta",
@@ -362,5 +360,11 @@
   "end.failed": "Se ei onnistunut. Yritä uudelleen.",
   "end.notYet": "Voit valita, kun sopimus on päättynyt, {date} jälkeisestä päivästä alkaen.",
   "end.decided": "Tämän tuotteen kohtalosta on jo päätetty.",
-  "invoices.payAll": "Maksa kaikki {count} ({total})"
+  "invoices.payAll": "Maksa kaikki {count} ({total})",
+  "status.leased": "Vuokralla",
+  "asset.statusNote.leased": "Tämä tuote on parhaillaan vuokralla. Kun se palautuu ja on tarkastettu, se tarjotaan uudelleen.",
+  "asset.statusNote.reservedForYou": "Tämä tuote siirrettiin sinulle ja on varattu sinulle: voit vuokrata sen.",
+  "asset.statusNote.heldFor": "Tämä tuote on varattu asiakkaalle {name}, jolle se siirrettiin.",
+  "history.nextLife.leased": "Vuokrakausi {number}: vuokralla nyt",
+  "end.unpaid": "{count} laskua on vielä maksamatta ({total}). Valitsitpa mitä tahansa, sopimus on ensin maksettava loppuun."
 }

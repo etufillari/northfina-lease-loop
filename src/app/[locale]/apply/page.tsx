@@ -17,7 +17,9 @@ import { vatPercentOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
-import { getAsset } from '@/server/assets';
+import { getAsset, getAssetExtras } from '@/server/assets';
+import { viewerCustomerId } from '@/server/viewer';
+import { canBeLeasedBy } from '@/domain/availability';
 import { db } from '@/server/db';
 import { appDate } from '@/server/app-date';
 import { currentViewer } from '@/server/current-viewer';
@@ -46,7 +48,16 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
     );
   }
 
-  const [{ today }, viewer] = await Promise.all([appDate(), currentViewer()]);
+  const [{ today }, viewer, extras] = await Promise.all([
+    appDate(),
+    currentViewer(),
+    getAssetExtras(db, asset.id),
+  ]);
+  // Available to anyone, or reserved for this viewer (an item passed on to them).
+  const leasable = canBeLeasedBy(
+    { status: asset.status, reservedFor: extras?.reservedFor ?? null },
+    viewerCustomerId(viewer)
+  );
   const [priceLists, table, vatRates, questionsFile] = await Promise.all([
     loadPriceLists(),
     loadCoefficientTable(),
@@ -62,12 +73,12 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
       ? quoteLease({ listPriceCents: price.priceCents, vatPercent, ...selection }, table)
       : null;
 
-  if (asset.status !== 'available' || !price.ok || !quoted?.ok) {
+  if (!leasable || !price.ok || !quoted?.ok) {
     return (
       <Shell locale={locale} t={t} backHref={itemHref}>
         <Notice
           title={`${asset.make} ${asset.model}`}
-          text={asset.status !== 'available' ? t('apply.notAvailable') : t('apply.cannotQuote')}
+          text={!leasable ? t('apply.notAvailable') : t('apply.cannotQuote')}
         />
       </Shell>
     );

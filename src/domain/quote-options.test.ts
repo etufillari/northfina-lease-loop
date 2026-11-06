@@ -6,9 +6,12 @@ import { calculateQuote } from './pricing';
 import {
   clampDownPayment,
   downPaymentRange,
+  downPaymentToPosition,
   leaseOffer,
   lowerRentOption,
   offeredTerms,
+  positionToDownPayment,
+  sliderPositions,
   type DownPaymentRange,
 } from './quote-options';
 
@@ -186,6 +189,44 @@ describe('clampDownPayment', () => {
 
   it('lowers an amount over the maximum', () => {
     expect(clampDownPayment(range, 999_999)).toBe(5_000);
+  });
+});
+
+describe('slider positions', () => {
+  const range = { minCents: 0, maxCents: 378_400, stepCents: 1_000 };
+
+  it('adds a last position for a maximum between two steps', () => {
+    expect(sliderPositions(range)).toBe(379);
+  });
+
+  it('adds nothing when the maximum is on a step', () => {
+    expect(sliderPositions({ ...range, maxCents: 378_000 })).toBe(378);
+  });
+
+  it('has no positions when only one amount is possible', () => {
+    expect(sliderPositions({ minCents: 0, maxCents: 0, stepCents: 100 })).toBe(0);
+  });
+
+  it('reaches the exact maximum at the last position', () => {
+    expect(positionToDownPayment(range, sliderPositions(range))).toBe(378_400);
+  });
+
+  it('counts positions from the minimum', () => {
+    const fromTenThousand = { minCents: 1_000_000, maxCents: 25_970_000, stepCents: 50_000 };
+    expect(positionToDownPayment(fromTenThousand, 0)).toBe(1_000_000);
+    expect(positionToDownPayment(fromTenThousand, 2)).toBe(1_100_000);
+  });
+
+  it('places a typed amount on the nearest position', () => {
+    expect(downPaymentToPosition(range, 2_300)).toBe(2);
+    expect(downPaymentToPosition(range, 2_600)).toBe(3);
+  });
+
+  it('turns every position back into itself', () => {
+    for (let position = 0; position <= sliderPositions(range); position += 1) {
+      const cents = positionToDownPayment(range, position);
+      expect(downPaymentToPosition(range, cents)).toBe(position);
+    }
   });
 });
 

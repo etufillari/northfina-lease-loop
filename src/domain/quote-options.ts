@@ -88,6 +88,24 @@ export function clampDownPayment(range: DownPaymentRange, cents: number): number
   return Math.min(range.maxCents, Math.max(range.minCents, wholeEuros));
 }
 
+/**
+ * Slider positions after 0. The slider moves in positions rather than cents, so its last
+ * position is always the exact maximum, even when that falls between two steps.
+ */
+export function sliderPositions(range: DownPaymentRange): number {
+  return Math.ceil((range.maxCents - range.minCents) / range.stepCents);
+}
+
+export function positionToDownPayment(range: DownPaymentRange, position: number): number {
+  return Math.min(range.maxCents, range.minCents + position * range.stepCents);
+}
+
+/** The nearest position. It only places the slider, so the rounding never touches money. */
+export function downPaymentToPosition(range: DownPaymentRange, cents: number): number {
+  if (cents >= range.maxCents) return sliderPositions(range);
+  return Math.round((cents - range.minCents) / range.stepCents);
+}
+
 export type LowerRentOption = { downPaymentCents: number; monthlyNetRentCents: number };
 
 /**

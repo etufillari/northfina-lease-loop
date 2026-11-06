@@ -1,10 +1,11 @@
-// One catalogue item: what it is, what it costs today, and whether it can be leased.
+// One catalogue item: what it is, what it costs today, and the sliders to price a lease.
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetFacts } from '@/components/asset-facts';
 import { LeaseUnavailable } from '@/components/lease-unavailable';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { PriceSliders } from '@/components/price-sliders';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
 import { leaseOffer } from '@/domain/quote-options';
@@ -27,7 +28,11 @@ export default async function AssetPricePage({ params }: PageProps<'/[locale]/as
   const t = getT(locale);
   const today = todayIso();
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  const [priceLists, table] = await Promise.all([loadPriceLists(), loadCoefficientTable()]);
+  const [priceLists, table, vatRates] = await Promise.all([
+    loadPriceLists(),
+    loadCoefficientTable(),
+    loadVatRates(),
+  ]);
   const price = listPriceOn(priceLists, asset.id, today);
   const offer = leaseOffer(table, asset.status, price);
 
@@ -61,12 +66,14 @@ export default async function AssetPricePage({ params }: PageProps<'/[locale]/as
       </section>
 
       {offer.ok ? (
-        <p className="mt-6 text-stone-700 dark:text-stone-300">
-          {t('price.downRange', {
-            min: euro(offer.range.minCents),
-            max: euro(offer.range.maxCents),
-          })}
-        </p>
+        <PriceSliders
+          assetId={asset.id}
+          onDate={today}
+          offer={offer}
+          table={table}
+          vatRates={vatRates}
+          locale={locale}
+        />
       ) : (
         <LeaseUnavailable
           reason={offer.reason}

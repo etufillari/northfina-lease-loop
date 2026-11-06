@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import type { CoefficientTable, PriceList, VatRates } from '@/data/schemas';
 import { quoteFromPriceList } from './pricing';
-import { priceQuote } from './quote-costs';
+import { priceLeaseChoice, priceQuote } from './quote-costs';
 
 let table: CoefficientTable;
 let priceLists: PriceList[];
@@ -76,6 +76,51 @@ describe('priceQuote', () => {
       ok: false,
       reason: 'no_vat_rate_on_date',
       date: '2026-11-05',
+    });
+  });
+
+  it('names the first invoice at the new VAT rate', () => {
+    expect(priced('ebike-003', '2026-11-05', 0, 36).firstVatChange).toEqual({
+      invoiceDate: '2027-01-05',
+      fromPercent: 25.5,
+      toPercent: 26,
+    });
+  });
+
+  it('reports no VAT change when the rate stays for the whole term', () => {
+    expect(priced('ebike-003', '2026-01-10', 0, 12).firstVatChange).toBeNull();
+  });
+});
+
+describe('priceLeaseChoice', () => {
+  const choice = {
+    assetId: 'ebike-003',
+    onDate: '2026-11-05',
+    listPriceCents: 389_000,
+    priceListVersion: 1,
+    downPaymentCents: 0,
+    termMonths: 36,
+  };
+
+  it('gives the same answer as pricing from the price list', () => {
+    expect(priceLeaseChoice(table, vatRates, choice)).toEqual({
+      ok: true,
+      quote: priced('ebike-003', '2026-11-05', 0, 36),
+    });
+  });
+
+  it('passes on a refused amount', () => {
+    expect(priceLeaseChoice(table, vatRates, { ...choice, downPaymentCents: 380_000 })).toEqual({
+      ok: false,
+      reason: 'below_minimum',
+    });
+  });
+
+  it('passes on a missing VAT rate', () => {
+    const noRates: VatRates = { ...vatRates, rates: [] };
+    expect(priceLeaseChoice(table, noRates, choice)).toMatchObject({
+      ok: false,
+      reason: 'no_vat_rate_on_date',
     });
   });
 });

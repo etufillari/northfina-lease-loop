@@ -62,7 +62,6 @@
   "price.exclVat": "{amount} ilma KM-ta",
   "price.term": "Liisingu periood",
   "price.months": "{months} kuud",
-  "price.monthsUnit": "kuud",
   "price.downPayment": "Sissemakse",
   "price.minDownPayment": "Selle toote jaoks on vaja vähemalt {amount} sissemakset, sest rahastame kuni {max}.",
   "price.noDownPayment": "Hind on meie miinimumile nii lähedal, et sissemakse pole võimalik.",

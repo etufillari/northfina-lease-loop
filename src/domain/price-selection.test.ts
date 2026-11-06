@@ -2,12 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
 import { downPaymentRange } from './pricing';
-import {
-  nearestTerm,
-  parseEuroInput,
-  parsePriceSelection,
-  snapDownPayment,
-} from './price-selection';
+import { parseEuroInput, parsePriceSelection, snapDownPayment } from './price-selection';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -63,25 +58,6 @@ describe('parsePriceSelection', () => {
       termMonths: 24,
       downPaymentCents: 0,
     });
-  });
-});
-
-describe('nearestTerm', () => {
-  const terms = [12, 24, 36, 48];
-
-  it('keeps an offered term', () => {
-    expect(nearestTerm(terms, 24)).toBe(24);
-  });
-
-  it('picks the closest offered term, the shorter one on a tie', () => {
-    expect(nearestTerm(terms, 40)).toBe(36);
-    expect(nearestTerm(terms, 30)).toBe(24);
-    expect(nearestTerm(terms, 1)).toBe(12);
-    expect(nearestTerm(terms, 120)).toBe(48);
-  });
-
-  it('has nothing to pick from an empty list', () => {
-    expect(nearestTerm([], 36)).toBeNull();
   });
 });
 

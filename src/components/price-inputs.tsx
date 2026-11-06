@@ -1,13 +1,13 @@
 'use client';
 
-// The two price controls: a lease term and a down payment, each as a slider and a field you can
-// type into. They always show the same value. While typing, the price follows any value that is
-// already valid; when the field loses focus (or on Enter) the text is settled to a valid value:
-// the nearest offered term, or the down payment snapped to the slider step inside its range.
+// The two price controls. The lease term is a slider with a button for each offered term. The
+// down payment is a slider and a field you can type into, always showing the same value: while
+// typing, the price follows any value that is already valid; when the field loses focus (or on
+// Enter) the text settles to the down payment snapped to the slider step inside its range.
 // The rules live in src/domain/price-selection.ts.
 import { useId, useState, type KeyboardEvent } from 'react';
 import { formatEuro } from '@/domain/money';
-import { nearestTerm, parseEuroInput, snapDownPayment } from '@/domain/price-selection';
+import { parseEuroInput, snapDownPayment } from '@/domain/price-selection';
 import type { DownPaymentRange } from '@/domain/pricing';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -36,44 +36,23 @@ type TermInputProps = {
   t: Translate;
 };
 
+/**
+ * The lease term: a slider plus one button per offered term. Only the terms in the coefficient
+ * table can be priced, so there is nothing to type; the buttons are a quicker way to the same
+ * stops as the slider.
+ */
 export function TermInput({ terms, termMonths, onChange, t }: TermInputProps) {
   const id = useId();
-  const { text, setDraft } = useDraft(termMonths, String);
   const termIndex = Math.max(0, terms.indexOf(termMonths));
-
-  function type(next: string) {
-    const months = Number(next.trim());
-    const valid = /^\d+$/.test(next.trim()) && terms.includes(months);
-    if (valid) onChange(months);
-    setDraft({ text: next, value: valid ? months : termMonths });
-  }
-
-  function settle() {
-    const months = Number(text.trim());
-    const settled = /^\d+$/.test(text.trim()) ? nearestTerm(terms, months) : null;
-    if (settled !== null && settled !== termMonths) onChange(settled);
-    setDraft(null);
-  }
 
   return (
     <div className="mt-8">
-      <div className="flex items-center justify-between gap-4">
-        <label id={`${id}-label`} htmlFor={`${id}-field`} className="text-sm font-medium">
+      <div className="flex items-center justify-between gap-4 text-sm">
+        <span id={`${id}-label`} className="font-medium">
           {t('price.term')}
-        </label>
-        <span className="flex items-center gap-2 text-sm">
-          <input
-            id={`${id}-field`}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            value={text}
-            onChange={(event) => type(event.target.value)}
-            onBlur={settle}
-            onKeyDown={blurOnEnter}
-            className={fieldClass}
-          />
-          <span className="text-stone-600 dark:text-stone-400">{t('price.monthsUnit')}</span>
+        </span>
+        <span className="font-medium tabular-nums">
+          {t('price.months', { months: termMonths })}
         </span>
       </div>
       <input
@@ -87,14 +66,27 @@ export function TermInput({ terms, termMonths, onChange, t }: TermInputProps) {
         aria-valuetext={t('price.months', { months: termMonths })}
         className="mt-3 w-full accent-emerald-700"
       />
-      <span
-        aria-hidden="true"
-        className="mt-1 flex justify-between text-xs text-stone-600 dark:text-stone-400"
-      >
-        {terms.map((months) => (
-          <span key={months}>{months}</span>
-        ))}
-      </span>
+      <div role="group" aria-labelledby={`${id}-label`} className="mt-2 flex justify-between gap-2">
+        {terms.map((months) => {
+          const active = months === termMonths;
+          return (
+            <button
+              key={months}
+              type="button"
+              aria-pressed={active}
+              aria-label={t('price.months', { months })}
+              onClick={() => onChange(months)}
+              className={`min-w-11 rounded-full border px-3 py-1 text-sm font-medium tabular-nums transition-colors focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-stone-900 ${
+                active
+                  ? 'border-emerald-700 bg-emerald-700 text-white'
+                  : 'border-stone-300 bg-white text-stone-800 hover:border-emerald-600 hover:text-emerald-800 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:text-emerald-300'
+              }`}
+            >
+              {months}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

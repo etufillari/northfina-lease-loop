@@ -1,3 +1,4 @@
+
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
 // SQLite has no enums here, so allowed values (category, condition, status) are
@@ -15,22 +16,23 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id              String   @id
+  category        String // e_bike | laptop | farm_machine
+  make            String
+  model           String
+  model_year      Int
+  serial_number   String   @unique
+  condition       String // new | like_new | good | fair | poor
+  usage_unit      String // km | battery_cycles | engine_hours
+  usage_value     Int
+  previous_lives  Int
+  status          String // available | reserved | returned
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
-  quotes    Quote[]
-  contracts Contract[]
+  quotes          Quote[]
+  contracts       Contract[]
+  return_requests ReturnRequest[]
 
   @@index([category])
 }
@@ -38,10 +40,10 @@ model Asset {
 // A priced offer, saved as it was shown. Never updated; it is not binding until signed.
 // Dates are ISO `YYYY-MM-DD` text, money is integer euro cents, VAT excluded.
 model Quote {
-  id                       String    @id
-  created_at               DateTime  @default(now())
+  id                       String   @id
+  created_at               DateTime @default(now())
   asset_id                 String
-  asset                    Asset     @relation(fields: [asset_id], references: [id])
+  asset                    Asset    @relation(fields: [asset_id], references: [id])
   customer_id              String?
   quoted_on                String
   price_list_version       Int? // null: a second-life price, not from a price list
@@ -64,12 +66,12 @@ model Quote {
 // The locked agreement: a full copy of the signed terms, so it needs no price list or quote
 // to be reproduced. Pricing columns are never updated after signing.
 model Contract {
-  id                       String    @id
-  created_at               DateTime  @default(now())
-  quote_id                 String    @unique // one quote can be signed once
-  quote                    Quote     @relation(fields: [quote_id], references: [id])
+  id                       String   @id
+  created_at               DateTime @default(now())
+  quote_id                 String   @unique // one quote can be signed once
+  quote                    Quote    @relation(fields: [quote_id], references: [id])
   asset_id                 String
-  asset                    Asset     @relation(fields: [asset_id], references: [id])
+  asset                    Asset    @relation(fields: [asset_id], references: [id])
   customer_id              String
   status                   String // active
   signed_on                String
@@ -90,6 +92,7 @@ model Contract {
   price_lock_json          String // which price was locked and why
   invoices                 Invoice[]
   access_tokens            CustomerAccessToken[]
+  return_requests          ReturnRequest[]
 
   @@index([asset_id])
   @@index([customer_id])
@@ -128,23 +131,78 @@ model Application {
   @@index([created_at])
 }
 
+// A customer's request to return a leased asset, followed by dealer inspection,
+// refurbishment planning, approval and completion.
+// The asset itself is not made available for matching until completion.
+model ReturnRequest {
+  id         String   @id
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Original lease and customer
+  asset_id    String
+  asset       Asset    @relation(fields: [asset_id], references: [id])
+  contract_id String
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  customer_id String
+
+  // requested | received | inspected | planned | approved | completed | cancelled
+  status String
+
+  // Customer return request
+  expected_return_date String?
+
+  // Dealer confirms physical receipt
+  received_at DateTime?
+  received_by String?
+
+  // Dealer inspection
+  inspected_at             DateTime?
+  inspected_by             String?
+  inspected_condition      String?
+  inspected_usage_unit     String?
+  inspected_usage_value    Int?
+  usage_since_last_service Int?
+
+  // Refurbishment plan snapshot
+  target_condition                String?
+  refurbishment_plan_json         String?
+  refurbishment_total_cost_cents  Int?
+  resulting_condition             String?
+  resulting_usage_unit            String?
+  resulting_usage_value           Int?
+
+  // Dealer approval
+  approved_at DateTime?
+  approved_by String?
+
+  // Dealer confirms refurbishment work is complete
+  completed_at DateTime?
+  completed_by String?
+
+  @@index([asset_id, status])
+  @@index([contract_id])
+  @@index([customer_id])
+  @@index([status])
+}
+
 // An issued invoice. The VAT rate and amounts are stored, so history never changes even if
 // the VAT data does. Invoices not issued yet are computed and shown as a forecast.
 model Invoice {
-  id               String   @id
-  created_at       DateTime @default(now())
-  contract_id      String
-  contract         Contract @relation(fields: [contract_id], references: [id])
-  sequence         Int // 0 = down payment, 1..term = rents
-  kind             String // down_payment | rent
-  invoice_date     String
-  due_date         String
-  period_start     String?
-  period_end       String?
-  net_cents        Int
+  id          String   @id
+  created_at  DateTime @default(now())
+  contract_id String
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  sequence    Int // 0 = down payment, 1..term = rents
+  kind        String // down_payment | rent
+  invoice_date String
+  due_date    String
+  period_start String?
+  period_end   String?
+  net_cents   Int
   vat_rate_percent Float
-  vat_cents        Int
-  gross_cents      Int
+  vat_cents   Int
+  gross_cents Int
 
   @@unique([contract_id, sequence]) // what makes invoice generation idempotent
 }
@@ -158,7 +216,7 @@ model AuditLog {
   action       String // e.g. asset.status_changed
   entity_type  String // e.g. asset
   entity_id    String
-  details_json String? // JSON text, e.g. {"from":"available","to":"reserved"}
+  details_json String? // JSON text, e.g. {"from":"available","to":"returned"}
 
   @@index([entity_type, entity_id])
   @@index([created_at])

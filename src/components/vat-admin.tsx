@@ -2,14 +2,13 @@
 
 // Admin: the VAT rates in force (data pack + admin changes) and a form to add a rate from a
 // future date, e.g. 27 % from 1 Jul 2027. Invoices, quotes and contracts follow at once.
-// Changing VAT needs "Lease Loop staff" in "Acting as" (demo login, see viewer.ts).
+// Having the admin page open is enough: like the rest of this demo, there is no real login.
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { addDays } from '@/domain/contract';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
-import { STAFF, VIEWER_COOKIE } from '@/server/viewer';
 
 type VatRow = {
   validFrom: string;
@@ -19,16 +18,15 @@ type VatRow = {
   adminId: number | null;
 };
 
-type VatAdminProps = { rates: VatRow[]; today: string; isStaff: boolean; locale: Locale };
+type VatAdminProps = { rates: VatRow[]; today: string; locale: Locale };
 
 const errorKeys = {
   NOT_IN_FUTURE: 'admin.vat.errorPast',
   INVALID_RATE: 'admin.vat.errorRate',
   ALREADY_IN_FORCE: 'admin.vat.errorInForce',
-  STAFF_ONLY: 'admin.staffOnly',
 } as const;
 
-export function VatAdmin({ rates, today, isStaff, locale }: VatAdminProps) {
+export function VatAdmin({ rates, today, locale }: VatAdminProps) {
   const t = getT(locale);
   const router = useRouter();
   const firstAllowed = addDays(today, 1);
@@ -64,11 +62,6 @@ export function VatAdmin({ rates, today, isStaff, locale }: VatAdminProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ validFrom, ratePercent: Number(rate.replace(',', '.')) }),
     });
-  }
-
-  function becomeStaff() {
-    document.cookie = `${VIEWER_COOKIE}=${STAFF}; path=/; samesite=lax`;
-    router.refresh();
   }
 
   return (
@@ -116,7 +109,7 @@ export function VatAdmin({ rates, today, isStaff, locale }: VatAdminProps) {
                     {inForce ? ` · ${t('admin.vat.inForce')}` : ''}
                   </td>
                   <td className="py-1.5 text-right">
-                    {row.adminId !== null && row.validFrom > today && isStaff ? (
+                    {row.adminId !== null && row.validFrom > today ? (
                       <button
                         type="button"
                         disabled={busy}
@@ -136,54 +129,42 @@ export function VatAdmin({ rates, today, isStaff, locale }: VatAdminProps) {
         </table>
       </div>
 
-      {isStaff ? (
-        <form onSubmit={add} className="mt-5 flex flex-wrap items-end gap-3">
-          <label className="text-sm font-medium">
-            {t('admin.vat.newFrom')}
-            <input
-              type="date"
-              required
-              min={firstAllowed}
-              value={validFrom}
-              onChange={(event) => setValidFrom(event.target.value)}
-              className="mt-1 block rounded-lg border border-stone-300 bg-white px-3 py-2 dark:border-stone-700 dark:bg-stone-950"
-            />
-          </label>
-          <label className="text-sm font-medium">
-            {t('admin.vat.newRate')}
-            <input
-              type="number"
-              required
-              min={0}
-              max={100}
-              step="0.01"
-              inputMode="decimal"
-              value={rate}
-              onChange={(event) => setRate(event.target.value)}
-              placeholder="27"
-              className="mt-1 block w-28 rounded-lg border border-stone-300 bg-white px-3 py-2 dark:border-stone-700 dark:bg-stone-950"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={busy || rate === ''}
-            className="rounded-lg bg-emerald-700 px-5 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
-          >
-            {t('admin.vat.add')}
-          </button>
-        </form>
-      ) : (
-        <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
-          <p>{t('admin.staffOnly')}</p>
-          <button
-            type="button"
-            onClick={becomeStaff}
-            className="mt-2 rounded-lg bg-amber-700 px-4 py-2 font-semibold text-white hover:bg-amber-800"
-          >
-            {t('admin.becomeStaff')}
-          </button>
-        </div>
-      )}
+      <form onSubmit={add} className="mt-5 flex flex-wrap items-end gap-3">
+        <label className="text-sm font-medium">
+          {t('admin.vat.newFrom')}
+          <input
+            type="date"
+            required
+            min={firstAllowed}
+            value={validFrom}
+            onChange={(event) => setValidFrom(event.target.value)}
+            className="mt-1 block rounded-lg border border-stone-300 bg-white px-3 py-2 dark:border-stone-700 dark:bg-stone-950"
+          />
+        </label>
+        <label className="text-sm font-medium">
+          {t('admin.vat.newRate')}
+          <input
+            type="number"
+            required
+            min={0}
+            max={100}
+            step="0.01"
+            inputMode="decimal"
+            value={rate}
+            onChange={(event) => setRate(event.target.value)}
+            placeholder="27"
+            className="mt-1 block w-28 rounded-lg border border-stone-300 bg-white px-3 py-2 dark:border-stone-700 dark:bg-stone-950"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={busy || rate === ''}
+          className="rounded-lg bg-emerald-700 px-5 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+        >
+          {t('admin.vat.add')}
+        </button>
+      </form>
+
       <p className="mt-3 text-xs text-stone-600 dark:text-stone-400">{t('admin.vat.rules')}</p>
       {error ? (
         <p role="alert" className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">

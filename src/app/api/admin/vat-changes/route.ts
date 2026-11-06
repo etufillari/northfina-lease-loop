@@ -1,10 +1,10 @@
 // POST /api/admin/vat-changes   body: { "validFrom": "2027-07-01", "ratePercent": 27 }
-// Adds a VAT rate from a future date (admin page). Staff only; see src/server/vat.ts.
+// Adds a VAT rate from a future date (admin page). Like the rest of this demo there's no login.
+// See src/server/vat.ts.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { appDate } from '@/server/app-date';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { currentViewer } from '@/server/current-viewer';
 import { db } from '@/server/db';
 import { addVatChange } from '@/server/vat';
 
@@ -19,15 +19,8 @@ const failures = {
 } as const;
 
 export const POST = handleRoute(async (request) => {
-  if ((await currentViewer()).kind !== 'staff') {
-    return fail(403, 'STAFF_ONLY', 'Only Lease Loop staff can change VAT');
-  }
   const body = await readJsonBody(request, bodySchema);
-  const result = await addVatChange(
-    db,
-    { ...body, actor: 'Lease Loop staff' },
-    (await appDate()).today
-  );
+  const result = await addVatChange(db, { ...body, actor: 'admin' }, (await appDate()).today);
   if (!result.ok) {
     const [status, code, message] = failures[result.reason];
     return fail(status, code, message);

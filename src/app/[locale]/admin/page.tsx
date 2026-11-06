@@ -1,6 +1,6 @@
 // Admin: a control room for demonstrations. Totals on the app's date, VAT changes on the fly,
-// every contract, and the latest audit log entries. Changing anything needs "Lease Loop staff"
-// in "Acting as"; like the rest of the demo login, that is not real security.
+// every contract, and the latest audit log entries. Having the page open is enough: like the
+// rest of this demo there is no real login.
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
@@ -14,7 +14,6 @@ import { intlLocale, isLocale } from '@/i18n/locales';
 import { adminOverview } from '@/server/admin';
 import { appDate } from '@/server/app-date';
 import { listAssets } from '@/server/assets';
-import { currentViewer } from '@/server/current-viewer';
 import { db } from '@/server/db';
 import { effectiveVatRates, listVatChanges } from '@/server/vat';
 
@@ -24,7 +23,7 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
   await connection();
 
   const t = getT(locale);
-  const [{ today }, viewer] = await Promise.all([appDate(), currentViewer()]);
+  const { today } = await appDate();
   const [overview, rates, changes, assets] = await Promise.all([
     adminOverview(db, today),
     effectiveVatRates(db),
@@ -106,7 +105,6 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
             adminId: adminIdByDate.get(rate.valid_from) ?? null,
           }))}
           today={today}
-          isStaff={viewer.kind === 'staff'}
           locale={locale}
         />
       </Panel>

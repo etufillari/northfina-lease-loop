@@ -2,7 +2,7 @@
 // When the VAT rate changes, it says so in plain words: the locked rent stays the same and
 // only the VAT part (and so the total) moves.
 import type { Invoice } from '@/domain/invoicing';
-import { splitByDate, sumInvoices } from '@/domain/invoicing';
+import { splitByDate, sumInvoices, upcomingVatChange } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
@@ -16,8 +16,11 @@ export function InvoiceList({ invoices, today, locale, t }: InvoiceListProps) {
   const next = upcoming[0];
   const issuedTotals = sumInvoices(issued);
   const allTotals = sumInvoices(invoices);
-  const vatChange = invoices.find((invoice) => invoice.vatChangedFrom !== null);
-  const beforeChange = vatChange ? invoices[vatChange.number - 2] : undefined;
+  // Warn about a VAT change only while it is still ahead; once it has happened, each row
+  // still shows its own VAT %.
+  const change = upcomingVatChange(invoices, today);
+  const vatChange = change?.invoice;
+  const beforeChange = change?.previous;
 
   return (
     <section
@@ -97,7 +100,7 @@ export function InvoiceList({ invoices, today, locale, t }: InvoiceListProps) {
                     key={invoice.number}
                     className={
                       'border-b border-stone-100 dark:border-stone-800 ' +
-                      (invoice.vatChangedFrom !== null ? 'bg-amber-50 dark:bg-amber-950/50 ' : '') +
+                      (invoice === vatChange ? 'bg-amber-50 dark:bg-amber-950/50 ' : '') +
                       (isIssued ? '' : 'text-stone-500 dark:text-stone-500')
                     }
                   >

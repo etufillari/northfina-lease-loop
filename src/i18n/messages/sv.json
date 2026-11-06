@@ -214,7 +214,7 @@
   "invoices.next": "Nästa faktura",
   "invoices.nextValue": "{amount} den {date}",
   "invoices.none": "Ingen – alla fakturor är skickade",
-  "invoices.vatChange": "Från faktura {number} ({date}) är momsen {to} % i stället för {from} %. Din hyra exkl. moms är fortfarande {net}, eftersom den är låst; bara momsdelen ändras, så summan går från {before} till {after}.",
+  "invoices.vatChange": "Från faktura {number} ({date}) blir momsen {to} % i stället för {from} %. Din hyra exkl. moms är fortfarande {net}, eftersom den är låst; bara momsdelen ändras, så summan går från {before} till {after}.",
   "invoices.showAll": "Alla {count} fakturor",
   "invoices.due": "Faktura- och förfallodag",
   "invoices.net": "Hyra exkl. moms",

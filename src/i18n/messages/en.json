@@ -214,7 +214,7 @@
   "invoices.next": "Next invoice",
   "invoices.nextValue": "{amount} on {date}",
   "invoices.none": "None – all invoices are out",
-  "invoices.vatChange": "From invoice {number} ({date}) VAT is {to} % instead of {from} %. Your rent excl. VAT stays {net}, because it is locked; only the VAT part changes, so the total goes from {before} to {after}.",
+  "invoices.vatChange": "From invoice {number} ({date}) VAT will be {to} % instead of {from} %. Your rent excl. VAT stays {net}, because it is locked; only the VAT part changes, so the total goes from {before} to {after}.",
   "invoices.showAll": "All {count} invoices",
   "invoices.due": "Invoice and due date",
   "invoices.net": "Rent excl. VAT",

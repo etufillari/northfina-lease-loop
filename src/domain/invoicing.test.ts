@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
-import { invoiceSchedule, splitByDate, sumInvoices, type Invoice } from './invoicing';
+import {
+  invoiceSchedule,
+  splitByDate,
+  sumInvoices,
+  upcomingVatChange,
+  type Invoice,
+} from './invoicing';
 
 let vatRates: VatRates;
 beforeAll(async () => {
@@ -104,5 +110,29 @@ describe('splitByDate', () => {
     const invoices = schedule('2026-11-05', 12, 100);
     expect(splitByDate(invoices, '2026-11-04').issued).toHaveLength(0);
     expect(splitByDate(invoices, '2030-01-01').issued).toHaveLength(12);
+  });
+});
+
+describe('upcomingVatChange', () => {
+  // From 15 Sep 2026: invoice 5 (15 Jan 2027) is the first at 26 %
+  const invoices = () => schedule('2026-09-15', 24, 6_957);
+
+  it('warns about the change while it is still ahead', () => {
+    const change = upcomingVatChange(invoices(), '2026-12-20');
+    expect(change?.invoice).toMatchObject({ number: 5, vatPercent: 26 });
+    expect(change?.previous).toMatchObject({ number: 4, vatPercent: 25.5 });
+  });
+
+  it('still warns the day before the first new-rate invoice', () => {
+    expect(upcomingVatChange(invoices(), '2027-01-14')?.invoice.number).toBe(5);
+  });
+
+  it('stops warning once the first new-rate invoice is issued', () => {
+    expect(upcomingVatChange(invoices(), '2027-01-15')).toBeNull();
+    expect(upcomingVatChange(invoices(), '2028-01-01')).toBeNull();
+  });
+
+  it('has nothing to warn about when the rate never changes', () => {
+    expect(upcomingVatChange(schedule('2027-02-01', 12, 1_000), '2027-02-01')).toBeNull();
   });
 });

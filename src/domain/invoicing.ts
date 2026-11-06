@@ -87,3 +87,20 @@ export function splitByDate(
     upcoming: invoices.filter((invoice) => invoice.dueDate > today),
   };
 }
+
+/**
+ * The next VAT change still ahead on `today`: the first not-yet-issued invoice whose rate
+ * differs from the invoice before it. Once that invoice is issued the change has happened and
+ * there is nothing left to warn about, so this returns `null` (until a later change comes up).
+ */
+export function upcomingVatChange(
+  invoices: readonly Invoice[],
+  today: string
+): { invoice: Invoice; previous: Invoice } | null {
+  const index = invoices.findIndex(
+    (invoice) => invoice.vatChangedFrom !== null && invoice.dueDate > today
+  );
+  const invoice = invoices[index];
+  const previous = invoices[index - 1];
+  return invoice && previous ? { invoice, previous } : null;
+}

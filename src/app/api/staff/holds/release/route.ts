@@ -10,6 +10,9 @@ import { requireStaff } from '@/server/current-user';
 export const POST = handleRoute(async (request) => {
   const user = await requireStaff();
   if (user instanceof Response) return user;
-  const released = await releaseExpiredHolds(db, { actor: user.actorId, asOf: asOfFrom(request) });
+  const released = await releaseExpiredHolds(db, {
+    actor: user.actorId,
+    asOf: await asOfFrom(request),
+  });
   return ok({ released });
 });

@@ -13,6 +13,8 @@ import { isLocale } from '@/i18n/locales';
 import { todayIso } from '@/server/today';
 import '../globals.css';
 import { currentUser } from '@/server/current-user';
+import { db } from '@/server/db';
+import { getDemoClock } from '@/server/demo-clock';
 import { demoMode } from '@/server/demo-mode';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
@@ -30,8 +32,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const user = await currentUser();
   // The demo picker shows who is chosen; everything else asks currentUser().
   const persona = user?.actorId ?? null;
+  // The shared demo clock first, so every browser's bar shows the same day; the old
+  // cookie only bridges databases from before the clock existed.
   const asOfCookie = cookieStore.get(AS_OF_COOKIE)?.value;
-  const asOf = asOfCookie && /^\d{4}-\d{2}-\d{2}$/.test(asOfCookie) ? asOfCookie : todayIso();
+  const asOf =
+    (demoMode() ? await getDemoClock(db) : null) ??
+    (asOfCookie && /^\d{4}-\d{2}-\d{2}$/.test(asOfCookie) ? asOfCookie : todayIso());
 
   return (
     // suppressHydrationWarning: browser extensions (e.g. Storylane) add classes to <html>

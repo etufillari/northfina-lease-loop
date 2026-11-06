@@ -38,7 +38,7 @@ export const GET = handleRoute(
     // The exit price is the holder's business (and staff's).
     const contract = await db.contract.findUnique({ where: { id }, select: { customer_id: true } });
     if (contract && !user.isStaff && contract.customer_id !== user.customerId) return notYours();
-    const result = await earlyExitPreview(db, id, asOfFrom(request));
+    const result = await earlyExitPreview(db, id, await asOfFrom(request));
     if (!result.ok) {
       if (result.reason === 'not_yours') return notYours();
       const [status, code, message] = failures[result.reason]!;
@@ -62,7 +62,7 @@ export const POST = handleRoute(
     const result = await executeEarlyExit(db, {
       contractId: id,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
       usageReadings: body.usageReadings,
     });
     if (!result.ok) {

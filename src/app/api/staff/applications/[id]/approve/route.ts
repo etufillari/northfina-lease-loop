@@ -34,7 +34,7 @@ export const POST = handleRoute(
       actor: user.actorId,
       isStaff: user.isStaff,
       note: body.note,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       const [status, code, message] = failures[result.reason]!;

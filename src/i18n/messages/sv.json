@@ -522,5 +522,6 @@
   "passOn.nominateTitle": "Utse en efterträdare till när leasingen tar slut",
   "passOn.nominateIntro": "Du behåller avtalet till slutet. Om hen accepterar hålls föremålet för hen, före väntelistan, i 3 dagar när det är återlämnat och renoverat.",
   "passOn.lockedNote": "{name} accepterade att ta över föremålet: avtalet löper till sitt slut och föremålet återlämnas till hen — det kan inte längre köpas eller avslutas i förtid.",
-  "apply.summary.noteGross": "Alla priser här inkluderar moms {rate} %."
+  "apply.summary.noteGross": "Alla priser här inkluderar moms {rate} %.",
+  "passOn.storeNote": "Det här föremålet går via butiken: lämna in det där, och efterträdaren hämtar det efter den obligatoriska certifierade dataraderingen — {amount}, debiteras på plats."
 }

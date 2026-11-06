@@ -6,5 +6,5 @@ import { db } from '@/server/db';
 import { listReturnedDecisions } from '@/server/second-life';
 
 export const GET = handleRoute(async (request) =>
-  ok(await listReturnedDecisions(db, asOfFrom(request)))
+  ok(await listReturnedDecisions(db, await asOfFrom(request)))
 );

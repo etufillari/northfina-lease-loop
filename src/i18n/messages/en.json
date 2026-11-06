@@ -522,5 +522,6 @@
   "passOn.nominateTitle": "Nominate a successor for when the lease ends",
   "passOn.nominateIntro": "You keep the lease to the end. If they accept, the item is held for them, ahead of the waiting list, for 3 days once it is returned and refurbished.",
   "passOn.lockedNote": "{name} accepted to take this item over: the lease runs to its end and the item is returned to them — it can no longer be bought or ended early.",
-  "apply.summary.noteGross": "All prices here include VAT {rate} %."
+  "apply.summary.noteGross": "All prices here include VAT {rate} %.",
+  "passOn.storeNote": "This item goes through the store: return it there, and the successor picks it up after the mandatory certified data wipe — {amount}, charged on site."
 }

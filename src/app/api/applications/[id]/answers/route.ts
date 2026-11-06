@@ -25,7 +25,7 @@ export const PUT = handleRoute(
       questionId: body.questionId,
       answer: body.answer,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       if (result.reason === 'not_yours') return notYours();

@@ -15,7 +15,7 @@ export const POST = handleRoute(
     const result = await acceptOffer(db, {
       entryId: id,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) return waitlistFailure(result.reason);
     return ok({ applicationId: result.applicationId });

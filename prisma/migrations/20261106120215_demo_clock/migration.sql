@@ -1,0 +1,5 @@
+-- CreateTable
+CREATE TABLE "DemoClock" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
+    "as_of" TEXT NOT NULL
+);

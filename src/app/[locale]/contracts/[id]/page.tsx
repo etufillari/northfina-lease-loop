@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { ContractActions } from '@/components/contract-actions';
-import { loadVatRates } from '@/data/load';
+import { loadRefurbishmentCosts, loadVatRates } from '@/data/load';
+import type { AssetCategory } from '@/data/schemas';
 import { buyoutInvoicePreview } from '@/domain/buyout';
 import { addMonthsClamped } from '@/domain/calendar';
 import { formatEuro } from '@/domain/money';
-import { pricesIncludeVat } from '@/domain/vat';
+import { mandatoryHandoverCents } from '@/domain/second-life';
+import { pricesIncludeVat, vatRateOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
@@ -77,10 +79,26 @@ export default async function ContractPage({
   const pricesInclVat = pricesIncludeVat(holder?.type);
   const leasedAssets = await db.asset.findMany({
     where: { id: { in: contract.assets.map((a) => a.asset_id) } },
-    select: { id: true, make: true, model: true, usage_unit: true, usage_total: true },
+    select: {
+      id: true,
+      make: true,
+      model: true,
+      category: true,
+      usage_unit: true,
+      usage_total: true,
+    },
     orderBy: { id: 'asc' },
   });
   const vatRates = await loadVatRates();
+  const vatNow = vatRateOn(vatRates, asOf);
+  // Hand-over work nobody may skip (a laptop's data wipe): the hand-over goes through the
+  // store and the successor pays this on site, so the giver is told up front.
+  const refurbishmentCosts = await loadRefurbishmentCosts();
+  const handoverResetNetCents = leasedAssets.reduce(
+    (sum, asset) =>
+      sum + mandatoryHandoverCents(asset.category as AssetCategory, refurbishmentCosts),
+    0
+  );
   const buyout = buyoutInvoicePreview(
     { buyoutNetCents: contract.buyout_net_cents, termEndsOn: endsOn, asOf },
     vatRates
@@ -163,6 +181,15 @@ export default async function ContractPage({
           buyoutInvoice={buyout.ok ? buyout.preview : null}
           pricesInclVat={pricesInclVat}
           purchaseAtEnd={contract.purchase_at_end}
+          handoverReset={
+            handoverResetNetCents > 0 && vatNow.ok
+              ? {
+                  netCents: handoverResetNetCents,
+                  rateBasisPoints: vatNow.rateBasisPoints,
+                  ratePercent: vatNow.ratePercent,
+                }
+              : null
+          }
           nomination={
             nominationRow
               ? {

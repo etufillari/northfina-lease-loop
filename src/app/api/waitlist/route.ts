@@ -33,7 +33,7 @@ export const POST = handleRoute(async (request) => {
     ...body,
     customerId: user.customerId,
     actor: user.actorId,
-    asOf: asOfFrom(request),
+    asOf: await asOfFrom(request),
   });
   if (!result.ok) return waitlistFailure(result.reason);
   return ok({ id: result.entry.id }, { status: 201 });

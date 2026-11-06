@@ -328,3 +328,15 @@ export function secondLifeDecision(
   }
   return parts;
 }
+
+/**
+ * Work that is MANDATORY before anyone else may use the item — a laptop's certified data
+ * wipe. A mid-lease hand-over goes through the store for exactly this: the giver returns
+ * the item there and the successor picks it up once the work is done, paid on site.
+ */
+export function mandatoryHandoverCents(category: AssetCategory, costs: RefurbishmentCosts): number {
+  const fixed = costs[category].fixed;
+  return fixed
+    .filter((item) => item.mandatory_before_next_lease === true)
+    .reduce((sum, item) => sum + item.cost_cents, 0);
+}

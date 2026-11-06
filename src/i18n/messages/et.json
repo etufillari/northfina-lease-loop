@@ -522,5 +522,6 @@
   "passOn.nominateTitle": "Nimeta järeltulija rendiperioodi lõpuks",
   "passOn.nominateIntro": "Leping jääb lõpuni sinule. Kui ta nõustub, hoitakse toodet talle ootejärjekorrast ees 3 päeva, kui see on tagastatud ja taastatud.",
   "passOn.lockedNote": "{name} nõustus toote üle võtma: leping kestab lõpuni ja toode tagastatakse talle — seda ei saa enam osta ega lepingut ennetähtaegselt lõpetada.",
-  "apply.summary.noteGross": "Kõik hinnad siin sisaldavad käibemaksu {rate} %."
+  "apply.summary.noteGross": "Kõik hinnad siin sisaldavad käibemaksu {rate} %.",
+  "passOn.storeNote": "See toode liigub kaupluse kaudu: tagasta see sinna ja järeltulija võtab selle vastu pärast kohustuslikku sertifitseeritud andmekustutust — {amount}, tasutakse kohapeal."
 }

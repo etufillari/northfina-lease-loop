@@ -16,7 +16,7 @@ export const POST = handleRoute(
       entryId: id,
       actor: user.actorId,
       isStaff: user.isStaff,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) return waitlistFailure(result.reason);
     return ok({ passedOn: result.passedOn });

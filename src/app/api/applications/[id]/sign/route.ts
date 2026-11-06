@@ -52,7 +52,7 @@ export const POST = handleRoute(
       applicationId: id,
       startDate: body.startDate,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       const [status, code, message] = failures[result.reason]!;

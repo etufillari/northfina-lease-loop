@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { BuyoutInvoicePreview } from '@/domain/buyout';
 import { formatEuro } from '@/domain/money';
+import { grossCents } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -38,6 +39,7 @@ export function ContractActions({
   termMonthsTotal,
   returnItems,
   nomination,
+  handoverReset,
 }: {
   locale: Locale;
   contractId: string;
@@ -54,6 +56,8 @@ export function ContractActions({
   returnItems: ReturnItem[];
   /** The current successor invitation (not yet answered) or accepted nomination. */
   nomination: { name: string; accepted: boolean } | null;
+  /** Mandatory work before the next user (a laptop's data wipe): paid on site at the store. */
+  handoverReset: { netCents: number; rateBasisPoints: number; ratePercent: number } | null;
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -219,6 +223,21 @@ export function ContractActions({
             <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
               {t('passOn.transferIntro')}
             </p>
+            {handoverReset ? (
+              <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+                {t('passOn.storeNote', {
+                  amount: `${euro(
+                    pricesInclVat
+                      ? grossCents(handoverReset.netCents, handoverReset.rateBasisPoints)
+                      : handoverReset.netCents
+                  )} ${
+                    pricesInclVat
+                      ? t('price.inclVat', { rate: handoverReset.ratePercent })
+                      : t('price.exclVat')
+                  }`,
+                })}
+              </p>
+            ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-3">
               {transferToken ? (
                 <p className="text-sm">
@@ -244,7 +263,11 @@ export function ContractActions({
           </div>
         ) : null}
         {!purchaseAtEnd ? (
-          <div className="mt-4">
+          <div
+            className={
+              termOver ? 'mt-4' : 'mt-4 border-t border-stone-100 pt-4 dark:border-stone-800'
+            }
+          >
             <h4 className="text-sm font-medium">{t('passOn.nominateTitle')}</h4>
             <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
               {t('passOn.nominateIntro')}

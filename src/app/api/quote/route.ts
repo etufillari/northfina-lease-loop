@@ -30,7 +30,7 @@ export const GET = handleRoute(async (request) => {
   if (!parsed.success) return fail(400, 'VALIDATION_ERROR', 'Bad quote parameters');
   const { assetIds, downPaymentCents, termMonths } = parsed.data;
   const customerId = (await currentUser())?.customerId ?? null;
-  const asOf = asOfFrom(request);
+  const asOf = await asOfFrom(request);
 
   const ids = assetIds.split(',').filter(Boolean);
   const live = await buildLiveQuote({

@@ -16,7 +16,7 @@ export const POST = handleRoute(
     const result = await executeSecondLife(db, {
       assetId: id,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) return secondLifeFailure(result.reason, id);
     return ok({

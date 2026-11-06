@@ -19,14 +19,15 @@ describe('demo mode', () => {
     expect(demoMode()).toBe(false);
   });
 
-  it('in demo mode ?asOf= wins, then the time-travel cookie', () => {
-    expect(asOfFrom(request('http://x/api?asOf=2026-01-31'))).toBe('2026-01-31');
-    expect(asOfFrom(request('http://x/api', 'asOf=2026-11-05'))).toBe('2026-11-05');
+  it('in demo mode ?asOf= wins, then the shared clock, then the time-travel cookie', async () => {
+    expect(await asOfFrom(request('http://x/api?asOf=2026-01-31'))).toBe('2026-01-31');
+    // No database in this test, so the shared clock yields nothing and the cookie holds.
+    expect(await asOfFrom(request('http://x/api', 'asOf=2026-11-05'))).toBe('2026-11-05');
   });
 
-  it('switched off, "today" is the real date whatever the request says', () => {
+  it('switched off, "today" is the real date whatever the request says', async () => {
     process.env.DEMO_MODE = 'off';
-    expect(asOfFrom(request('http://x/api?asOf=2026-01-31'))).toBe(todayIso());
-    expect(asOfFrom(request('http://x/api', 'asOf=2026-11-05'))).toBe(todayIso());
+    expect(await asOfFrom(request('http://x/api?asOf=2026-01-31'))).toBe(todayIso());
+    expect(await asOfFrom(request('http://x/api', 'asOf=2026-11-05'))).toBe(todayIso());
   });
 });

@@ -15,7 +15,7 @@ export const POST = handleRoute(
     const result = await expireOffer(db, {
       entryId: id,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) return waitlistFailure(result.reason);
     return ok({ passedOn: result.passedOn });

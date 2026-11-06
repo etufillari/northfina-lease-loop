@@ -9,7 +9,7 @@ import { secondLifeFailure } from './failure';
 export const GET = handleRoute(
   async (request, { params }: RouteContext<'/api/second-life/[id]'>) => {
     const { id } = await params;
-    const result = await previewSecondLife(db, id, asOfFrom(request));
+    const result = await previewSecondLife(db, id, await asOfFrom(request));
     if (!result.ok) return secondLifeFailure(result.reason, id);
     return ok(result.preview);
   }

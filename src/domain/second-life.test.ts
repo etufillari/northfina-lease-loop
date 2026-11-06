@@ -17,6 +17,7 @@ import type {
 } from '@/data/schemas';
 import { listPriceOn } from './price-list';
 import {
+  mandatoryHandoverCents,
   matchWaitingList,
   meetsMinCondition,
   requiredRefurbishments,
@@ -314,5 +315,18 @@ describe('secondLifeDecision: an upgrade must pay for itself', () => {
     const decision = decide('ebike-007', {}, Math.round(v1Price('ebike-007') / 10));
     expect(decision.valueAsIsCents).toBeLessThan(decision.requiredTotalCents);
     expect(decision.action).toBe('parts_bin');
+  });
+});
+
+describe('mandatoryHandoverCents', () => {
+  it('a laptop must get its certified data wipe before the next person: 25,00 €', async () => {
+    const costs = await loadRefurbishmentCosts();
+    expect(mandatoryHandoverCents('laptop', costs)).toBe(2500);
+  });
+
+  it('e-bikes and farm machines have no mandatory hand-over work', async () => {
+    const costs = await loadRefurbishmentCosts();
+    expect(mandatoryHandoverCents('e_bike', costs)).toBe(0);
+    expect(mandatoryHandoverCents('farm_machine', costs)).toBe(0);
   });
 });

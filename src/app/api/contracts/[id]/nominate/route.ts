@@ -22,7 +22,7 @@ export const POST = handleRoute(
       contractId: id,
       email: body.email,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       const failures: Record<typeof result.reason, [number, string, string]> = {

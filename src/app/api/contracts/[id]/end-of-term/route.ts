@@ -26,7 +26,7 @@ export const POST = handleRoute(
       contractId: id,
       action: body.action,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
       usageReadings: body.usageReadings,
     });
     if (!result.ok) {

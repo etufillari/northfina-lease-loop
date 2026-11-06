@@ -22,7 +22,7 @@ export const POST = handleRoute(
       assetId,
       customerId: user.customerId,
       accept: body.accept,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       if (result.reason === 'no_invitation')

@@ -522,5 +522,6 @@
   "passOn.nominateTitle": "Nimeä seuraaja vuokrakauden loppuun",
   "passOn.nominateIntro": "Pidät sopimuksen loppuun asti. Jos hän hyväksyy, tuote varataan hänelle jonon ohi 3 päiväksi, kun se on palautettu ja kunnostettu.",
   "passOn.lockedNote": "{name} hyväksyi tuotteen vastaanoton: sopimus jatkuu loppuun asti ja tuote palautetaan heille — sitä ei voi enää ostaa eikä sopimusta päättää kesken.",
-  "apply.summary.noteGross": "Kaikki hinnat tässä sisältävät ALV:n {rate} %."
+  "apply.summary.noteGross": "Kaikki hinnat tässä sisältävät ALV:n {rate} %.",
+  "passOn.storeNote": "Tämä tuote kulkee myymälän kautta: palauta se sinne, ja seuraaja noutaa sen pakollisen sertifioidun tietojen pyyhinnän jälkeen — {amount}, veloitetaan paikan päällä."
 }

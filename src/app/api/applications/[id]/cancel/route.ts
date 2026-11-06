@@ -14,7 +14,7 @@ export const POST = handleRoute(
     const result = await cancelApplication(db, {
       applicationId: id,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       if (result.reason === 'not_found')

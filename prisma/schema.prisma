@@ -259,3 +259,10 @@ model AuditLog {
   @@index([entity_type, entity_id])
   @@index([created_at])
 }
+
+// The demo's shared clock: one row. Every browser (and persona) sees the same "today", so a
+// hand-over signed in another window happens on the same demo day the giver sees.
+model DemoClock {
+  id    Int    @id @default(1)
+  as_of String
+}

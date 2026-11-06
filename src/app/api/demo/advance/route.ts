@@ -6,6 +6,7 @@ import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { currentUser } from '@/server/current-user';
 import { demoMode } from '@/server/demo-mode';
 import { db } from '@/server/db';
+import { setDemoClock } from '@/server/demo-clock';
 import { expireLapsedHolds } from '@/server/hold-expiry';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -22,5 +23,7 @@ export const POST = handleRoute(async (request) => {
   // The overnight job acts on its own: the audit log names `system`, with who moved the clock.
   const summary = await expireLapsedHolds(db, { from: body.from, to: body.to });
   const movedBy = (await currentUser())?.actorId ?? 'demo';
+  // The clock is shared: every browser and persona now lives on the new day.
+  await setDemoClock(db, body.to, movedBy);
   return ok({ to: body.to, movedBy, ...summary });
 });

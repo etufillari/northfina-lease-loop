@@ -17,7 +17,7 @@ export const POST = handleRoute(
       token,
       customerId: user.customerId,
       actor: user.actorId,
-      asOf: asOfFrom(request),
+      asOf: await asOfFrom(request),
     });
     if (!result.ok) {
       if (result.reason === 'not_yours') return notYours();

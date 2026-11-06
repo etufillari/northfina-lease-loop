@@ -9,6 +9,9 @@ import {
   clampDownPaymentCents,
   downPaymentBoundsFor,
 } from './contract-pricing';
+import { addMonthsClamped } from './calendar';
+import { mulDivRound } from './rounding';
+import { vatRateOn } from './vat';
 
 let table: CoefficientTable;
 let vatRates: VatRates;
@@ -348,8 +351,17 @@ describe('contract-pricing property tests (Hegel: Money that adds up)', () => {
         // Total rent adds up: net total = monthly net * term
         expect(quote.totalRentNetCents).toBe(quote.monthlyNetRentCents * termMonths);
 
-        // Total rent gross adds up: gross total = monthly gross * term
-        expect(quote.totalRentGrossCents).toBe(quote.monthlyGrossRentCents * termMonths);
+        // Total rent gross adds up row by row: each invoice is charged VAT at the rate on its
+        // own date (ARCHITECTURE.md §6.3), so a term that spans a VAT change is not simply
+        // monthly gross × term.
+        let expectedGrossCents = 0;
+        for (let i = 0; i < termMonths; i += 1) {
+          const vat = vatRateOn(vatRates, addMonthsClamped(isoDate, i));
+          if (!vat.ok) throw new Error('every invoice date has a VAT rate in the data pack');
+          expectedGrossCents +=
+            quote.monthlyNetRentCents + mulDivRound(quote.monthlyNetRentCents, vat.rateBp, 10_000);
+        }
+        expect(quote.totalRentGrossCents).toBe(expectedGrossCents);
 
         // Total lease net = down payment + total rent net
         expect(quote.totalLeaseNetCents).toBe(quote.downPaymentCents + quote.totalRentNetCents);

@@ -97,6 +97,18 @@ describe('signingProblem', () => {
     expect(signingProblem(app, customer('cust-aino'))).toBe('signatory_required');
   });
 
+  it('lets a signatory sign for a company whose applicant cannot', () => {
+    const app = application({ customer_id: 'cust-norvi', answers: { q_can_sign: 'no' } });
+    expect(signingProblem(app, customer('cust-norvi'), true)).toBeNull();
+  });
+
+  it('still holds a signatory to the owner and the decision', () => {
+    const app = application({ customer_id: 'cust-norvi' });
+    expect(signingProblem(app, customer('cust-haapala'), true)).toBe('not_owner');
+    const rejected = application({ customer_id: 'cust-norvi', decision: 'rejected' });
+    expect(signingProblem(rejected, customer('cust-norvi'), true)).toBe('not_approved');
+  });
+
   it('reports the decision before the signatory', () => {
     const app = application({ customer_id: 'cust-norvi', decision: 'rejected' });
     expect(signingProblem(app, customer('cust-norvi'))).toBe('not_approved');
@@ -175,7 +187,11 @@ describe('buildContract', () => {
   });
 
   it('produces a record that matches the contract schema once it has an id', () => {
-    const contract = { id: 'con-1', ...build(application(), '2026-11-05') };
+    const contract = {
+      id: 'con-1',
+      signed_by: 'cust-aino',
+      ...build(application(), '2026-11-05'),
+    };
     expect(contractSchema.safeParse(contract).success).toBe(true);
   });
 
@@ -232,6 +248,7 @@ describe('openLife', () => {
 
   const contract = (overrides: Partial<Application> = {}) => ({
     id: 'con-1',
+    signed_by: 'cust-aino',
     ...build(application(overrides), '2026-11-05'),
   });
 

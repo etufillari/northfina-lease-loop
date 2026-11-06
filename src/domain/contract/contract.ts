@@ -10,15 +10,17 @@ export type SigningProblem = 'not_owner' | 'not_approved' | 'signatory_required'
 /**
  * Why this customer cannot sign this application, or `null` if they can. Either source can
  * stop an applicant: the company record, whatever type they answered, or their own answer.
- * Whether the application is already signed and whether the asset is still free are for the
- * database to decide.
+ * A signatory linked to the company clears that. Whether the application is already signed
+ * and whether the asset is still free are for the database to decide.
  */
 export function signingProblem(
   application: Application,
-  customer: Customer
+  customer: Customer,
+  isSignatory = false
 ): SigningProblem | null {
   if (application.customer_id !== customer.id) return 'not_owner';
   if (application.decision !== 'approved') return 'not_approved';
+  if (isSignatory) return null;
   const recordForbids = customer.type === 'company' && !customer.applicant_can_sign;
   if (recordForbids || application.answers.q_can_sign === 'no') return 'signatory_required';
   return null;
@@ -43,7 +45,7 @@ export function buildContract(
   application: Application,
   lockedPrice: Quote,
   signedOn: string
-): Omit<Contract, 'id'> {
+): Omit<Contract, 'id' | 'signed_by'> {
   const startOn = application.start_on > signedOn ? application.start_on : signedOn;
 
   return {

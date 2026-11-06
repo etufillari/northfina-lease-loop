@@ -11,6 +11,7 @@ export const TEST_SECRET = 'test-secret-at-least-this-long';
 export const AINO = { sub: 'cust-aino', role: 'client' } as const;
 export const ADMIN = { sub: 'staff-admin', role: 'admin' } as const;
 export const DEALER = { sub: 'staff-dealer', role: 'dealer' } as const;
+export const NORVI_CEO = { sub: 'sign-norvi-ceo', role: 'signatory' } as const;
 
 /** Acts as `user`, or as nobody when `null`. */
 export async function actAs(user: { sub: string; role: Role } | null) {

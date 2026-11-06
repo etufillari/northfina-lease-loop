@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Customer, Staff } from '@/data/schemas';
 import {
+  actingCustomerId,
   can,
   findIdentity,
   identityId,
@@ -179,5 +180,31 @@ describe('isRole', () => {
     expect(isRole(undefined)).toBe(false);
     expect(isRole(null)).toBe(false);
     expect(isRole(42)).toBe(false);
+  });
+});
+
+describe('signatories', () => {
+  const ceo = {
+    id: 'sign-norvi-ceo',
+    name: 'Anna Norvi',
+    email: 'ceo@norvi.example.com',
+    company_id: 'cust-norvi',
+    story: '',
+  };
+
+  it('finds a signatory, with the name and company they act for', () => {
+    const identity = findIdentity([], [], 'sign-norvi-ceo', [ceo]);
+    if (!identity) throw new Error('expected the signatory');
+
+    expect(identity).toMatchObject({ kind: 'signatory', role: 'signatory' });
+    expect(identityId(identity)).toBe('sign-norvi-ceo');
+    expect(identityName(identity)).toBe('Anna Norvi');
+    expect(actingCustomerId(identity)).toBe('cust-norvi');
+  });
+
+  it('lets them sign and nothing else', () => {
+    expect(PERMISSIONS.filter((permission) => can('signatory', permission))).toEqual([
+      'contract.sign',
+    ]);
   });
 });

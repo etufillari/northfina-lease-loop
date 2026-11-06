@@ -2,20 +2,29 @@
 //   A client applies. The server prices the deal on its own date and decides:
 //   approved, rejected (with reasons) or manual_review.
 // GET /api/applications[?decision=manual_review]
-//   A client gets their own applications. An admin gets everyone's: the review queue.
+//   A client gets their own applications, and an admin everyone's: the review queue.
+//   A signatory gets the ones waiting for their signature.
 import { z } from 'zod';
 import { applicationDecisionSchema } from '@/data/lease-schemas';
-import { can } from '@/domain/identity';
+import { actingCustomerId, can } from '@/domain/identity';
 import { requireActor, requireCustomer } from '@/server/auth/actor';
 import {
   applicationRequestSchema,
   failureResponse,
 } from '@/server/application/application-request';
 import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { listApplications, submitApplication, viewsOf } from '@/server/application/applications';
+import {
+  listApplications,
+  submitApplication,
+  viewsOf,
+  type ApplicationView,
+} from '@/server/application/applications';
 import { db } from '@/server/db';
 
 const querySchema = z.strictObject({ decision: applicationDecisionSchema.optional() });
+
+const isWaitingForSignature = (view: ApplicationView) =>
+  view.decision === 'approved' && view.contract_id === null;
 
 export const POST = handleRoute(async (request) => {
   const customer = await requireCustomer('application.submit');
@@ -35,12 +44,13 @@ export const POST = handleRoute(async (request) => {
 
 export const GET = handleRoute(async (request) => {
   const actor = await requireActor();
-  const customerId = actor.kind === 'customer' ? actor.customer.id : undefined;
+  const customerId = actingCustomerId(actor);
   if (customerId === undefined && !can(actor.role, 'application.decide_manual_review')) {
     throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
   }
 
   const searchParams = new URL(request.url).searchParams;
   const { decision } = querySchema.parse(Object.fromEntries(searchParams));
-  return ok(await viewsOf(db, await listApplications(db, { decision, customerId })));
+  const views = await viewsOf(db, await listApplications(db, { decision, customerId }));
+  return ok(actor.kind === 'signatory' ? views.filter(isWaitingForSignature) : views);
 });

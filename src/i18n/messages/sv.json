@@ -14,6 +14,7 @@
   "session.role.client": "Kund",
   "session.role.dealer": "Återförsäljare",
   "session.role.admin": "Administratör",
+  "session.role.signatory": "Firmatecknare",
   "session.error": "Det gick inte att byta användare.",
   "catalogue.title": "Katalog",
   "catalogue.intro": "Varje produkt kan leasas, returneras, renoveras och leasas igen.",

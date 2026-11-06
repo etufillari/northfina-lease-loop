@@ -33,6 +33,7 @@ async function readSessionApi<T>(response: Response): Promise<T> {
 function roleLabel(role: IdentitySummary['role'], t: Translate): string {
   if (role === 'dealer') return t('session.role.dealer');
   if (role === 'admin') return t('session.role.admin');
+  if (role === 'signatory') return t('session.role.signatory');
   return t('session.role.client');
 }
 
@@ -131,7 +132,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   }
 
   const customers = users.filter((user) => user.kind === 'customer');
-  const staff = users.filter((user) => user.kind === 'staff');
+  const staff = users.filter((user) => user.kind !== 'customer');
 
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-stone-800 dark:bg-stone-900">

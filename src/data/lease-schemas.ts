@@ -125,6 +125,8 @@ export const contractSchema = z.strictObject({
   quantity: positiveIntSchema,
   quote_date: isoDateSchema,
   signed_on: isoDateSchema,
+  /** Who signed: the customer, or a signatory for a company. Empty on older contracts. */
+  signed_by: z.string().min(1).nullable(),
   start_on: isoDateSchema,
   planned_end_on: isoDateSchema,
   actual_end_on: isoDateSchema.nullable(),

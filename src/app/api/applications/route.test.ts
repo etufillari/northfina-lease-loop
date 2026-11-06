@@ -1,10 +1,20 @@
 // Runs the real handlers against a real, migrated SQLite database, only swapping which one.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadAssets } from '@/data/load';
-import { seedAssets } from '@/server/assets/assets';
 import type { PrismaClient } from '@/server/prisma-client';
-import { ADMIN, AINO, DEALER, TEST_SECRET, actAs } from '../../../../tests/helpers/act-as';
-import { ainoEbikeAnswers, haapalaFarmAnswers } from '../../../../tests/helpers/applicants';
+import {
+  ADMIN,
+  AINO,
+  DEALER,
+  NORVI_CEO,
+  TEST_SECRET,
+  actAs,
+} from '../../../../tests/helpers/act-as';
+import {
+  ainoEbikeAnswers,
+  haapalaFarmAnswers,
+  norviEbikeAnswers,
+} from '../../../../tests/helpers/applicants';
+import { applyFor, resetLeaseData, signFor } from '../../../../tests/helpers/lease-flow';
 import { createTestDb } from '../../../../tests/helpers/test-db';
 import { GET, POST } from './route';
 
@@ -23,20 +33,13 @@ beforeAll(async () => {
   vi.stubEnv('JWT_SECRET', TEST_SECRET);
   ({ db, cleanup } = await createTestDb());
   testDb.current = db;
-  await seedAssets(db, await loadAssets());
 });
 afterAll(async () => {
   vi.unstubAllEnvs();
   await cleanup();
 });
 beforeEach(async () => {
-  await db.auditLog.deleteMany();
-  await db.application.deleteMany();
-  await db.appSetting.upsert({
-    where: { key: 'demo_date' },
-    create: { key: 'demo_date', value: '2026-11-05' },
-    update: { value: '2026-11-05' },
-  });
+  await resetLeaseData(db);
 });
 
 const card1 = {
@@ -122,6 +125,8 @@ describe('POST /api/applications', () => {
     await actAs(DEALER);
     expect((await post(card1)).status).toBe(403);
     await actAs(ADMIN);
+    expect((await post(card1)).status).toBe(403);
+    await actAs(NORVI_CEO);
     expect((await post(card1)).status).toBe(403);
     expect(await db.application.count()).toBe(0);
   });
@@ -234,6 +239,18 @@ describe('GET /api/applications', () => {
       customer_id: 'cust-haapala',
       reviewed_by: 'staff-admin',
     });
+  });
+
+  it('shows a signatory only what is waiting for their signature', async () => {
+    await applyAsAinoAndHaapala();
+    const waiting = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers);
+    const signedOne = await applyFor(db, 'cust-norvi', 'ebike-012', norviEbikeAnswers);
+    await actAs(NORVI_CEO);
+    await signFor(db, 'cust-norvi', signedOne.id, 'sign-norvi-ceo');
+
+    const { status, body } = await list();
+    expect(status).toBe(200);
+    expect(body.data.map((a: { id: string }) => a.id)).toEqual([waiting.id]);
   });
 
   it('gives a client with no applications an empty list', async () => {

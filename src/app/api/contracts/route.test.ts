@@ -1,7 +1,14 @@
 // Runs the real handlers against a real, migrated SQLite database, only swapping which one.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '@/server/prisma-client';
-import { ADMIN, AINO, DEALER, TEST_SECRET, actAs } from '../../../../tests/helpers/act-as';
+import {
+  ADMIN,
+  AINO,
+  DEALER,
+  NORVI_CEO,
+  TEST_SECRET,
+  actAs,
+} from '../../../../tests/helpers/act-as';
 import {
   ainoEbikeAnswers,
   haapalaFarmAnswers,
@@ -155,6 +162,37 @@ describe('POST /api/contracts', () => {
       code: 'SIGNATORY_REQUIRED',
       details: { signatory_email: 'ceo@norvi.example.com' },
     });
+  });
+
+  it('lets the signatory sign for Norvi, and the contract stays with the company', async () => {
+    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers, {
+      quantity: 4,
+    });
+    await actAs(NORVI_CEO);
+
+    const { status, body } = await sign({ application_id: application.id });
+    expect(status).toBe(201);
+    expect(body.data).toMatchObject({
+      customer_id: 'cust-norvi',
+      signed_by: 'sign-norvi-ceo',
+      status: 'active',
+    });
+    const audit = await db.auditLog.findFirstOrThrow({ where: { action: 'contract.signed' } });
+    expect(audit.actor).toBe('sign-norvi-ceo');
+  });
+
+  it('does not let a signatory sign for another company', async () => {
+    const application = await ainoApplication();
+    await actAs(NORVI_CEO);
+    const { status, body } = await sign({ application_id: application.id });
+    expect(status).toBe(404);
+    expect(body.error.code).toBe('APPLICATION_NOT_FOUND');
+  });
+
+  it('records the customer as the signer when they sign for themselves', async () => {
+    const application = await ainoApplication();
+    await actAs(AINO);
+    expect((await sign({ application_id: application.id })).body.data.signed_by).toBe('cust-aino');
   });
 
   it('needs a logged-in client', async () => {

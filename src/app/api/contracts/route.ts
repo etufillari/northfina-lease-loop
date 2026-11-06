@@ -1,22 +1,22 @@
 // POST /api/contracts   body: { "application_id": "app-..." }
-//   A client signs their approved application. The price comes from the application and the
+//   A client signs their approved application, or a signatory for their company. The price comes from the application and the
 //   dates from the server, so neither is in the request.
 // GET /api/contracts
 //   A client gets their own contracts. Staff get everyone's.
 import { z } from 'zod';
 import { can } from '@/domain/identity';
 import { ApiError, fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { requireActor, requireCustomer } from '@/server/auth/actor';
+import { requireActor, requireSigner } from '@/server/auth/actor';
 import { contractViews, listContracts, signContract } from '@/server/contract/contracts';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ application_id: z.string().trim().min(1) });
 
 export const POST = handleRoute(async (request) => {
-  const customer = await requireCustomer('contract.sign');
+  const signer = await requireSigner('contract.sign');
   const body = await readJsonBody(request, bodySchema);
 
-  const result = await signContract(db, { applicationId: body.application_id, customer });
+  const result = await signContract(db, { applicationId: body.application_id, ...signer });
   if (result.ok) return ok(result.contract, { status: 201 });
 
   switch (result.reason) {

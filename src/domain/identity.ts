@@ -4,12 +4,14 @@
 //
 // Pure: this file never loads data or reads a session. Callers pass in the customers
 // and staff they already have, and `src/server/auth/session.ts` decides who is acting now.
-import type { Customer, Staff, StaffRole } from '@/data/schemas';
+import type { Customer, Signatory, Staff, StaffRole } from '@/data/schemas';
 
 /** Every customer acts as a client. Staff carry their own role from data/staff.json. */
 export const CLIENT_ROLE = 'client' as const;
-export type Role = typeof CLIENT_ROLE | StaffRole;
-export const ROLES: readonly Role[] = [CLIENT_ROLE, 'dealer', 'admin'];
+/** Someone who signs for a company, without being its applicant. */
+export const SIGNATORY_ROLE = 'signatory' as const;
+export type Role = typeof CLIENT_ROLE | typeof SIGNATORY_ROLE | StaffRole;
+export const ROLES: readonly Role[] = [CLIENT_ROLE, SIGNATORY_ROLE, 'dealer', 'admin'];
 
 /** True when `value` is one of the known roles. Used to check a role read from outside
  *  the app, e.g. a decoded session token, before it is trusted as a `Role`. */
@@ -20,24 +22,51 @@ export function isRole(value: unknown): value is Role {
 /** One person who can log in, with the role that decides what they may do. */
 export type Identity =
   | { kind: 'customer'; role: typeof CLIENT_ROLE; customer: Customer }
-  | { kind: 'staff'; role: StaffRole; staff: Staff };
+  | { kind: 'staff'; role: StaffRole; staff: Staff }
+  | { kind: 'signatory'; role: typeof SIGNATORY_ROLE; signatory: Signatory };
 
 export function identityId(identity: Identity): string {
-  return identity.kind === 'customer' ? identity.customer.id : identity.staff.id;
+  switch (identity.kind) {
+    case 'customer':
+      return identity.customer.id;
+    case 'staff':
+      return identity.staff.id;
+    case 'signatory':
+      return identity.signatory.id;
+  }
 }
 
 export function identityName(identity: Identity): string {
-  return identity.kind === 'customer' ? identity.customer.name : identity.staff.name;
+  switch (identity.kind) {
+    case 'customer':
+      return identity.customer.name;
+    case 'staff':
+      return identity.staff.name;
+    case 'signatory':
+      return identity.signatory.name;
+  }
 }
 
-/** Every customer and every staff member, as one list of identities. */
+/** The customer this identity acts for: themselves, or a signatory's company. */
+export function actingCustomerId(identity: Identity): string | undefined {
+  if (identity.kind === 'customer') return identity.customer.id;
+  return identity.kind === 'signatory' ? identity.signatory.company_id : undefined;
+}
+
+/** Everyone who can log in, as one list of identities. */
 export function listIdentities(
   customers: readonly Customer[],
-  staff: readonly Staff[]
+  staff: readonly Staff[],
+  signatories: readonly Signatory[] = []
 ): Identity[] {
   return [
     ...customers.map((customer): Identity => ({ kind: 'customer', role: CLIENT_ROLE, customer })),
     ...staff.map((person): Identity => ({ kind: 'staff', role: person.role, staff: person })),
+    ...signatories.map((signatory): Identity => ({
+      kind: 'signatory',
+      role: SIGNATORY_ROLE,
+      signatory,
+    })),
   ];
 }
 
@@ -45,9 +74,12 @@ export function listIdentities(
 export function findIdentity(
   customers: readonly Customer[],
   staff: readonly Staff[],
-  id: string
+  id: string,
+  signatories: readonly Signatory[] = []
 ): Identity | undefined {
-  return listIdentities(customers, staff).find((identity) => identityId(identity) === id);
+  return listIdentities(customers, staff, signatories).find(
+    (identity) => identityId(identity) === id
+  );
 }
 
 /** A plain, serializable view of an identity: enough for an "acting as" UI, no more. */
@@ -107,6 +139,7 @@ const DEALER_PERMISSIONS: readonly Permission[] = [
 
 const GRANTS: Record<Role, readonly Permission[]> = {
   client: ['application.submit', 'contract.sign', 'contract.view_own', 'contract.end_term'],
+  signatory: ['contract.sign'],
   dealer: DEALER_PERMISSIONS,
   admin: [...DEALER_PERMISSIONS, 'application.decide_manual_review', 'demo.configure'],
 };

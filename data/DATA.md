@@ -27,6 +27,7 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 | `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                       |
 | `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                            |
 | `staff.json`               | **Added by this team**, not part of the original pack. Seeded `dealer` and `admin` users for the no-password "acting as" login (see `src/server/auth/session.ts`).                                                  |
+| `signatories.json`         | **Added by this team**, not part of the original pack. People allowed to sign for a company when its applicant cannot, each linked to the company by `company_id`.                                                  |
 
 ## Worked example: the monthly price
 

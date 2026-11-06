@@ -2,7 +2,7 @@
 // This is the one place that reads JWT_SECRET and the real clock; everything it calls
 // (session.ts, identity.ts) is otherwise fully testable without either.
 import { cookies } from 'next/headers';
-import { loadCustomers, loadStaff } from '@/data/load';
+import { loadCustomers, loadSignatories, loadStaff } from '@/data/load';
 import { can, findIdentity, type Identity, type Permission } from '@/domain/identity';
 import type { Customer } from '@/data/schemas';
 import { ApiError } from '../api-response';
@@ -30,8 +30,12 @@ export async function actorForToken(
   const result = await verifySession(token, secret, now);
   if (!result.ok) return null;
 
-  const [customers, staff] = await Promise.all([loadCustomers(), loadStaff()]);
-  return findIdentity(customers, staff, result.payload.sub) ?? null;
+  const [customers, staff, signatories] = await Promise.all([
+    loadCustomers(),
+    loadStaff(),
+    loadSignatories(),
+  ]);
+  return findIdentity(customers, staff, result.payload.sub, signatories) ?? null;
 }
 
 /**
@@ -69,4 +73,23 @@ export async function requireCustomer(permission: Permission): Promise<Customer>
     throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
   }
   return actor.customer;
+}
+
+/**
+ * Someone signing: a customer for themselves, or a signatory for their company. `customer` is
+ * who the contract belongs to, and `signatoryId` is set when another person signs for them.
+ */
+export async function requireSigner(
+  permission: Permission
+): Promise<{ customer: Customer; signatoryId?: string }> {
+  const actor = await requireRole(permission);
+  if (actor.kind === 'customer') return { customer: actor.customer };
+  if (actor.kind !== 'signatory') {
+    throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
+  }
+
+  const companyId = actor.signatory.company_id;
+  const company = (await loadCustomers()).find((customer) => customer.id === companyId);
+  if (!company) throw new Error(`signatory ${actor.signatory.id} has no company ${companyId}`);
+  return { customer: company, signatoryId: actor.signatory.id };
 }

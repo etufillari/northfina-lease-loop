@@ -28,6 +28,7 @@ export function toContract(row: ContractRow): Contract {
     quantity: row.quantity,
     quote_date: row.quote_date,
     signed_on: row.signed_on,
+    signed_by: row.signed_by,
     start_on: row.start_on,
     planned_end_on: row.planned_end_on,
     actual_end_on: row.actual_end_on,
@@ -96,7 +97,12 @@ export async function listContracts(
 }
 
 /** The contract an approved application becomes today, and its invoices. Saves nothing. */
-async function draftContract(db: PrismaClient, application: Application, id: string) {
+async function draftContract(
+  db: PrismaClient,
+  application: Application,
+  id: string,
+  signedBy: string
+) {
   const locked = lockedQuote(await loadCoefficientTable(), application);
   if (!locked.ok) {
     throw new Error(`approved application ${application.id} cannot be priced: ${locked.reason}`);
@@ -105,6 +111,7 @@ async function draftContract(db: PrismaClient, application: Application, id: str
   const contract: Contract = {
     id,
     ...buildContract(application, locked.quote, await currentDate(db)),
+    signed_by: signedBy,
   };
   return { contract, invoices: invoiceSchedule(contract, await loadVatRates()) };
 }
@@ -114,7 +121,7 @@ function signatoryEmail(application: Application): string | null {
   return typeof email === 'string' ? email : null;
 }
 
-export type ContractPreview = Omit<Contract, 'id' | 'status' | 'actual_end_on'> & {
+export type ContractPreview = Omit<Contract, 'id' | 'status' | 'actual_end_on' | 'signed_by'> & {
   /** The dates assume signing on this day. Signing later moves them. */
   calculated_on: string;
   list_price_on_signing_cents: number | null;
@@ -134,14 +141,14 @@ export type ContractPreviewResult =
 /** Exactly what signing today would create, so the customer can read it first. Saves nothing. */
 export async function previewContract(
   db: PrismaClient,
-  input: { applicationId: string; customer: Customer }
+  input: { applicationId: string; customer: Customer; signatoryId?: string }
 ): Promise<ContractPreviewResult> {
-  const { applicationId, customer } = input;
+  const { applicationId, customer, signatoryId } = input;
 
   const application = await getApplication(db, applicationId);
   if (!application) return { ok: false, reason: 'application_not_found' };
 
-  const problem = signingProblem(application, customer);
+  const problem = signingProblem(application, customer, signatoryId !== undefined);
   if (problem === 'not_owner') return { ok: false, reason: 'application_not_found' };
   if (problem === 'not_approved') return { ok: false, reason: 'not_approved' };
 
@@ -157,8 +164,13 @@ export async function previewContract(
   });
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
 
-  const { contract, invoices } = await draftContract(db, application, 'preview');
-  const { id: _id, status: _status, actual_end_on: _end, ...terms } = contract;
+  const { contract, invoices } = await draftContract(
+    db,
+    application,
+    'preview',
+    signatoryId ?? customer.id
+  );
+  const { id: _id, status: _status, actual_end_on: _end, signed_by: _by, ...terms } = contract;
 
   return {
     ok: true,
@@ -191,14 +203,15 @@ class AssetNotAvailable extends Error {}
  */
 export async function signContract(
   db: PrismaClient,
-  input: { applicationId: string; customer: Customer }
+  input: { applicationId: string; customer: Customer; signatoryId?: string }
 ): Promise<SignResult> {
-  const { applicationId, customer } = input;
+  const { applicationId, customer, signatoryId } = input;
+  const signer = signatoryId ?? customer.id;
 
   const application = await getApplication(db, applicationId);
   if (!application) return { ok: false, reason: 'application_not_found' };
 
-  const problem = signingProblem(application, customer);
+  const problem = signingProblem(application, customer, signatoryId !== undefined);
   if (problem === 'not_owner') return { ok: false, reason: 'application_not_found' };
   if (problem === 'not_approved') return { ok: false, reason: 'not_approved' };
   if (problem === 'signatory_required') {
@@ -216,7 +229,7 @@ export async function signContract(
   if (existing) return { ok: false, reason: 'already_signed' };
 
   const id = `con-${randomUUID()}`;
-  const { contract, invoices } = await draftContract(db, application, id);
+  const { contract, invoices } = await draftContract(db, application, id, signer);
 
   const assetRow = await db.asset.findUniqueOrThrow({ where: { id: contract.asset_id } });
   const latestLife = await db.assetLife.findFirst({
@@ -230,12 +243,13 @@ export async function signContract(
     await withAudit(
       db,
       {
-        actor: customer.id,
+        actor: signer,
         action: 'contract.signed',
         entityType: 'contract',
         entityId: id,
         details: {
           application_id: applicationId,
+          customer_id: customer.id,
           asset_id: contract.asset_id,
           price_list_version: contract.price_list_version,
           monthly_net_rent_cents: contract.monthly_net_rent_cents,

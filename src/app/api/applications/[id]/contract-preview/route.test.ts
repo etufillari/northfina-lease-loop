@@ -1,7 +1,18 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '@/server/prisma-client';
-import { ADMIN, AINO, DEALER, TEST_SECRET, actAs } from '../../../../../../tests/helpers/act-as';
-import { ainoEbikeAnswers, haapalaFarmAnswers } from '../../../../../../tests/helpers/applicants';
+import {
+  ADMIN,
+  AINO,
+  DEALER,
+  NORVI_CEO,
+  TEST_SECRET,
+  actAs,
+} from '../../../../../../tests/helpers/act-as';
+import {
+  ainoEbikeAnswers,
+  haapalaFarmAnswers,
+  norviEbikeAnswers,
+} from '../../../../../../tests/helpers/applicants';
 import { applyFor, resetLeaseData, signFor } from '../../../../../../tests/helpers/lease-flow';
 import { createTestDb } from '../../../../../../tests/helpers/test-db';
 import { GET } from './route';
@@ -93,6 +104,30 @@ describe('GET /api/applications/:id/contract-preview', () => {
     const gone = await preview(second.id);
     expect(gone.status).toBe(409);
     expect(gone.body.error.code).toBe('ASSET_NOT_AVAILABLE');
+  });
+
+  it('shows the applicant and their signatory the same terms, with who can sign', async () => {
+    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers, {
+      quantity: 4,
+    });
+
+    await actAs({ sub: 'cust-norvi', role: 'client' });
+    const applicant = await preview(application.id);
+    expect(applicant.body.data.can_sign).toBe(false);
+
+    await actAs(NORVI_CEO);
+    const signatory = await preview(application.id);
+    expect(signatory.status).toBe(200);
+    expect(signatory.body.data.can_sign).toBe(true);
+    expect(signatory.body.data.monthly_net_rent_cents).toBe(
+      applicant.body.data.monthly_net_rent_cents
+    );
+  });
+
+  it("does not show a signatory another company's application", async () => {
+    const application = await ainoApplication();
+    await actAs(NORVI_CEO);
+    expect((await preview(application.id)).status).toBe(404);
   });
 
   it('is for the customer: staff get 403, and nobody gets 401', async () => {

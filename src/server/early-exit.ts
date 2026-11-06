@@ -4,19 +4,20 @@
 // invoices page uses (`earlyExitForContract`), so the browser never sends an amount that we
 // then trust. The asset change and its audit row, which carries the whole breakdown, commit in
 // one transaction.
-import {
-  loadCoefficientTable,
-  loadPriceLists,
-  loadResidualCurves,
-  loadVatRates,
-} from '@/data/load';
 import type { Asset, AssetCondition, AssetStatus } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
 import { earlyExitForContract } from '@/domain/early-exit';
-import { listPriceOn } from '@/domain/price-list';
+import { effectiveAssetPriceOn } from '@/domain/price-list';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
 import type { PrismaClient } from './prisma-client';
+import {
+  readCoefficientTable,
+  readPriceLists,
+  readResidualCurves,
+  readVatRates,
+} from './reference-read';
+import { percentToBp } from './reference-rows';
 
 export type EarlyExitChoice = 'buyout' | 'return';
 
@@ -63,13 +64,13 @@ export async function executeEarlyExit(
   if (ENDED_STATUSES.includes(asset.status)) return { ok: false, reason: 'lease_ended' };
 
   const [priceLists, coefficientTable, residualCurves, vatRates] = await Promise.all([
-    loadPriceLists(),
-    loadCoefficientTable(),
-    loadResidualCurves(),
-    loadVatRates(),
+    readPriceLists(db),
+    readCoefficientTable(db),
+    readResidualCurves(db),
+    readVatRates(db),
   ]);
 
-  const price = listPriceOn(priceLists, asset.id, input.signedOn);
+  const price = effectiveAssetPriceOn(priceLists, asset, input.signedOn);
   if (!price.ok) return { ok: false, reason: 'invalid_contract' };
   const quoted = calculateContractQuote({
     listPriceCents: price.priceCents,
@@ -136,10 +137,68 @@ export async function executeEarlyExit(
           where: { id: asset.id, status: { notIn: [...ENDED_STATUSES] } },
           data:
             input.choice === 'return'
-              ? { status: nextStatus, condition: input.condition }
+              ? {
+                  status: nextStatus,
+                  condition: input.condition,
+                  previous_lives: { increment: 1 },
+                }
               : { status: nextStatus },
         });
         if (count === 0) throw new LeaseEndedError();
+
+        const activeContract = await tx.contract.findFirst({
+          where: { asset_id: asset.id, status: 'active' },
+          orderBy: { created_at: 'desc' },
+          include: { invoiceRows: { orderBy: { seq: 'asc' } } },
+        });
+
+        if (activeContract) {
+          await tx.contract.update({
+            where: { id: activeContract.id },
+            data: { status: 'exited', closed_on: exit.asOf },
+          });
+          await tx.invoiceRow.updateMany({
+            where: {
+              contract_id: activeContract.id,
+              kind: 'rent',
+              invoice_date: { gt: exit.asOf },
+            },
+            data: { cancelled_by_exit: true },
+          });
+          const nextSeq = (activeContract.invoiceRows.at(-1)?.seq ?? -1) + 1;
+          await tx.invoiceRow.create({
+            data: {
+              contract_id: activeContract.id,
+              seq: nextSeq,
+              kind: input.choice === 'buyout' ? 'exit_buyout' : 'exit_return',
+              invoice_date: exit.asOf,
+              period_start: exit.asOf,
+              period_end: exit.asOf,
+              net_cents: option.netCents,
+              vat_rate_bp: percentToBp(option.settlement.vatRatePercent),
+              vat_cents: option.settlement.vatCents,
+              gross_cents: option.settlement.grossCents,
+            },
+          });
+        }
+
+        await tx.assetEvent.create({
+          data: {
+            asset_id: asset.id,
+            on_date: exit.asOf,
+            from_status: asset.status,
+            to_status: nextStatus,
+            contract_id: activeContract?.id ?? null,
+            condition: input.condition,
+            usage_value: asset.usage.value,
+            amount_cents: option.netCents,
+            note_key:
+              input.choice === 'buyout'
+                ? 'passport.event.early_buyout'
+                : 'passport.event.early_return',
+          },
+        });
+
         return tx.asset.findUniqueOrThrow({ where: { id: asset.id } });
       }
     );

@@ -3,10 +3,9 @@
 
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { calculateContractQuote, type ContractQuote } from '@/domain/contract-pricing';
 import { calculateOfferExpiryDate } from '@/domain/offer';
-import { listPriceOn } from '@/domain/price-list';
+import { effectiveAssetPriceOn } from '@/domain/price-list';
 import {
   calculateReservationExpiry,
   canReserveAsset,
@@ -16,6 +15,7 @@ import {
   type ReservationStatus,
 } from '@/domain/reservation';
 import { withAudit } from './audit';
+import { readCoefficientTable, readPriceLists, readVatRates } from './reference-read';
 
 export type ReserveAssetInput = {
   assetId: string;
@@ -134,11 +134,11 @@ export async function reserveAsset(
   const offeredOnIso = currentDate.toISOString().slice(0, 10);
   if (isOffer) {
     const [priceLists, coefficientTable, vatRates] = await Promise.all([
-      loadPriceLists(),
-      loadCoefficientTable(),
-      loadVatRates(),
+      readPriceLists(db),
+      readCoefficientTable(db),
+      readVatRates(db),
     ]);
-    const priceRes = listPriceOn(priceLists, input.assetId, offeredOnIso);
+    const priceRes = effectiveAssetPriceOn(priceLists, asset, offeredOnIso);
     if (!priceRes.ok) return { ok: false, reason: 'no_price' };
     const quoteRes = calculateContractQuote({
       listPriceCents: priceRes.priceCents,

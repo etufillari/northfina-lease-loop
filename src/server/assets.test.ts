@@ -6,6 +6,7 @@ import { createTestDb } from '../../tests/helpers/test-db';
 import {
   changeAssetStatus,
   listAssets,
+  relistAsset,
   resolveAssetEndOfTerm,
   seedAssets,
   toAsset,
@@ -25,6 +26,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  await db.assetEvent.deleteMany();
   await db.auditLog.deleteMany();
   await db.asset.deleteMany();
 });
@@ -189,5 +191,92 @@ describe('toAsset', () => {
       first_list_price_cents: null,
     };
     expect(() => toAsset(row)).toThrow();
+  });
+});
+
+describe('relistAsset', () => {
+  it('relists ebike-007 (Card 9) at 92781 cents, sets status to available, and writes AssetEvent + AuditLog', async () => {
+    await seedAssets(db, dataPack);
+
+    const result = await relistAsset(db, {
+      id: 'ebike-007',
+      actor: 'dealer-demo',
+      asOf: '2026-11-05',
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      asset: {
+        id: 'ebike-007',
+        status: 'available',
+        relist_price_cents: 92_781,
+        first_lease_date: '2023-01-01',
+        first_list_price_cents: 549_000,
+      },
+    });
+
+    const event = await db.assetEvent.findFirstOrThrow({ where: { asset_id: 'ebike-007' } });
+    expect(event).toMatchObject({
+      from_status: 'returned',
+      to_status: 'available',
+      amount_cents: 92_781,
+      note_key: 'passport.event.relisted',
+    });
+
+    const audit = await db.auditLog.findFirstOrThrow();
+    expect(audit).toMatchObject({
+      action: 'asset.relisted',
+      entity_id: 'ebike-007',
+      actor: 'dealer-demo',
+    });
+  });
+
+  it('recomputes a fresh relist_price_cents when an asset is returned after a prior relisted life', async () => {
+    await seedAssets(db, dataPack);
+    await db.asset.update({
+      where: { id: 'ebike-007' },
+      data: { relist_price_cents: 200_000, status: 'returned' },
+    });
+
+    const result = await relistAsset(db, {
+      id: 'ebike-007',
+      actor: 'dealer-demo',
+      asOf: '2026-11-05',
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      asset: { id: 'ebike-007', status: 'available', relist_price_cents: 92_781 },
+    });
+  });
+
+  it('rejects laptop-006 with below_minimum because its residual value is 27577 (< 30000)', async () => {
+    await seedAssets(db, dataPack);
+
+    const result = await relistAsset(db, {
+      id: 'laptop-006',
+      actor: 'dealer-demo',
+      asOf: '2026-11-05',
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'below_minimum',
+      relistPriceCents: 27_577,
+    });
+    expect(await db.auditLog.count()).toBe(0);
+  });
+
+  it('rejects an asset that is not returned or does not exist', async () => {
+    await seedAssets(db, dataPack);
+
+    expect(await relistAsset(db, { id: 'ebike-001', actor: 'dealer-demo' })).toEqual({
+      ok: false,
+      reason: 'not_returned',
+    });
+    expect(await relistAsset(db, { id: 'nope', actor: 'dealer-demo' })).toEqual({
+      ok: false,
+      reason: 'not_found',
+    });
   });
 });

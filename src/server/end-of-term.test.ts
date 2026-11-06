@@ -4,13 +4,14 @@ import { loadAssets } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { submitApplication } from './applications';
 import { seedAssets } from './assets';
-import { getContract, returnContract, signContract } from './contracts';
+import { getContract, signContract } from './contracts';
 import {
   buyContract,
   handoverForContract,
   passOnContract,
   pendingHandovers,
   respondToHandover,
+  returnContract,
 } from './end-of-term';
 import { payInvoice } from './invoices';
 import { notificationsFor } from './notifications';
@@ -68,6 +69,13 @@ async function ainosLease() {
   return signed.contract;
 }
 
+/** A lease that has ended with every invoice paid, so its end can be decided. */
+async function settledLease() {
+  const contract = await ainosLease();
+  await payAll(contract.id);
+  return contract;
+}
+
 async function payAll(contractId: string) {
   for (let invoiceNumber = 2; invoiceNumber <= 12; invoiceNumber++) {
     await payInvoice(db, { contractId, invoiceNumber, actor: 'Aino' }, AFTER_END);
@@ -117,7 +125,7 @@ describe('buyContract', () => {
 
 describe('passOnContract and respondToHandover', () => {
   it('passes the item on: it comes back for a check and the recipient is asked', async () => {
-    const contract = await ainosLease();
+    const contract = await settledLease();
     const result = await passOnContract(
       db,
       { contractId: contract.id, toCustomerId: 'cust-lena', actor: 'Aino' },
@@ -126,18 +134,18 @@ describe('passOnContract and respondToHandover', () => {
     expect(result).toMatchObject({ ok: true });
     expect(await getContract(db, contract.id)).toMatchObject({ status: 'passed_on' });
     expect(await asset()).toMatchObject({ status: 'returned', previous_lives: 1 });
-    expect(await pendingHandovers(db, 'cust-lena')).toEqual([
+    expect(await pendingHandovers(db, 'cust-lena', AFTER_END)).toEqual([
       expect.objectContaining({ fromName: 'Aino Virtanen', assetId: 'laptop-001' }),
     ]);
-    expect(await pendingHandovers(db, 'cust-mikko')).toEqual([]);
+    expect(await pendingHandovers(db, 'cust-mikko', AFTER_END)).toEqual([]);
     // A returned contract can't be returned again either
     expect(await returnContract(db, { contractId: contract.id, actor: 'Aino' }, AFTER_END)).toEqual(
-      { ok: false, reason: 'already_returned' }
+      { ok: false, reason: 'already_decided' }
     );
   });
 
   it('reserves the item for the recipient when they accept', async () => {
-    const contract = await ainosLease();
+    const contract = await settledLease();
     const passed = await passOnContract(
       db,
       { contractId: contract.id, toCustomerId: 'cust-lena', actor: 'Aino' },
@@ -151,12 +159,13 @@ describe('passOnContract and respondToHandover', () => {
         AFTER_END
       )
     ).toEqual({ ok: true, status: 'accepted' });
-    expect(await asset()).toMatchObject({ status: 'reserved' });
+    // Held for Lena while it waits for its check; reserved for her once refurbished
+    expect(await asset()).toMatchObject({ status: 'returned', reserved_for: 'cust-lena' });
     expect(await handoverForContract(db, contract.id)).toMatchObject({ status: 'accepted' });
   });
 
   it('leaves the item returned when the recipient declines', async () => {
-    const contract = await ainosLease();
+    const contract = await settledLease();
     const passed = await passOnContract(
       db,
       { contractId: contract.id, toCustomerId: 'cust-lena', actor: 'Aino' },
@@ -179,7 +188,7 @@ describe('passOnContract and respondToHandover', () => {
   });
 
   it('only lets the recipient answer', async () => {
-    const contract = await ainosLease();
+    const contract = await settledLease();
     const passed = await passOnContract(
       db,
       { contractId: contract.id, toCustomerId: 'cust-lena', actor: 'Aino' },
@@ -196,7 +205,7 @@ describe('passOnContract and respondToHandover', () => {
   });
 
   it('refuses passing on to yourself or to someone unknown', async () => {
-    const contract = await ainosLease();
+    const contract = await settledLease();
     for (const toCustomerId of ['cust-aino', 'cust-nobody']) {
       expect(
         await passOnContract(
@@ -236,5 +245,44 @@ describe('notificationsFor', () => {
     await ainosLease();
     const notifications = await notificationsFor(db, aino, '2027-01-10');
     expect(notifications).toMatchObject({ endedLeases: [], handovers: [], count: 2 });
+  });
+});
+
+describe('ending a lease needs it settled, and pass-ons follow the app date', () => {
+  it('refuses to return or pass on while invoices are unpaid', async () => {
+    const contract = await ainosLease();
+    expect(await returnContract(db, { contractId: contract.id, actor: 'Aino' }, AFTER_END)).toEqual(
+      {
+        ok: false,
+        reason: 'unpaid_invoices',
+      }
+    );
+    expect(
+      await passOnContract(
+        db,
+        { contractId: contract.id, toCustomerId: 'cust-lena', actor: 'Aino' },
+        AFTER_END
+      )
+    ).toEqual({ ok: false, reason: 'unpaid_invoices' });
+    expect(await asset()).toMatchObject({ status: 'leased' });
+  });
+
+  it('hides a pass-on, and refuses an answer, before the day it was made', async () => {
+    const contract = await settledLease();
+    const passed = await passOnContract(
+      db,
+      { contractId: contract.id, toCustomerId: 'cust-lena', actor: 'Aino' },
+      AFTER_END
+    );
+    if (!passed.ok) throw new Error(passed.reason);
+    const before = '2027-01-01';
+    expect(await pendingHandovers(db, 'cust-lena', before)).toEqual([]);
+    expect(
+      await respondToHandover(
+        db,
+        { handoverId: passed.handoverId, accept: false, customerId: 'cust-lena', actor: 'Lena' },
+        before
+      )
+    ).toEqual({ ok: false, reason: 'not_yet' });
   });
 });

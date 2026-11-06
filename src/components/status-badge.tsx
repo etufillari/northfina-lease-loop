@@ -8,6 +8,11 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
       'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
     dot: 'bg-emerald-600 dark:bg-emerald-400',
   },
+  leased: {
+    badge:
+      'bg-indigo-50 text-indigo-900 ring-indigo-200 dark:bg-indigo-950 dark:text-indigo-200 dark:ring-indigo-800',
+    dot: 'bg-indigo-600 dark:bg-indigo-400',
+  },
   reserved: {
     badge:
       'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800',

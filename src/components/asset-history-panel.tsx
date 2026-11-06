@@ -1,16 +1,55 @@
-// The item's history so far: one step per completed lease, then where it is now.
-// The data pack only records how many leases an item has had, not when, so this says so.
+// The item's history, its passport: age, usage and condition, then every life and every
+// refurbishment (see src/domain/asset-timeline.ts). The data pack only counts the earliest
+// lives; everything since comes from Lease Loop's own records.
 import type { Asset } from '@/data/schemas';
 import { assetHistory } from '@/domain/asset-history';
-import { formatNumber } from '@/i18n/format';
+import type { TimelineEntry } from '@/domain/asset-timeline';
+import { formatEuro } from '@/domain/money';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
-import type { Locale } from '@/i18n/locales';
+import { intlLocale, type Locale } from '@/i18n/locales';
 
-type AssetHistoryPanelProps = { asset: Asset; today: string; locale: Locale; t: Translate };
+type AssetHistoryPanelProps = {
+  asset: Asset;
+  entries: TimelineEntry[];
+  today: string;
+  locale: Locale;
+  t: Translate;
+};
 
-export function AssetHistoryPanel({ asset, today, locale, t }: AssetHistoryPanelProps) {
+export function AssetHistoryPanel({ asset, entries, today, locale, t }: AssetHistoryPanelProps) {
   const history = assetHistory(asset, today);
-  const pastLives = Array.from({ length: history.previousLives }, (_, index) => index + 1);
+  const date = (iso: string | null) => (iso ? formatIsoDate(iso, locale) : '');
+  const condition = (value: string) => t(`condition.${value as Asset['condition']}`);
+
+  function text(entry: TimelineEntry): string {
+    switch (entry.kind) {
+      case 'earlier':
+        return entry.from === entry.to
+          ? t('history.earlierOne', { number: entry.from })
+          : t('history.earlier', { from: entry.from, to: entry.to });
+      case 'lease':
+        return t(
+          `history.lease.${entry.status as 'active' | 'returned' | 'bought' | 'passed_on'}`,
+          {
+            number: entry.number,
+            name: entry.customerName,
+            start: date(entry.startDate),
+            end: date(entry.endDate),
+            date: date(entry.closedDate),
+          }
+        );
+      case 'refurbished':
+        return t('history.refurbished', {
+          date: date(entry.date),
+          from: condition(entry.conditionBefore),
+          to: condition(entry.conditionAfter),
+          price: formatEuro(entry.priceCents, intlLocale[locale]),
+        });
+      case 'next':
+        return t(`history.nextLife.${entry.stage}`, { number: entry.number });
+    }
+  }
 
   return (
     <section
@@ -34,39 +73,49 @@ export function AssetHistoryPanel({ asset, today, locale, t }: AssetHistoryPanel
           label={t('asset.usage')}
           value={t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
         />
-        <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
+        <Fact label={t('condition.label')} value={condition(asset.condition)} />
       </dl>
 
       <ol className="mt-6 space-y-3">
-        {pastLives.map((life) => (
-          <Step key={life} done text={t('history.pastLife', { number: life })} />
-        ))}
-        <Step text={t(`history.nextLife.${history.stage}`, { number: history.nextLife })} current />
+        {entries.map((entry, index) => {
+          const last = index === entries.length - 1;
+          const icon =
+            entry.kind === 'refurbished'
+              ? '✦'
+              : entry.kind === 'next' || (last && entry.kind === 'lease')
+                ? '→'
+                : '✓';
+          return (
+            <li key={index} className="flex items-start gap-3 text-sm">
+              <span
+                aria-hidden="true"
+                className={
+                  'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ' +
+                  (icon === '→'
+                    ? 'bg-emerald-700 text-white'
+                    : icon === '✦'
+                      ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100'
+                      : 'bg-stone-200 text-stone-700 dark:bg-stone-700 dark:text-stone-200')
+                }
+              >
+                {icon}
+              </span>
+              <span
+                className={
+                  last ? 'pt-0.5 font-semibold' : 'pt-0.5 text-stone-700 dark:text-stone-300'
+                }
+              >
+                {text(entry)}
+              </span>
+            </li>
+          );
+        })}
       </ol>
 
-      <p className="mt-5 text-xs text-stone-600 dark:text-stone-400">{t('history.noDates')}</p>
+      {entries.some((entry) => entry.kind === 'earlier') ? (
+        <p className="mt-5 text-xs text-stone-600 dark:text-stone-400">{t('history.noDates')}</p>
+      ) : null}
     </section>
-  );
-}
-
-function Step({ text, done, current }: { text: string; done?: boolean; current?: boolean }) {
-  return (
-    <li className="flex items-center gap-3 text-sm">
-      <span
-        aria-hidden="true"
-        className={
-          'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ' +
-          (done
-            ? 'bg-stone-200 text-stone-700 dark:bg-stone-700 dark:text-stone-200'
-            : 'bg-emerald-700 text-white')
-        }
-      >
-        {done ? '✓' : '→'}
-      </span>
-      <span className={current ? 'font-semibold' : 'text-stone-700 dark:text-stone-300'}>
-        {text}
-      </span>
-    </li>
   );
 }
 

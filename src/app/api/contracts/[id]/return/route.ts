@@ -4,7 +4,8 @@
 import { z } from 'zod';
 import { appDate } from '@/server/app-date';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { getContract, returnContract } from '@/server/contracts';
+import { getContract } from '@/server/contracts';
+import { returnContract } from '@/server/end-of-term';
 import { currentViewer } from '@/server/current-viewer';
 import { canSee } from '@/server/viewer';
 import { db } from '@/server/db';
@@ -14,7 +15,8 @@ const bodySchema = z.strictObject({ actor: z.string().trim().min(1).max(100) });
 const failures = {
   not_found: [404, 'NOT_FOUND', 'Contract not found'],
   not_ended: [409, 'NOT_ENDED', 'The lease has not ended yet'],
-  already_returned: [409, 'ALREADY_RETURNED', 'The item has already been returned'],
+  already_decided: [409, 'ALREADY_DECIDED', 'The end of this lease has already been decided'],
+  unpaid_invoices: [409, 'UNPAID_INVOICES', 'Pay the remaining invoices first'],
 } as const;
 
 export const POST = handleRoute(

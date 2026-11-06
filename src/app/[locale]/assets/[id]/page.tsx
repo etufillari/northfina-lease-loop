@@ -7,7 +7,8 @@ import { connection } from 'next/server';
 import { AssetHistoryPanel } from '@/components/asset-history-panel';
 import { PriceCalculator } from '@/components/price-calculator';
 import { StatusBadge } from '@/components/status-badge';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadCustomers } from '@/data/load';
+import { effectivePriceLists } from '@/server/second-life';
 import { effectiveVatRates } from '@/server/vat';
 import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
@@ -17,7 +18,13 @@ import { vatPercentOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
-import { getAsset } from '@/server/assets';
+import { getAsset, getAssetExtras } from '@/server/assets';
+import { listContractsForAsset } from '@/server/contracts';
+import { listRefurbishments } from '@/server/second-life';
+import { assetTimeline } from '@/domain/asset-timeline';
+import { currentViewer } from '@/server/current-viewer';
+import { viewerCustomerId } from '@/server/viewer';
+import { canBeLeasedBy } from '@/domain/availability';
 import { db } from '@/server/db';
 import { appDate } from '@/server/app-date';
 
@@ -47,14 +54,43 @@ export default async function AssetPage({
 
   const [asset, priceLists, table, vatRates] = await Promise.all([
     getAsset(db, id),
-    loadPriceLists(),
+    effectivePriceLists(db),
     loadCoefficientTable(),
     effectiveVatRates(db),
   ]);
   if (!asset) notFound();
 
   const t = getT(locale);
-  const { today } = await appDate();
+  const [{ today }, viewer, extras, customers, contracts, refurbishments] = await Promise.all([
+    appDate(),
+    currentViewer(),
+    getAssetExtras(db, asset.id),
+    loadCustomers(),
+    listContractsForAsset(db, asset.id),
+    listRefurbishments(db, asset.id),
+  ]);
+  // The passport: the data pack's counted lives, then our own leases and refurbishments.
+  const timeline = assetTimeline(
+    asset,
+    contracts.map((c) => ({
+      startDate: c.startDate,
+      endDate: c.endDate,
+      status: c.status,
+      customerName: c.customerName,
+      closedDate: c.boughtDate ?? c.returnedDate,
+    })),
+    refurbishments.map((r) => ({
+      date: r.date,
+      conditionBefore: r.conditionBefore,
+      conditionAfter: r.conditionAfter,
+      priceCents: r.priceCents,
+    })),
+    today
+  );
+  const reservedFor = extras?.reservedFor ?? null;
+  const heldForName = customers.find((c) => c.id === reservedFor)?.name ?? null;
+  // Available to anyone, or reserved for the viewer (an item passed on to them).
+  const leasable = canBeLeasedBy({ status: asset.status, reservedFor }, viewerCustomerId(viewer));
   const price = listPriceOn(priceLists, asset.id, today);
   const change = nextPriceChange(priceLists, asset.id, today);
   const vatPercent = vatPercentOn(vatRates, today);
@@ -87,7 +123,11 @@ export default async function AssetPage({
 
       {asset.status !== 'available' ? (
         <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
-          {t(`asset.statusNote.${asset.status}`)}
+          {leasable
+            ? t('asset.statusNote.reservedForYou')
+            : heldForName
+              ? t('asset.statusNote.heldFor', { name: heldForName })
+              : t(`asset.statusNote.${asset.status}`)}
         </p>
       ) : null}
 
@@ -124,7 +164,12 @@ export default async function AssetPage({
               {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
             </time>
             {price.ok ? (
-              <> · {t('asset.priceListVersion', { version: price.priceListVersion })}</>
+              <>
+                {' · '}
+                {extras?.secondLifePriceCents
+                  ? t('asset.secondLifePrice')
+                  : t('asset.priceListVersion', { version: price.priceListVersion })}
+              </>
             ) : null}
           </p>
           {change ? (
@@ -139,7 +184,7 @@ export default async function AssetPage({
       </div>
 
       {/* Only an available item with a price can be quoted; the status note explains the rest. */}
-      {asset.status === 'available' && price.ok && vatPercent !== null ? (
+      {leasable && price.ok && vatPercent !== null ? (
         <PriceCalculator
           assetId={asset.id}
           listPriceCents={price.priceCents}
@@ -150,7 +195,7 @@ export default async function AssetPage({
         />
       ) : null}
 
-      <AssetHistoryPanel asset={asset} today={today} locale={locale} t={t} />
+      <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
     </div>
   );
 }

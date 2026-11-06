@@ -4,7 +4,9 @@ import { loadAssets } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { submitApplication, type SubmitApplicationInput } from './applications';
 import { seedAssets } from './assets';
-import { getContract, listContracts, returnContract, signContract } from './contracts';
+import { getContract, listContracts, listContractsForAsset, signContract } from './contracts';
+import { returnContract } from './end-of-term';
+import { payAllDue } from './invoices';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -88,7 +90,7 @@ describe('signContract', () => {
     if (!result.ok) throw new Error(result.reason);
 
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'laptop-004' } });
-    expect(asset.status).toBe('reserved');
+    expect(asset.status).toBe('leased');
     const audit = await db.auditLog.findMany({ where: { action: 'contract.signed' } });
     expect(audit).toHaveLength(1);
     expect(audit[0]).toMatchObject({ entity_type: 'contract', entity_id: result.contract.id });
@@ -171,6 +173,12 @@ describe('returnContract', () => {
       signDate
     );
     if (!result.ok) throw new Error(result.reason);
+    // Settle the lease so it can be ended: every invoice up to the end is paid.
+    await payAllDue(
+      db,
+      { contractId: result.contract.id, filter: null, actor: 'Aino' },
+      '2027-11-05'
+    );
     return result.contract; // 12 months from 5 Nov 2026: last day 4 Nov 2027
   }
 
@@ -199,7 +207,7 @@ describe('returnContract', () => {
       await returnContract(db, { contractId: contract.id, actor: 'Aino' }, '2027-11-04')
     ).toEqual({ ok: false, reason: 'not_ended' });
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'laptop-004' } });
-    expect(asset.status).toBe('reserved');
+    expect(asset.status).toBe('leased');
   });
 
   it('returns a contract only once', async () => {
@@ -207,7 +215,7 @@ describe('returnContract', () => {
     await returnContract(db, { contractId: contract.id, actor: 'Aino' }, '2027-11-05');
     expect(
       await returnContract(db, { contractId: contract.id, actor: 'Aino' }, '2027-12-01')
-    ).toEqual({ ok: false, reason: 'already_returned' });
+    ).toEqual({ ok: false, reason: 'already_decided' });
   });
 
   it('refuses an unknown contract', async () => {
@@ -242,5 +250,16 @@ describe('contracts per customer', () => {
       'laptop-001',
     ]);
     expect(await listContracts(db, { customerId: 'cust-mikko' })).toEqual([]);
+  });
+});
+
+describe('listContractsForAsset', () => {
+  it('lists one item’s contracts only', async () => {
+    const application = await apply({}, '2026-11-05');
+    await signContract(db, { applicationId: application.id, signerName: 'Aino' }, '2026-11-05');
+    expect((await listContractsForAsset(db, 'laptop-004')).map((c) => c.assetId)).toEqual([
+      'laptop-004',
+    ]);
+    expect(await listContractsForAsset(db, 'laptop-001')).toEqual([]);
   });
 });

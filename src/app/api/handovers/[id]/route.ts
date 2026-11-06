@@ -14,6 +14,7 @@ const failures = {
   not_found: [404, 'NOT_FOUND', 'Handover not found'],
   not_yours: [403, 'NOT_YOURS', 'This item was passed on to another customer'],
   already_decided: [409, 'ALREADY_DECIDED', 'This has already been answered'],
+  not_yet: [409, 'NOT_YET', 'This item has not been passed on yet on the app’s date'],
 } as const;
 
 export const POST = handleRoute(

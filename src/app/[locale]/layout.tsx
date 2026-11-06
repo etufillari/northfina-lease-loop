@@ -48,19 +48,25 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         </a>
 
         <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 print:hidden">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-            <Link href={`/${locale}`} className="flex items-center gap-3 rounded-lg">
+          {/* One line on wide screens in every language: the tagline gives way ("…", full text on
+              hover) instead of pushing the menu onto a second line. Phones still wrap. */}
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:flex-nowrap">
+            <Link
+              href={`/${locale}`}
+              title={t('brand.tagline')}
+              className="flex min-w-0 items-center gap-3 rounded-lg"
+            >
               <LoopMark />
-              <span>
+              <span className="min-w-0">
                 <span className="block text-lg font-semibold tracking-tight">
                   {t('brand.name')}
                 </span>
-                <span className="block text-sm text-stone-600 dark:text-stone-400">
+                <span className="block truncate text-sm text-stone-600 dark:text-stone-400">
                   {t('brand.tagline')}
                 </span>
               </span>
             </Link>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap">
               <CustomerSwitcher
                 customers={customers.map(({ id, name, type }) => ({ id, name, type }))}
                 current={

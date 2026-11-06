@@ -123,3 +123,36 @@ export async function payInvoice(
   }
   return { ok: true, paidDate: todayIso, amountCents: invoice.totalCents };
 }
+
+/**
+ * Pays every invoice that is due on `todayIso` (demo payments, each with its own audit row):
+ * for one contract, or across the contracts `filter` selects (as in listContracts).
+ */
+export async function payAllDue(
+  db: PrismaClient,
+  input: { contractId?: string; filter: { customerId: string | null } | null; actor: string },
+  todayIso: string
+): Promise<{ paidCount: number; paidCents: number }> {
+  let due: ReceivedInvoice[];
+  if (input.contractId) {
+    const contract = await getContract(db, input.contractId);
+    const invoices = contract ? ((await contractInvoices(db, contract, todayIso)) ?? []) : [];
+    due = contract ? invoices.map((invoice) => ({ contract, invoice })) : [];
+  } else {
+    due = await receivedInvoices(db, input.filter, todayIso);
+  }
+  let paidCount = 0;
+  let paidCents = 0;
+  for (const { contract, invoice } of due.filter((r) => r.invoice.status === 'due')) {
+    const result = await payInvoice(
+      db,
+      { contractId: contract.id, invoiceNumber: invoice.number, actor: input.actor },
+      todayIso
+    );
+    if (result.ok) {
+      paidCount += 1;
+      paidCents += result.amountCents;
+    }
+  }
+  return { paidCount, paidCents };
+}

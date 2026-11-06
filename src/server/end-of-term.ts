@@ -1,19 +1,69 @@
-// End of term, on the server: buying the item, passing it on to another customer, and that
-// customer's answer. (Returning it is returnContract in contracts.ts.) Each choice writes its
-// audit row in the same transaction, and a contract's end of term is decided only once.
+// End of term, on the server: returning the item, buying it, passing it on to another customer,
+// and that customer's answer. Every choice needs the lease settled first (no unpaid invoices),
+// writes its audit row in the same transaction, and a contract's end is decided only once.
 import type { Handover as HandoverRow, PrismaClient } from '@/generated/prisma/client';
 import { loadCustomers } from '@/data/load';
 import { buyoutQuote, endOfTermChoice } from '@/domain/end-of-term';
 import { withAudit } from './audit';
-import { getContract } from './contracts';
+import { getContract, toContract, type Contract } from './contracts';
 import { contractInvoices } from './invoices';
 import { effectiveVatRates } from './vat';
 
-type Refusal = 'not_found' | 'not_ended' | 'already_decided';
+type Refusal = 'not_found' | 'not_ended' | 'already_decided' | 'unpaid_invoices';
+
+/** Loads a contract and checks that its end of term can be decided now, settled. */
+async function decidable(db: PrismaClient, contractId: string, todayIso: string) {
+  const contract = await getContract(db, contractId);
+  if (!contract) return { ok: false as const, reason: 'not_found' as const };
+  const invoices = (await contractInvoices(db, contract, todayIso)) ?? [];
+  const choice = endOfTermChoice(contract, invoices, todayIso);
+  if (!choice.canDecide) {
+    return { ok: false as const, reason: choice.reason ?? ('already_decided' as const) };
+  }
+  if (!choice.settled) return { ok: false as const, reason: 'unpaid_invoices' as const };
+  return { ok: true as const, contract };
+}
+
+export type ReturnContractResult =
+  { ok: true; contract: Contract } | { ok: false; reason: Refusal };
+
+/**
+ * The customer returns the item after the lease's last day. The contract becomes `returned` and
+ * the item `returned` (waiting for a check and a second life) with one more completed lease.
+ */
+export async function returnContract(
+  db: PrismaClient,
+  input: { contractId: string; actor: string },
+  todayIso: string
+): Promise<ReturnContractResult> {
+  const check = await decidable(db, input.contractId, todayIso);
+  if (!check.ok) return check;
+  const { contract } = check;
+  const row = await withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: 'contract.returned',
+      entityType: 'contract',
+      entityId: contract.id,
+      details: { assetId: contract.assetId, endDate: contract.endDate, returnedDate: todayIso },
+    },
+    async (tx) => {
+      await tx.asset.update({
+        where: { id: contract.assetId },
+        data: { status: 'returned', previous_lives: { increment: 1 } },
+      });
+      return tx.contract.update({
+        where: { id: contract.id },
+        data: { status: 'returned', returned_date: todayIso },
+      });
+    }
+  );
+  return { ok: true, contract: toContract(row) };
+}
 
 export type BuyContractResult =
-  | { ok: true; paidCents: number }
-  | { ok: false; reason: Refusal | 'unpaid_invoices' | 'no_vat_rate' };
+  { ok: true; paidCents: number } | { ok: false; reason: Refusal | 'no_vat_rate' };
 
 /**
  * The customer buys the item at the end of the lease (a DEMO payment: no money moves). The
@@ -25,12 +75,9 @@ export async function buyContract(
   input: { contractId: string; actor: string },
   todayIso: string
 ): Promise<BuyContractResult> {
-  const contract = await getContract(db, input.contractId);
-  if (!contract) return { ok: false, reason: 'not_found' };
-  const invoices = (await contractInvoices(db, contract, todayIso)) ?? [];
-  const choice = endOfTermChoice(contract, invoices, todayIso);
-  if (!choice.canDecide) return { ok: false, reason: choice.reason ?? 'already_decided' };
-  if (!choice.canBuy) return { ok: false, reason: 'unpaid_invoices' };
+  const check = await decidable(db, input.contractId, todayIso);
+  if (!check.ok) return check;
+  const { contract } = check;
   const quote = buyoutQuote(contract.buyoutCents, await effectiveVatRates(db), todayIso);
   if (!quote) return { ok: false, reason: 'no_vat_rate' };
 
@@ -69,8 +116,9 @@ export async function passOnContract(
   input: { contractId: string; toCustomerId: string; actor: string },
   todayIso: string
 ): Promise<PassOnResult> {
-  const contract = await getContract(db, input.contractId);
-  if (!contract) return { ok: false, reason: 'not_found' };
+  const check = await decidable(db, input.contractId, todayIso);
+  if (!check.ok) return check;
+  const { contract } = check;
   const customers = await loadCustomers();
   if (
     !customers.some((c) => c.id === input.toCustomerId) ||
@@ -78,9 +126,6 @@ export async function passOnContract(
   ) {
     return { ok: false, reason: 'invalid_recipient' };
   }
-  const invoices = (await contractInvoices(db, contract, todayIso)) ?? [];
-  const choice = endOfTermChoice(contract, invoices, todayIso);
-  if (!choice.canDecide) return { ok: false, reason: choice.reason ?? 'already_decided' };
 
   const handover = await withAudit(
     db,
@@ -139,13 +184,22 @@ function toHandover(row: HandoverRow): Handover {
   };
 }
 
-/** Pending handovers addressed to a customer, or all pending ones (`null`, for staff). */
+/**
+ * Pending handovers addressed to a customer, or all pending ones (`null`, for staff), that
+ * exist on `todayIso`: a pass-on made on a later date (while time-travelling ahead) hasn't
+ * happened yet.
+ */
 export async function pendingHandovers(
   db: PrismaClient,
-  toCustomerId: string | null
+  toCustomerId: string | null,
+  todayIso: string
 ): Promise<Handover[]> {
   const rows = await db.handover.findMany({
-    where: { status: 'pending', ...(toCustomerId ? { to_customer_id: toCustomerId } : {}) },
+    where: {
+      status: 'pending',
+      passed_date: { lte: todayIso },
+      ...(toCustomerId ? { to_customer_id: toCustomerId } : {}),
+    },
     orderBy: { created_at: 'desc' },
   });
   return rows.map(toHandover);
@@ -161,11 +215,12 @@ export async function handoverForContract(
 
 export type RespondResult =
   | { ok: true; status: 'accepted' | 'declined' }
-  | { ok: false; reason: 'not_found' | 'not_yours' | 'already_decided' };
+  | { ok: false; reason: 'not_found' | 'not_yours' | 'already_decided' | 'not_yet' };
 
 /**
- * The recipient's answer. Accepting reserves the item for them (the second-life step then
- * leases it to them); declining leaves it returned, in the normal second-life pool.
+ * The recipient's answer, from the day of the pass-on. Accepting marks the item as held for them
+ * (`reserved_for`): it still gets its check first, and once refurbished it is reserved for them
+ * and only they can lease it. Declining leaves it in the normal second-life pool.
  */
 export async function respondToHandover(
   db: PrismaClient,
@@ -176,6 +231,7 @@ export async function respondToHandover(
   if (!row) return { ok: false, reason: 'not_found' };
   if (row.to_customer_id !== input.customerId) return { ok: false, reason: 'not_yours' };
   if (row.status !== 'pending') return { ok: false, reason: 'already_decided' };
+  if (todayIso < row.passed_date) return { ok: false, reason: 'not_yet' };
   const status = input.accept ? 'accepted' : 'declined';
 
   await withAudit(
@@ -190,10 +246,10 @@ export async function respondToHandover(
     async (tx) => {
       await tx.handover.update({ where: { id: row.id }, data: { status, decided_date: todayIso } });
       if (input.accept) {
-        // Hold it for them; only if it's still waiting for its next life.
+        // Hold it for them while it waits for its check (only if it is still waiting).
         await tx.asset.updateMany({
           where: { id: row.asset_id, status: 'returned' },
-          data: { status: 'reserved' },
+          data: { reserved_for: row.to_customer_id },
         });
       }
     }

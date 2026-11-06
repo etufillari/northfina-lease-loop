@@ -1,5 +1,6 @@
 // What the bell counts for a viewer on the app's date: leases that have ended and wait for a
-// choice (buy, return or pass on), items another customer passed on to them, and invoices to pay.
+// choice (buy, return or pass on), items another customer passed on to them, items passed on to
+// them that are refurbished and ready to lease, and invoices to pay.
 import type { PrismaClient } from '@/generated/prisma/client';
 import { contractStage } from '@/domain/contract';
 import { listContracts, type Contract } from './contracts';
@@ -10,6 +11,8 @@ import { viewerCustomerId, type Viewer } from './viewer';
 export type Notifications = {
   endedLeases: Contract[];
   handovers: Handover[];
+  /** Ids of items reserved for this customer and ready to lease. */
+  readyForYou: string[];
   dueInvoices: ReceivedInvoice[];
   count: number;
 };
@@ -20,14 +23,21 @@ export async function notificationsFor(
   todayIso: string
 ): Promise<Notifications> {
   const filter = viewer.kind === 'staff' ? null : { customerId: viewerCustomerId(viewer) };
-  const [contracts, received, handovers] = await Promise.all([
+  const [contracts, received, handovers, ready] = await Promise.all([
     listContracts(db, filter),
     receivedInvoices(db, filter, todayIso),
     // Only a customer can receive an item; staff see every pending handover.
     viewer.kind === 'guest'
       ? Promise.resolve([])
-      : pendingHandovers(db, viewer.kind === 'staff' ? null : viewer.customer.id),
+      : pendingHandovers(db, viewer.kind === 'staff' ? null : viewer.customer.id, todayIso),
+    viewer.kind === 'customer'
+      ? db.asset.findMany({
+          where: { status: 'reserved', reserved_for: viewer.customer.id },
+          select: { id: true },
+        })
+      : Promise.resolve([]),
   ]);
+  const readyForYou = ready.map((row) => row.id);
   const endedLeases = contracts.filter(
     (contract) => contract.status === 'active' && contractStage(contract, todayIso) === 'ended'
   );
@@ -35,7 +45,8 @@ export async function notificationsFor(
   return {
     endedLeases,
     handovers,
+    readyForYou,
     dueInvoices,
-    count: endedLeases.length + handovers.length + dueInvoices.length,
+    count: endedLeases.length + handovers.length + readyForYou.length + dueInvoices.length,
   };
 }

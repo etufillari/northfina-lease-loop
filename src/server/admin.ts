@@ -18,7 +18,7 @@ export type AdminOverview = {
   };
   applications: { total: number; approved: number; manual_review: number; rejected: number };
   invoices: { dueCount: number; dueCents: number; paidCount: number; paidCents: number };
-  assets: { available: number; reserved: number; returned: number; sold: number };
+  assets: { available: number; leased: number; reserved: number; returned: number; sold: number };
   allContracts: Contract[];
   audit: { id: number; createdAt: string; actor: string; action: string; entity: string }[];
 };
@@ -59,6 +59,7 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
     },
     assets: {
       available: byStatus.available ?? 0,
+      leased: byStatus.leased ?? 0,
       reserved: byStatus.reserved ?? 0,
       returned: byStatus.returned ?? 0,
       sold: byStatus.sold ?? 0,

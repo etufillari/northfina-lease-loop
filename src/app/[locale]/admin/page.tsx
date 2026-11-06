@@ -76,11 +76,26 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
       <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
         {t('admin.items', {
           available: overview.assets.available,
+          leased: overview.assets.leased,
           reserved: overview.assets.reserved,
           returned: overview.assets.returned,
           sold: overview.assets.sold,
         })}
       </p>
+
+      <Panel title={t('secondLife.title')}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-stone-700 dark:text-stone-300">
+            {t('admin.secondLifeWaiting', { count: overview.assets.returned })}
+          </p>
+          <Link
+            href={`/${locale}/admin/second-life`}
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            {t('admin.secondLifeOpen')}
+          </Link>
+        </div>
+      </Panel>
 
       <Panel title={t('admin.vat.title')}>
         <VatAdmin

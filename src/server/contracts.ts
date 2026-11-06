@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { loadCoefficientTable } from '@/data/load';
-import { checkSignable, contractPeriod, contractStage } from '@/domain/contract';
+import { checkSignable, contractPeriod } from '@/domain/contract';
 import { percentOfCents } from '@/domain/money';
 import { getApplication } from './applications';
 import { withAudit } from './audit';
@@ -36,7 +36,7 @@ export type Contract = {
   buyoutPaidCents: number | null;
 };
 
-function toContract(row: ContractRow): Contract {
+export function toContract(row: ContractRow): Contract {
   return {
     id: row.id,
     applicationId: row.application_id,
@@ -183,11 +183,20 @@ export async function signContract(
           status: 'active',
         },
       });
-      // Take the item only if it is still available, in the same write: if someone else
-      // signed for it a moment ago, nothing is updated and the whole signing rolls back.
+      // Take the item only if it can still be leased, in the same write: if someone else
+      // signed for it a moment ago, nothing is updated and the whole signing rolls back. An item
+      // reserved for this customer (passed on to them) can be taken by them only.
       const taken = await tx.asset.updateMany({
-        where: { id: application.assetId, status: 'available' },
-        data: { status: 'reserved' },
+        where: {
+          id: application.assetId,
+          OR: [
+            { status: 'available' },
+            ...(application.customerId
+              ? [{ status: 'reserved', reserved_for: application.customerId }]
+              : []),
+          ],
+        },
+        data: { status: 'leased', reserved_for: null },
       });
       if (taken.count === 0) throw new AssetTakenError();
       return contract;
@@ -200,46 +209,14 @@ export async function signContract(
   return { ok: true, contract: toContract(row) };
 }
 
-export type ReturnContractResult =
-  | { ok: true; contract: Contract }
-  | { ok: false; reason: 'not_found' | 'not_ended' | 'already_returned' };
-
-/**
- * End of term: the customer returns the item. Allowed only after the lease's last day. In one
- * transaction the contract is marked returned, the item becomes `returned` (ready for a check
- * and a second life) with one more completed lease, and a `contract.returned` audit row is
- * written.
- */
-export async function returnContract(
+/** Every contract of one item, oldest first: its lives in Lease Loop's own records. */
+export async function listContractsForAsset(
   db: PrismaClient,
-  input: { contractId: string; actor: string },
-  todayIso: string
-): Promise<ReturnContractResult> {
-  const contract = await getContract(db, input.contractId);
-  if (!contract) return { ok: false, reason: 'not_found' };
-  // Already returned, bought or passed on: the end of term is decided once.
-  if (contract.status !== 'active') return { ok: false, reason: 'already_returned' };
-  if (contractStage(contract, todayIso) !== 'ended') return { ok: false, reason: 'not_ended' };
-
-  const row = await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'contract.returned',
-      entityType: 'contract',
-      entityId: contract.id,
-      details: { assetId: contract.assetId, endDate: contract.endDate, returnedDate: todayIso },
-    },
-    async (tx) => {
-      await tx.asset.update({
-        where: { id: contract.assetId },
-        data: { status: 'returned', previous_lives: { increment: 1 } },
-      });
-      return tx.contract.update({
-        where: { id: contract.id },
-        data: { status: 'returned', returned_date: todayIso },
-      });
-    }
-  );
-  return { ok: true, contract: toContract(row) };
+  assetId: string
+): Promise<Contract[]> {
+  const rows = await db.contract.findMany({
+    where: { asset_id: assetId },
+    orderBy: { start_date: 'asc' },
+  });
+  return rows.map(toContract);
 }

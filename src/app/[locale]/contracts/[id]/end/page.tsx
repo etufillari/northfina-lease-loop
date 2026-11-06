@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { EndOfTermChoices } from '@/components/end-of-term-choices';
 import { NotYoursNotice } from '@/components/not-yours-notice';
+import { PayAllButton } from '@/components/pay-all-button';
 import { loadCustomers } from '@/data/load';
 import { buyoutQuote, endOfTermChoice } from '@/domain/end-of-term';
 import { formatEuro } from '@/domain/money';
@@ -63,12 +64,28 @@ export default async function EndOfTermPage({ params }: PageProps<'/[locale]/con
         })}
       </p>
 
+      {choice.canDecide && !choice.settled ? (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          <p className="mb-3">
+            {t('end.unpaid', { count: choice.unpaidCount, total: euro(choice.unpaidCents) })}
+          </p>
+          <PayAllButton
+            contractId={contract.id}
+            label={t('invoices.payAll', {
+              count: choice.unpaidCount,
+              total: euro(choice.unpaidCents),
+            })}
+            failedLabel={t('pay.failed')}
+          />
+        </div>
+      ) : null}
+
       {choice.canDecide ? (
         <div className="mt-8">
           <EndOfTermChoices
             contractId={contract.id}
             actor={contract.signerName}
-            canBuy={choice.canBuy}
+            settled={choice.settled}
             buyout={
               quote
                 ? {
@@ -79,7 +96,6 @@ export default async function EndOfTermPage({ params }: PageProps<'/[locale]/con
                   }
                 : null
             }
-            unpaid={{ count: choice.unpaidCount, total: euro(choice.unpaidCents) }}
             recipients={customers
               .filter((c) => c.id !== contract.customerId)
               .map(({ id: customerId, name }) => ({ id: customerId, name }))}

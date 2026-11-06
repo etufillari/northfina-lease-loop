@@ -103,6 +103,8 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      reserved_for: null,
+      second_life_price_cents: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { HandoverResponse } from '@/components/handover-response';
+import { PayAllButton } from '@/components/pay-all-button';
 import { contractNumber } from '@/domain/contract';
 import { invoiceLabel } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
@@ -64,6 +65,22 @@ export default async function NotificationsPage({ params }: PageProps<'/[locale]
         </Section>
       ) : null}
 
+      {notes.readyForYou.length > 0 ? (
+        <Section title={t('notifications.ready')}>
+          {notes.readyForYou.map((assetId) => (
+            <Card key={assetId} tone="violet">
+              <p>{t('notifications.readyText', { item: name(assetId) })}</p>
+              <Link
+                href={`/${locale}/assets/${assetId}`}
+                className="mt-3 inline-block rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800"
+              >
+                {t('notifications.leaseIt')}
+              </Link>
+            </Card>
+          ))}
+        </Section>
+      ) : null}
+
       {notes.handovers.length > 0 ? (
         <Section title={t('notifications.passedToYou')}>
           {notes.handovers.map((handover) => (
@@ -107,6 +124,18 @@ export default async function NotificationsPage({ params }: PageProps<'/[locale]
               </div>
             </Card>
           ))}
+          <li className="pt-2">
+            <PayAllButton
+              label={t('invoices.payAll', {
+                count: notes.dueInvoices.length,
+                total: formatEuro(
+                  notes.dueInvoices.reduce((sum, r) => sum + r.invoice.totalCents, 0),
+                  intlLocale[locale]
+                ),
+              })}
+              failedLabel={t('pay.failed')}
+            />
+          </li>
         </Section>
       ) : null}
 

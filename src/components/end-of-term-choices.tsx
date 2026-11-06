@@ -1,8 +1,8 @@
 'use client';
 
-// The three end-of-term choices as cards: buy it, return it, or pass it on. The server checks
-// every choice again (see src/server/end-of-term.ts); this only sends it and shows the outcome.
-import Link from 'next/link';
+// The three end-of-term choices as cards: buy it, return it, or pass it on. All of them wait
+// until the lease is settled (no unpaid invoices). The server checks every choice again (see
+// src/server/end-of-term.ts); this only sends it and shows the outcome.
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { getT } from '@/i18n/get-t';
@@ -11,10 +11,10 @@ import type { Locale } from '@/i18n/locales';
 type EndOfTermChoicesProps = {
   contractId: string;
   actor: string;
-  canBuy: boolean;
+  /** No unpaid invoices: every choice needs this. */
+  settled: boolean;
   /** Formatted amounts, worked out on the server. */
   buyout: { net: string; vatPercent: string; vat: string; total: string } | null;
-  unpaid: { count: number; total: string };
   recipients: { id: string; name: string }[];
   locale: Locale;
 };
@@ -25,7 +25,7 @@ const buttonClass =
   'mt-auto rounded-lg px-5 py-2.5 font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50';
 
 export function EndOfTermChoices(props: EndOfTermChoicesProps) {
-  const { contractId, actor, canBuy, buyout, unpaid, recipients, locale } = props;
+  const { contractId, actor, settled, buyout, recipients, locale } = props;
   const t = getT(locale);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -63,17 +63,9 @@ export function EndOfTermChoices(props: EndOfTermChoicesProps) {
               <Line label={t('end.buy.total')} value={buyout.total} strong />
             </dl>
           ) : null}
-          {!canBuy && unpaid.count > 0 ? (
-            <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100">
-              {t('end.buy.unpaid', { count: unpaid.count, total: unpaid.total })}{' '}
-              <Link href={`/${locale}/invoices`} className="font-medium underline">
-                {t('end.buy.toInvoices')}
-              </Link>
-            </p>
-          ) : null}
           <button
             type="button"
-            disabled={!canBuy || !buyout || busy}
+            disabled={!settled || !buyout || busy}
             onClick={() => void choose('buy', {})}
             className={`${buttonClass} bg-emerald-700 hover:bg-emerald-800`}
           >
@@ -89,7 +81,7 @@ export function EndOfTermChoices(props: EndOfTermChoicesProps) {
           </p>
           <button
             type="button"
-            disabled={busy}
+            disabled={!settled || busy}
             onClick={() => void choose('return', {})}
             className={`${buttonClass} bg-sky-700 hover:bg-sky-800`}
           >
@@ -117,7 +109,7 @@ export function EndOfTermChoices(props: EndOfTermChoicesProps) {
           </label>
           <button
             type="button"
-            disabled={!recipient || busy}
+            disabled={!settled || !recipient || busy}
             onClick={() => void choose('pass-on', { toCustomerId: recipient })}
             className={`${buttonClass} bg-violet-700 hover:bg-violet-800`}
           >

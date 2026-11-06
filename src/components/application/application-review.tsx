@@ -1,6 +1,7 @@
 'use client';
 
 import { formatEuro } from '@/domain/money';
+import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { getOptionLabel, type AnswerValue, type ApplicationQuestion } from './eligibility-question';
 
@@ -21,11 +22,6 @@ type ApplicationReviewProps = {
   submitting: boolean;
 };
 
-const blockedMessages: Record<Blocked['reason'], string> = {
-  min_age: 'You do not currently meet the minimum age requirement.',
-  residency: 'You do not currently meet the residency requirement.',
-};
-
 export default function ApplicationReview({
   locale,
   termMonths,
@@ -37,6 +33,8 @@ export default function ApplicationReview({
   onSubmit,
   submitting,
 }: ApplicationReviewProps) {
+  const t = getT(locale);
+
   function formatAnswer(questionId: string, value: AnswerValue | undefined) {
     if (value === undefined || value === '') return '—';
 
@@ -53,26 +51,28 @@ export default function ApplicationReview({
     <div className="space-y-8">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Review your application
+          {t('application.review.title')}
         </h2>
         <p className="text-sm text-stone-600 dark:text-stone-400">
-          Check your details before submitting your application.
+          {t('application.review.description')}
         </p>
       </div>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Lease details</h3>
+        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+          {t('application.review.leaseDetails')}
+        </h3>
 
         <dl className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white px-4 dark:divide-stone-800 dark:border-stone-800 dark:bg-stone-900">
           <div className="flex justify-between gap-4 py-3">
-            <dt className="text-sm text-stone-500 dark:text-stone-400">Lease term</dt>
+            <dt className="text-sm text-stone-500 dark:text-stone-400">{t('asset.leaseTerm')}</dt>
             <dd className="text-sm font-medium text-stone-900 dark:text-stone-100">
-              {termMonths} months
+              {t('asset.leaseDuration', { months: termMonths })}
             </dd>
           </div>
 
           <div className="flex justify-between gap-4 py-3">
-            <dt className="text-sm text-stone-500 dark:text-stone-400">Down payment</dt>
+            <dt className="text-sm text-stone-500 dark:text-stone-400">{t('asset.downPayment')}</dt>
             <dd className="text-sm font-medium text-stone-900 dark:text-stone-100">
               {formatEuro(downPaymentCents, locale)}
             </dd>
@@ -80,12 +80,14 @@ export default function ApplicationReview({
         </dl>
 
         <p className="text-xs text-stone-500 dark:text-stone-400">
-          Final pricing is calculated by the server when your application is submitted.
+          {t('application.review.finalPricing')}
         </p>
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Your answers</h3>
+        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+          {t('application.review.yourAnswers')}
+        </h3>
 
         <dl className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white px-4 dark:divide-stone-800 dark:border-stone-800 dark:bg-stone-900">
           {questions.map((question) => (
@@ -105,20 +107,20 @@ export default function ApplicationReview({
           className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40"
         >
           <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            Application eligibility restriction
+            {t('application.review.restrictionTitle')}
           </p>
           <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-            {blockedMessages[blocked.reason]}
+            {t(`application.reason.${blocked.reason}`)}
           </p>
 
           {blocked.eligible_from && (
             <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">
-              Eligible from: {blocked.eligible_from}
+              {t('application.result.eligibleFrom')} {blocked.eligible_from}
             </p>
           )}
 
           <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
-            You can still submit your application for the server to process.
+            {t('application.review.canStillSubmit')}
           </p>
         </div>
       )}
@@ -130,7 +132,7 @@ export default function ApplicationReview({
           disabled={submitting}
           className="rounded-xl border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
         >
-          Back to questions
+          {t('application.review.back')}
         </button>
 
         <button
@@ -139,7 +141,7 @@ export default function ApplicationReview({
           disabled={submitting}
           className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? 'Submitting...' : 'Submit application'}
+          {submitting ? t('application.review.submitting') : t('application.review.submit')}
         </button>
       </div>
     </div>

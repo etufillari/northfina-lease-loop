@@ -85,15 +85,12 @@ describe('POST /api/applications/questions', () => {
     expect(question.text).toBe(email?.text.en);
   });
 
-  it('falls back to English when why_we_ask has no translation yet', async () => {
-    const { questions } = await loadQuestions();
-    const email = questions.find((q) => q.id === 'q_email');
+  it('explains why it asks in the language asked for', async () => {
     await actAs(AINO);
 
     const { body } = await post(deal, '?locale=fi');
     const question = body.data.questions.find((q: { id: string }) => q.id === 'q_email');
-    expect(question.why_we_ask).toBe(email?.why_we_ask.fi ?? email?.why_we_ask.en);
-    expect(typeof question.why_we_ask).toBe('string');
+    expect(question.why_we_ask).toBe('Laskut ja sopimus lähetetään tähän osoitteeseen.');
   });
 
   it('answers 400 for a language the app does not speak, or an unknown parameter', async () => {
@@ -117,6 +114,13 @@ describe('POST /api/applications/questions', () => {
     expect(byId.q_business_id.hint).toBe('1234567-8 with a valid check digit');
     expect(byId.q_email).not.toHaveProperty('hint');
     expect(byId.q_business_id).not.toHaveProperty('validation');
+  });
+
+  it('gives the format hint in the language asked for', async () => {
+    await actAs({ sub: 'cust-norvi', role: 'client' });
+    const { body } = await post({ ...deal, answers: { q_customer_type: 'company' } }, '?locale=fi');
+    const hinted = body.data.questions.find((q: { id: string }) => q.id === 'q_business_id');
+    expect(hinted.hint).toBe('1234567-8 ja kelvollinen tarkistusnumero');
   });
 
   it('does not leak the internal rules of a question', async () => {

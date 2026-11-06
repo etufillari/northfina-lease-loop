@@ -261,7 +261,7 @@ export const questionSchema = z
     options: z.array(z.string()).min(1).optional(),
     blocks_application_when: z.array(blockRuleSchema).optional(),
     validation: z
-      .strictObject({ format: z.literal('finnish_business_id'), hint: z.string() })
+      .strictObject({ format: z.literal('finnish_business_id'), hint: localizedTextSchema })
       .optional(),
   })
   .refine((q) => (q.type === 'choice') === (q.options !== undefined), {

@@ -4,6 +4,11 @@ import { useId } from 'react';
 import type { Locale } from '@/i18n/locales';
 import { getT } from '@/i18n/get-t';
 
+const yesNoKeys = {
+  yes: 'application.options.yes',
+  no: 'application.options.no',
+} as const;
+
 const optionTranslationKeys = {
   q_customer_type: {
     consumer: 'application.options.q_customer_type.consumer',
@@ -14,6 +19,7 @@ const optionTranslationKeys = {
     FI: 'application.options.q_country.FI',
     SE: 'application.options.q_country.SE',
     EE: 'application.options.q_country.EE',
+    other: 'application.options.q_country.other',
   },
   q_employment: {
     employed: 'application.options.q_employment.employed',
@@ -28,6 +34,9 @@ const optionTranslationKeys = {
     leisure: 'application.options.q_usage_purpose.leisure',
     delivery: 'application.options.q_usage_purpose.delivery',
   },
+  q_can_sign: yesNoKeys,
+  q_vat_registered: yesNoKeys,
+  q_pep: yesNoKeys,
 } as const satisfies Record<string, Record<string, Parameters<ReturnType<typeof getT>>[0]>>;
 
 export function getOptionLabel(questionId: string, option: string, locale: Locale) {

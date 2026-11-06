@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { EligibilityReason } from '@/data/lease-schemas';
 import type { Locale } from '@/i18n/locales';
 import { getT } from '@/i18n/get-t';
 
@@ -9,7 +10,7 @@ type ApplicationDecision = 'approved' | 'rejected' | 'manual_review';
 export type ApplicationResultData = {
   id: string;
   decision: ApplicationDecision;
-  reasons: string[];
+  reasons: EligibilityReason[];
   eligible_from: string | null;
 };
 
@@ -82,7 +83,7 @@ export default function ApplicationResult({ application, locale }: ApplicationRe
 
             <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-stone-400">
               {application.reasons.map((reason, index) => (
-                <li key={`${reason}-${index}`}>{reason}</li>
+                <li key={`${reason}-${index}`}>{t(`application.reason.${reason}`)}</li>
               ))}
             </ul>
           </div>

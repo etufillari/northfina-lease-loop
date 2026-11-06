@@ -32,19 +32,19 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         </a>
 
         <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-            <Link href={`/${locale}`} className="flex items-center gap-3 rounded-lg">
+          <div className="flex w-full flex-wrap items-center justify-between gap-4 px-4 py-4 lg:flex-nowrap">
+            <Link href={`/${locale}`} className="flex min-w-0 items-center gap-3 rounded-lg">
               <LoopMark />
               <span>
                 <span className="block text-lg font-semibold tracking-tight">
                   {t('brand.name')}
                 </span>
-                <span className="block text-sm text-stone-600 dark:text-stone-400">
+                <span className="block truncate text-sm text-stone-600 dark:text-stone-400">
                   {t('brand.tagline')}
                 </span>
               </span>
             </Link>
-            <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
+            <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end lg:shrink-0">
               <CategoryNavigation locale={locale} label={t('nav.categories')} t={t} />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>

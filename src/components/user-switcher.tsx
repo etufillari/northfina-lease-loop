@@ -11,6 +11,8 @@ import type { IdentitySummary } from '@/domain/identity';
 import { getT, type Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
+import { DemoDateControl } from './demo-date-control';
+
 type ApiEnvelope<T> = {
   success: boolean;
   data?: T;
@@ -150,6 +152,8 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {currentUser?.role === 'admin' && <DemoDateControl locale={locale} />}
+
       {applicationsHref && (
         <Link
           href={applicationsHref}

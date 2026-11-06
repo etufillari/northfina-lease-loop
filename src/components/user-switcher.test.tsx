@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { messages } from '@/i18n/get-t';
 import { UserSwitcher } from './user-switcher';
@@ -17,7 +17,10 @@ function stubSession(current: User | null) {
   const answer = (data: unknown) => new Response(JSON.stringify({ success: true, data }));
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string) => answer(url.endsWith('/users') ? users : current))
+    vi.fn(async (url: string) => {
+      if (url.endsWith('/demo-date')) return answer({ date: '2026-11-05', is_demo: false });
+      return answer(url.endsWith('/users') ? users : current);
+    })
   );
 }
 
@@ -59,5 +62,20 @@ describe('UserSwitcher', () => {
   it('shows no link when nobody is logged in', async () => {
     await renderAs(null);
     expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('gives only an admin the demo date control', async () => {
+    const setDate = messages.en['admin.demoDate.apply'];
+
+    await renderAs(users[1] ?? null);
+    expect(await screen.findByRole('button', { name: setDate })).toBeTruthy();
+    cleanup();
+
+    await renderAs(users[2] ?? null);
+    expect(screen.queryByRole('button', { name: setDate })).toBeNull();
+    cleanup();
+
+    await renderAs(users[0] ?? null);
+    expect(screen.queryByRole('button', { name: setDate })).toBeNull();
   });
 });

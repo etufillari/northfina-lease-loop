@@ -154,6 +154,23 @@ describe('decideApplication with the scenario cards', () => {
     expect(backToConsumer.evaluation.status).toBe('approved');
   });
 
+  it('stays incomplete while the full name is a single letter', () => {
+    const context = contextFor('ebike-003', 'e_bike', 36);
+    const aino = {
+      q_customer_type: 'consumer',
+      q_full_name: 'A',
+      q_birth_date: '1997-04-12',
+      q_email: 'aino.virtanen@example.com',
+      q_country: 'FI',
+      q_employment: 'employed',
+      q_monthly_income: '3200',
+      q_usage_purpose: 'commuting',
+    };
+    expect(decideApplication(questions, aino, context).evaluation.status).toBe('incomplete');
+    const fixed = { ...aino, q_full_name: 'Aino Virtanen' };
+    expect(decideApplication(questions, fixed, context).evaluation.status).toBe('approved');
+  });
+
   it('is incomplete, not approved, while questions are unanswered', () => {
     const context = contextFor('ebike-003', 'e_bike', 36);
     expect(

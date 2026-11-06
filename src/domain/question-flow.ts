@@ -1,6 +1,7 @@
 // Pure business logic for application question targeting, validation, and eligibility.
 // Zero database, zero framework imports, no Date.now(), all money in cents.
 import type { AssetCategory, Question } from '@/data/schemas';
+import { checkCompanyName, checkPersonName } from './names';
 
 export type CustomerType = 'consumer' | 'sole_trader' | 'company';
 
@@ -162,7 +163,18 @@ export function pruneIrrelevantAnswers(
  * Validates an individual question's answer against format rules and blocking criteria.
  */
 /** Why an answer is not accepted, so the UI can explain it in the customer's language. */
-export type AnswerErrorCode = 'invalid_business_id' | 'under_age' | 'answer_not_accepted';
+export type AnswerErrorCode =
+  | 'invalid_business_id'
+  | 'under_age'
+  | 'answer_not_accepted'
+  | 'invalid_name'
+  | 'invalid_company_name';
+
+/** Free-text questions that hold a name, and the check each one gets (see names.ts). */
+const NAME_CHECKS: Record<string, { check: (text: string) => unknown; code: AnswerErrorCode }> = {
+  q_full_name: { check: checkPersonName, code: 'invalid_name' },
+  q_company_name: { check: checkCompanyName, code: 'invalid_company_name' },
+};
 
 export function validateQuestionAnswer(
   question: Question,
@@ -171,6 +183,12 @@ export function validateQuestionAnswer(
 ): { valid: boolean; code?: AnswerErrorCode; error?: string } {
   if (!value || value.trim() === '') {
     return { valid: true };
+  }
+
+  // Names: a person's full name and a company name (the data pack gives them no format).
+  const nameCheck = NAME_CHECKS[question.id];
+  if (nameCheck && nameCheck.check(value) !== null) {
+    return { valid: false, code: nameCheck.code, error: 'This is not a valid name' };
   }
 
   // Format validation (e.g. Finnish business ID)
@@ -354,7 +372,11 @@ export function evaluateEligibility(
   }
 
   // Check completeness across all visible questions
-  const isComplete = visibleQuestions.every((q) => Boolean(answers[q.id]?.trim()));
+  // Complete = every visible question has an answer that passes its own checks (so a
+  // one-letter name keeps the application from being sent).
+  const isComplete = visibleQuestions.every(
+    (q) => Boolean(answers[q.id]?.trim()) && validateQuestionAnswer(q, answers[q.id], context).valid
+  );
 
   return {
     status: isComplete ? 'approved' : 'incomplete',

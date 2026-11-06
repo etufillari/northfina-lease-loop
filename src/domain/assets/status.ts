@@ -1,0 +1,10 @@
+// Which asset statuses a person may set by hand. `leased` and `sold` follow from a contract,
+// so they only change through signing and end of term: otherwise a leased item could be set
+// back to available and leased twice.
+import type { AssetStatus } from '@/data/schemas';
+
+const SET_BY_CONTRACTS: readonly AssetStatus[] = ['leased', 'sold'];
+
+export function canChangeStatusByHand(from: AssetStatus, to: AssetStatus): boolean {
+  return !SET_BY_CONTRACTS.includes(from) && !SET_BY_CONTRACTS.includes(to);
+}

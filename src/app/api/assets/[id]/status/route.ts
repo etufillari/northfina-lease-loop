@@ -1,6 +1,7 @@
 // PATCH /api/assets/:id/status   body: { "status": "reserved" }
 // Changes the status and writes an audit row in the same transaction. Who made the
 // change comes from the session, not the request body: see src/server/auth/actor.ts.
+// A leased or sold asset is refused with a 409: only contracts move it.
 import { z } from 'zod';
 import { assetStatusSchema } from '@/data/schemas';
 import { identityId } from '@/domain/identity';
@@ -22,8 +23,10 @@ export const PATCH = handleRoute(
       status: body.status,
       actor: identityId(actor),
     });
-    if (!result.ok) return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);
-
-    return ok(result.asset);
+    if (result.ok) return ok(result.asset);
+    if (result.reason === 'status_locked') {
+      return fail(409, 'ASSET_STATUS_LOCKED', 'Only a contract can change this status');
+    }
+    return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);
   }
 );

@@ -5,6 +5,7 @@ import { seedAssets } from '@/server/assets/assets';
 import type { PrismaClient } from '@/server/prisma-client';
 import { ADMIN, AINO, DEALER, TEST_SECRET, actAs } from '../../../../../tests/helpers/act-as';
 import { ainoEbikeAnswers } from '../../../../../tests/helpers/applicants';
+import { signFor } from '../../../../../tests/helpers/lease-flow';
 import { createTestDb } from '../../../../../tests/helpers/test-db';
 import { GET } from './route';
 
@@ -32,7 +33,10 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  await db.assetLife.deleteMany();
+  await db.contract.deleteMany();
   await db.application.deleteMany();
+  await db.asset.updateMany({ where: { id: 'ebike-003' }, data: { status: 'available' } });
   await db.appSetting.deleteMany();
   await db.appSetting.create({ data: { key: 'demo_date', value: '2026-11-05' } });
 
@@ -76,6 +80,14 @@ describe('GET /api/applications/:id', () => {
     const { status, body } = await get(ainoApplicationId);
     expect(status).toBe(200);
     expect(body.data).toMatchObject({ id: ainoApplicationId, decision: 'approved' });
+  });
+
+  it('has no contract until it is signed, then links to it', async () => {
+    await actAs(AINO);
+    expect((await get(ainoApplicationId)).body.data.contract_id).toBeNull();
+
+    const contract = await signFor(db, 'cust-aino', ainoApplicationId);
+    expect((await get(ainoApplicationId)).body.data.contract_id).toBe(contract.id);
   });
 
   it('still says when to try again after a refresh', async () => {

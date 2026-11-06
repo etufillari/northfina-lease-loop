@@ -19,7 +19,7 @@ export const GET = handleRoute(
       return fail(404, 'APPLICATION_NOT_FOUND', `No application with id "${id}"`);
     }
 
-    const [view] = await viewsOf([application]);
+    const [view] = await viewsOf(db, [application]);
     return ok(view);
   }
 );

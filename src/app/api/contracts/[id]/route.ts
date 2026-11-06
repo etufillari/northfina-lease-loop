@@ -1,0 +1,24 @@
+// GET /api/contracts/:id
+// The customer sees their own contract, and staff see any. Anyone else gets a 404, the same
+// as for an id that does not exist, so ids cannot be probed.
+import { can } from '@/domain/identity';
+import { fail, handleRoute, ok } from '@/server/api-response';
+import { requireActor } from '@/server/auth/actor';
+import { contractViews, getContract } from '@/server/contract/contracts';
+import { db } from '@/server/db';
+
+export const GET = handleRoute(
+  async (_request, { params }: RouteContext<'/api/contracts/[id]'>) => {
+    const actor = await requireActor();
+    const { id } = await params;
+
+    const contract = await getContract(db, id);
+    const isOwner = actor.kind === 'customer' && actor.customer.id === contract?.customer_id;
+    if (!contract || !(isOwner || can(actor.role, 'contract.view_all'))) {
+      return fail(404, 'CONTRACT_NOT_FOUND', `No contract with id "${id}"`);
+    }
+
+    const [view] = await contractViews([contract]);
+    return ok(view);
+  }
+);

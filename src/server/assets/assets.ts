@@ -2,6 +2,7 @@
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
 import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
+import { canChangeStatusByHand } from '@/domain/assets/status';
 import { withAudit } from '../audit';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
@@ -49,15 +50,21 @@ export async function listAssets(
 }
 
 export type ChangeAssetStatusResult =
-  { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
+  { ok: true; asset: Asset } | { ok: false; reason: 'not_found' | 'status_locked' };
 
-/** Sets an asset's status and writes `asset.status_changed` to the audit log, atomically. */
+/**
+ * Sets an asset's status by hand and writes `asset.status_changed` to the audit log,
+ * atomically. `leased` and `sold` are refused: only contracts move an asset to or from those.
+ */
 export async function changeAssetStatus(
   db: PrismaClient,
   input: { id: string; status: AssetStatus; actor: string }
 ): Promise<ChangeAssetStatusResult> {
   const existing = await db.asset.findUnique({ where: { id: input.id } });
   if (!existing) return { ok: false, reason: 'not_found' };
+  if (!canChangeStatusByHand(toAsset(existing).status, input.status)) {
+    return { ok: false, reason: 'status_locked' };
+  }
 
   const updated = await withAudit(
     db,

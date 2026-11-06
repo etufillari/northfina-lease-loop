@@ -91,6 +91,7 @@ describe('submitApplication: approved (card 1)', () => {
       reasons: [],
       reviewed_by: null,
       eligible_from: null,
+      contract_id: null,
     });
   });
 

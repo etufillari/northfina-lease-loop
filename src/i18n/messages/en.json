@@ -261,5 +261,14 @@
   "invoices.earlyExit.marketValue": "Market value after {months} months: {price} first list price × {percent}% on the value curve, adjusted for condition ({condition}) and usage = {value}.",
   "invoices.earlyExit.total.net": "Net amount",
   "invoices.earlyExit.total.vat": "VAT ({rate}%)",
-  "invoices.earlyExit.total.gross": "Total to pay"
+  "invoices.earlyExit.total.gross": "Total to pay",
+  "invoices.earlyExit.action.buyout": "Buy it out now",
+  "invoices.earlyExit.action.return": "Return it now",
+  "invoices.earlyExit.action.confirm": "Confirm and pay {amount}",
+  "invoices.earlyExit.action.cancel": "Cancel",
+  "invoices.earlyExit.action.working": "Saving…",
+  "invoices.earlyExit.action.doneBuyout": "Done. The lease ended on {date} and the item is now yours. Your final invoice is {amount}.",
+  "invoices.earlyExit.action.doneReturn": "Done. The lease ended on {date}. Please bring the item back. Your final invoice is {amount}.",
+  "invoices.earlyExit.action.ended": "This lease has already ended, so there is nothing more to pay here.",
+  "invoices.earlyExit.action.error": "Something went wrong and nothing was changed. Please try again."
 }

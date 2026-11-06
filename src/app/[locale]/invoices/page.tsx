@@ -273,6 +273,7 @@ export default async function InvoicesPage({
           condition={exitCondition}
           monthChoices={exitMonthChoices}
           firstListPriceCents={quote.listPriceCents}
+          leaseEnded={asset.status === 'sold' || asset.status === 'returned'}
         />
 
         {/* End of term options (Buy, Return, Pass on) */}

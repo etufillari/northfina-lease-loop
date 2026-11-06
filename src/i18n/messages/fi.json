@@ -261,5 +261,14 @@
   "invoices.earlyExit.marketValue": "Markkina-arvo {months} kuukauden jälkeen: {price} ensimmäinen listahinta × {percent} % arvokäyrällä, säädettynä kunnolla ({condition}) ja käytöllä = {value}.",
   "invoices.earlyExit.total.net": "Summa ilman ALV:tä",
   "invoices.earlyExit.total.vat": "ALV ({rate} %)",
-  "invoices.earlyExit.total.gross": "Maksettava yhteensä"
+  "invoices.earlyExit.total.gross": "Maksettava yhteensä",
+  "invoices.earlyExit.action.buyout": "Lunasta nyt",
+  "invoices.earlyExit.action.return": "Palauta nyt",
+  "invoices.earlyExit.action.confirm": "Vahvista ja maksa {amount}",
+  "invoices.earlyExit.action.cancel": "Peruuta",
+  "invoices.earlyExit.action.working": "Tallennetaan…",
+  "invoices.earlyExit.action.doneBuyout": "Valmis. Sopimus päättyi {date} ja laite on nyt sinun. Loppulaskusi on {amount}.",
+  "invoices.earlyExit.action.doneReturn": "Valmis. Sopimus päättyi {date}. Palauta laite meille. Loppulaskusi on {amount}.",
+  "invoices.earlyExit.action.ended": "Tämä sopimus on jo päättynyt, joten täällä ei ole enää maksettavaa.",
+  "invoices.earlyExit.action.error": "Jokin meni pieleen eikä mitään muutettu. Yritä uudelleen."
 }

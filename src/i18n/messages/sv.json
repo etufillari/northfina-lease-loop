@@ -261,5 +261,14 @@
   "invoices.earlyExit.marketValue": "Marknadsvärde efter {months} månader: {price} första listpris × {percent} % på värdekurvan, justerat för skick ({condition}) och användning = {value}.",
   "invoices.earlyExit.total.net": "Belopp exkl. moms",
   "invoices.earlyExit.total.vat": "Moms ({rate} %)",
-  "invoices.earlyExit.total.gross": "Totalt att betala"
+  "invoices.earlyExit.total.gross": "Totalt att betala",
+  "invoices.earlyExit.action.buyout": "Lös ut nu",
+  "invoices.earlyExit.action.return": "Lämna tillbaka nu",
+  "invoices.earlyExit.action.confirm": "Bekräfta och betala {amount}",
+  "invoices.earlyExit.action.cancel": "Avbryt",
+  "invoices.earlyExit.action.working": "Sparar…",
+  "invoices.earlyExit.action.doneBuyout": "Klart. Avtalet upphörde {date} och föremålet är nu ditt. Din slutfaktura är {amount}.",
+  "invoices.earlyExit.action.doneReturn": "Klart. Avtalet upphörde {date}. Lämna tillbaka föremålet. Din slutfaktura är {amount}.",
+  "invoices.earlyExit.action.ended": "Det här avtalet har redan upphört, så det finns inget mer att betala här.",
+  "invoices.earlyExit.action.error": "Något gick fel och ingenting ändrades. Försök igen."
 }

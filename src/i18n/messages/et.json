@@ -261,5 +261,14 @@
   "invoices.earlyExit.marketValue": "Turuväärtus {months} kuu järel: {price} esimene hinnakirjahind × {percent}% väärtuskõveral, kohandatud seisukorra ({condition}) ja kasutuse järgi = {value}.",
   "invoices.earlyExit.total.net": "Summa ilma käibemaksuta",
   "invoices.earlyExit.total.vat": "Käibemaks ({rate}%)",
-  "invoices.earlyExit.total.gross": "Tasuda kokku"
+  "invoices.earlyExit.total.gross": "Tasuda kokku",
+  "invoices.earlyExit.action.buyout": "Lunasta kohe",
+  "invoices.earlyExit.action.return": "Tagasta kohe",
+  "invoices.earlyExit.action.confirm": "Kinnita ja maksa {amount}",
+  "invoices.earlyExit.action.cancel": "Tühista",
+  "invoices.earlyExit.action.working": "Salvestan…",
+  "invoices.earlyExit.action.doneBuyout": "Valmis. Leping lõppes {date} ja seade on nüüd sinu. Sinu lõpparve on {amount}.",
+  "invoices.earlyExit.action.doneReturn": "Valmis. Leping lõppes {date}. Palun tagasta seade. Sinu lõpparve on {amount}.",
+  "invoices.earlyExit.action.ended": "See leping on juba lõppenud, seega pole siin enam midagi maksta.",
+  "invoices.earlyExit.action.error": "Midagi läks valesti ja midagi ei muudetud. Palun proovi uuesti."
 }

@@ -1,11 +1,13 @@
 // Early exit (Smart Problem 2): shows what ending the lease in a chosen month costs, line by
 // line, for both options (buy it out, or return it). A server component: the month and the
 // condition are chosen with a plain GET form, so it works without client JavaScript.
+import type { ReactNode } from 'react';
 import type { AssetCondition } from '@/data/schemas';
 import type { EarlyExitLine, EarlyExitOption, EarlyExitQuote } from '@/domain/early-exit';
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { EarlyExitAction } from './early-exit-action';
 
 const CONDITIONS: readonly AssetCondition[] = ['new', 'like_new', 'good', 'fair', 'poor'];
 
@@ -19,6 +21,8 @@ export type EarlyExitOptionsProps = {
   /** One entry per month of the term, with the formatted date of that month's rent row. */
   monthChoices: { month: number; date: string }[];
   firstListPriceCents: number;
+  /** The asset was already bought out or returned, so the lease cannot be exited again. */
+  leaseEnded: boolean;
 };
 
 /** A percentage with the locale's decimal separator, e.g. 7.9 -> "7,9" in Finnish. */
@@ -55,12 +59,14 @@ function OptionCard({
   title,
   description,
   note,
+  action,
 }: {
   locale: Locale;
   option: EarlyExitOption;
   title: string;
   description: string;
   note?: string;
+  action: ReactNode;
 }) {
   const t = getT(locale);
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
@@ -109,6 +115,7 @@ function OptionCard({
           </dd>
         </div>
       </dl>
+      {action}
     </div>
   );
 }
@@ -124,10 +131,22 @@ export function EarlyExitOptions({
   condition,
   monthChoices,
   firstListPriceCents,
+  leaseEnded,
 }: EarlyExitOptionsProps) {
   const t = getT(locale);
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const termOver = quote.remainingMonths === 0;
+  const actionFor = (choice: 'buyout' | 'return', option: EarlyExitOption) => (
+    <EarlyExitAction
+      locale={locale}
+      choice={choice}
+      contract={contract}
+      exitMonth={exitMonth}
+      condition={condition}
+      grossCents={option.settlement.grossCents}
+      leaseEnded={leaseEnded}
+    />
+  );
 
   return (
     <section
@@ -212,6 +231,7 @@ export function EarlyExitOptions({
           option={quote.buyout}
           title={t('invoices.earlyExit.buyout.title')}
           description={t('invoices.earlyExit.buyout.description')}
+          action={actionFor('buyout', quote.buyout)}
         />
         <OptionCard
           locale={locale}
@@ -225,6 +245,7 @@ export function EarlyExitOptions({
             condition: t(`condition.${condition}`),
             value: money(quote.marketValue.valueCents),
           })}
+          action={actionFor('return', quote.returnItem)}
         />
       </div>
     </section>

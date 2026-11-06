@@ -118,3 +118,12 @@ model InvoicePayment {
 
   @@unique([contract_id, invoice_number])
 }
+
+// A VAT rate added on the admin page, e.g. 27 % from 2027-07-01. It applies from its date until
+// the next change, on top of data/vat-rates.json (which is never edited). One per start date.
+model VatChange {
+  id                Int      @id @default(autoincrement())
+  created_at        DateTime @default(now())
+  valid_from        String   @unique // YYYY-MM-DD
+  rate_basis_points Int // 27 % → 2700, an integer like money
+}

@@ -5,7 +5,8 @@ import { notFound, redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { ContractDocument, type ContractView } from '@/components/contract-document';
 import { SignContractForm } from '@/components/sign-contract-form';
-import { loadCoefficientTable, loadCustomers, loadPriceLists, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadCustomers, loadPriceLists } from '@/data/load';
+import { effectiveVatRates } from '@/server/vat';
 import { checkSignable, contractPeriod } from '@/domain/contract';
 import { percentOfCents } from '@/domain/money';
 import { differentPriceOn } from '@/domain/price-list';
@@ -42,7 +43,7 @@ export default async function ApplicationPage({
   const [asset, table, vatRates, priceLists] = await Promise.all([
     getAsset(db, application.assetId),
     loadCoefficientTable(),
-    loadVatRates(),
+    effectiveVatRates(db),
     loadPriceLists(),
   ]);
   if (!asset) notFound();

@@ -11,6 +11,8 @@ import { BuyoutPurchase } from './buyout-purchase';
 
 type ExitBreakdown = {
   usedMonths: number;
+  /** The months paid for: the months used, but never fewer than the 6-month minimum. */
+  chargedMonths: number;
   coveringTermMonths: number;
   fairMonthlyNetCents: number;
   fairTotalNetCents: number;
@@ -218,10 +220,15 @@ export function ContractActions({
               covering: preview.coveringTermMonths,
             })}
           </p>
+          {preview.chargedMonths > preview.usedMonths ? (
+            <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+              {t('exit.minimum', { months: preview.chargedMonths })}
+            </p>
+          ) : null}
           <dl className="mt-3 space-y-1.5 text-sm tabular-nums">
             <Row
               label={t('exit.fairRent', {
-                used: preview.usedMonths,
+                used: preview.chargedMonths,
                 covering: preview.coveringTermMonths,
                 rate: euro(preview.fairMonthlyNetCents),
               })}

@@ -1,16 +1,24 @@
 // Fair early exit (Smart Problem 2), the tier re-price model from docs/DECISIONS.md:
-// the months actually used are re-priced at the cheapest term in the coefficient table that
-// covers them — what the customer SHOULD have paid had they committed only that long — plus
-// a handling fee of one month of that tier's rent. The result is capped at the remaining
-// contract payments (leaving can never cost more than staying) and floored at 0. VAT is
-// charged at the exit date's rate. At the full term the cost is 0: a plain return.
+// the months actually used — at least MIN_CHARGED_MONTHS — are re-priced at the cheapest term
+// in the coefficient table that covers them, i.e. what the customer SHOULD have paid had they
+// committed only that long, plus a handling fee of HANDLING_FEE_MONTHS months of that tier's
+// rent. The result is capped at the remaining contract payments (leaving can never cost more
+// than staying) and floored at 0. VAT is charged at the exit date's rate. At the full term
+// the cost is 0: a plain return.
 import type { CoefficientTable, VatRates } from '@/data/schemas';
 import { quoteFor } from './pricing';
 import { vatCents, vatRateOn } from './vat';
 
+/** An early exit always pays for at least this many months of use. */
+export const MIN_CHARGED_MONTHS = 6;
+/** The handling fee, in months of the re-priced tier's rent. */
+export const HANDLING_FEE_MONTHS = 2;
+
 export type EarlyExitBreakdown = {
   usedMonths: number;
-  /** The cheapest term in the table that covers the months used (7 used → 12). */
+  /** The months paid for: the months used, but never fewer than MIN_CHARGED_MONTHS. */
+  chargedMonths: number;
+  /** The cheapest term in the table that covers the months charged (7 → 12). */
   coveringTermMonths: number;
   /** The monthly net rent the covering term would have cost for the same financed amount. */
   fairMonthlyNetCents: number;
@@ -52,6 +60,7 @@ export function earlyExitQuote(input: {
       ok: true,
       breakdown: {
         usedMonths,
+        chargedMonths: usedMonths,
         coveringTermMonths: contract.termMonths,
         fairMonthlyNetCents: 0,
         fairTotalNetCents: 0,
@@ -69,7 +78,8 @@ export function earlyExitQuote(input: {
   const terms = Object.keys(table.end_of_term_buyout_percent_of_financed)
     .map(Number)
     .sort((a, b) => a - b);
-  const coveringTermMonths = terms.find((t) => t >= usedMonths) ?? terms[terms.length - 1]!;
+  const chargedMonths = Math.max(usedMonths, MIN_CHARGED_MONTHS);
+  const coveringTermMonths = terms.find((t) => t >= chargedMonths) ?? terms[terms.length - 1]!;
 
   // Same financed amount, no down payment: the rent this customer would have had on the
   // covering term.
@@ -82,8 +92,8 @@ export function earlyExitQuote(input: {
   if (!requote.ok) return { ok: false, reason: 'unpriceable_amount' };
 
   const fairMonthlyNetCents = requote.quote.monthlyNetRentCents;
-  const fairTotalNetCents = fairMonthlyNetCents * usedMonths;
-  const handlingFeeNetCents = fairMonthlyNetCents;
+  const fairTotalNetCents = fairMonthlyNetCents * chargedMonths;
+  const handlingFeeNetCents = fairMonthlyNetCents * HANDLING_FEE_MONTHS;
   const raw = fairTotalNetCents - paidNetCents + handlingFeeNetCents;
   const remaining = contract.netTotalCents - paidNetCents;
   const exitNetCents = Math.max(0, Math.min(raw, remaining));
@@ -93,6 +103,7 @@ export function earlyExitQuote(input: {
     ok: true,
     breakdown: {
       usedMonths,
+      chargedMonths,
       coveringTermMonths,
       fairMonthlyNetCents,
       fairTotalNetCents,

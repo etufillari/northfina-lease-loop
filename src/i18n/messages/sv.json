@@ -152,7 +152,7 @@
   "exit.intro": "Du har använt {used} av {term} månader. Priset för {covering} månader täcker din användning:",
   "exit.fairRent": "{used} mån till {covering}-månaderspris ({rate}/mån)",
   "exit.paid": "Redan betalt (netto)",
-  "exit.fee": "Hanteringsavgift: en månad till samma pris",
+  "exit.fee": "Hanteringsavgift: två månader till samma pris",
   "exit.net": "Avslutsavgift (netto)",
   "exit.total": "Att betala (inkl. moms {rate} %)",
   "exit.confirm": "Bekräfta förtida avslut",
@@ -485,5 +485,6 @@
   "buyout.invoiceNote": "Fakturan skickas {date} och förfaller {due}.",
   "buyout.vatNote": "Moms tas ut enligt den sats som gäller på fakturadagen; här används den sats som är känd i dag.",
   "buyout.confirm": "Bekräfta köpet",
-  "buyout.cancel": "Avbryt"
+  "buyout.cancel": "Avbryt",
+  "exit.minimum": "En förtida avslutning betalar alltid för minst {months} månaders användning."
 }

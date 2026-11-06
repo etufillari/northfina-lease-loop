@@ -152,7 +152,7 @@
   "exit.intro": "Oled kasutanud {used}/{term} kuud. {covering} kuu hind katab sinu kasutuse:",
   "exit.fairRent": "{used} kuud {covering} kuu hinnaga ({rate}/kuu)",
   "exit.paid": "Juba makstud (neto)",
-  "exit.fee": "Käsitlustasu: üks kuu sama hinnaga",
+  "exit.fee": "Käsitlustasu: kaks kuud sama hinnaga",
   "exit.net": "Lõpetamistasu (neto)",
   "exit.total": "Maksta (koos käibemaksuga {rate} %)",
   "exit.confirm": "Kinnita lõpetamine",
@@ -485,5 +485,6 @@
   "buyout.invoiceNote": "Arve saadetakse {date} ja maksetähtaeg on {due}.",
   "buyout.vatNote": "Käibemaks arvestatakse arve kuupäeval kehtiva määraga; siin on kasutatud täna teadaolevat määra.",
   "buyout.confirm": "Kinnita lunastus",
-  "buyout.cancel": "Tühista"
+  "buyout.cancel": "Tühista",
+  "exit.minimum": "Ennetähtaegne lõpetamine maksab alati vähemalt {months} kuu kasutuse eest."
 }

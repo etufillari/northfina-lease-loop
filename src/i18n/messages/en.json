@@ -171,7 +171,7 @@
   "exit.intro": "You have used {used} of {term} months. The {covering}-month price covers that use:",
   "exit.fairRent": "{used} months at the {covering}-month rate ({rate}/mo)",
   "exit.paid": "Already paid (net)",
-  "exit.fee": "Handling fee: one month at that rate",
+  "exit.fee": "Handling fee: two months at that rate",
   "exit.net": "Early-exit charge (net)",
   "exit.total": "To pay (incl. VAT {rate} %)",
   "exit.confirm": "Confirm early exit",
@@ -485,5 +485,6 @@
   "buyout.invoiceNote": "The invoice is sent on {date} and is due on {due}.",
   "buyout.vatNote": "VAT is charged at the rate valid on the invoice date; this uses the rate known today.",
   "buyout.confirm": "Confirm purchase",
-  "buyout.cancel": "Cancel"
+  "buyout.cancel": "Cancel",
+  "exit.minimum": "An early exit always pays for at least {months} months of use."
 }

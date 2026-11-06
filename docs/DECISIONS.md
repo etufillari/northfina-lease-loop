@@ -74,12 +74,15 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   purpose. Never VAT.
 - Mid-lease the customer may opt to **buy at end of term**: the buyout invoice is issued at
   term end with 30 days to pay, and is excluded from the affordability test.
-- **Early exit (tier re-price):** returning in started month k, the k months used are
-  re-priced at the cheapest term in the data that covers them (k ≤ 12 → 12, ≤ 24 → 24,
-  ≤ 36 → 36, else 48) on the contract's own price basis. Exit cost = that fair rent × k
-  − net already paid + a handling fee of one month of the re-priced tier's rent, capped at
-  the remaining contract payments, floored at 0, plus VAT at the exit date. At k = term the
-  cost is 0 (a plain return). The full calculation is always shown.
+- **Early exit (tier re-price):** returning in started month k, the customer pays for
+  m = max(k, 6) months — **at least 6 months of use**, however early they leave. Those m
+  months are re-priced at the cheapest term in the data that covers them (m ≤ 12 → 12,
+  ≤ 24 → 24, ≤ 36 → 36, else 48) on the contract's own price basis. Exit cost = that fair
+  rent × m − net already paid + a handling fee of **two months** of the re-priced tier's
+  rent, capped at the remaining contract payments (leaving never costs more than staying),
+  floored at 0, plus VAT at the exit date. At k = term the cost is 0 (a plain return). The
+  full calculation is always shown. Card 8 (month 7 of 36): 7 × €213.17 − €751.10 paid +
+  2 × €213.17 = €1,167.43 net, €1,470.96 with 26 % VAT.
 - **Return inspection (designed, deferred — not in the code):** the usage purpose from
   `q_usage_purpose` is locked on the contract at signing, and the monthly price is never
   adjusted for a self-declared purpose. Wear is internalized through second-life

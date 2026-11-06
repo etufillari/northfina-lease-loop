@@ -26,20 +26,63 @@ describe('earlyExitQuote', () => {
     expect(result).toMatchObject({
       ok: true,
       breakdown: {
+        // 7 months used is above the 6-month minimum, so all 7 are charged.
+        chargedMonths: 7,
         coveringTermMonths: 12,
         // 389 000 × 0.054799 = 21 316.811 → 21 317 a month on the 12-month tier.
         fairMonthlyNetCents: 21_317,
         fairTotalNetCents: 149_219,
         paidNetCents: 75_110,
-        handlingFeeNetCents: 21_317,
-        // 149 219 − 75 110 + 21 317, far below the 311 176 still outstanding.
-        exitNetCents: 95_426,
+        // Two months at the re-priced rate.
+        handlingFeeNetCents: 42_634,
+        // 149 219 − 75 110 + 42 634, far below the 311 176 still outstanding.
+        exitNetCents: 116_743,
         cappedAtRemaining: false,
         vatRatePercent: 26,
-        exitVatCents: 24_811,
-        exitTotalCents: 120_237,
+        exitVatCents: 30_353,
+        exitTotalCents: 147_096,
       },
     });
+  });
+
+  it('always charges at least 6 months: leaving in month 1 pays for 6 months plus the fee', () => {
+    const result = earlyExitQuote({
+      contract: ainoContract,
+      usedMonths: 1,
+      paidNetCents: 10_730,
+      exitDate: '2026-12-04',
+      table,
+      vatRates,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      breakdown: {
+        usedMonths: 1,
+        chargedMonths: 6,
+        coveringTermMonths: 12,
+        fairTotalNetCents: 6 * 21_317,
+        handlingFeeNetCents: 2 * 21_317,
+        // 127 902 − 10 730 + 42 634
+        exitNetCents: 159_806,
+        cappedAtRemaining: false,
+      },
+    });
+  });
+
+  it('the minimum applies up to month 6 and gives way to the real use from month 7', () => {
+    const charged = (usedMonths: number) => {
+      const result = earlyExitQuote({
+        contract: ainoContract,
+        usedMonths,
+        paidNetCents: usedMonths * 10_730,
+        exitDate: '2027-06-04',
+        table,
+        vatRates,
+      });
+      if (!result.ok) throw new Error(result.reason);
+      return result.breakdown.chargedMonths;
+    };
+    expect([1, 5, 6, 7, 8].map(charged)).toEqual([6, 6, 6, 7, 8]);
   });
 
   it('picks the covering term, not the contract term: month 18 of 36 uses the 24-month tier', () => {
@@ -55,7 +98,7 @@ describe('earlyExitQuote', () => {
     expect(result.breakdown.coveringTermMonths).toBe(24);
   });
 
-  it('near the end the exit is only the handling fee, and stays below the remaining payments', () => {
+  it('near the end leaving never costs more than staying: the fee is capped at what is left', () => {
     const result = earlyExitQuote({
       contract: ainoContract,
       usedMonths: 35,
@@ -65,13 +108,13 @@ describe('earlyExitQuote', () => {
       vatRates,
     });
     if (!result.ok) throw new Error(result.reason);
-    // Covering term = the contract's own 36: the re-price nets out, one handling fee remains
-    // (10 730), which is less than the 10 736 still outstanding — leaving never costs more
-    // than staying.
+    // Covering term = the contract's own 36: the re-price nets out and the two-month fee
+    // (21 460) would exceed the 10 736 still outstanding, so the exit costs exactly that.
     expect(result.breakdown.coveringTermMonths).toBe(36);
-    expect(result.breakdown.exitNetCents).toBe(10_730);
-    expect(result.breakdown.cappedAtRemaining).toBe(false);
-    expect(result.breakdown.exitNetCents).toBeLessThanOrEqual(
+    expect(result.breakdown.handlingFeeNetCents).toBe(21_460);
+    expect(result.breakdown.exitNetCents).toBe(10_736);
+    expect(result.breakdown.cappedAtRemaining).toBe(true);
+    expect(result.breakdown.exitNetCents).toBe(
       ainoContract.netTotalCents - result.breakdown.paidNetCents
     );
   });

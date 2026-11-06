@@ -191,9 +191,10 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
       preview: {
         breakdown: {
           usedMonths: 7,
+          chargedMonths: 7,
           coveringTermMonths: 12,
-          exitNetCents: 95_426,
-          exitTotalCents: 120_237,
+          exitNetCents: 116_743,
+          exitTotalCents: 147_096,
         },
       },
     });
@@ -215,7 +216,7 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
     expect(contract?.status).toBe('ended_early_exit');
     // The exit invoice was issued with 30 days to pay.
     const exitInvoice = contract!.invoices.find((i) => i.type === 'early_exit');
-    expect(exitInvoice).toMatchObject({ total_cents: 120_237, due_date: '2027-06-05' });
+    expect(exitInvoice).toMatchObject({ total_cents: 147_096, due_date: '2027-06-05' });
     expect((await db.asset.findUnique({ where: { id: 'ebike-003' } }))?.status).toBe('returned');
 
     // A second exit is refused: the contract is no longer active.

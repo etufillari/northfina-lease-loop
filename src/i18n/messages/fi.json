@@ -152,7 +152,7 @@
   "exit.intro": "Olet käyttänyt {used}/{term} kuukautta. {covering} kuukauden hinta kattaa käyttösi:",
   "exit.fairRent": "{used} kk {covering} kk:n hinnalla ({rate}/kk)",
   "exit.paid": "Jo maksettu (netto)",
-  "exit.fee": "Käsittelymaksu: yksi kuukausi samalla hinnalla",
+  "exit.fee": "Käsittelymaksu: kaksi kuukautta samalla hinnalla",
   "exit.net": "Päättämismaksu (netto)",
   "exit.total": "Maksettavaa (sis. ALV {rate} %)",
   "exit.confirm": "Vahvista päättäminen",
@@ -485,5 +485,6 @@
   "buyout.invoiceNote": "Lasku lähetetään {date} ja erääntyy {due}.",
   "buyout.vatNote": "Alv peritään laskun päivänä voimassa olevan kannan mukaan; tässä on käytetty tänään tiedossa olevaa kantaa.",
   "buyout.confirm": "Vahvista lunastus",
-  "buyout.cancel": "Peruuta"
+  "buyout.cancel": "Peruuta",
+  "exit.minimum": "Ennenaikainen päättäminen maksaa aina vähintään {months} kuukauden käytön."
 }

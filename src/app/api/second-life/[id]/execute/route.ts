@@ -1,6 +1,6 @@
-// POST /api/second-life/:id/execute  body:   [?asOf=]
+// POST /api/second-life/:id/execute  [?asOf=]  (staff)
 // Carries out the desk's decision in one audited transaction. The decision is recomputed on
-// the server; the body only says who pressed the button.
+// the server; who pressed the button is the signed-in staff member.
 import { handleRoute, ok } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { db } from '@/server/db';

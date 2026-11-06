@@ -102,13 +102,22 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   floored at 0, plus VAT at the exit date. At k = term the cost is 0 (a plain return). The
   full calculation is always shown. Card 8 (month 7 of 36): 7 × €213.17 − €751.10 paid +
   2 × €213.17 = €1,167.43 net, €1,470.96 with 26 % VAT.
-- **Return inspection (designed, deferred — not in the code):** the usage purpose from
-  `q_usage_purpose` is locked on the contract at signing, and the monthly price is never
-  adjusted for a self-declared purpose. Wear is internalized through second-life
+- **Return inspection — condition** (6 Nov, `src/domain/inspection.ts`): an item back from a
+  lease is graded at the second-life desk before the decision. The grade is pre-filled: a
+  used item is at best "like new", and it drops one grade per full 5,000 km (e-bikes),
+  300 battery cycles (laptops) or 1,000 engine hours (farm machines) used on that lease —
+  our steps, as the data pack has no wear rule — never below poor. Staff may correct it, as
+  it went out or worse, never better; carrying the card out without inspecting accepts the
+  suggestion. The decision (and so the price) uses the graded condition, and the card shows
+  how each value was worked out (age %, condition multiplier, usage deduction). Data-pack
+  items that arrive already returned were graded by the data pack.
+- **Return inspection — wear charge (designed, deferred — not in the code):** the usage
+  purpose from `q_usage_purpose` is locked on the contract at signing, and the monthly price
+  is never adjusted for a self-declared purpose. Wear is internalized through second-life
   re-pricing instead: a returned item's new financed amount is its market value from
-  `data/residual-curves.json`, so actual km lower what the next customer pays and the
-  residual risk stays with Northfina. The full inspection — a wear charge only for
-  abnormal use (expected residual value, age curve × "good" × normal usage, versus
+  `data/residual-curves.json` at its inspected condition and actual usage, so wear lowers
+  what the next customer pays and the residual risk stays with Northfina. A wear charge
+  only for abnormal use (expected residual value, age curve × "good" × normal usage, versus
   actual), **delivery use** doubling the allowed usage, battery wear counted as
   refurbishment and never a customer charge — is designed but not implemented.
 - **Pass it on:** (a) mid-lease transfer — the lessee shares a link; the recipient goes

@@ -41,8 +41,22 @@ describe('meter readings at a return', () => {
     });
     if (!checked.ok) throw new Error(checked.reason);
     expect(checked.updates).toEqual([
-      { assetId: 'ebike-005', reading: 3700, added: 2500, total: 3700, sinceReset: 3700 },
-      { assetId: 'farm-005', reading: 4650, added: 450, total: 4650, sinceReset: 650 },
+      {
+        assetId: 'ebike-005',
+        reading: 3700,
+        added: 2500,
+        total: 3700,
+        sinceReset: 3700,
+        conditionOut: 'like_new',
+      },
+      {
+        assetId: 'farm-005',
+        reading: 4650,
+        added: 450,
+        total: 4650,
+        sinceReset: 650,
+        conditionOut: 'good',
+      },
     ]);
     await db.$transaction((tx) => applyReadings(tx, checked.updates));
     const farm = await db.asset.findUniqueOrThrow({ where: { id: 'farm-005' } });
@@ -50,6 +64,7 @@ describe('meter readings at a return', () => {
     expect(readingDetails(checked.updates, 'farm-005')).toEqual({
       usageReading: 4650,
       usageAdded: 450,
+      conditionOut: 'good',
     });
     expect(readingDetails(checked.updates, 'nope')).toEqual({});
   });

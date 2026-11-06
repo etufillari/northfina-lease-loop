@@ -527,5 +527,15 @@
   "secondLife.skipped.gain_below_cost": "Tõstmist pole: {from} → {to} maksaks {cost}, kuid lisaks väärtust vaid {gain}.",
   "secondLife.skipped.not_worth_work": "Tõstmist pole: {from} → {to} hinnaga {cost} teeks selle väärtuseks {value}, mitte rohkem kui kogu töö hind {work} – seega läheb see varuosadeks.",
   "secondLife.skipped.below_minimum": "Tõstmist pole: isegi seisukorras {to} oleks see väärt vaid {value}, alla 300 € rendi miinimumi – seega läheb see varuosadeks.",
-  "secondLife.skipped.still_not_listable": "Tõstmist pole: {from} → {to} tasuks end ära, kuid seisukorras {to} ei saa seda ikka nimekirja panna ja keegi järjekorrast seda ei võta – seega läheb see varuosadeks."
+  "secondLife.skipped.still_not_listable": "Tõstmist pole: {from} → {to} tasuks end ära, kuid seisukorras {to} ei saa seda ikka nimekirja panna ja keegi järjekorrast seda ei võta – seega läheb see varuosadeks.",
+  "secondLife.factors": "Vanus {months} kuud → {age} % · {condition} × {multiplier} · {usage} → {usagePercent} %",
+  "secondLife.inspection.title": "Tagastuse ülevaatus",
+  "secondLife.inspection.suggestion": "Läks välja seisukorras {out}, selle rendiga kasutust {used}. Soovitus: {suggested} – kasutatud ese on parimal juhul nagu uus ja langeb ühe astme iga {step} kohta.",
+  "secondLife.inspection.pending": "Veel üle vaatamata: allolev otsus kasutab soovitust ja selle täitmine kinnitab soovituse.",
+  "secondLife.inspection.done": "Üle vaadatud: {condition}.",
+  "secondLife.inspection.grade": "Seisukord",
+  "secondLife.inspection.save": "Salvesta ülevaatus",
+  "passport.event.inspected": "Tagastuse ülevaatus",
+  "passport.detail.inspected": "Hinnatud {condition} (soovitus {suggested})",
+  "staff.audit.action.asset.inspected": "Vaatas tagastuse üle"
 }

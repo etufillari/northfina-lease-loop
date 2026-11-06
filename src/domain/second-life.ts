@@ -12,7 +12,7 @@ import type {
   SecondLifeRequest,
 } from '@/data/schemas';
 import { quoteFor } from './pricing';
-import { ageInMonths, marketValueCents } from './residual';
+import { ageInMonths, marketValueCents, marketValueFactors } from './residual';
 import { serviceInterval, valueUsage } from './usage';
 
 // Worst to best; a waiter's min_condition is met by anything at or above it.
@@ -161,6 +161,16 @@ export type UpgradeReason =
   /** Listable already, but the value it adds is more than it costs. */
   | 'pays_for_itself';
 
+/** One market value's factors: the condition and usage it was taken at, and their effect. */
+export type ValueFactors = {
+  condition: AssetCondition;
+  /** The usage figure the value reads (since the last battery, or lifetime engine hours). */
+  usage: number;
+  agePercent: number;
+  conditionMultiplier: number;
+  usagePercent: number;
+};
+
 /** Why no condition upgrade was taken, with the numbers that decided it. */
 export type UpgradeSkipped =
   /** A waiter accepts the item as it is: nothing to gain from an upgrade. */
@@ -210,6 +220,12 @@ export type SecondLifeDecision = {
   financedCents: number;
   /** When no upgrade was taken: why not (null when one was). */
   upgradeSkipped: UpgradeSkipped | null;
+  /** How the values were worked out: age, condition and usage, as returned and at the end. */
+  valueFactors: {
+    ageMonths: number;
+    asReturned: ValueFactors;
+    final: ValueFactors;
+  };
   action: 'lease_to_waiter' | 'list_available' | 'parts_bin';
   winnerId: string | null;
   considered: WaiterVerdict[];
@@ -230,7 +246,7 @@ export type SecondLifeDecision = {
  *    A worthwhile upgrade serves a waiter first, else the catalogue.
  * 4. Anything else that can be listed is; the rest goes to parts.
  */
-export function secondLifeDecision(
+function decideCore(
   input: { asset: Asset; originalListPriceCents: number; asOfDate: string },
   data: {
     curves: ResidualCurves;
@@ -238,7 +254,7 @@ export function secondLifeDecision(
     demand: readonly SecondLifeRequest[];
     table: CoefficientTable;
   }
-): SecondLifeDecision {
+): DecisionCore {
   const { asset, originalListPriceCents, asOfDate } = input;
   const required = requiredRefurbishments(asset, data.costs);
   const usageAfterRefurb = required.resetsUsage ? 0 : asset.usage.value;
@@ -277,7 +293,7 @@ export function secondLifeDecision(
     workTotalCents: required.totalCents,
     financedCents: valueAsIsCents,
   };
-  const parts: SecondLifeDecision = {
+  const parts: DecisionCore = {
     ...asIs,
     upgradeSkipped: null,
     action: 'parts_bin',
@@ -374,4 +390,49 @@ export function secondLifeDecision(
     };
   }
   return { ...parts, upgradeSkipped: skipped };
+}
+
+type DecisionCore = Omit<SecondLifeDecision, 'valueFactors'>;
+
+/** See `decideCore` for the rules; this adds how each value was worked out, for the desk. */
+export function secondLifeDecision(
+  input: { asset: Asset; originalListPriceCents: number; asOfDate: string },
+  data: {
+    curves: ResidualCurves;
+    costs: RefurbishmentCosts;
+    demand: readonly SecondLifeRequest[];
+    table: CoefficientTable;
+  }
+): SecondLifeDecision {
+  const core = decideCore(input, data);
+  const { asset } = input;
+  const ageMonths = ageInMonths(asset.model_year, input.asOfDate);
+  const factorsAt = (condition: AssetCondition, sinceReset: number): ValueFactors => {
+    const usage = valueUsage(asset, data.costs, sinceReset);
+    const f = marketValueFactors(
+      {
+        originalListPriceCents: input.originalListPriceCents,
+        category: asset.category,
+        condition,
+        usageValue: usage,
+        ageMonths,
+      },
+      data.curves
+    );
+    return {
+      condition,
+      usage,
+      agePercent: f.agePercent,
+      conditionMultiplier: f.conditionMultiplier,
+      usagePercent: f.usagePercent,
+    };
+  };
+  return {
+    ...core,
+    valueFactors: {
+      ageMonths,
+      asReturned: factorsAt(asset.condition, asset.usage.value),
+      final: factorsAt(core.upgrade?.to ?? asset.condition, core.usageAfterRefurb),
+    },
+  };
 }

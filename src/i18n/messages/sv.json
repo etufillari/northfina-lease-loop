@@ -49,8 +49,6 @@
   "asset.choosePersona": "Välj vem du är i fältet ovan för att ansöka.",
   "asset.notAvailable": "Denna vara är inte tillgänglig just nu.",
   "price.term": "Leasingtid",
-  "price.quantity": "Antal",
-  "price.quantityNote": "ett avtal, prisklass på totalen",
   "price.months": "{months} mån",
   "price.downPayment": "Handpenning",
   "price.downPaymentMax": "0–30 % av listpriset, högst {max}",
@@ -184,5 +182,9 @@
   "transfer.title": "Ta över denna leasing",
   "transfer.intro": "Du tar över den återstående planen som den är: {rent} / mån (exkl. moms), cirka {months} månader kvar, ingen handpenning.",
   "transfer.apply": "Ansök om att ta över",
-  "transfer.invalid": "Denna överlåtelselänk är inte längre giltig."
+  "transfer.invalid": "Denna överlåtelselänk är inte längre giltig.",
+  "fleet.title": "Leasa en flotta",
+  "fleet.intro": "Välj flera varor i en kategori — unika exemplar, ett avtal, prisklass på totalen.",
+  "fleet.selected": "{count} varor valda",
+  "catalogue.fleetLink": "Behöver du flera? Leasa en flotta →"
 }

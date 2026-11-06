@@ -83,7 +83,8 @@ export async function startTransferApplication(
       const quote = await tx.quote.create({
         data: {
           id: crypto.randomUUID(),
-          asset_id: offer.assets[0]?.id ?? contract.assets[0]!.asset_id,
+          asset_id: contract.assets[0]!.asset_id,
+          asset_ids_json: JSON.stringify(contract.assets.map((a) => a.asset_id)),
           customer_id: input.customerId,
           quantity: contract.assets.length,
           quote_date: input.asOf,

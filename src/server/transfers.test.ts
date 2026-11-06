@@ -42,8 +42,7 @@ describe('mid-lease transfer', () => {
 
   it('Aino leases ebike-004 and creates a transfer link', async () => {
     const started = await startApplication(db, {
-      assetId: 'ebike-004',
-      quantity: 1,
+      assetIds: ['ebike-004'],
       downPaymentCents: 0,
       termMonths: 36,
       customerId: 'cust-aino',

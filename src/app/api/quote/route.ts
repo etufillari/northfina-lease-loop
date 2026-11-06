@@ -17,10 +17,10 @@ import { db } from '@/server/db';
 import { buildLiveQuote } from '@/server/quotes';
 
 const paramsSchema = z.object({
-  assetId: z.string().min(1),
+  /** Comma-separated DISTINCT asset ids: one item, or a fleet priced as one banded total. */
+  assetIds: z.string().min(1),
   downPaymentCents: z.coerce.number().int(),
   termMonths: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().int().positive().max(100).default(1),
   customerId: z.string().optional(),
 });
 
@@ -28,10 +28,15 @@ export const GET = handleRoute(async (request) => {
   const url = new URL(request.url);
   const parsed = paramsSchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) return fail(400, 'VALIDATION_ERROR', 'Bad quote parameters');
-  const { assetId, downPaymentCents, termMonths, quantity, customerId } = parsed.data;
+  const { assetIds, downPaymentCents, termMonths, customerId } = parsed.data;
   const asOf = asOfFrom(request);
 
-  const live = await buildLiveQuote({ assetId, quantity, downPaymentCents, termMonths, asOf });
+  const live = await buildLiveQuote({
+    assetIds: assetIds.split(',').filter(Boolean),
+    downPaymentCents,
+    termMonths,
+    asOf,
+  });
   if (!live.ok) return fail(422, 'NOT_PRICEABLE', live.reason);
 
   let affordability: AffordabilityResult | null = null;

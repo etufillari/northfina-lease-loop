@@ -49,8 +49,6 @@
   "asset.choosePersona": "Valitse yläpalkista kuka olet, jotta voit hakea.",
   "asset.notAvailable": "Tämä tuote ei ole juuri nyt saatavilla.",
   "price.term": "Leasing-aika",
-  "price.quantity": "Määrä",
-  "price.quantityNote": "yksi sopimus, hintaluokka kokonaissummasta",
   "price.months": "{months} kk",
   "price.downPayment": "Käsiraha",
   "price.downPaymentMax": "0–30 % listahinnasta, enintään {max}",
@@ -184,5 +182,9 @@
   "transfer.title": "Jatka tätä leasingia",
   "transfer.intro": "Jatkat jäljellä olevaa maksuohjelmaa sellaisenaan: {rent} / kk (ilman ALV:tä), noin {months} kk jäljellä, ei käsirahaa.",
   "transfer.apply": "Hae jatkajaksi",
-  "transfer.invalid": "Tämä siirtolinkki ei ole enää voimassa."
+  "transfer.invalid": "Tämä siirtolinkki ei ole enää voimassa.",
+  "fleet.title": "Leasaa kalusto",
+  "fleet.intro": "Valitse useita saman luokan tuotteita — yksilöllisiä laitteita, yksi sopimus, hintaluokka kokonaissummasta.",
+  "fleet.selected": "{count} tuotetta valittu",
+  "catalogue.fleetLink": "Tarvitsetko useita? Leasaa kalusto →"
 }

@@ -49,8 +49,6 @@
   "asset.choosePersona": "Taotlemiseks vali ülaribalt, kes sa oled.",
   "asset.notAvailable": "See ese pole praegu saadaval.",
   "price.term": "Rendiperiood",
-  "price.quantity": "Kogus",
-  "price.quantityNote": "üks leping, hinnaklass kogusumma järgi",
   "price.months": "{months} kuud",
   "price.downPayment": "Sissemakse",
   "price.downPaymentMax": "0–30 % hinnakirjahinnast, kuni {max}",
@@ -184,5 +182,9 @@
   "transfer.title": "Võta see rent üle",
   "transfer.intro": "Võtad järelejäänud graafiku üle sellisena, nagu see on: {rent} / kuu (ilma käibemaksuta), umbes {months} kuud jäänud, ilma sissemakseta.",
   "transfer.apply": "Taotle ülevõtmist",
-  "transfer.invalid": "See üleandmislink ei kehti enam."
+  "transfer.invalid": "See üleandmislink ei kehti enam.",
+  "fleet.title": "Rendi autopark",
+  "fleet.intro": "Vali mitu sama kategooria eset — unikaalsed esemed, üks leping, hinnaklass kogusumma järgi.",
+  "fleet.selected": "{count} eset valitud",
+  "catalogue.fleetLink": "Vaja mitut? Rendi autopark →"
 }

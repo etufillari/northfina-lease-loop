@@ -61,6 +61,9 @@ model Customer {
 model Quote {
   id                        String        @id @default(cuid())
   asset_id                  String
+  // Every asset in the quote (JSON array of ids). Assets are unique physical items, so a
+  // fleet is a group of DISTINCT assets priced as one banded total; asset_id is the first.
+  asset_ids_json            String?
   customer_id               String?
   quantity                  Int           @default(1)
   quote_date                String // ISO; its price list version is what gets locked

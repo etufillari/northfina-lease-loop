@@ -49,8 +49,6 @@
   "asset.choosePersona": "Choose who you are in the top bar to apply.",
   "asset.notAvailable": "This item is not available right now.",
   "price.term": "Lease term",
-  "price.quantity": "Quantity",
-  "price.quantityNote": "one contract, banded on the total",
   "price.months": "{months} mo",
   "price.downPayment": "Down payment",
   "price.downPaymentMax": "0–30 % of the list price, up to {max}",
@@ -184,5 +182,9 @@
   "transfer.title": "Take over this lease",
   "transfer.intro": "You take over the remaining schedule exactly as it is: {rent} / month (excl. VAT), about {months} months left, no down payment.",
   "transfer.apply": "Apply to take over",
-  "transfer.invalid": "This transfer link is no longer valid."
+  "transfer.invalid": "This transfer link is no longer valid.",
+  "fleet.title": "Lease a fleet",
+  "fleet.intro": "Pick several items of one category — unique physical items, one contract, banded on the total.",
+  "fleet.selected": "{count} items selected",
+  "catalogue.fleetLink": "Need several? Lease a fleet →"
 }

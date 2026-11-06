@@ -3,7 +3,9 @@ import {
   addDays,
   addMonths,
   checkSignable,
+  contractNumber,
   contractPeriod,
+  contractStage,
   daysBetween,
   QUOTE_VALID_DAYS,
 } from './contract';
@@ -88,5 +90,28 @@ describe('checkSignable', () => {
     expect(
       checkSignable({ decision: 'approved', quoteDate: '2026-11-05', signDate: '2026-11-04' })
     ).toMatchObject({ ok: false, reason: 'signed_before_quote' });
+  });
+});
+
+describe('contractStage', () => {
+  const lease = { startDate: '2026-11-05', endDate: '2029-11-04' };
+
+  it('is not started before the first day', () => {
+    expect(contractStage(lease, '2026-11-04')).toBe('not_started');
+  });
+
+  it('is active from the first to the last day, both included', () => {
+    expect(contractStage(lease, '2026-11-05')).toBe('active');
+    expect(contractStage(lease, '2029-11-04')).toBe('active');
+  });
+
+  it('has ended from the day after the last day', () => {
+    expect(contractStage(lease, '2029-11-05')).toBe('ended');
+  });
+});
+
+describe('contractNumber', () => {
+  it('is the first 8 characters of the id in upper case', () => {
+    expect(contractNumber('1a2b3c4d-0000-4000-8000-000000000000')).toBe('1A2B3C4D');
   });
 });

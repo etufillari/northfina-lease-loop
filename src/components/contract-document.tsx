@@ -112,7 +112,10 @@ export function ContractDocument(props: ContractDocumentProps) {
           })}
         />
         <Row label={t('contract.buyout')} value={euro(view.buyoutCents)} />
-        <p className="mt-3 text-sm text-stone-700 dark:text-stone-300">
+        <p className="mt-3 text-sm font-medium text-stone-800 dark:text-stone-200">
+          {t('contract.firstMonth')}
+        </p>
+        <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
           {vatToday === null || vatPercentToday === null
             ? t('contract.vatRule')
             : t('contract.vatExample', {

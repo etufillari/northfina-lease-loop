@@ -18,6 +18,8 @@ export type SubmitApplicationInput = {
   termMonths: number;
   downPaymentCents: number;
   answers: Record<string, string>;
+  /** The data pack customer applying, or null for a guest (see viewer.ts). */
+  customerId?: string | null;
 };
 
 export type ApplicationDecisionStatus = Exclude<EligibilityStatus, 'incomplete'>;
@@ -115,6 +117,7 @@ export async function submitApplication(
           id,
           quote_date: todayIso,
           asset_id: asset.id,
+          customer_id: input.customerId ?? null,
           customer_type: answers.q_customer_type ?? 'unknown',
           applicant_name: answers.q_full_name?.trim() || answers.q_company_name?.trim() || null,
           term_months: quote.termMonths,
@@ -151,6 +154,7 @@ export type StoredApplication = {
   createdAt: string;
   quoteDate: string;
   assetId: string;
+  customerId: string | null;
   customerType: string;
   applicantName: string | null;
   termMonths: number;
@@ -178,6 +182,7 @@ export async function getApplication(
     createdAt: row.created_at.toISOString(),
     quoteDate: row.quote_date,
     assetId: row.asset_id,
+    customerId: row.customer_id,
     customerType: row.customer_type,
     applicantName: row.applicant_name,
     termMonths: row.term_months,

@@ -18,7 +18,9 @@ import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
+import { currentViewer } from '@/server/current-viewer';
+import { prefillAnswers } from '@/domain/prefill';
 
 export default async function ApplyPage({ params, searchParams }: PageProps<'/[locale]/apply'>) {
   const { locale } = await params;
@@ -43,7 +45,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
     );
   }
 
-  const today = todayIso();
+  const [{ today }, viewer] = await Promise.all([appDate(), currentViewer()]);
   const [priceLists, table, vatRates, questionsFile] = await Promise.all([
     loadPriceLists(),
     loadCoefficientTable(),
@@ -127,6 +129,8 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
           termMonths: quote.termMonths,
           downPaymentCents: quote.downPaymentCents,
         }}
+        initialAnswers={viewer.kind === 'customer' ? prefillAnswers(viewer.customer) : {}}
+        viewerKey={viewer.kind === 'customer' ? viewer.customer.id : viewer.kind}
         locale={locale}
       />
     </Shell>

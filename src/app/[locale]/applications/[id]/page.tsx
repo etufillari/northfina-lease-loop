@@ -5,7 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { ContractDocument, type ContractView } from '@/components/contract-document';
 import { SignContractForm } from '@/components/sign-contract-form';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadCustomers, loadPriceLists, loadVatRates } from '@/data/load';
 import { checkSignable, contractPeriod } from '@/domain/contract';
 import { percentOfCents } from '@/domain/money';
 import { differentPriceOn } from '@/domain/price-list';
@@ -17,7 +17,10 @@ import { getApplication } from '@/server/applications';
 import { getAsset } from '@/server/assets';
 import { getContractForApplication } from '@/server/contracts';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { currentViewer } from '@/server/current-viewer';
+import { canSee } from '@/server/viewer';
+import { NotYoursNotice } from '@/components/not-yours-notice';
+import { appDate } from '@/server/app-date';
 
 export default async function ApplicationPage({
   params,
@@ -28,6 +31,11 @@ export default async function ApplicationPage({
 
   const application = await getApplication(db, id);
   if (!application) notFound();
+  // Demo login: only the customer it belongs to (or staff) sees it; see src/server/viewer.ts.
+  if (!canSee(await currentViewer(), application.customerId)) {
+    const owner = (await loadCustomers()).find((c) => c.id === application.customerId);
+    return <NotYoursNotice ownerName={owner?.name ?? null} locale={locale} t={getT(locale)} />;
+  }
   const contract = await getContractForApplication(db, application.id);
   if (contract) redirect(`/${locale}/contracts/${contract.id}`);
 
@@ -40,7 +48,7 @@ export default async function ApplicationPage({
   if (!asset) notFound();
 
   const t = getT(locale);
-  const today = todayIso();
+  const { today } = await appDate();
   const check = checkSignable({
     decision: application.decision,
     quoteDate: application.quoteDate,

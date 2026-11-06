@@ -24,20 +24,24 @@ type ApplicationFormProps = {
   questions: Question[];
   context: QuestionFlowContext;
   deal: { assetId: string; termMonths: number; downPaymentCents: number };
+  /** Starting answers: the chosen customer's details, or nothing for a guest. */
+  initialAnswers: Record<string, string>;
+  /** Who is applying (customer id, or "guest"), so two people's drafts never mix. */
+  viewerKey: string;
   locale: Locale;
 };
 
 type Submitted = { id: string; decision: 'approved' | 'manual_review' | 'rejected' };
 
-// Stable starting values for useSessionState (it compares them by identity).
-const NO_ANSWERS: Record<string, string> = {};
+// Stable starting value for useSessionState (it compares it by identity).
 const NOT_SUBMITTED: Submitted | null = null;
 
-export function ApplicationForm({ questions, context, deal, locale }: ApplicationFormProps) {
+export function ApplicationForm(props: ApplicationFormProps) {
+  const { questions, context, deal, initialAnswers, viewerKey, locale } = props;
   const t = getT(locale);
   // Kept in this tab's session storage, so switching language doesn't wipe the answers.
-  const storageKey = `apply:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
-  const [answers, setAnswers] = useSessionState(`${storageKey}:answers`, NO_ANSWERS);
+  const storageKey = `apply:${viewerKey}:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
+  const [answers, setAnswers] = useSessionState(`${storageKey}:answers`, initialAnswers);
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
   const [submitted, setSubmitted] = useSessionState(`${storageKey}:submitted`, NOT_SUBMITTED);

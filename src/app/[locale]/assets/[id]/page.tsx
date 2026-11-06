@@ -18,7 +18,7 @@ import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appDate } from '@/server/app-date';
 
 export async function generateMetadata({
   params,
@@ -53,7 +53,7 @@ export default async function AssetPage({
   if (!asset) notFound();
 
   const t = getT(locale);
-  const today = todayIso();
+  const { today } = await appDate();
   const price = listPriceOn(priceLists, asset.id, today);
   const change = nextPriceChange(priceLists, asset.id, today);
   const vatPercent = vatPercentOn(vatRates, today);

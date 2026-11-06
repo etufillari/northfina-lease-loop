@@ -27,6 +27,7 @@ const failures = {
   not_approved: [409, 'NOT_APPROVED', 'This application cannot be signed online'],
   quote_expired: [409, 'QUOTE_EXPIRED', 'The quote has expired; please apply again'],
   signed_before_quote: [409, 'QUOTE_IN_FUTURE', 'The quote date is after today'],
+  part_of_fleet: [409, 'PART_OF_FLEET', 'Sign the whole fleet together'],
   asset_not_available: [409, 'ASSET_NOT_AVAILABLE', 'This item has already been leased'],
 } as const;
 

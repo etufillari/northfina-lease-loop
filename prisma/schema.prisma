@@ -74,9 +74,11 @@ model Application {
   decision            String // approved | rejected | manual_review
   reasons_json        String // JSON array of eligibility rule ids
   answers_json        String // JSON object: question id → answer
+  fleet_id            String? // shared by the applications of one fleet (several items at once)
 
   @@index([asset_id])
   @@index([customer_id])
+  @@index([fleet_id])
 }
 
 // A signed lease contract. Every price field is COPIED from the approved application at
@@ -112,9 +114,11 @@ model Contract {
   // when the item was returned. Invoices after that day are cancelled.
   exited_early_date  String?
   exit_fee_cents     Int?
+  fleet_id           String? // set when signed as part of a fleet (see Application.fleet_id)
 
   @@index([asset_id])
   @@index([customer_id])
+  @@index([fleet_id])
 }
 
 // A paid invoice. Invoices themselves are derived from the contract (src/domain/invoicing.ts);

@@ -8,8 +8,9 @@ import { checkSignable, contractPeriod } from '@/domain/contract';
 import { contractOn } from '@/domain/state-on';
 import { hasLaterHistory } from './asset-state';
 import { percentOfCents } from '@/domain/money';
-import { getApplication } from './applications';
-import { withAudit } from './audit';
+import type { CoefficientTable } from '@/data/schemas';
+import { getApplication, type StoredApplication } from './applications';
+import { withAudit, type TransactionClient } from './audit';
 
 export type Contract = {
   id: string;
@@ -39,6 +40,8 @@ export type Contract = {
   /** Set when the lease was ended before its last day; invoices after it are cancelled. */
   exitedEarlyDate: string | null;
   exitFeeCents: number | null;
+  /** Set when it was signed as part of a fleet. */
+  fleetId: string | null;
 };
 
 export function toContract(row: ContractRow): Contract {
@@ -69,6 +72,7 @@ export function toContract(row: ContractRow): Contract {
     buyoutPaidCents: row.buyout_paid_cents,
     exitedEarlyDate: row.exited_early_date,
     exitFeeCents: row.exit_fee_cents,
+    fleetId: row.fleet_id,
   };
 }
 
@@ -105,39 +109,29 @@ export async function getContractForApplication(
 }
 
 /** Thrown inside the signing transaction when the item was taken in the meantime. */
-class AssetTakenError extends Error {}
+export class AssetTakenError extends Error {}
+
+export type SignFailure =
+  | 'application_not_found'
+  | 'already_signed'
+  | 'not_approved'
+  | 'quote_expired'
+  | 'signed_before_quote'
+  | 'asset_not_available'
+  | 'later_history'
+  | 'part_of_fleet';
 
 export type SignContractResult =
-  | { ok: true; contract: Contract }
-  | {
-      ok: false;
-      reason:
-        | 'application_not_found'
-        | 'already_signed'
-        | 'not_approved'
-        | 'quote_expired'
-        | 'signed_before_quote'
-        | 'asset_not_available'
-        | 'later_history';
-      contractId?: string;
-    };
+  { ok: true; contract: Contract } | { ok: false; reason: SignFailure; contractId?: string };
 
-/**
- * Signs the contract for an approved application on `todayIso`. In one transaction it
- * creates the contract with the locked price, marks the item as taken (`reserved`) and
- * writes a `contract.signed` audit row. An application can be signed once.
- */
-export async function signContract(
+/** Whether `application` can be signed on `todayIso`: not yet signed, approved, quote valid. */
+export async function signingCheck(
   db: PrismaClient,
-  input: { applicationId: string; signerName: string },
+  application: StoredApplication,
   todayIso: string
-): Promise<SignContractResult> {
-  const application = await getApplication(db, input.applicationId);
-  if (!application) return { ok: false, reason: 'application_not_found' };
-
+): Promise<{ ok: true } | { ok: false; reason: SignFailure; contractId?: string }> {
   const existing = await getContractForApplication(db, application.id);
   if (existing) return { ok: false, reason: 'already_signed', contractId: existing.id };
-
   const check = checkSignable({
     decision: application.decision,
     quoteDate: application.quoteDate,
@@ -147,15 +141,95 @@ export async function signContract(
   if (await hasLaterHistory(db, application.assetId, todayIso)) {
     return { ok: false, reason: 'later_history' };
   }
+  return { ok: true };
+}
 
+/**
+ * Inside a signing transaction: creates the contract with the price copied from the
+ * application, and takes the item. Throws AssetTakenError (rolling everything back) when the
+ * item can no longer be leased, e.g. someone else signed for it a moment ago.
+ */
+export async function createContractIn(
+  tx: TransactionClient,
+  input: {
+    id: string;
+    application: StoredApplication;
+    signerName: string;
+    todayIso: string;
+    table: CoefficientTable;
+    fleetId?: string;
+  }
+): Promise<ContractRow> {
+  const { application, signerName, todayIso } = input;
   // The buyout is fixed at signing too, from the coefficient table in force today.
-  const table = await loadCoefficientTable();
   const buyoutPercent =
-    table.end_of_term_buyout_percent_of_financed[String(application.termMonths)] ?? 0;
+    input.table.end_of_term_buyout_percent_of_financed[String(application.termMonths)] ?? 0;
   const { startDate, endDate } = contractPeriod(todayIso, application.termMonths);
   const answers = application.answers;
-  const id = randomUUID();
+  const contract = await tx.contract.create({
+    data: {
+      id: input.id,
+      application_id: application.id,
+      asset_id: application.assetId,
+      customer_id: application.customerId,
+      signed_date: todayIso,
+      signer_name: signerName,
+      customer_type: application.customerType,
+      customer_name: answers.q_company_name?.trim() || application.applicantName || signerName,
+      customer_email: answers.q_email?.trim() || null,
+      business_id: answers.q_business_id?.trim() || null,
+      start_date: startDate,
+      end_date: endDate,
+      term_months: application.termMonths,
+      quote_date: application.quoteDate,
+      price_list_version: application.priceListVersion,
+      list_price_cents: application.listPriceCents,
+      down_payment_cents: application.downPaymentCents,
+      financed_cents: application.financedCents,
+      monthly_net_cents: application.monthlyNetCents,
+      buyout_cents: percentOfCents(application.financedCents, buyoutPercent),
+      status: 'active',
+      fleet_id: input.fleetId ?? null,
+    },
+  });
+  // Take the item only if it can still be leased, in the same write: if someone else signed
+  // for it a moment ago, nothing is updated and the whole signing rolls back. An item reserved
+  // for this customer (passed on to them) can be taken by them only.
+  const taken = await tx.asset.updateMany({
+    where: {
+      id: application.assetId,
+      OR: [
+        { status: 'available' },
+        ...(application.customerId
+          ? [{ status: 'reserved', reserved_for: application.customerId }]
+          : []),
+      ],
+    },
+    data: { status: 'leased', reserved_for: null },
+  });
+  if (taken.count === 0) throw new AssetTakenError();
+  return contract;
+}
 
+/**
+ * Signs the contract for an approved application on `todayIso`. In one transaction it
+ * creates the contract with the locked price, marks the item as leased and writes a
+ * `contract.signed` audit row. An application can be signed once.
+ */
+export async function signContract(
+  db: PrismaClient,
+  input: { applicationId: string; signerName: string },
+  todayIso: string
+): Promise<SignContractResult> {
+  const application = await getApplication(db, input.applicationId);
+  if (!application) return { ok: false, reason: 'application_not_found' };
+  // A fleet is signed as a whole (see fleets.ts), never one item at a time.
+  if (application.fleetId) return { ok: false, reason: 'part_of_fleet' };
+  const check = await signingCheck(db, application, todayIso);
+  if (!check.ok) return check;
+
+  const table = await loadCoefficientTable();
+  const id = randomUUID();
   const row = await withAudit(
     db,
     {
@@ -171,51 +245,7 @@ export async function signContract(
         quoteDate: application.quoteDate,
       },
     },
-    async (tx) => {
-      const contract = await tx.contract.create({
-        data: {
-          id,
-          application_id: application.id,
-          asset_id: application.assetId,
-          customer_id: application.customerId,
-          signed_date: todayIso,
-          signer_name: input.signerName,
-          customer_type: application.customerType,
-          customer_name:
-            answers.q_company_name?.trim() || application.applicantName || input.signerName,
-          customer_email: answers.q_email?.trim() || null,
-          business_id: answers.q_business_id?.trim() || null,
-          start_date: startDate,
-          end_date: endDate,
-          term_months: application.termMonths,
-          quote_date: application.quoteDate,
-          price_list_version: application.priceListVersion,
-          list_price_cents: application.listPriceCents,
-          down_payment_cents: application.downPaymentCents,
-          financed_cents: application.financedCents,
-          monthly_net_cents: application.monthlyNetCents,
-          buyout_cents: percentOfCents(application.financedCents, buyoutPercent),
-          status: 'active',
-        },
-      });
-      // Take the item only if it can still be leased, in the same write: if someone else
-      // signed for it a moment ago, nothing is updated and the whole signing rolls back. An item
-      // reserved for this customer (passed on to them) can be taken by them only.
-      const taken = await tx.asset.updateMany({
-        where: {
-          id: application.assetId,
-          OR: [
-            { status: 'available' },
-            ...(application.customerId
-              ? [{ status: 'reserved', reserved_for: application.customerId }]
-              : []),
-          ],
-        },
-        data: { status: 'leased', reserved_for: null },
-      });
-      if (taken.count === 0) throw new AssetTakenError();
-      return contract;
-    }
+    (tx) => createContractIn(tx, { id, application, signerName: input.signerName, todayIso, table })
   ).catch((error: unknown) => {
     if (error instanceof AssetTakenError) return null;
     throw error;

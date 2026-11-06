@@ -5,7 +5,7 @@
 // `fleetId` it signs every contract of that fleet at once and goes back to the fleet.
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, type FormEvent } from 'react';
-import { checkPersonName, MAX_PERSON_NAME_LENGTH } from '@/domain/names';
+import { checkPersonName, MAX_PERSON_NAME_LENGTH, signerMatchesApplicant } from '@/domain/names';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { useSessionState } from './use-session-state';
@@ -14,6 +14,8 @@ type SignContractFormProps = {
   /** The application to sign, or the fleet whose applications are all signed together. */
   target: { applicationId: string } | { fleetId: string };
   defaultName: string;
+  /** The full name given in the application, which the signature must match; none for a company. */
+  applicantFullName?: string;
   locale: Locale;
 };
 
@@ -21,9 +23,15 @@ const errorKeys = {
   QUOTE_EXPIRED: 'contract.error.expired',
   ASSET_NOT_AVAILABLE: 'contract.error.taken',
   NOT_APPROVED: 'contract.error.notApproved',
+  NAME_MISMATCH: 'contract.error.nameMismatch',
 } as const;
 
-export function SignContractForm({ target, defaultName, locale }: SignContractFormProps) {
+export function SignContractForm({
+  target,
+  defaultName,
+  applicantFullName,
+  locale,
+}: SignContractFormProps) {
   const t = getT(locale);
   const router = useRouter();
   // Kept in session storage, so switching language keeps the typed name and the tick.
@@ -63,7 +71,11 @@ export function SignContractForm({ target, defaultName, locale }: SignContractFo
         return;
       }
       const code = payload.error?.code as keyof typeof errorKeys | undefined;
-      setError(t(code && code in errorKeys ? errorKeys[code] : 'contract.error.generic'));
+      setError(
+        t(code && code in errorKeys ? errorKeys[code] : 'contract.error.generic', {
+          name: applicantFullName?.trim() ?? '',
+        })
+      );
     } catch {
       setError(t('contract.error.generic'));
     } finally {
@@ -71,10 +83,20 @@ export function SignContractForm({ target, defaultName, locale }: SignContractFo
     }
   }
 
-  // The same rule as the server: at least two letters, no digits (see names.ts).
+  // The same rules as the server: at least two letters, no digits, and the same name as in
+  // the application (see names.ts).
   const nameValid = checkPersonName(name) === null;
-  const showNameHint = name.trim() !== '' && !nameValid;
-  const canSign = agreed && nameValid && !sending;
+  const nameMatches = signerMatchesApplicant(name, applicantFullName);
+  const nameHint =
+    name.trim() === ''
+      ? null
+      : !nameValid
+        ? t('contract.error.invalidName')
+        : !nameMatches
+          ? t('contract.error.nameMismatch', { name: applicantFullName?.trim() ?? '' })
+          : null;
+  const showNameHint = nameHint !== null;
+  const canSign = agreed && nameValid && nameMatches && !sending;
 
   return (
     <form
@@ -110,7 +132,7 @@ export function SignContractForm({ target, defaultName, locale }: SignContractFo
           role="status"
           className="text-sm text-amber-900 dark:text-amber-200"
         >
-          {t('contract.error.invalidName')}
+          {nameHint}
         </p>
       ) : null}
       <button

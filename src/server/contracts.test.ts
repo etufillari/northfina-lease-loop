@@ -101,12 +101,12 @@ describe('signContract', () => {
     const application = await apply({}, '2026-11-05');
     const first = await signContract(
       db,
-      { applicationId: application.id, signerName: 'Aino' },
+      { applicationId: application.id, signerName: 'Aino Virtanen' },
       '2026-11-05'
     );
     const second = await signContract(
       db,
-      { applicationId: application.id, signerName: 'Aino' },
+      { applicationId: application.id, signerName: 'Aino Virtanen' },
       '2026-11-05'
     );
     expect(second).toEqual({
@@ -119,9 +119,13 @@ describe('signContract', () => {
   it('refuses a second contract for an item someone else has signed for', async () => {
     const first = await apply({}, '2026-11-05');
     const second = await apply({}, '2026-11-05');
-    await signContract(db, { applicationId: first.id, signerName: 'Aino' }, '2026-11-05');
+    await signContract(db, { applicationId: first.id, signerName: 'Aino Virtanen' }, '2026-11-05');
     expect(
-      await signContract(db, { applicationId: second.id, signerName: 'Lena' }, '2026-11-05')
+      await signContract(
+        db,
+        { applicationId: second.id, signerName: 'Aino Virtanen' },
+        '2026-11-05'
+      )
     ).toEqual({ ok: false, reason: 'asset_not_available' });
     expect(await db.contract.count()).toBe(1);
     expect(await db.auditLog.count({ where: { action: 'contract.signed' } })).toBe(1);
@@ -153,13 +157,35 @@ describe('signContract', () => {
   it('refuses a quote older than 14 days', async () => {
     const application = await apply({}, '2026-11-05');
     expect(
-      await signContract(db, { applicationId: application.id, signerName: 'Aino' }, '2026-11-20')
+      await signContract(
+        db,
+        { applicationId: application.id, signerName: 'Aino Virtanen' },
+        '2026-11-20'
+      )
     ).toEqual({ ok: false, reason: 'quote_expired' });
+  });
+
+  it('refuses a signature that is not the full name given in the application', async () => {
+    const application = await apply({}, '2026-11-05');
+    for (const signerName of ['Aino', 'Mikko Laine']) {
+      expect(
+        await signContract(db, { applicationId: application.id, signerName }, '2026-11-05')
+      ).toEqual({ ok: false, reason: 'name_mismatch' });
+    }
+    expect(await db.contract.count()).toBe(0);
+    // Case and extra spaces don't matter
+    expect(
+      await signContract(
+        db,
+        { applicationId: application.id, signerName: ' aino  VIRTANEN ' },
+        '2026-11-05'
+      )
+    ).toMatchObject({ ok: true });
   });
 
   it('refuses an unknown application', async () => {
     expect(
-      await signContract(db, { applicationId: 'nope', signerName: 'Aino' }, '2026-11-05')
+      await signContract(db, { applicationId: 'nope', signerName: 'Aino Virtanen' }, '2026-11-05')
     ).toEqual({ ok: false, reason: 'application_not_found' });
   });
 });
@@ -229,7 +255,11 @@ describe('returnContract', () => {
 describe('listContracts', () => {
   it('lists every contract', async () => {
     const application = await apply({}, '2026-11-05');
-    await signContract(db, { applicationId: application.id, signerName: 'Aino' }, '2026-11-05');
+    await signContract(
+      db,
+      { applicationId: application.id, signerName: 'Aino Virtanen' },
+      '2026-11-05'
+    );
     expect((await listContracts(db)).map((c) => c.assetId)).toEqual(['laptop-004']);
   });
 });
@@ -238,8 +268,8 @@ describe('contracts per customer', () => {
   it('carries the customer from the application to the contract, and filters by it', async () => {
     const ainos = await apply({ customerId: 'cust-aino' }, '2026-11-05');
     const guests = await apply({ assetId: 'laptop-001' }, '2026-11-05');
-    await signContract(db, { applicationId: ainos.id, signerName: 'Aino' }, '2026-11-05');
-    await signContract(db, { applicationId: guests.id, signerName: 'Guest' }, '2026-11-05');
+    await signContract(db, { applicationId: ainos.id, signerName: 'Aino Virtanen' }, '2026-11-05');
+    await signContract(db, { applicationId: guests.id, signerName: 'Aino Virtanen' }, '2026-11-05');
 
     const all = await listContracts(db);
     expect(all.map((c) => c.customerId).sort()).toEqual(['cust-aino', null].sort());
@@ -256,7 +286,11 @@ describe('contracts per customer', () => {
 describe('listContractsForAsset', () => {
   it('lists one item’s contracts only', async () => {
     const application = await apply({}, '2026-11-05');
-    await signContract(db, { applicationId: application.id, signerName: 'Aino' }, '2026-11-05');
+    await signContract(
+      db,
+      { applicationId: application.id, signerName: 'Aino Virtanen' },
+      '2026-11-05'
+    );
     expect((await listContractsForAsset(db, 'laptop-004')).map((c) => c.assetId)).toEqual([
       'laptop-004',
     ]);

@@ -56,7 +56,7 @@ async function ainosLease() {
   if (!applied.ok) throw new Error(applied.reason);
   const signed = await signContract(
     db,
-    { applicationId: applied.application.id, signerName: 'Aino' },
+    { applicationId: applied.application.id, signerName: 'Aino Virtanen' },
     '2026-11-05'
   );
   if (!signed.ok) throw new Error(signed.reason);

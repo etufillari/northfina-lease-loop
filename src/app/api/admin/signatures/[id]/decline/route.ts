@@ -26,6 +26,8 @@ const failures = {
   quote_expired: [409, 'QUOTE_EXPIRED', 'The quote has expired'],
   signed_before_quote: [409, 'QUOTE_IN_FUTURE', 'The quote date is after today'],
   part_of_fleet: [409, 'PART_OF_FLEET', 'Decline the whole fleet together'],
+  // Never for the signatory, whose name isn't compared (see signingCheck); here for completeness.
+  name_mismatch: [422, 'NAME_MISMATCH', 'Sign with the full name given in the application'],
   asset_not_available: [409, 'ASSET_NOT_AVAILABLE', 'An item has already been leased'],
   declined: [409, 'DECLINED', 'This has already been declined'],
 } as const;

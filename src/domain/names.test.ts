@@ -1,5 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { checkCompanyName, checkPersonName } from './names';
+import { checkCompanyName, checkPersonName, signerMatchesApplicant } from './names';
+
+describe('signerMatchesApplicant', () => {
+  it('accepts the same name, ignoring case, extra spaces and the kind of apostrophe', () => {
+    for (const signed of [
+      'Aino Virtanen',
+      'aino virtanen',
+      '  Aino   Virtanen ',
+      'AINO VIRTANEN',
+    ]) {
+      expect(signerMatchesApplicant(signed, 'Aino Virtanen'), signed).toBe(true);
+    }
+    expect(signerMatchesApplicant('Seán O’Brien', "Seán O'Brien")).toBe(true);
+    // The same letter written as one code point or as a letter plus an accent
+    expect(signerMatchesApplicant('Mäkelä', 'Mäkelä')).toBe(true);
+  });
+
+  it('refuses a different or partial name, and a name without its accents', () => {
+    for (const signed of ['Aino', 'Virtanen', 'Aino Virtane', 'Mikko Virtanen', 'Virtanen Aino']) {
+      expect(signerMatchesApplicant(signed, 'Aino Virtanen'), signed).toBe(false);
+    }
+    expect(signerMatchesApplicant('Sanna Makela', 'Sanna Mäkelä')).toBe(false);
+  });
+
+  it('accepts any name when the application has no person’s name (a company)', () => {
+    expect(signerMatchesApplicant('Norvi CEO', undefined)).toBe(true);
+    expect(signerMatchesApplicant('Norvi CEO', '  ')).toBe(true);
+  });
+});
 
 describe('checkPersonName', () => {
   it('accepts names from many countries, with or without a space', () => {

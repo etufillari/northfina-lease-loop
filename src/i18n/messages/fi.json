@@ -243,6 +243,7 @@
   "contract.sign": "Allekirjoita sopimus",
   "contract.signing": "Allekirjoitetaan…",
   "contract.error.invalidName": "Allekirjoita kirjoittamalla koko nimesi: vähintään kaksi kirjainta, ei numeroita.",
+  "contract.error.nameMismatch": "Nimen pitää olla sama kuin hakemuksessasi: {name}.",
   "contract.error.expired": "Tämä tarjous on vanhentunut.",
   "contract.error.taken": "Valitettavasti joku muu vuokrasi juuri tämän tuotteen.",
   "contract.error.notApproved": "Tätä hakemusta ei voi allekirjoittaa verkossa.",

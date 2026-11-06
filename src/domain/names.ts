@@ -31,6 +31,25 @@ export function checkPersonName(text: string): NameProblem | null {
   return null;
 }
 
+/** A name as we compare it: one Unicode form, trimmed, one space between words, ’ as ', lower case. */
+function comparable(name: string): string {
+  return name.normalize('NFC').trim().replace(/\s+/gu, ' ').replace(/’/gu, "'").toLowerCase();
+}
+
+/**
+ * Whether the name typed as the signature is the person who applied: the same as the full name
+ * given in the application, ignoring case, extra spaces and the kind of apostrophe. Accents
+ * count ("Makela" is not "Mäkelä"), because they are part of the name on the contract. When the
+ * application has no person's name (a company gives only its own name), any valid name signs.
+ */
+export function signerMatchesApplicant(
+  signerName: string,
+  applicantFullName: string | undefined
+): boolean {
+  if (!applicantFullName?.trim()) return true;
+  return comparable(signerName) === comparable(applicantFullName);
+}
+
 /**
  * Why `text` can't be a company name, or null if it can. Companies have digits and symbols in
  * their names ("3M Oy", "7-Eleven", "AT&T"), so only: at least two letters or digits, and at

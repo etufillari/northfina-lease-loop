@@ -55,7 +55,7 @@ describe('adminOverview', () => {
     if (!approved.ok) throw new Error(approved.reason);
     await signContract(
       db,
-      { applicationId: approved.application.id, signerName: 'Aino' },
+      { applicationId: approved.application.id, signerName: 'Aino Virtanen' },
       '2026-11-05'
     );
 

@@ -87,6 +87,30 @@ describe('fleets', () => {
     );
   });
 
+  it('a sole trader signs a fleet with the full name given in the application', async () => {
+    const pekka = (await loadCustomers()).find((c) => c.id === 'cust-pekka');
+    if (!pekka) throw new Error('missing');
+    const applied = await submitFleetApplication(
+      db,
+      {
+        assetIds: ['laptop-001', 'laptop-002'],
+        termMonths: 36,
+        answers: { ...prefillAnswers(pekka), q_usage_purpose: 'business' },
+        customerId: 'cust-pekka',
+      },
+      TODAY
+    );
+    if (!applied.ok) throw new Error(applied.reason);
+    expect(applied.decision).toBe('approved');
+    expect(
+      await signFleet(db, { fleetId: applied.fleetId, signerName: 'Norvi CEO' }, TODAY)
+    ).toMatchObject({ ok: false, reason: 'name_mismatch' });
+    expect(await db.contract.count()).toBe(0);
+    expect(
+      await signFleet(db, { fleetId: applied.fleetId, signerName: 'Pekka Korhonen' }, TODAY)
+    ).toMatchObject({ ok: true });
+  });
+
   it('signs nothing when one item was taken in the meantime', async () => {
     const applied = await submitFleetApplication(
       db,

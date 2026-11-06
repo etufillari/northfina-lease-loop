@@ -243,6 +243,7 @@
   "contract.sign": "Sign contract",
   "contract.signing": "Signing…",
   "contract.error.invalidName": "Type your full name to sign: at least two letters, no digits.",
+  "contract.error.nameMismatch": "The name must be the same as in your application: {name}.",
   "contract.error.expired": "This quote has expired.",
   "contract.error.taken": "Sorry, someone else has just leased this item.",
   "contract.error.notApproved": "This application can’t be signed online.",

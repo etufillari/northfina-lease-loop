@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { RefurbishmentResult } from '@/server/refurbishment';
+import type { RefurbishmentResult } from '@/server/second-life/refurbishment';
 
 const { quoteRefurbishmentMock } = vi.hoisted(() => ({ quoteRefurbishmentMock: vi.fn() }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/refurbishment', async () => {
+vi.mock('@/server/second-life/refurbishment', async () => {
   const { z } = await import('zod');
   return {
     quoteRefurbishment: quoteRefurbishmentMock,

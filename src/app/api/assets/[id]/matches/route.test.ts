@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SecondLifeAcceptanceResult } from '@/server/second-life-matching';
+import type { SecondLifeAcceptanceResult } from '@/server/second-life/second-life-matching';
 
 const { acceptSecondLifeMatchMock } = vi.hoisted(() => ({
   acceptSecondLifeMatchMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/second-life-matching', async () => {
+vi.mock('@/server/second-life/second-life-matching', async () => {
   const { z } = await import('zod');
   return {
     acceptSecondLifeMatch: acceptSecondLifeMatchMock,

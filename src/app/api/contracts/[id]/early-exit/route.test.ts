@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const { requestEarlyExitMock } = vi.hoisted(() => ({ requestEarlyExitMock: vi.fn() }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/early-exit', async () => {
+vi.mock('@/server/lifecycle/early-exit', async () => {
   const { z } = await import('zod');
   return {
     requestEarlyExit: requestEarlyExitMock,

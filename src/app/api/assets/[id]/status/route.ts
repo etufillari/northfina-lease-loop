@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { assetStatusSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { changeAssetStatus } from '@/server/assets';
+import { changeAssetStatus } from '@/server/assets/assets';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({

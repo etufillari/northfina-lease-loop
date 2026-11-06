@@ -2,8 +2,8 @@
 // body: { assetId, date, downPaymentCents, termMonths }
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
-import { createQuote, quoteRequestSchema } from '@/server/quotes';
-import { throwQuoteError } from '@/server/quote-errors';
+import { createQuote, quoteRequestSchema } from '@/server/quotes/quotes';
+import { throwQuoteError } from '@/server/quotes/quote-errors';
 
 export const POST = handleRoute(async (request) => {
   const input = await readJsonBody(request, quoteRequestSchema);

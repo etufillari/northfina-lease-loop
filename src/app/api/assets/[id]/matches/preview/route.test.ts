@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SecondLifePreviewResult } from '@/server/second-life-matching';
+import type { SecondLifePreviewResult } from '@/server/second-life/second-life-matching';
 
 const { previewSecondLifeMatchesMock } = vi.hoisted(() => ({
   previewSecondLifeMatchesMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/second-life-matching', async () => {
+vi.mock('@/server/second-life/second-life-matching', async () => {
   const { z } = await import('zod');
   return {
     previewSecondLifeMatches: previewSecondLifeMatchesMock,

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { EndOfTermResult } from '@/server/end-of-term';
+import type { EndOfTermResult } from '@/server/lifecycle/end-of-term';
 
 const { completeContractMock } = vi.hoisted(() => ({ completeContractMock: vi.fn() }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/end-of-term', async () => {
+vi.mock('@/server/lifecycle/end-of-term', async () => {
   const { z } = await import('zod');
   const base = {
     completedOn: z.iso.date(),

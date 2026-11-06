@@ -7,7 +7,7 @@ import { assetCategorySchema } from '@/data/schemas';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { listAssets } from '@/server/assets/assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 

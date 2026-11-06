@@ -1,6 +1,6 @@
 import { AssetCard } from '@/components/asset-card';
 import type { Asset, PriceList } from '@/data/schemas';
-import { listPriceOn } from '@/domain/price-list';
+import { listPriceOn } from '@/domain/pricing/price-list';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 

@@ -4,8 +4,8 @@ import { db } from '@/server/db';
 import {
   completeRefurbishment,
   refurbishmentCompletionRequestSchema,
-} from '@/server/refurbishment';
-import { throwRefurbishmentError } from '@/server/refurbishment-errors';
+} from '@/server/second-life/refurbishment';
+import { throwRefurbishmentError } from '@/server/second-life/refurbishment-errors';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/assets/[id]/refurbishment'>) => {

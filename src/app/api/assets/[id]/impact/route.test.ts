@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AssetCircularImpactResult } from '@/server/circular-impact';
+import type { AssetCircularImpactResult } from '@/server/second-life/circular-impact';
 
 const { getAssetCircularImpactMock } = vi.hoisted(() => ({
   getAssetCircularImpactMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/circular-impact', async () => {
+vi.mock('@/server/second-life/circular-impact', async () => {
   const { z } = await import('zod');
   return {
     circularImpactQuerySchema: z.strictObject({ asOf: z.string() }),

@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ApplicationSubmissionResult, SubmittedApplication } from '@/server/applications';
+import type {
+  ApplicationSubmissionResult,
+  SubmittedApplication,
+} from '@/server/applications/applications';
 
 const { createApplicationMock } = vi.hoisted(() => ({
   createApplicationMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/applications', async () => {
+vi.mock('@/server/applications/applications', async () => {
   const { z } = await import('zod');
   const { centsSchema, isoDateSchema } = await import('@/data/schemas');
   return {

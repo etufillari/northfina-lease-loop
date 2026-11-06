@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { QuoteData } from '@/domain/quote';
-import type { CreateQuoteResult } from '@/server/quotes';
+import type { QuoteData } from '@/domain/pricing/quote';
+import type { CreateQuoteResult } from '@/server/quotes/quotes';
 
 const { createQuoteMock } = vi.hoisted(() => ({
   createQuoteMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/quotes', async () => {
+vi.mock('@/server/quotes/quotes', async () => {
   const { z } = await import('zod');
   const { centsSchema, isoDateSchema } = await import('@/data/schemas');
   return {

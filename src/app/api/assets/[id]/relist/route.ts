@@ -14,6 +14,7 @@ const bodySchema = z.strictObject({ target: assetConditionSchema });
 const statusFor = {
   asset_not_found: 404,
   asset_not_returned: 409,
+  not_back_yet: 409,
   target_not_allowed: 422,
 } satisfies Record<RelistRefusal, number>;
 
@@ -32,7 +33,9 @@ export const POST = handleRoute(
       return fail(
         statusFor[result.reason],
         result.reason.toUpperCase(),
-        'The item cannot be re-listed'
+        'The item cannot be re-listed',
+        // For not_back_yet: the hand-back day, from which it can (D-056).
+        result.opensOn ? { opensOn: result.opensOn } : undefined
       );
     }
     return ok(

@@ -14,6 +14,7 @@ import {
   loadSecondLifeDataPack,
   relistAsset,
   secondLifeView,
+  stillOutUntilFor,
   type SecondLifeDataPack,
 } from './second-life';
 
@@ -157,6 +158,48 @@ describe('relistAsset', () => {
     // Relisting twice: the second time it is available, not returned.
     await relist('ebike-008');
     expect(await relist('ebike-008')).toEqual({ ok: false, reason: 'asset_not_returned' });
+  });
+
+  it('waits for the hand-back day: returned early in the last month, re-listed only from then (B2)', async () => {
+    // Signed 5 Nov 2026 for 12 months: the last month opens 5 Oct 2027, handover 5 Nov 2027.
+    const lease1 = await signAsAino('ebike-003', 12, '2026-11-05');
+    if (!lease1.ok) throw new Error(lease1.reason);
+    const ended = await endLease(
+      db,
+      { ...lease, secondLife: data },
+      {
+        contractId: lease1.id,
+        choice: { kind: 'return', condition: 'good', usageValue: 2_400 },
+        today: '2027-10-10',
+        actor: 'cust-aino',
+      }
+    );
+    expect(ended).toMatchObject({ ok: true, ending: { effectiveDate: '2027-11-05' } });
+
+    // Aino still rides it until 5 Nov, so nobody else can lease it before then.
+    expect(
+      await relistAsset(db, data, {
+        assetId: 'ebike-003',
+        target: 'good',
+        today: '2027-10-10',
+        actor: 's',
+      })
+    ).toEqual({
+      ok: false,
+      reason: 'not_back_yet',
+      opensOn: '2027-11-05',
+    });
+    expect(await db.secondLifeListing.count()).toBe(0);
+    expect(await stillOutUntilFor(db, 'ebike-003', '2027-11-04')).toBe('2027-11-05');
+    expect(await stillOutUntilFor(db, 'ebike-003', '2027-11-05')).toBeNull();
+    expect(
+      await relistAsset(db, data, {
+        assetId: 'ebike-003',
+        target: 'good',
+        today: '2027-11-05',
+        actor: 's',
+      })
+    ).toMatchObject({ ok: true });
   });
 
   it('a whole loop: lease, pass on, re-list, lease again; the first contract never changes', async () => {

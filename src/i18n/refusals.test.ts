@@ -58,6 +58,7 @@ const fromRoutes = [
   'TERM_OVER',
   // POST /api/assets/:id/relist
   'ASSET_NOT_RETURNED',
+  'NOT_BACK_YET',
   'TARGET_NOT_ALLOWED',
   // POST /api/contracts/:id/hand-over (#65)
   'NOT_PASSED_ON',

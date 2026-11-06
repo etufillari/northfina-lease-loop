@@ -94,6 +94,18 @@ export function inspectionProblem(
   return null;
 }
 
+/**
+ * The day an ended lease's item comes back, while the lessee still has it; null once it is back
+ * or when nothing has ended. An ending decided early takes effect later, and until then the item
+ * can't be re-listed or leased to anyone else (D-056).
+ */
+export function stillOutUntil(
+  ending: Pick<Ending, 'effectiveDate'> | null,
+  today: string
+): string | null {
+  return ending && today < ending.effectiveDate ? ending.effectiveDate : null;
+}
+
 /** Counted from the start date like the invoice schedule, so a 31st never drifts (D-016). */
 export function endOfTermDates(contract: BilledContract): EndOfTermDates {
   const handoverDate = addMonthsClamped(contract.startDate, contract.termMonths);

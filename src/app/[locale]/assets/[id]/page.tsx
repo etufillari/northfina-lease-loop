@@ -24,7 +24,7 @@ import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { latestListing, priceListsWithListings } from '@/server/listed-prices';
 import { asOfDate } from '@/server/as-of';
-import { loadSecondLifeDataPack, secondLifeView } from '@/server/second-life';
+import { loadSecondLifeDataPack, secondLifeView, stillOutUntilFor } from '@/server/second-life';
 
 export async function generateMetadata({
   params,
@@ -51,7 +51,10 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
   const price = listPriceOn(priceLists, asset.id, today);
   const newPrice = listPriceOn(data.priceLists, asset.id, today);
   const listing = asset.status === 'available' ? await latestListing(db, asset.id) : null;
-  const secondLifeData = asset.status === 'returned' ? await loadSecondLifeDataPack() : null;
+  // Ended early or before its last day: the lessee keeps it until then, so no re-listing (D-056).
+  const backOn = asset.status === 'returned' ? await stillOutUntilFor(db, asset.id, today) : null;
+  const secondLifeData =
+    asset.status === 'returned' && !backOn ? await loadSecondLifeDataPack() : null;
   const secondLife = secondLifeData
     ? await secondLifeView(db, secondLifeData, asset.id, today)
     : null;
@@ -167,7 +170,11 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
           />
         ) : blocked !== null || !price.ok || !vat.ok || !bounds?.ok ? (
           <UnavailableNotice
-            reason={t(blocked ?? 'lease.notLeasable.no_price')}
+            reason={
+              backOn
+                ? t('lease.notLeasable.not_back_yet', { date: formatIsoDate(backOn, locale) })
+                : t(blocked ?? 'lease.notLeasable.no_price')
+            }
             similar={similar}
             locale={locale}
             t={t}

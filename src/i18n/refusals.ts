@@ -82,6 +82,7 @@ const messageKeys = {
   term_over: 'refusal.term_over',
   // re-listing
   asset_not_returned: 'refusal.asset_not_returned',
+  not_back_yet: 'refusal.not_back_yet',
   target_not_allowed: 'refusal.target_not_allowed',
   // handing a passed-on item over (#65)
   not_passed_on: 'refusal.not_passed_on',

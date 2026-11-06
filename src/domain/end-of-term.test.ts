@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { VatRates } from '@/data/schemas';
-import { endOfTerm, endOfTermDates, type EndedContract, type EndOfTermChoice } from './end-of-term';
+import {
+  endOfTerm,
+  endOfTermDates,
+  stillOutUntil,
+  type EndedContract,
+  type EndOfTermChoice,
+} from './end-of-term';
 
 const vatRates: VatRates = {
   country: 'FI',
@@ -184,5 +190,21 @@ describe('endOfTerm: timing', () => {
       reason: 'too_early',
       opensOn: '2029-10-05',
     });
+  });
+});
+
+describe('stillOutUntil', () => {
+  // An ending decided before it takes effect: the lessee keeps the item until then (B2).
+  const ending = { effectiveDate: '2027-06-05' };
+
+  it('is the hand-back day while the lessee still has the item', () => {
+    expect(stillOutUntil(ending, '2027-05-10')).toBe('2027-06-05');
+    expect(stillOutUntil(ending, '2027-06-04')).toBe('2027-06-05');
+  });
+
+  it('is null from the hand-back day on, or when nothing has ended', () => {
+    expect(stillOutUntil(ending, '2027-06-05')).toBeNull();
+    expect(stillOutUntil(ending, '2027-07-01')).toBeNull();
+    expect(stillOutUntil(null, '2027-05-10')).toBeNull();
   });
 });

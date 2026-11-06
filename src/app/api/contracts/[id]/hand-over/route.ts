@@ -19,6 +19,7 @@ const statusFor = {
   already_handed_over: 409,
   too_early: 409,
   asset_not_returned: 409,
+  not_back_yet: 409,
   asset_not_available: 409,
   no_price: 422,
   waiting_list_not_a_match: 422,

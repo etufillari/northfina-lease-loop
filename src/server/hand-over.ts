@@ -96,6 +96,8 @@ export async function handOver(
     return {
       ok: false,
       reason: relisted.reason === 'asset_not_returned' ? 'already_handed_over' : relisted.reason,
+      // For not_back_yet (caught as too_early first today): the day it can (D-056).
+      ...(relisted.opensOn ? { opensOn: relisted.opensOn } : {}),
     };
   }
 

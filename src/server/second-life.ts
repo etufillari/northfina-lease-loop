@@ -23,6 +23,7 @@ import {
   type SecondLifeOption,
 } from '@/domain/second-life';
 import { inSignupOrder, matchWaitingList, type MatchResult } from '@/domain/waiting-list';
+import { stillOutUntil } from '@/domain/end-of-term';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
 import { getContractEnding } from './contract-endings';
@@ -56,6 +57,23 @@ export interface SecondLifeView {
   options: SecondLifeOption[];
   /** The option the top waiting-list match needs, or the cheapest one. */
   suggested: AssetCondition;
+}
+
+/**
+ * The hand-back day of the asset's latest lease while its lessee still has the item, else null
+ * (D-056). Until then it can't be re-listed, so two leases never overlap.
+ */
+export async function stillOutUntilFor(
+  db: PrismaClient,
+  assetId: string,
+  today: string
+): Promise<string | null> {
+  const latest = await db.contract.findFirst({
+    where: { asset_id: assetId },
+    orderBy: { id: 'desc' },
+    select: { id: true },
+  });
+  return latest ? stillOutUntil(await getContractEnding(db, latest.id), today) : null;
 }
 
 /** The pass-on ending of the asset's latest contract, if that is how it came back. */
@@ -135,11 +153,16 @@ export interface RelistInput {
 }
 
 /** Every reason `relistAsset` refuses; `POST /api/assets/:id/relist` answers each in upper case. */
-export type RelistRefusal = 'asset_not_found' | 'asset_not_returned' | 'target_not_allowed';
+export type RelistRefusal =
+  | 'asset_not_found'
+  | 'asset_not_returned'
+  /** Ended, but the lessee keeps it until the hand-back day (D-056). */
+  | 'not_back_yet'
+  | 'target_not_allowed';
 
 export type RelistResult =
   | { ok: true; asset: Asset; listingId: number; valuation: SecondLifeOption['valuation'] }
-  | { ok: false; reason: RelistRefusal };
+  | { ok: false; reason: RelistRefusal; opensOn?: string };
 
 /** Thrown inside the transaction to roll it back when the asset changed meanwhile. */
 class AssetChangedError extends Error {}
@@ -156,6 +179,8 @@ export async function relistAsset(
 ): Promise<RelistResult> {
   const exists = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!exists) return { ok: false, reason: 'asset_not_found' };
+  const backOn = await stillOutUntilFor(db, input.assetId, input.today);
+  if (backOn) return { ok: false, reason: 'not_back_yet', opensOn: backOn };
   const view = await secondLifeView(db, data, input.assetId, input.today);
   if (!view) return { ok: false, reason: 'asset_not_returned' };
   const option = view.options.find((o) => o.target === input.target);

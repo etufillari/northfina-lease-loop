@@ -30,7 +30,6 @@ model Asset {
   reserved_by    String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
-
   @@index([category])
 }
 
@@ -115,7 +114,6 @@ model EngineLease {
   version           Int @default(1)
   invoices          EngineInvoice[]
   allocation        EngineAllocation?
-
   @@index([assetId])
 }
 

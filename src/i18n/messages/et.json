@@ -42,7 +42,6 @@
   "account.no": "Ei",
   "account.leases": "Liisingulepingud",
   "account.noLeases": "Sellel kliendil pole liisingulepinguid.",
-  "account.mockLease": "Demoleping — näidisandmed",
   "account.savedLease": "Salvestatud allkirjastatud liising",
   "account.monthsRemaining": "{count} kuud jäänud",
   "account.viewAsset": "Vaata toote üksikasju",

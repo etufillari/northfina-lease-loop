@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { handleRoute, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
-import { demoCustomer } from '@/server/lease-engine/demo-access';
+import { demoCompanyOperator } from '@/server/circular/demo-operator';
 import { respondEngineOperation } from '@/server/lease-engine/http';
 import { receiveReturn, inspectReturn, finishRefurbishment } from '@/server/circular/service';
 const id = z.string().min(1).max(100);
@@ -27,10 +27,10 @@ const schema = z.discriminatedUnion('action', [
   }),
 ]);
 export const POST = handleRoute(async (request) => {
-  const operator = await demoCustomer(request);
+  const operator = demoCompanyOperator(request);
   const payload = await readJsonBody(request, schema);
   const context = {
-    actor: `demo-operator:${operator.id}`,
+    actor: operator.actorId,
     idempotencyKey: id.parse(request.headers.get('Idempotency-Key')),
   };
   return respondEngineOperation(async () => {

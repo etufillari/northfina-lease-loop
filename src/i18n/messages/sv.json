@@ -42,7 +42,6 @@
   "account.no": "Nej",
   "account.leases": "Leasingavtal",
   "account.noLeases": "Kunden har inga leasingavtal.",
-  "account.mockLease": "Demoavtal — testdata",
   "account.savedLease": "Sparat undertecknat leasingavtal",
   "account.monthsRemaining": "{count} månader kvar",
   "account.viewAsset": "Visa produktdetaljer",

@@ -42,7 +42,6 @@
   "account.no": "No",
   "account.leases": "Leases",
   "account.noLeases": "No leases for this customer.",
-  "account.mockLease": "Demo lease — mock data",
   "account.savedLease": "Saved signed lease",
   "account.monthsRemaining": "{count} months remaining",
   "account.viewAsset": "View asset details",

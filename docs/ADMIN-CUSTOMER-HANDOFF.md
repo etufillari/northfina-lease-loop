@@ -10,7 +10,7 @@ Build on `feat/circular-lease-loop`. The full demo loop works locally: contract 
 
 ## Important current behavior
 
-The role split and company approval gate are **not implemented yet**. The workshop is development-only and uses a simulated operator identity. Completing financeable refurbishment currently publishes the offer immediately. Low-value items save completed work as `REVIEW_REQUIRED` without an offer; this is a financing exception, not company approval.
+The basic role split is implemented for the development demo: the catalogue links to the operator workshop, the customer account no longer links to operator controls, and the workshop API uses a same-origin development-only operator identity without requiring a selected customer. This is not production authentication. Company approval is **not implemented yet**. Completing financeable refurbishment currently publishes the offer immediately. Low-value items save completed work as `REVIEW_REQUIRED` without an offer; this is a financing exception, not company approval.
 
 ## Implementation boundaries
 

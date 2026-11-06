@@ -18,6 +18,9 @@ export function DashboardSidebar({
     { href: `/${locale}/saved`, label: t('nav.saved'), icon: '♡' },
     { href: `/${locale}`, label: t('nav.transactions'), icon: '⇄' },
     { href: `/${locale}/account`, label: t('nav.account'), icon: '♙' },
+    ...(process.env.NODE_ENV === 'development'
+      ? [{ href: `/${locale}/circular`, label: t('circular.title'), icon: '↻' }]
+      : []),
   ];
 
   return (

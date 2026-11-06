@@ -42,7 +42,6 @@
   "account.no": "Ei",
   "account.leases": "Leasing-sopimukset",
   "account.noLeases": "Tällä asiakkaalla ei ole leasing-sopimuksia.",
-  "account.mockLease": "Esimerkkisopimus — testitietoa",
   "account.savedLease": "Tallennettu allekirjoitettu leasing",
   "account.monthsRemaining": "{count} kuukautta jäljellä",
   "account.viewAsset": "Näytä tuotteen tiedot",

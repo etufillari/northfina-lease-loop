@@ -1,3 +1,4 @@
+import { roundRatio } from './circular/money';
 import type { Asset, Customer } from '@/data/schemas';
 
 export type ApplicationStatus = 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
@@ -13,10 +14,11 @@ export type ApplicationDecisionInput = Readonly<{
   asset: Asset;
   monthlyNetCents: number;
   asOf: string;
+  vatRateBps?: number;
 }>;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const AFFORDABILITY_PERCENT = 40;
+const AFFORDABILITY_PERCENT = 30;
 
 function isValidFinnishBusinessId(value: string): boolean {
   const match = /^(\d{7})-(\d)$/.exec(value);
@@ -45,7 +47,7 @@ export function decideApplication(input: ApplicationDecisionInput): ApplicationD
   if (!ISO_DATE.test(input.asOf)) {
     throw new RangeError(`asOf must look like YYYY-MM-DD, got "${input.asOf}"`);
   }
-  if (!Number.isInteger(input.monthlyNetCents) || input.monthlyNetCents <= 0) {
+  if (!Number.isSafeInteger(input.monthlyNetCents) || input.monthlyNetCents <= 0) {
     return {
       status: 'REJECTED',
       reason: 'Monthly net rent must be a positive whole number of cents',
@@ -59,13 +61,19 @@ export function decideApplication(input: ApplicationDecisionInput): ApplicationD
       signingAuthority: false,
     };
   }
-  if (input.customer.type === 'consumer' && !isAdult(input.customer.birth_date, input.asOf)) {
+  if (input.customer.type !== 'company' && !isAdult(input.customer.birth_date, input.asOf)) {
     return {
       status: 'REJECTED',
       reason: 'Applicant must be at least 18 years old',
       signingAuthority: false,
     };
   }
+  if (!['FI', 'SE', 'EE'].includes(input.customer.country))
+    return {
+      status: 'REJECTED',
+      reason: 'Country is outside the supported leasing area',
+      signingAuthority: false,
+    };
   if (input.customer.type !== 'consumer' && !isValidFinnishBusinessId(input.customer.business_id)) {
     return {
       status: 'REJECTED',
@@ -81,13 +89,17 @@ export function decideApplication(input: ApplicationDecisionInput): ApplicationD
         input.customer.type === 'company' ? input.customer.applicant_can_sign : true,
     };
   }
+  const rate = input.vatRateBps ?? 2550; // Compatibility default for the 2026 rule; services pass the dated rate.
+  if (!Number.isInteger(rate) || rate < 0 || rate > 10000) throw new RangeError('Invalid VAT rate');
+  const grossCents =
+    input.monthlyNetCents + roundRatio(BigInt(input.monthlyNetCents) * BigInt(rate), 10000n);
   if (
     input.customer.type === 'consumer' &&
-    input.monthlyNetCents * 100 > input.customer.monthly_net_income_cents * AFFORDABILITY_PERCENT
+    grossCents * 100 > input.customer.monthly_net_income_cents * AFFORDABILITY_PERCENT
   ) {
     return {
       status: 'REJECTED',
-      reason: 'Monthly net rent exceeds the affordability limit',
+      reason: 'Monthly rent including VAT exceeds the affordability limit',
       signingAuthority: false,
     };
   }

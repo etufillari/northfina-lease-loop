@@ -10,6 +10,7 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
+  retired: { badge: 'bg-stone-100 text-stone-700', dot: 'bg-stone-500' },
   available: {
     badge:
       'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',

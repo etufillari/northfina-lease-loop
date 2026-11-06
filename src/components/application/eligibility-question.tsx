@@ -1,8 +1,13 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Locale } from '@/i18n/locales';
 import { getT } from '@/i18n/get-t';
+
+import { DateSelect } from './date-select';
+
+/** How long after the last key an email counts as finished. */
+const TYPING_PAUSE_MS = 800;
 
 const yesNoKeys = {
   yes: 'application.options.yes',
@@ -87,28 +92,70 @@ export default function EligibilityQuestion({
   const id = useId();
   const t = getT(locale);
 
+  // The server checks every key, so half an email would flash an error. It waits for a pause.
+  const [typing, setTyping] = useState(false);
+  const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(typingTimer.current), []);
+
+  function changeEmail(next: string) {
+    onChange(next);
+    setTyping(true);
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setTyping(false), TYPING_PAUSE_MS);
+  }
+
+  function leaveEmail() {
+    clearTimeout(typingTimer.current);
+    setTyping(false);
+  }
+
+  const shownError = typing ? undefined : error;
+
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
 
   const describedBy =
-    [question.hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
+    [question.hint ? hintId : null, shownError ? errorId : null].filter(Boolean).join(' ') ||
+    undefined;
 
   const inputValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 
   function renderInput() {
     switch (question.type) {
+      case 'date':
+        return (
+          <DateSelect
+            id={id}
+            value={inputValue}
+            labels={{
+              day: t('application.question.day'),
+              month: t('application.question.month'),
+              year: t('application.question.year'),
+            }}
+            onChange={onChange}
+            disabled={disabled}
+            className={`${inputClassName} [color-scheme:dark]`}
+            invalid={Boolean(error)}
+            describedBy={describedBy}
+          />
+        );
+
       case 'text':
       case 'email':
-      case 'date':
         return (
           <input
             id={id}
             type={question.type}
             value={inputValue}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) =>
+              question.type === 'email'
+                ? changeEmail(event.target.value)
+                : onChange(event.target.value)
+            }
+            onBlur={question.type === 'email' ? leaveEmail : undefined}
             disabled={disabled}
             className={inputClassName}
-            aria-invalid={Boolean(error)}
+            aria-invalid={Boolean(shownError)}
             aria-describedby={describedBy}
           />
         );
@@ -265,9 +312,9 @@ export default function EligibilityQuestion({
         </p>
       )}
 
-      {error && (
+      {shownError && (
         <p id={errorId} role="alert" className="text-sm text-red-400">
-          {t(`application.question.error.${error.reason}`)}
+          {t(`application.question.error.${shownError.reason}`)}
         </p>
       )}
     </section>

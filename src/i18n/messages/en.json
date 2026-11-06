@@ -517,5 +517,8 @@
   "price.vatFooter.gross": "The total includes VAT {rate} %; the other amounts are excl. VAT.",
   "price.notPriceable.above_maximum_cap": "Even a 30 % down payment leaves this above €250,000 (excl. VAT) — it cannot be leased",
   "catalogue.needsDownPayment": "Needs a down payment of at least {percent} % ({amount} excl. VAT)",
-  "passport.co2FirstLife": "A new item’s first life avoids nothing — the saving starts from the second life, when leasing this item again replaces making a new one."
+  "passport.co2FirstLife": "A new item’s first life avoids nothing — the saving starts from the second life, when leasing this item again replaces making a new one.",
+  "me.co2Title": "CO₂ avoided by your leases",
+  "me.co2Note": "From {count} second-life lease(s): leasing a refurbished item avoids most of the CO₂ of making a new one.",
+  "me.co2None": "Nothing yet — the saving starts when you lease an item on its second life instead of a new one."
 }

@@ -517,5 +517,8 @@
   "price.vatFooter.gross": "Kogusumma sisaldab käibemaksu {rate} %; muud summad on ilma käibemaksuta.",
   "price.notPriceable.above_maximum_cap": "Isegi 30 % sissemakse ei too seda alla 250 000 € (ilma käibemaksuta) — seda ei saa liisida",
   "catalogue.needsDownPayment": "Nõuab vähemalt {percent} % sissemakset ({amount} ilma käibemaksuta)",
-  "passport.co2FirstLife": "Uue toote esimene elutsükkel ei säästa veel midagi — sääst algab teisest elutsüklist, kui toode liisitakse uuesti uue valmistamise asemel."
+  "passport.co2FirstLife": "Uue toote esimene elutsükkel ei säästa veel midagi — sääst algab teisest elutsüklist, kui toode liisitakse uuesti uue valmistamise asemel.",
+  "me.co2Title": "Sinu rendilepingute välditud CO₂",
+  "me.co2Note": "{count} teise elutsükli rendist: taastatud toote rentimine väldib suurema osa uue valmistamise CO₂-st.",
+  "me.co2None": "Veel mitte midagi — sääst algab, kui rendid toote selle teisel elutsüklil uue asemel."
 }

@@ -4,11 +4,12 @@ import { BackToCatalogue } from '@/components/back-to-catalogue';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { formatEuro } from '@/domain/money';
-import { formatIsoDate } from '@/i18n/format';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { addMonthsClamped } from '@/domain/calendar';
+import { co2SavedFor } from '@/server/co2';
 import { invoicesFor, listCustomerContracts } from '@/server/contracts';
 import { nominationsFor } from '@/server/nominations';
 import { NominationActions } from './nomination-actions';
@@ -64,10 +65,11 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
     );
   }
 
-  const [contracts, applications, nominations] = await Promise.all([
+  const [contracts, applications, nominations, co2] = await Promise.all([
     listCustomerContracts(db, customer.id),
     listCustomerOpenApplications(db, customer.id, asOf),
     nominationsFor(db, customer.id),
+    co2SavedFor(db, customer.id),
   ]);
 
   return (
@@ -75,6 +77,18 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
       <BackToCatalogue locale={locale} label={t('asset.backToCatalogue')} asOfParam={asOfParam} />
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">{customer.name}</h1>
       <p className="mt-1 text-stone-600 dark:text-stone-400">{customer.email}</p>
+
+      <section className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
+        <h2 className="text-sm font-semibold">{t('me.co2Title')}</h2>
+        <p className="mt-1 text-2xl font-semibold text-emerald-900 dark:text-emerald-200">
+          {formatNumber(Math.round(co2.totalKg), locale)} kg CO₂e
+        </p>
+        <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+          {co2.credits.length > 0
+            ? t('me.co2Note', { count: co2.credits.length })
+            : t('me.co2None')}
+        </p>
+      </section>
 
       {applications.length > 0 ? (
         <>

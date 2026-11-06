@@ -517,5 +517,8 @@
   "price.vatFooter.gross": "Totalkostnaden inkluderar moms {rate} %; övriga belopp är exkl. moms.",
   "price.notPriceable.above_maximum_cap": "Inte ens 30 % kontantinsats får ner detta under 250 000 € (exkl. moms) — det kan inte leasas",
   "catalogue.needsDownPayment": "Kräver en kontantinsats på minst {percent} % ({amount} exkl. moms)",
-  "passport.co2FirstLife": "Ett nytt föremåls första liv sparar inget ännu — besparingen börjar från det andra livet, när föremålet leasas igen i stället för att ett nytt tillverkas."
+  "passport.co2FirstLife": "Ett nytt föremåls första liv sparar inget ännu — besparingen börjar från det andra livet, när föremålet leasas igen i stället för att ett nytt tillverkas.",
+  "me.co2Title": "CO₂ som dina leasingavtal undvikit",
+  "me.co2Note": "Från {count} andra-livet-leasing(ar): att leasa ett renoverat föremål undviker det mesta av CO₂ för att tillverka ett nytt.",
+  "me.co2None": "Inget ännu — besparingen börjar när du leasar ett föremål på dess andra liv i stället för ett nytt."
 }

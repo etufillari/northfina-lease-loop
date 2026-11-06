@@ -517,5 +517,8 @@
   "price.vatFooter.gross": "Kokonaiskustannus sisältää ALV:n {rate} %; muut summat ovat ilman ALV:tä.",
   "price.notPriceable.above_maximum_cap": "Edes 30 % käsiraha ei tuo tätä alle 250 000 € (ilman ALV:tä) — sitä ei voi liisata",
   "catalogue.needsDownPayment": "Vaatii vähintään {percent} % käsirahan ({amount} ilman ALV:tä)",
-  "passport.co2FirstLife": "Uuden tuotteen ensimmäinen elinkaari ei vielä säästä mitään — säästö alkaa toisesta elinkaaresta, kun tuote liisataan uudelleen uuden valmistamisen sijaan."
+  "passport.co2FirstLife": "Uuden tuotteen ensimmäinen elinkaari ei vielä säästä mitään — säästö alkaa toisesta elinkaaresta, kun tuote liisataan uudelleen uuden valmistamisen sijaan.",
+  "me.co2Title": "Vuokriesi välttämä CO₂",
+  "me.co2Note": "{count} uudelleenvuokrauksesta: kunnostetun tuotteen vuokraaminen välttää suurimman osan uuden valmistamisen CO₂:sta.",
+  "me.co2None": "Ei vielä mitään — säästö alkaa, kun vuokraat tuotteen sen toisella elinkaarella uuden sijaan."
 }

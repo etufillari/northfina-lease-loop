@@ -45,6 +45,9 @@ export function toAssetRowData(asset: Asset, costs: RefurbishmentCosts) {
     usage_unit: asset.usage.unit,
     usage_value: usage.sinceReset,
     usage_total: usage.total,
+    // The data pack graded it: wear is counted from here (src/domain/inspection.ts).
+    wear_from_condition: asset.condition,
+    wear_from_total: usage.total,
     previous_lives: asset.previous_lives,
     status: asset.status,
   };

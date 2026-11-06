@@ -21,6 +21,8 @@ export type ReturnInspection = {
   /** The condition it went out in: the best grade an inspection may give. */
   conditionOut: AssetCondition;
   usedDuringLease: number;
+  /** The condition wear is counted from (last set by the data pack or an upgrade). */
+  baselineCondition: AssetCondition;
   /** One grade per this much use (km, battery cycles, engine hours). */
   wearStep: number;
   suggested: ConditionSuggestion;
@@ -41,7 +43,14 @@ const asCondition = (value: unknown): AssetCondition | null => {
 /** The inspection state of a returned item, or null when it came back without a recorded return. */
 export async function returnInspection(
   db: Reader,
-  asset: { id: string; category: string; condition: string }
+  asset: {
+    id: string;
+    category: string;
+    condition: string;
+    usage_total: number;
+    wear_from_condition: string | null;
+    wear_from_total: number | null;
+  }
 ): Promise<ReturnInspection | null> {
   const returned = await db.assetEvent.findFirst({
     where: { asset_id: asset.id, type: 'returned' },
@@ -60,12 +69,23 @@ export async function returnInspection(
   const category = asset.category as keyof typeof WEAR_STEP;
   const conditionOut = asCondition(d.conditionOut) ?? asCondition(asset.condition) ?? 'good';
   const usedDuringLease = typeof d.usageAdded === 'number' ? d.usageAdded : 0;
+  // Rows from before the baseline existed count this lease only.
+  const baseline = {
+    condition: asCondition(asset.wear_from_condition) ?? conditionOut,
+    usageTotal: asset.wear_from_total ?? asset.usage_total - usedDuringLease,
+  };
   return {
     needed: inspectedEvent === null,
     conditionOut,
     usedDuringLease,
+    baselineCondition: baseline.condition,
     wearStep: WEAR_STEP[category],
-    suggested: suggestReturnCondition({ category, conditionOut, usedDuringLease }),
+    suggested: suggestReturnCondition({
+      category,
+      conditionOut,
+      baseline,
+      usageTotalNow: asset.usage_total,
+    }),
     inspected: inspectedEvent ? asCondition(details(inspectedEvent.details_json).condition) : null,
   };
 }
@@ -86,6 +106,7 @@ export async function recordInspection(
         suggested: input.inspection.suggested.condition,
         conditionOut: input.inspection.conditionOut,
         usedDuringLease: input.inspection.usedDuringLease,
+        usedSinceBaseline: input.inspection.suggested.usedSinceBaseline,
       }),
     },
   });

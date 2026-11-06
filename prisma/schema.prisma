@@ -28,6 +28,11 @@ model Asset {
   usage_value             Int
   // Lifetime usage, never reset; grows by the meter reading taken at each return.
   usage_total             Int      @default(0)
+  // The wear baseline for the return inspection (src/domain/inspection.ts): the condition
+  // last SET (by the data pack or an upgrade at the desk, not by wear) and the lifetime usage
+  // at that moment. Wear is counted from here across leases. Null on rows from before.
+  wear_from_condition     String?
+  wear_from_total         Int?
   previous_lives          Int
   status                  String // available | reserved | returned
   // Set by the second-life desk: refurbished value + refurbishment, quoted instead of the

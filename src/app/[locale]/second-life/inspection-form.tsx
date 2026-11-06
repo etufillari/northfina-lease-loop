@@ -64,7 +64,9 @@ export function InspectionForm({
       <p className="mt-1">
         {t('secondLife.inspection.suggestion', {
           out: condLabel(inspection.conditionOut),
-          used: usage(inspection.usedDuringLease),
+          lease: usage(inspection.usedDuringLease),
+          used: usage(inspection.suggested.usedSinceBaseline),
+          baseline: condLabel(inspection.baselineCondition),
           suggested: condLabel(inspection.suggested.condition),
           step: usage(inspection.wearStep),
         })}

@@ -105,8 +105,12 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 - **Return inspection — condition** (6 Nov, `src/domain/inspection.ts`): an item back from a
   lease is graded at the second-life desk before the decision. The grade is pre-filled: a
   used item is at best "like new", and it drops one grade per full 5,000 km (e-bikes),
-  300 battery cycles (laptops) or 1,000 engine hours (farm machines) used on that lease —
-  our steps, as the data pack has no wear rule — never below poor. Staff may correct it, as
+  300 battery cycles (laptops) or 1,000 engine hours (farm machines) — our steps, as the
+  data pack has no wear rule — never below poor. Wear is counted **cumulatively** from the
+  item's wear baseline (the condition last set by the data pack or an upgrade at the desk,
+  and the lifetime usage then), so two leases of 4,900 km cost a grade like one of 9,800 km;
+  the suggestion is also never better than it went out, so a grade lowered for damage
+  stays lowered. Staff may correct it, as
   it went out or worse, never better; carrying the card out without inspecting accepts the
   suggestion. The decision (and so the price) uses the graded condition, and the card shows
   how each value was worked out (age %, condition multiplier, usage deduction). Data-pack

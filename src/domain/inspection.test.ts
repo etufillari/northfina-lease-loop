@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import type { AssetCondition } from '@/data/schemas';
 import { isAllowedInspection, suggestReturnCondition, worseOf } from './inspection';
 
-const bike = (
-  conditionOut: Parameters<typeof suggestReturnCondition>[0]['conditionOut'],
-  km: number
-) => suggestReturnCondition({ category: 'e_bike', conditionOut, usedDuringLease: km }).condition;
+/** An e-bike set to `baseline` at 0 km that went out `out` and now has `km` on the clock. */
+const bike = (baseline: AssetCondition, km: number, out: AssetCondition = baseline) =>
+  suggestReturnCondition({
+    category: 'e_bike',
+    conditionOut: out,
+    baseline: { condition: baseline, usageTotal: 0 },
+    usageTotalNow: km,
+  }).condition;
 
 describe('suggestReturnCondition', () => {
   it('a used item is never new again', () => {
@@ -19,25 +24,52 @@ describe('suggestReturnCondition', () => {
     expect(bike('like_new', 0)).toBe('like_new');
   });
 
+  it('counts wear across leases: 4,900 km twice wears it like 9,800 km once', () => {
+    // First lease: new → like new (under one step).
+    expect(bike('new', 4900)).toBe('like_new');
+    // Second lease: went out like new, but 9,800 km since it was new.
+    expect(bike('new', 9800, 'like_new')).toBe('good');
+    expect(bike('new', 10_000, 'like_new')).toBe('fair');
+  });
+
+  it('counts from the baseline usage, not from zero', () => {
+    const result = suggestReturnCondition({
+      category: 'e_bike',
+      conditionOut: 'good',
+      baseline: { condition: 'good', usageTotal: 18_400 },
+      usageTotalNow: 23_000,
+    });
+    expect(result).toEqual({ condition: 'good', usedSinceBaseline: 4600, gradesForUse: 0 });
+  });
+
+  it('never better than it went out: a grade lowered for damage stays lowered', () => {
+    expect(bike('new', 1000, 'fair')).toBe('fair');
+  });
+
   it('never goes below poor', () => {
     expect(bike('fair', 100_000)).toBe('poor');
   });
 
   it('uses each category’s own step', () => {
-    expect(
-      suggestReturnCondition({ category: 'laptop', conditionOut: 'new', usedDuringLease: 600 })
-    ).toEqual({ condition: 'fair', gradesForUse: 2 });
-    expect(
+    const at = (category: 'laptop' | 'farm_machine', used: number, cond: AssetCondition) =>
       suggestReturnCondition({
-        category: 'farm_machine',
-        conditionOut: 'good',
-        usedDuringLease: 999,
-      })
-    ).toEqual({ condition: 'good', gradesForUse: 0 });
+        category,
+        conditionOut: cond,
+        baseline: { condition: cond, usageTotal: 0 },
+        usageTotalNow: used,
+      });
+    expect(at('laptop', 600, 'new')).toMatchObject({ condition: 'fair', gradesForUse: 2 });
+    expect(at('farm_machine', 999, 'good')).toMatchObject({ condition: 'good', gradesForUse: 0 });
   });
 
-  it('a negative reading difference counts as no use', () => {
-    expect(bike('good', -50)).toBe('good');
+  it('a reading below the baseline counts as no use', () => {
+    const result = suggestReturnCondition({
+      category: 'e_bike',
+      conditionOut: 'good',
+      baseline: { condition: 'good', usageTotal: 500 },
+      usageTotalNow: 100,
+    });
+    expect(result.usedSinceBaseline).toBe(0);
   });
 });
 

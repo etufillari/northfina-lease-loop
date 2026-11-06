@@ -24,20 +24,20 @@ Then open <http://localhost:3000/en>.
 
 ## Ready after `db:demo`
 
-| State                           | Log in as                      | Item         | Where to look                     |
-| ------------------------------- | ------------------------------ | ------------ | --------------------------------- |
-| Rejected, too young             | Mikko Laine                    | `laptop-005` | My applications                   |
-| Rejected, cannot afford it      | Sanna Mäkelä                   | `farm-008`   | My applications                   |
-| Rejected, wrong business ID     | The broken ID company          | `laptop-009` | My applications                   |
-| Waiting for manual review       | Northfina admin, or Haapala    | `farm-003`   | Manual review, or My applications |
-| Approved, ready to sign         | Lena Tamm                      | `ebike-006`  | My applications                   |
-| Waiting for a company signature | Anna Norvi                     | `laptop-010` | `/en/account/applications`        |
-| Signed, crosses the VAT change  | Pekka Korhonen                 | `ebike-005`  | `/api/contracts`, `/api/invoices` |
-| Held for someone                | Jonas Lind, or Dealer desk     | `ebike-002`  | Catalogue, or Dealer dashboard    |
-| Re-listed used item             | Anyone                         | `ebike-011`  | Catalogue                         |
-| Returned, waiting for a dealer  | Dealer desk                    | 5 items      | Dealer dashboard                  |
-| Reserved, cannot be leased      | Anyone                         | `ebike-009`  | Catalogue                         |
-| End-of-term choice              | Olavi Niemi, on 1 January 2027 | `laptop-002` | See [End of term](#end-of-term)   |
+| State                           | Log in as                                                  | Item                                    | Where to look                     |
+| ------------------------------- | ---------------------------------------------------------- | --------------------------------------- | --------------------------------- |
+| Rejected, too young             | Mikko Laine                                                | `laptop-005`                            | My applications                   |
+| Rejected, cannot afford it      | Sanna Mäkelä                                               | `farm-008`                              | My applications                   |
+| Rejected, wrong business ID     | Typo Trading Oy                                            | `laptop-005`                            | My applications                   |
+| Waiting for manual review       | Northfina admin, or Haapala                                | `farm-003`                              | Manual review, or My applications |
+| Approved, ready to sign         | Lena Tamm                                                  | `ebike-006`                             | My applications                   |
+| Waiting for a company signature | Anna Norvi                                                 | `laptop-010`                            | `/en/account/applications`        |
+| Signed, crosses the VAT change  | Pekka Korhonen                                             | `ebike-005`                             | Contracts, Invoices               |
+| Held for someone                | Jonas Lind, or Dealer desk                                 | `ebike-002`                             | Catalogue, or Dealer dashboard    |
+| Re-listed used item             | Anyone                                                     | `ebike-011`                             | Catalogue                         |
+| Returned, waiting for a dealer  | Dealer desk                                                | 5 items                                 | Dealer dashboard                  |
+| Reserved, cannot be leased      | Anyone                                                     | `ebike-009`                             | Catalogue                         |
+| End-of-term choice              | Olavi Niemi, Ella Salmi, Kettu Koodi Oy, on 1 January 2027 | `laptop-002`, `ebike-012`, `laptop-009` | See [End of term](#end-of-term)   |
 
 ## The application steps
 
@@ -101,6 +101,8 @@ Use Aino's answers from card 1, then open the contract. You don't need to sign.
 | 15 Jan 2027 | €69.57 | €18.09 | €87.66 |
 
 **Expect:** the net rent stays the same, and a note under the January invoice says the total rose by €0.35 because VAT went from 25.5 % to 26 %.
+
+To see the same note on a signed contract, log in as Pekka Korhonen, click **My applications**, then **Invoices** in the sidebar.
 
 ### Card 4: Calendar traps
 
@@ -205,40 +207,29 @@ Log in as Lena Tamm, click **My applications**, then **Continue to contract** on
 2. Log in as anyone else. **Expect:** it shows as Reserved and can't be leased.
 3. Log in as Dealer desk. **Expect:** Held items says "Held for Jonas Lind". Click **Release**, and it is available to everyone.
 
+### Audit log
+
+Log in as Dealer desk or Northfina admin and click **Audit log**. Every change shows who made it, what it was and when, newest first. Customers see "Staff only". The times are real clock times, so they don't follow the demo date.
+
 ### End of term
 
-There is no screen for this yet, so it runs from the browser console. A contract can only end once, so run `npm run db:demo` again between outcomes.
+Three contracts reach their end on 1 January 2027, so you can try each choice without resetting. Any of them can make any choice.
 
 1. Log in as Northfina admin and set the date to **1 January 2027**. VAT is now 26 %.
-2. Log in as Olavi Niemi. Open `/api/contracts` to see `"end_choice": "open"` and a deadline of 8 January 2027.
-3. Open the browser console (F12) and paste this, choosing one outcome:
+2. Log in as the customer, click **My applications** in the header, then **Contracts** in the sidebar. The contract is under **End-of-term decisions**, with **Buy out**, **Return** and **Pass on** buttons.
 
-```js
-const { data } = await (await fetch('/api/contracts')).json();
-const outcome = { outcome: 'returned' };
-// or { outcome: 'bought_out' }
-// or { outcome: 'passed_on', passed_to: 'cust-wait-06' }
-const response = await fetch(`/api/contracts/${data[0].id}/end`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(outcome),
-});
-console.log(await response.json());
-```
+| Log in as      | Item         | Try     | Expect                                                                            |
+| -------------- | ------------ | ------- | --------------------------------------------------------------------------------- |
+| Olavi Niemi    | `laptop-002` | Buy out | The item is sold, and Invoices gains a €1,008.00 buyout                           |
+| Ella Salmi     | `ebike-012`  | Return  | The item appears in the Dealer dashboard under Returned items                     |
+| Kettu Koodi Oy | `laptop-009` | Pass on | Choose Noora Heikkinen. The item appears under both Returned items and Held items |
 
-| Outcome      | Expect                                                                                 |
-| ------------ | -------------------------------------------------------------------------------------- |
-| `returned`   | `laptop-002` appears in the Dealer dashboard under Returned items                      |
-| `bought_out` | The item is sold, and a €1,008.00 buyout invoice takes the contract total to €2,695.32 |
-| `passed_on`  | The item appears under both Returned items and Held items, held for Noora Heikkinen    |
+To finish a pass-on, log in as Dealer desk and re-list `laptop-009`. Noora then sees it as **Reserved for you**, and everyone else is refused.
 
-To finish a pass-on, log in as Dealer desk and re-list `laptop-002`. Noora then sees it as **Reserved for you**, and everyone else is refused.
-
-If nobody chooses within 7 days, the contract closes as returned by itself.
+Set the date past **8 January 2027** instead, and any contract nobody decided on closes as returned by itself. Moving the date back does not reopen it, so run `npm run db:demo` to start over.
 
 ## Not built yet
 
-- A screen to find a signed contract, its invoices and the end-of-term choice.
 - A header link for signatories.
 - Early exit (card 8).
 - Waiting-list matching and refurbishment costs (card 9).

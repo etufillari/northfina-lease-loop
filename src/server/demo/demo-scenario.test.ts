@@ -123,13 +123,16 @@ describe('seedDemoScenario', () => {
     expect(returned).toHaveLength(5);
   });
 
-  it('opens the end-of-term choice on 1 Jan 2027, with the new VAT rate', async () => {
-    expect((await contractOf('cust-olavi')).end_choice).toBe('not_due');
+  it.each(['cust-olavi', 'cust-wait-01', 'cust-kettukoodi'])(
+    'opens the end-of-term choice for %s on 1 Jan 2027',
+    async (customerId) => {
+      expect((await contractOf(customerId)).end_choice).toBe('not_due');
 
-    await setDemoDate(db, { date: '2027-01-01', actor: 'test' });
+      await setDemoDate(db, { date: '2027-01-01', actor: 'test' });
 
-    expect((await contractOf('cust-olavi')).end_choice).toBe('open');
-  });
+      expect((await contractOf(customerId)).end_choice).toBe('open');
+    }
+  );
 
   it('refuses to run twice', async () => {
     await expect(seedDemoScenario(db)).rejects.toThrow('empty database');

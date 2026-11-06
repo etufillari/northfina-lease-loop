@@ -36,7 +36,7 @@ export const CARD_ITEMS = [
 export const DEMO_GUIDE = [
   { state: 'Rejected, too young', login: 'Mikko', item: 'laptop-005' },
   { state: 'Rejected, cannot afford it', login: 'Sanna', item: 'farm-008' },
-  { state: 'Rejected, wrong business ID', login: 'the broken ID company', item: 'laptop-009' },
+  { state: 'Rejected, wrong business ID', login: 'Typo Trading Oy', item: 'laptop-005' },
   { state: 'Waiting for manual review', login: 'Admin (or Haapala)', item: 'farm-003' },
   { state: 'Approved, ready to sign', login: 'Lena', item: 'ebike-006' },
   { state: 'Waiting for a company signature', login: 'Anna Norvi', item: 'laptop-010' },
@@ -44,6 +44,8 @@ export const DEMO_GUIDE = [
   { state: 'Held for someone', login: 'Jonas Lind (or Dealer)', item: 'ebike-002' },
   { state: 'Re-listed used item', login: 'Anyone', item: 'ebike-011' },
   { state: 'End-of-term choice', login: 'Olavi, on 1 Jan 2027', item: 'laptop-002' },
+  { state: 'End-of-term choice', login: 'Ella, on 1 Jan 2027', item: 'ebike-012' },
+  { state: 'End-of-term choice', login: 'Kettu Koodi, on 1 Jan 2027', item: 'laptop-009' },
 ] as const;
 
 function companyAnswers(
@@ -144,9 +146,12 @@ export async function seedDemoScenario(db: PrismaClient): Promise<void> {
     if (!result.ok) throw new Error(`${customerId} signing ${assetId}: ${result.reason}`);
   }
 
-  // Reaches its end on 1 Jan 2027, the same day as the VAT change.
+  // All three reach their end on 1 Jan 2027, the same day as the VAT change. A contract can
+  // only end once, so there is one for each choice: buy, return and pass on.
   await setDate(FIRST_LEASE_DATE);
   await lease('cust-olavi', 'laptop-002', 12);
+  await lease('cust-wait-01', 'ebike-012', 12);
+  await lease('cust-kettukoodi', 'laptop-009', 12);
 
   await setDate(VAT_LEASE_DATE);
   await lease('cust-pekka', 'ebike-005');
@@ -154,7 +159,7 @@ export async function seedDemoScenario(db: PrismaClient): Promise<void> {
   await setDate(DEMO_DATE);
   await apply('cust-mikko', 'laptop-005', 'rejected');
   await apply('cust-sanna', 'farm-008', 'rejected');
-  await apply('cust-broken-id', 'laptop-009', 'rejected');
+  await apply('cust-broken-id', 'laptop-005', 'rejected');
   await apply('cust-haapala', 'farm-003', 'manual_review');
   await apply('cust-lena', 'ebike-006', 'approved');
   await apply('cust-norvi', 'laptop-010', 'approved');

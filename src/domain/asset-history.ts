@@ -3,8 +3,9 @@
 // those will come from contracts signed in the app.
 import type { Asset } from '@/data/schemas';
 
-/** Where the item is now: ready to lease, held for someone, or back and waiting for a check. */
-export type LoopStage = 'available' | 'reserved' | 'awaiting_refurbishment';
+/** Where the item is now: ready to lease, held for someone, back and waiting for a check, or sold
+ * to its last lessee (it has left the loop). */
+export type LoopStage = 'available' | 'reserved' | 'awaiting_refurbishment' | 'sold';
 
 export type AssetHistory = {
   /** Leases already completed. */
@@ -20,6 +21,7 @@ const stageByStatus: Record<Asset['status'], LoopStage> = {
   available: 'available',
   reserved: 'reserved',
   returned: 'awaiting_refurbishment',
+  sold: 'sold',
 };
 
 export function assetHistory(asset: Asset, isoDate: string): AssetHistory {

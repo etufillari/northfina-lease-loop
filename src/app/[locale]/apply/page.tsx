@@ -17,6 +17,8 @@ export default async function ApplicationPage({
   const query = await searchParams;
   const category = assetCategorySchema.safeParse(query.category).data;
   const financedAmountCents = parseCents(query.financedAmountCents);
+  const quoteId = typeof query.quoteId === 'string' ? query.quoteId : undefined;
+  const customerId = typeof query.customerId === 'string' ? query.customerId : undefined;
   const questions = await loadQuestions();
   const firstQuestion = questions.questions.find((question) => question.id === 'q_customer_type');
   if (!firstQuestion) throw new Error('Application question q_customer_type is missing');
@@ -41,6 +43,8 @@ export default async function ApplicationPage({
           financedAmountCents={financedAmountCents}
           contractStartDate={todayIso()}
           locale={locale}
+          quoteId={quoteId}
+          customerId={customerId}
         />
       ) : (
         <section className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-900 dark:bg-amber-950">

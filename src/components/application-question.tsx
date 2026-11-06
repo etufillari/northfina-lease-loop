@@ -23,6 +23,8 @@ type ApplicationQuestionProps = {
   financedAmountCents: number;
   contractStartDate: string;
   locale: Locale;
+  quoteId?: string;
+  customerId?: string;
 };
 
 export function ApplicationQuestion({
@@ -32,6 +34,8 @@ export function ApplicationQuestion({
   financedAmountCents,
   contractStartDate,
   locale,
+  quoteId,
+  customerId,
 }: ApplicationQuestionProps) {
   const [answers, setAnswers] = useState<ApplicationAnswers>({});
   const [currentQuestionId, setCurrentQuestionId] = useState(question.id);
@@ -134,7 +138,13 @@ export function ApplicationQuestion({
         )}
         {decision?.decision === 'approved' && (
           <Link
-            href={`/${locale}/contract`}
+            href={{
+              pathname: `/${locale}/contract`,
+              query: {
+                ...(quoteId ? { quoteId } : {}),
+                ...(customerId ? { customerId } : {}),
+              },
+            }}
             className="mt-6 inline-flex rounded-xl bg-emerald-700 px-5 py-3 font-medium text-white transition hover:bg-emerald-800"
           >
             {t('application.continueToContract')}

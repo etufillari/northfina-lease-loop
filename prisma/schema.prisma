@@ -55,6 +55,7 @@ model Application {
   created_at          DateTime @default(now())
   quote_date          String // YYYY-MM-DD the price was calculated on
   asset_id            String
+  customer_id         String? // data pack customer who applied; null for a guest
   customer_type       String // consumer | sole_trader | company
   applicant_name      String?
   term_months         Int
@@ -70,6 +71,7 @@ model Application {
   answers_json        String // JSON object: question id → answer
 
   @@index([asset_id])
+  @@index([customer_id])
 }
 
 // A signed lease contract. Every price field is COPIED from the approved application at
@@ -80,6 +82,7 @@ model Contract {
   created_at         DateTime @default(now())
   application_id     String   @unique
   asset_id           String
+  customer_id        String? // copied from the application; null for a guest
   signed_date        String // YYYY-MM-DD
   signer_name        String
   customer_type      String
@@ -100,4 +103,5 @@ model Contract {
   returned_date      String? // YYYY-MM-DD the item came back at the end of the term
 
   @@index([asset_id])
+  @@index([customer_id])
 }

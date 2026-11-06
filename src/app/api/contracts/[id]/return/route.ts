@@ -4,7 +4,9 @@
 import { z } from 'zod';
 import { appDate } from '@/server/app-date';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { returnContract } from '@/server/contracts';
+import { getContract, returnContract } from '@/server/contracts';
+import { currentViewer } from '@/server/current-viewer';
+import { canSee } from '@/server/viewer';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ actor: z.string().trim().min(1).max(100) });
@@ -19,6 +21,10 @@ export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/return'>) => {
     const { id } = await params;
     const body = await readJsonBody(request, bodySchema);
+    const contract = await getContract(db, id);
+    if (contract && !canSee(await currentViewer(), contract.customerId)) {
+      return fail(403, 'NOT_YOURS', 'This contract belongs to another customer');
+    }
     const result = await returnContract(
       db,
       { contractId: id, actor: body.actor },

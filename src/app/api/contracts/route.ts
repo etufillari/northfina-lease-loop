@@ -3,7 +3,10 @@
 // src/server/contracts.ts.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { getApplication } from '@/server/applications';
 import { signContract } from '@/server/contracts';
+import { currentViewer } from '@/server/current-viewer';
+import { canSee } from '@/server/viewer';
 import { db } from '@/server/db';
 import { appDate } from '@/server/app-date';
 
@@ -24,6 +27,11 @@ const failures = {
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, signSchema);
+  // Only the customer who applied (or staff) may sign; see viewer.ts.
+  const application = await getApplication(db, body.applicationId);
+  if (application && !canSee(await currentViewer(), application.customerId)) {
+    return fail(403, 'NOT_YOURS', 'This application belongs to another customer');
+  }
   const result = await signContract(db, body, (await appDate()).today);
   if (!result.ok) {
     const [status, code, message] = failures[result.reason];

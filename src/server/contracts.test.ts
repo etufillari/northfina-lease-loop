@@ -225,3 +225,22 @@ describe('listContracts', () => {
     expect((await listContracts(db)).map((c) => c.assetId)).toEqual(['laptop-004']);
   });
 });
+
+describe('contracts per customer', () => {
+  it('carries the customer from the application to the contract, and filters by it', async () => {
+    const ainos = await apply({ customerId: 'cust-aino' }, '2026-11-05');
+    const guests = await apply({ assetId: 'laptop-001' }, '2026-11-05');
+    await signContract(db, { applicationId: ainos.id, signerName: 'Aino' }, '2026-11-05');
+    await signContract(db, { applicationId: guests.id, signerName: 'Guest' }, '2026-11-05');
+
+    const all = await listContracts(db);
+    expect(all.map((c) => c.customerId).sort()).toEqual(['cust-aino', null].sort());
+    expect((await listContracts(db, { customerId: 'cust-aino' })).map((c) => c.assetId)).toEqual([
+      'laptop-004',
+    ]);
+    expect((await listContracts(db, { customerId: null })).map((c) => c.assetId)).toEqual([
+      'laptop-001',
+    ]);
+    expect(await listContracts(db, { customerId: 'cust-mikko' })).toEqual([]);
+  });
+});

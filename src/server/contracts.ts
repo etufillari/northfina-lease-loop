@@ -13,6 +13,7 @@ export type Contract = {
   id: string;
   applicationId: string;
   assetId: string;
+  customerId: string | null;
   signedDate: string;
   signerName: string;
   customerType: string;
@@ -38,6 +39,7 @@ function toContract(row: ContractRow): Contract {
     id: row.id,
     applicationId: row.application_id,
     assetId: row.asset_id,
+    customerId: row.customer_id,
     signedDate: row.signed_date,
     signerName: row.signer_name,
     customerType: row.customer_type,
@@ -64,9 +66,17 @@ export async function getContract(db: PrismaClient, id: string): Promise<Contrac
   return row ? toContract(row) : null;
 }
 
-/** Every contract, newest first. */
-export async function listContracts(db: PrismaClient): Promise<Contract[]> {
-  const rows = await db.contract.findMany({ orderBy: { created_at: 'desc' } });
+/**
+ * Contracts, newest first: all of them, or only those of one customer (`null` = made by a guest).
+ */
+export async function listContracts(
+  db: PrismaClient,
+  filter: { customerId: string | null } | null = null
+): Promise<Contract[]> {
+  const rows = await db.contract.findMany({
+    where: filter ? { customer_id: filter.customerId } : {},
+    orderBy: { created_at: 'desc' },
+  });
   return rows.map(toContract);
 }
 
@@ -148,6 +158,7 @@ export async function signContract(
           id,
           application_id: application.id,
           asset_id: application.assetId,
+          customer_id: application.customerId,
           signed_date: todayIso,
           signer_name: input.signerName,
           customer_type: application.customerType,

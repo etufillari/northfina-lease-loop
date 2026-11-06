@@ -138,6 +138,7 @@ describe('previewContract', () => {
     expect(invoices).toHaveLength(36);
     expect(invoices.slice(0, 3).map((i) => i.total_cents)).toEqual([13_466, 13_466, 13_520]);
     expect(invoices[2]).toMatchObject({ vat_rate_percent: 26, kind: 'rent' });
+    expect(invoices[2]?.vat_change?.total_change_cents).toBe(54);
   });
 
   it('keeps the quoted price and compares it with the list on the day (card 2)', async () => {

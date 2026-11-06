@@ -1,5 +1,6 @@
 // GET /api/invoices[?contract_id=con-...&status=issued]
 // A customer gets the invoices on their own contracts. Staff get every invoice.
+// `vat_change` on a rent says what changed since the previous rent, or is null when nothing did.
 import { z } from 'zod';
 import { invoiceStatusSchema } from '@/data/lease-schemas';
 import { can } from '@/domain/identity';

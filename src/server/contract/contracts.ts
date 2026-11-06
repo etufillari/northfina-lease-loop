@@ -13,6 +13,7 @@ import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/c
 import { isHeldForSomeoneElse } from '@/domain/assets/status';
 import { choiceDeadline, endChoice, type EndChoice } from '@/domain/end-of-term/end-of-term';
 import { invoiceSchedule } from '@/domain/invoicing/invoicing';
+import { withVatChanges, type VatChange } from '@/domain/invoicing/vat-change';
 import { listPriceOn } from '@/domain/pricing/price-list';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { getApplication } from '../application/applications';
@@ -133,7 +134,10 @@ export type ContractPreview = Omit<
   /** `false` for a company applicant who may read the terms but not sign. */
   can_sign: boolean;
   signatory_email: string | null;
-  invoices: (Omit<Invoice, 'id' | 'contract_id'> & { vat_rate_percent: number })[];
+  invoices: (Omit<Invoice, 'id' | 'contract_id'> & {
+    vat_rate_percent: number;
+    vat_change: VatChange | null;
+  })[];
 };
 
 export type ContractPreviewResult =
@@ -194,7 +198,7 @@ export async function previewContract(
       list_price_on_signing_cents: listPriceOnSigning(contract, await loadPriceLists()),
       can_sign: problem === null,
       signatory_email: signatoryEmail(application),
-      invoices: invoices.map(({ contract_id: _contract, ...invoice }) => ({
+      invoices: withVatChanges(invoices).map(({ contract_id: _contract, ...invoice }) => ({
         ...invoice,
         vat_rate_percent: invoice.vat_rate_basis_points / 100,
       })),

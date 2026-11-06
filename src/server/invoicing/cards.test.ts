@@ -42,6 +42,19 @@ describe('card 3: tax is not price', () => {
       total_cents: 8_766,
     });
   });
+
+  it('explains why January costs more when the rent is locked', async () => {
+    const contract = await signOn('2026-09-15', 'ebike-001', 24);
+    const invoices = await listInvoices(db, { contractId: contract.id });
+
+    expect(invoices[3]?.vat_change).toBeNull();
+    expect(invoices[4]?.vat_change).toEqual({
+      from_percent: 25.5,
+      to_percent: 26,
+      net_change_cents: 0,
+      total_change_cents: 35,
+    });
+  });
 });
 
 describe('card 4: calendar traps', () => {

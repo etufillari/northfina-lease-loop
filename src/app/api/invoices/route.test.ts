@@ -40,6 +40,19 @@ async function list(query = '') {
 }
 
 describe('GET /api/invoices', () => {
+  it('tells the client why the January total changed (card 1)', async () => {
+    await actAs(AINO);
+    const { body } = await list(`?contract_id=${ainoContractId}`);
+
+    expect(body.data[1].vat_change).toBeNull();
+    expect(body.data[2].vat_change).toEqual({
+      from_percent: 25.5,
+      to_percent: 26,
+      net_change_cents: 0,
+      total_change_cents: 54,
+    });
+  });
+
   it('shows a customer the invoices on their own contract (card 1)', async () => {
     await actAs(AINO);
     const { status, body } = await list(`?contract_id=${ainoContractId}`);

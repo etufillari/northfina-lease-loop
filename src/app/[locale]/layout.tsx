@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
+import { companyModeActive } from '@/server/company-mode';
 import { getActiveUser, listActiveUserOptions } from '@/server/active-user';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -25,6 +26,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
     process.env.NODE_ENV === 'development'
       ? await Promise.all([listActiveUserOptions(), getActiveUser()])
       : null;
+  const companyMode = process.env.NODE_ENV === 'development' ? await companyModeActive() : false;
 
   return (
     <html lang={locale}>
@@ -36,7 +38,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
-        <DashboardSidebar locale={locale} activeUserData={activeUserData} />
+        <DashboardSidebar
+          locale={locale}
+          activeUserData={activeUserData}
+          companyMode={companyMode}
+        />
         <div className="min-w-0 flex-1 lg:ml-64">
           <header className="border-b border-slate-200 bg-[#f3f6fa]">
             <div className="flex items-center gap-4 px-4 py-4 sm:px-8">

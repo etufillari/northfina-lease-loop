@@ -28,51 +28,161 @@ function invalid(reason: string): never {
 export async function receiveReturn(
   db: PrismaClient,
   context: CommandContext,
-  input: { assetId: string; leaseId?: string; receivedOn: string }
+  input: { assetId?: string; leaseId?: string; returnId?: string; receivedOn: string }
 ) {
   const payload = z
-    .strictObject({ assetId: id, leaseId: id.optional(), receivedOn: z.iso.date() })
+    .strictObject({
+      assetId: id.optional(),
+      leaseId: id.optional(),
+      returnId: id.optional(),
+      receivedOn: z.iso.date(),
+    })
+    .refine((value) => Boolean(value.returnId) !== Boolean(value.assetId))
     .parse(input);
-  return auditedCommand(db, context, 'circular_receive', payload.assetId, payload, async (tx) => {
-    const asset = await tx.asset.findUnique({ where: { id: payload.assetId } });
-    if (!asset) throw new EngineServiceError('NOT_FOUND');
-    if (payload.leaseId) {
+  return auditedCommand(
+    db,
+    context,
+    'circular_receive',
+    payload.returnId ?? payload.assetId ?? '',
+    payload,
+    async (tx) => {
+      if (payload.returnId) {
+        const receipt = await tx.assetReturn.findUnique({ where: { id: payload.returnId } });
+        if (!receipt || receipt.status !== 'REQUESTED' || !receipt.leaseId)
+          invalid('return_request_not_receivable');
+        const lease = await tx.engineLease.findUnique({ where: { id: receipt.leaseId } });
+        const allocation = await tx.engineAllocation.findUnique({
+          where: { assetId: receipt.assetId },
+        });
+        if (
+          !lease ||
+          lease.assetId !== receipt.assetId ||
+          allocation?.leaseId !== lease.id ||
+          !['COMPLETED', 'TERMINATED'].includes(lease.status)
+        )
+          invalid('lease_not_completed_or_wrong_asset');
+        const end = lease.terminatedOn
+          ? { ok: true as const, value: lease.terminatedOn }
+          : anniversary(lease.startDate, lease.termMonths);
+        if (!end.ok || payload.receivedOn < end.value) invalid('return_before_lease_end');
+        const received = await tx.assetReturn.update({
+          where: { id: receipt.id },
+          data: { status: 'RECEIVED', receivedOn: payload.receivedOn },
+        });
+        await tx.asset.update({
+          where: { id: receipt.assetId },
+          data: { status: 'returned' },
+        });
+        return received;
+      }
+
+      const assetId = payload.assetId;
+      if (!assetId) invalid('asset_required');
+      const asset = await tx.asset.findUnique({ where: { id: assetId } });
+      if (!asset) throw new EngineServiceError('NOT_FOUND');
+      if (payload.leaseId) {
+        const lease = await tx.engineLease.findUnique({ where: { id: payload.leaseId } });
+        const allocation = await tx.engineAllocation.findUnique({ where: { assetId: asset.id } });
+        if (
+          !lease ||
+          lease.assetId !== asset.id ||
+          allocation?.leaseId !== lease.id ||
+          !['COMPLETED', 'TERMINATED'].includes(lease.status)
+        )
+          invalid('lease_not_completed_or_wrong_asset');
+        const end = lease.terminatedOn
+          ? { ok: true as const, value: lease.terminatedOn }
+          : anniversary(lease.startDate, lease.termMonths);
+        if (!end.ok || payload.receivedOn < end.value) invalid('return_before_lease_end');
+        if (await tx.assetReturn.findUnique({ where: { leaseId: lease.id } }))
+          invalid('already_returned');
+      } else if (
+        asset.status !== 'returned' ||
+        (await tx.assetReturn.findFirst({ where: { assetId: asset.id, status: { not: 'READY' } } }))
+      ) {
+        invalid('not_an_imported_return');
+      }
+      const receipt = await tx.assetReturn.create({
+        data: {
+          id: randomUUID(),
+          assetId: asset.id,
+          leaseId: payload.leaseId ?? null,
+          receivedOn: payload.receivedOn,
+        },
+      });
+      await tx.asset.update({
+        where: { id: asset.id },
+        data: { status: 'returned', previous_lives: { increment: payload.leaseId ? 1 : 0 } },
+      });
+      return receipt;
+    }
+  );
+}
+
+export async function requestReturn(
+  db: PrismaClient,
+  context: CommandContext,
+  input: { leaseId: string; customerId: string; usageValue: number; requestedOn: string }
+) {
+  const payload = z
+    .strictObject({
+      leaseId: id,
+      customerId: id,
+      usageValue: z.number().int().nonnegative().max(2_147_483_647),
+      requestedOn: z.iso.date(),
+    })
+    .parse(input);
+  return auditedCommand(
+    db,
+    context,
+    'circular_request_return',
+    payload.leaseId,
+    payload,
+    async (tx) => {
       const lease = await tx.engineLease.findUnique({ where: { id: payload.leaseId } });
-      const allocation = await tx.engineAllocation.findUnique({ where: { assetId: asset.id } });
-      if (
-        !lease ||
-        lease.assetId !== asset.id ||
-        allocation?.leaseId !== lease.id ||
-        !['COMPLETED', 'TERMINATED'].includes(lease.status)
-      )
-        invalid('lease_not_completed_or_wrong_asset');
+      if (!lease || lease.customerId !== payload.customerId)
+        throw new EngineServiceError('NOT_FOUND');
+      if (!['COMPLETED', 'TERMINATED'].includes(lease.status))
+        invalid('lease_not_ready_for_return');
+      const settlement = await tx.leaseSettlement.findUnique({
+        where: { leaseId: lease.id },
+      });
+      if (settlement?.option === 'BUYOUT') invalid('bought_out_asset_cannot_be_returned');
+      const asset = await tx.asset.findUnique({ where: { id: lease.assetId } });
+      if (!asset) throw new EngineServiceError('NOT_FOUND');
+      if (payload.usageValue < asset.usage_value) invalid('usage_cannot_decrease');
       const end = lease.terminatedOn
         ? { ok: true as const, value: lease.terminatedOn }
         : anniversary(lease.startDate, lease.termMonths);
-      if (!end.ok || payload.receivedOn < end.value) invalid('return_before_lease_end');
+      if (!end.ok || payload.requestedOn < end.value) invalid('return_before_lease_end');
       if (await tx.assetReturn.findUnique({ where: { leaseId: lease.id } }))
         invalid('already_returned');
-    } else {
-      if (
-        asset.status !== 'returned' ||
-        (await tx.assetReturn.findFirst({ where: { assetId: asset.id, status: { not: 'READY' } } }))
-      )
-        invalid('not_an_imported_return');
+      const allocation = await tx.engineAllocation.findUnique({ where: { assetId: asset.id } });
+      if (allocation?.leaseId !== lease.id) invalid('allocation_missing_or_wrong_life');
+      const receipt = await tx.assetReturn.create({
+        data: {
+          id: randomUUID(),
+          assetId: asset.id,
+          leaseId: lease.id,
+          requestedOn: payload.requestedOn,
+          receivedOn: null,
+          usageValue: payload.usageValue,
+          status: 'REQUESTED',
+        },
+      });
+      await tx.asset.update({
+        where: { id: asset.id },
+        data: {
+          status: 'returned',
+          usage_value: payload.usageValue,
+          previous_lives: { increment: 1 },
+          reserved_by: null,
+          reserved_until: null,
+        },
+      });
+      return receipt;
     }
-    const receipt = await tx.assetReturn.create({
-      data: {
-        id: randomUUID(),
-        assetId: asset.id,
-        leaseId: payload.leaseId ?? null,
-        receivedOn: payload.receivedOn,
-      },
-    });
-    await tx.asset.update({
-      where: { id: asset.id },
-      data: { status: 'returned', previous_lives: { increment: payload.leaseId ? 1 : 0 } },
-    });
-    return receipt;
-  });
+  );
 }
 
 export async function inspectReturn(
@@ -140,6 +250,7 @@ export async function finishRefurbishment(
     if (
       receipt.status !== 'INSPECTED' ||
       !receipt.planJson ||
+      !receipt.receivedOn ||
       payload.completedOn < receipt.receivedOn
     )
       invalid('invalid_refurbishment_state_or_date');
@@ -177,33 +288,101 @@ export async function finishRefurbishment(
     await tx.asset.update({
       where: { id: asset.id },
       data: {
-        status: financeable ? 'available' : 'returned',
+        status: 'returned',
         condition: plan.resultingCondition,
         usage_value: plan.resultingUsage,
         reserved_by: null,
         reserved_until: null,
       },
     });
-    const offer = financeable
-      ? await tx.circularOffer.create({
-          data: {
-            id: randomUUID(),
-            assetId: asset.id,
-            returnId: receipt.id,
-            netListCents: offerNet,
-            publishedOn: payload.completedOn,
-          },
-        })
-      : null;
     const completed = await tx.assetReturn.update({
       where: { id: receipt.id },
       data: {
-        status: financeable ? 'READY' : 'REVIEW_REQUIRED',
+        status: financeable ? 'PENDING_APPROVAL' : 'REVIEW_REQUIRED',
         completedOn: payload.completedOn,
         costCents: plan.costCents,
         offerNetCents: offerNet,
       },
     });
-    return { receipt: completed, offer };
+    return { receipt: completed, offer: null };
   });
+}
+
+export async function reviewRefurbishment(
+  db: PrismaClient,
+  context: CommandContext,
+  input: {
+    returnId: string;
+    decision: 'APPROVE' | 'REJECT';
+    reviewedOn: string;
+    reason?: string;
+  }
+) {
+  const payload = z
+    .strictObject({
+      returnId: id,
+      decision: z.enum(['APPROVE', 'REJECT']),
+      reviewedOn: z.iso.date(),
+      reason: z.string().trim().min(1).max(500).optional(),
+    })
+    .refine((value) => value.decision !== 'REJECT' || Boolean(value.reason))
+    .parse(input);
+  return auditedCommand(
+    db,
+    context,
+    'circular_review_return',
+    payload.returnId,
+    payload,
+    async (tx) => {
+      const receipt = await tx.assetReturn.findUnique({ where: { id: payload.returnId } });
+      if (
+        !receipt ||
+        receipt.status !== 'PENDING_APPROVAL' ||
+        receipt.offerNetCents === null ||
+        !receipt.completedOn ||
+        payload.reviewedOn < receipt.completedOn
+      )
+        invalid('return_not_awaiting_approval');
+      const asset = await tx.asset.findUnique({ where: { id: receipt.assetId } });
+      if (!asset || asset.status !== 'returned') invalid('asset_not_awaiting_approval');
+      const existingOffer = await tx.circularOffer.findUnique({
+        where: { returnId: receipt.id },
+      });
+      if (existingOffer) invalid('offer_already_published');
+      if (payload.decision === 'REJECT') {
+        const rejected = await tx.assetReturn.update({
+          where: { id: receipt.id },
+          data: {
+            status: 'REJECTED',
+            reviewedOn: payload.reviewedOn,
+            reviewReason: payload.reason,
+          },
+        });
+        return { receipt: rejected, offer: null };
+      }
+      const offer = await tx.circularOffer.create({
+        data: {
+          id: randomUUID(),
+          assetId: asset.id,
+          returnId: receipt.id,
+          netListCents: receipt.offerNetCents,
+          publishedOn: payload.reviewedOn,
+        },
+      });
+      const approved = await tx.assetReturn.update({
+        where: { id: receipt.id },
+        data: { status: 'READY', reviewedOn: payload.reviewedOn, reviewReason: null },
+      });
+      await tx.asset.update({
+        where: { id: asset.id },
+        data: { status: 'available', reserved_by: null, reserved_until: null },
+      });
+      return { receipt: approved, offer };
+    },
+    {
+      decision: payload.decision,
+      reviewedOn: payload.reviewedOn,
+      ...(payload.reason ? { reason: payload.reason } : {}),
+    }
+  );
 }

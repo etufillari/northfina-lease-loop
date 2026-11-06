@@ -6,21 +6,36 @@ import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { LeaseEngineActions } from './lease-engine-actions';
+import { ReturnRequest } from './return-request';
+import { usageUnitSchema } from '@/data/schemas';
 
 export async function LeaseEnginePanel({
   contractId,
   leaseId,
+  status,
   locale,
 }: {
   contractId: string;
   leaseId: string | null;
+  status: string;
   locale: Locale;
 }) {
   const t = getT(locale);
-  const invoices = leaseId ? await listLeaseInvoices(db, leaseId) : [];
-  const schedule = leaseId ? await getLeaseSchedule(db, leaseId) : null;
-  const contract = await db.contract.findUnique({ where: { id: contractId } });
-  const state = leaseId ? await db.engineLease.findUnique({ where: { id: leaseId } }) : null;
+  const [invoices, schedule, settlement, contract, state, returnRecord] = await Promise.all([
+    leaseId ? listLeaseInvoices(db, leaseId) : [],
+    leaseId ? getLeaseSchedule(db, leaseId) : null,
+    leaseId ? db.leaseSettlement.findUnique({ where: { leaseId } }) : null,
+    db.contract.findUnique({ where: { id: contractId } }),
+    leaseId ? db.engineLease.findUnique({ where: { id: leaseId } }) : null,
+    leaseId ? db.assetReturn.findUnique({ where: { leaseId } }) : null,
+  ]);
+  const returnAsset = state ? await db.asset.findUnique({ where: { id: state.assetId } }) : null;
+  const returnUsageUnit = returnAsset ? usageUnitSchema.parse(returnAsset.usage_unit) : null;
+  const usageUnitLabels = {
+    km: t('usage.unit.km'),
+    battery_cycles: t('usage.unit.battery_cycles'),
+    engine_hours: t('usage.unit.engine_hours'),
+  };
   const periods = (schedule?.periods ?? [])
     .filter((period) => !state?.terminatedOn || period.startDate < state.terminatedOn)
     .filter((period) => !invoices.some((invoice) => invoice.periodIndex === period.index))
@@ -75,6 +90,36 @@ export async function LeaseEnginePanel({
           }}
         />
       </div>
+      {settlement && (
+        <p className="mt-3">
+          {t('end.recorded')}: {settlement.option} ·{' '}
+          {formatEuro(settlement.grossCents, intlLocale[locale])} · {settlement.effectiveOn}
+        </p>
+      )}
+      {leaseId &&
+        ['COMPLETED', 'TERMINATED'].includes(status) &&
+        settlement?.option !== 'BUYOUT' &&
+        returnAsset && (
+          <ReturnRequest
+            leaseId={leaseId}
+            usageValue={returnRecord?.usageValue ?? returnAsset.usage_value}
+            usageUnit={returnAsset.usage_unit}
+            status={returnRecord?.status ?? null}
+            labels={{
+              title: t('return.title'),
+              usage: t('return.usage'),
+              submit: t('return.submit'),
+              pending: t('return.pending'),
+              processing: t('return.processing'),
+              ready: t('return.ready'),
+              rejected: t('return.rejected'),
+              error: t('return.error'),
+              busy: t('return.busy'),
+              unit: returnUsageUnit ? usageUnitLabels[returnUsageUnit] : '',
+            }}
+          />
+        )}
+      {status === 'COMPLETED' && <p className="mt-4 font-medium">{t('engine.awaitingReturn')}</p>}
     </section>
   );
 }

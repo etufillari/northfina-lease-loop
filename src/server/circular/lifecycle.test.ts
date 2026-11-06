@@ -7,9 +7,16 @@ import { issueInvoice } from '@/server/lease-engine/invoices';
 import { completeLease } from '@/server/lease-engine/leases';
 import * as audit from '@/server/audit';
 import { createTestDb } from '../../../tests/helpers/test-db';
-import { receiveReturn, inspectReturn, finishRefurbishment } from './service';
+import {
+  receiveReturn,
+  inspectReturn,
+  finishRefurbishment,
+  requestReturn,
+  reviewRefurbishment,
+} from './service';
 import { circularDashboard } from './queries';
 import type { WorkPlan } from '@/domain/circular/refurbishment';
+import { latestLifecycleDate } from '@/domain/circular/workflow-date';
 let database: Awaited<ReturnType<typeof createTestDb>>;
 const ctx = (key: string) => ({ actor: 'demo-operator', idempotencyKey: key });
 beforeAll(async () => {
@@ -35,7 +42,13 @@ beforeEach(async () => {
   await db.asset.deleteMany();
   await db.asset.createMany({ data: (await loadAssets()).map(toAssetRowData) });
 });
-async function signed(assetId: string, customerId: string, date: string, suffix: string) {
+async function signed(
+  assetId: string,
+  customerId: string,
+  date: string,
+  suffix: string,
+  termMonths: 12 | 24 | 36 | 48 = 36
+) {
   const db = database.db;
   const app = await submitApplication(
     db,
@@ -44,7 +57,7 @@ async function signed(assetId: string, customerId: string, date: string, suffix:
       assetId,
       customerId,
       startDate: date,
-      termMonths: 36,
+      termMonths,
       downPaymentCents: 0,
       offerExpiresOn: date,
       actor: customerId,
@@ -69,13 +82,222 @@ async function restore(returnId: string, condition: string, usageValue: number, 
     usageValue,
   });
   const plan: WorkPlan = JSON.parse(inspected.planJson ?? '{}');
-  return finishRefurbishment(database.db, ctx('finish:' + returnId), {
+  const finished = await finishRefurbishment(database.db, ctx('finish:' + returnId), {
     returnId,
     completedWorkIds: plan.steps.map((s) => s.id),
     completedOn: date,
   });
+  return finished.receipt.status === 'PENDING_APPROVAL'
+    ? reviewRefurbishment(database.db, ctx('approve:' + returnId), {
+        returnId,
+        decision: 'APPROVE',
+        reviewedOn: date,
+      })
+    : finished;
 }
 describe('complete persisted circular lease lifecycle', () => {
+  it('completes future-dated demo refurbishment and returns the asset to the catalogue', async () => {
+    const db = database.db;
+    const lease = await signed('ebike-003', 'cust-aino', '2026-11-06', 'future-demo', 24);
+    await completeLease(db, ctx('future-demo-complete'), lease.id, '2028-11-06', 1);
+    const requested = await requestReturn(db, ctx('future-demo-request'), {
+      leaseId: lease.id,
+      customerId: 'cust-aino',
+      usageValue: 50,
+      requestedOn: '2028-11-06',
+    });
+    const received = await receiveReturn(db, ctx('future-demo-receive'), {
+      returnId: requested.id,
+      receivedOn: latestLifecycleDate('2026-11-06', requested.requestedOn),
+    });
+    const inspected = await inspectReturn(db, ctx('future-demo-inspect'), {
+      returnId: received.id,
+      condition: 'good',
+      usageValue: 50,
+    });
+    const plan: WorkPlan = JSON.parse(inspected.planJson ?? '{}');
+    const finished = await finishRefurbishment(db, ctx('future-demo-finish'), {
+      returnId: received.id,
+      completedWorkIds: plan.steps.map((step) => step.id),
+      completedOn: latestLifecycleDate('2026-11-06', received.receivedOn),
+    });
+
+    expect(finished.receipt.status).toBe('PENDING_APPROVAL');
+    const approved = await reviewRefurbishment(db, ctx('future-demo-approve'), {
+      returnId: received.id,
+      decision: 'APPROVE',
+      reviewedOn: latestLifecycleDate('2026-11-06', finished.receipt.completedOn),
+    });
+
+    expect(approved.receipt.status).toBe('READY');
+    expect((await db.asset.findUniqueOrThrow({ where: { id: lease.assetId } })).status).toBe(
+      'available'
+    );
+    const relistedLease = await signed(
+      lease.assetId,
+      'cust-lena',
+      '2028-11-06',
+      'future-demo-relist'
+    );
+    expect(relistedLease.assetId).toBe(lease.assetId);
+  });
+
+  it('keeps a customer-returned asset unavailable until company approval', async () => {
+    const db = database.db;
+    const first = await signed('ebike-003', 'cust-aino', '2026-11-05', 'customer-return');
+    await completeLease(db, ctx('complete-customer-return'), first.id, '2029-11-05', 1);
+    const livesBeforeReturn = (await db.asset.findUniqueOrThrow({ where: { id: first.assetId } }))
+      .previous_lives;
+
+    const requested = await requestReturn(
+      db,
+      {
+        actor: 'cust-aino',
+        idempotencyKey: 'request-return',
+      },
+      {
+        leaseId: first.id,
+        customerId: 'cust-aino',
+        usageValue: 18400,
+        requestedOn: '2029-11-05',
+      }
+    );
+
+    expect(requested.status).toBe('REQUESTED');
+    expect(requested.receivedOn).toBeNull();
+    expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).usage_value).toBe(
+      18400
+    );
+    expect(
+      (await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).previous_lives
+    ).toBe(livesBeforeReturn + 1);
+    expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).status).toBe(
+      'returned'
+    );
+    await expect(
+      submitApplication(
+        db,
+        {
+          applicationId: 'blocked-before-approval',
+          assetId: first.assetId,
+          customerId: 'cust-lena',
+          startDate: '2029-11-05',
+          termMonths: 36,
+          downPaymentCents: 0,
+          offerExpiresOn: '2029-11-05',
+          actor: 'cust-lena',
+        },
+        new Date('2029-11-05T12:00:00.000Z')
+      )
+    ).resolves.toMatchObject({ ok: false, reason: 'asset_unavailable' });
+
+    const received = await receiveReturn(db, ctx('physical-receipt'), {
+      returnId: requested.id,
+      receivedOn: '2029-11-06',
+    });
+    expect(
+      (await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).previous_lives
+    ).toBe(livesBeforeReturn + 1);
+    const inspected = await inspectReturn(db, ctx('customer-inspection'), {
+      returnId: received.id,
+      condition: 'fair',
+      usageValue: 18400,
+    });
+    const plan: WorkPlan = JSON.parse(inspected.planJson ?? '{}');
+    const finished = await finishRefurbishment(db, ctx('customer-finish'), {
+      returnId: received.id,
+      completedWorkIds: plan.steps.map((step) => step.id),
+      completedOn: '2029-11-10',
+    });
+
+    expect(finished.receipt.status).toBe('PENDING_APPROVAL');
+    expect(finished.offer).toBeNull();
+    expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).status).toBe(
+      'returned'
+    );
+    await expect(
+      submitApplication(
+        db,
+        {
+          applicationId: 'blocked-pending-approval',
+          assetId: first.assetId,
+          customerId: 'cust-lena',
+          startDate: '2029-11-10',
+          termMonths: 36,
+          downPaymentCents: 0,
+          offerExpiresOn: '2029-11-10',
+          actor: 'cust-lena',
+        },
+        new Date('2029-11-10T12:00:00.000Z')
+      )
+    ).resolves.toMatchObject({ ok: false, reason: 'asset_unavailable' });
+
+    const approved = await reviewRefurbishment(db, ctx('approve-customer-return'), {
+      returnId: received.id,
+      decision: 'APPROVE',
+      reviewedOn: '2029-11-11',
+    });
+    expect(approved.receipt.status).toBe('READY');
+    expect(approved.offer?.returnId).toBe(received.id);
+    expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).status).toBe(
+      'available'
+    );
+    const second = await signed(first.assetId, 'cust-lena', '2029-11-11', 'after-approval');
+    expect(second.assetId).toBe(first.assetId);
+    const approvalAudit = await db.auditLog.findFirstOrThrow({
+      where: { entity_id: received.id, action: 'engine.circular_review_return_command' },
+    });
+    expect(approvalAudit.actor).toBe('demo-operator');
+    expect(JSON.parse(approvalAudit.details_json ?? '{}')).toMatchObject({
+      decision: 'APPROVE',
+      reviewedOn: '2029-11-11',
+    });
+  });
+
+  it('keeps a rejected refurbishment unavailable and records the company decision', async () => {
+    const db = database.db;
+    const lease = await signed('ebike-003', 'cust-aino', '2026-11-05', 'reject-return');
+    await completeLease(db, ctx('reject-complete'), lease.id, '2029-11-05', 1);
+    const receipt = await receiveReturn(db, ctx('reject-receive'), {
+      assetId: lease.assetId,
+      leaseId: lease.id,
+      receivedOn: '2029-11-05',
+    });
+    const inspected = await inspectReturn(db, ctx('reject-inspect'), {
+      returnId: receipt.id,
+      condition: 'good',
+      usageValue: 18400,
+    });
+    const plan: WorkPlan = JSON.parse(inspected.planJson ?? '{}');
+    await finishRefurbishment(db, ctx('reject-finish'), {
+      returnId: receipt.id,
+      completedWorkIds: plan.steps.map((step) => step.id),
+      completedOn: '2029-11-06',
+    });
+
+    const rejected = await reviewRefurbishment(db, ctx('reject-review'), {
+      returnId: receipt.id,
+      decision: 'REJECT',
+      reason: 'Safety documentation is incomplete',
+      reviewedOn: '2029-11-07',
+    });
+
+    expect(rejected.receipt.status).toBe('REJECTED');
+    expect(rejected.receipt.reviewReason).toBe('Safety documentation is incomplete');
+    expect(rejected.offer).toBeNull();
+    expect(await db.circularOffer.count()).toBe(0);
+    expect((await db.asset.findUniqueOrThrow({ where: { id: lease.assetId } })).status).toBe(
+      'returned'
+    );
+    const rejectionAudit = await db.auditLog.findFirstOrThrow({
+      where: { entity_id: receipt.id, action: 'engine.circular_review_return_command' },
+    });
+    expect(JSON.parse(rejectionAudit.details_json ?? '{}')).toMatchObject({
+      decision: 'REJECT',
+      reason: 'Safety documentation is incomplete',
+    });
+  });
+
   it('saves completed work on a low-value imported laptop without publishing a lease offer', async () => {
     const db = database.db;
     const receipt = await receiveReturn(db, ctx('low-receive'), {
@@ -185,10 +407,17 @@ describe('complete persisted circular lease lifecycle', () => {
     };
     const ready = await finishRefurbishment(db, ctx('ready'), finish);
     expect(await finishRefurbishment(db, ctx('ready'), finish)).toEqual(ready);
+    expect(ready.receipt.status).toBe('PENDING_APPROVAL');
+    expect(ready.offer).toBeNull();
     expect(await db.engineAllocation.count()).toBe(0);
     expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).status).toBe(
-      'available'
+      'returned'
     );
+    const approved = await reviewRefurbishment(db, ctx('approve-ready'), {
+      returnId: receipt.id,
+      decision: 'APPROVE',
+      reviewedOn: '2029-11-05',
+    });
     const second = await signed(first.assetId, 'cust-lena', '2029-11-05', 'second');
     expect(second.id).not.toBe(first.id);
     expect(second.contractId).not.toBe(first.contractId);
@@ -196,8 +425,8 @@ describe('complete persisted circular lease lifecycle', () => {
     const secondContract = await db.contract.findUniqueOrThrow({
       where: { id: second.contractId },
     });
-    expect(secondContract.circular_offer_id).toBe(ready.offer?.id);
-    expect(secondContract.financed_cents).toBe(ready.offer?.netListCents);
+    expect(secondContract.circular_offer_id).toBe(approved.offer?.id);
+    expect(secondContract.financed_cents).toBe(approved.offer?.netListCents);
     expect(await db.engineAllocation.count()).toBe(1);
     const secondInvoice = await issueInvoice(
       db,

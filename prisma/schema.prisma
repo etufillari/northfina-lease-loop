@@ -166,7 +166,8 @@ model AssetReturn {
   id String @id
   assetId String
   leaseId String? @unique
-  receivedOn String
+  requestedOn String?
+  receivedOn String?
   status String @default("RECEIVED")
   condition String?
   usageValue Int?
@@ -174,6 +175,8 @@ model AssetReturn {
   completedOn String?
   costCents Int?
   offerNetCents Int?
+  reviewedOn String?
+  reviewReason String?
   @@index([assetId])
 }
 

@@ -137,6 +137,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                     <LeaseEnginePanel
                       contractId={lease.terms.contractId}
                       leaseId={lease.leaseId}
+                      status={lease.status}
                       locale={locale}
                     />
                   </div>

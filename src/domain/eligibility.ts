@@ -21,7 +21,12 @@ export type EligibilityInput = {
   monthlyNetIncomeCents: number | null;
   /** From q_pep; null when not asked (deals under €10,000). */
   pepAnswer: 'yes' | 'no' | null;
-  startDate: string;
+  /**
+   * The day the customer applies. The lease is signed on it or later, and nobody signs a
+   * lease while under 18 (the event hosts, 6 Nov) — so age is checked on this day, not on a
+   * later start date.
+   */
+  applicationDate: string;
   financedCents: number;
   termMonths: number;
   monthlyRentWithVatCents: number;
@@ -54,11 +59,12 @@ const MIN_AGE = 18;
 export function evaluateEligibility(input: EligibilityInput): EligibilityDecision {
   const reasons: EligibilityReason[] = [];
 
-  // min_age: consumers and sole traders, 18 or older on the contract start date.
+  // min_age: consumers and sole traders, 18 or older when they apply (and so when they sign).
+  // A start date after the 18th birthday does not help: they would sign as a minor.
   if (input.customerType === 'company' || input.birthDate === null) {
     reasons.push({ rule: 'min_age', outcome: 'not_applicable' });
   } else {
-    const age = yearsOld(input.birthDate, input.startDate);
+    const age = yearsOld(input.birthDate, input.applicationDate);
     reasons.push(
       age >= MIN_AGE
         ? { rule: 'min_age', outcome: 'passed', params: { age } }

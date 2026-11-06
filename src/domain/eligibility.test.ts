@@ -18,7 +18,7 @@ const aino = (): EligibilityInput => ({
   businessId: null,
   monthlyNetIncomeCents: 320_000,
   pepAnswer: null,
-  startDate: '2026-11-05',
+  applicationDate: '2026-11-05',
   financedCents: 389_000,
   termMonths: 36,
   monthlyRentWithVatCents: 13_466,
@@ -43,12 +43,33 @@ describe('evaluateEligibility', () => {
     const result = evaluateEligibility({
       ...aino(),
       birthDate: '2009-03-10',
-      startDate: '2026-11-20',
+      applicationDate: '2026-11-20',
       monthlyNetIncomeCents: null,
     });
     expect(result.decision).toBe('declined');
     const minAge = result.reasons.find((r) => r.rule === 'min_age');
     expect(minAge).toMatchObject({ outcome: 'failed', params: { eligibleFrom: '2027-03-10' } });
+  });
+
+  it('declines someone who would be 18 by the start date but is 17 on the day they apply', () => {
+    // Turns 18 on 20 Jan 2027; a lease starting 25 Jan would still be signed by a minor.
+    const result = evaluateEligibility({
+      ...aino(),
+      birthDate: '2009-01-20',
+      applicationDate: '2026-11-05',
+    });
+    expect(result.decision).toBe('declined');
+    expect(result.reasons.find((r) => r.rule === 'min_age')).toMatchObject({
+      outcome: 'failed',
+      params: { age: 17, eligibleFrom: '2027-01-20' },
+    });
+    // On the birthday itself they may apply.
+    const onTheDay = evaluateEligibility({
+      ...aino(),
+      birthDate: '2009-01-20',
+      applicationDate: '2027-01-20',
+    });
+    expect(onTheDay.reasons.find((r) => r.rule === 'min_age')?.outcome).toBe('passed');
   });
 
   it('scenario card 7: a PEP answer sends Haapala to manual review, never auto-approval', () => {
@@ -61,7 +82,7 @@ describe('evaluateEligibility', () => {
       businessId: haapala.business_id,
       monthlyNetIncomeCents: null,
       pepAnswer: 'yes',
-      startDate: '2026-11-10',
+      applicationDate: '2026-11-10',
       financedCents: 12_500_000,
       termMonths: 48,
       monthlyRentWithVatCents: 330_000,

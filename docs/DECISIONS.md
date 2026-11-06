@@ -53,8 +53,12 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   line (whose offer can lapse in turn), an unused nomination ends. In the demo the clock is
   the time-travel bar, so moving it forward runs that job for each day on which something
   lapses, in date order, logged as `system`. Staff can still release by hand.
-- **Start date:** chosen by the customer, at most 3 months ahead. The 18-year age rule is
-  checked on the start date; a decline says when the applicant can come back.
+- **Start date:** chosen by the customer, at most 3 months ahead.
+- **Age 18 when applying and signing** (the event hosts, 6 Nov): the data pack's rule says
+  "on the contract start date", but nobody may sign a lease as a minor, so the age is checked
+  on the day the customer applies (signing is on that day or later). A start date after the
+  18th birthday does not help. The form stops at the birth date and says the day they can
+  come back (their 18th birthday; 29 February birthdays → 1 March in a common year).
 - **Question flow:** a pure engine evaluates `ask_when` from `data/questions.json` — nothing
   hard-coded. One question at a time. Changing an earlier answer deletes answers whose
   questions no longer apply; changing the deal re-evaluates the thresholds and asks what
@@ -71,7 +75,8 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 - **Fleets:** assets are unique physical items, so a fleet is a group of DISTINCT assets of
   one category, picked on the fleet page and priced as ONE contract banded on the total
   (that total is what band and question thresholds see). Duplicates and mixed categories
-  are refused.
+  are refused. Card 6's "4 × ebike-004" is a typo in the challenge: the event hosts confirmed
+  it means one ebike-004 (6 Nov), and that is what the scenario test runs.
 - **Profiles:** persona picker in the header (data customers + staff + "new customer"); the
   selected id is the audit actor. Answers can be saved as defaults; prefill is confirmed in
   groups — basics in one batch, income/employment and PEP each separately.

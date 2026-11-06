@@ -457,8 +457,6 @@
   "demo.plusDay": "+1 päivä",
   "demo.plusWeek": "+1 viikko",
   "demo.plusMonth": "+1 kuukausi",
-  "demo.jumpTo": "Siirry päivään",
-  "demo.go": "Siirry",
   "demo.reset": "Nollaa demo",
   "demo.confirmReset": "Nollataanko demo? Kaikki hakemukset, sopimukset, laskut ja jonomuutokset poistetaan, aineisto ladataan uudelleen ja päivä palaa 1.1.2026.",
   "waitlist.join.budget": "Kuukausibudjetti (€, ilman alv:tä)",

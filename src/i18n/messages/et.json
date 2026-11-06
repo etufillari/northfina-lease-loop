@@ -28,7 +28,6 @@
   "asset.modelYear": "Mudeliaasta",
   "asset.usage": "Kogukasutus",
   "asset.previousLives": "Varasemad liisinguperioodid",
-  "asset.listPrice": "Hinnakirja hind käibemaksuta",
   "asset.priceListVersion": "Hinnakiri {version}",
   "asset.noPrice": "Sellel kuupäeval hind puudub",
   "usage.km": "{value} km",
@@ -393,7 +392,6 @@
   "me.action.view": "Vaata taotlust",
   "catalogue.pickCategory": "Vali kategooria",
   "catalogue.termLabel": "Rendiperiood:",
-  "catalogue.noDownPayment": "sissemakseta",
   "catalogue.filter.monthlyMin": "Kuumakse alates (€)",
   "catalogue.filter.monthlyMax": "Kuumakse kuni (€)",
   "catalogue.filter.condition": "Seisukord vähemalt",
@@ -511,5 +509,9 @@
   "date.invalid": "Kirjuta kuupäev kujul pp.kk.aaaa, nt 06.11.2026",
   "date.between": "Vali kuupäev vahemikus {min}–{max}",
   "date.from": "Vali {min} või hiljem",
-  "date.until": "Vali {max} või varem"
+  "date.until": "Vali {max} või varem",
+  "catalogue.vat.label": "Hinnad",
+  "catalogue.vat.incl": "Koos käibemaksuga",
+  "catalogue.vat.excl": "Ilma käibemaksuta",
+  "catalogue.listPrice": "Hinnakirja hind"
 }

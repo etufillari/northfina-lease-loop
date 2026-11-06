@@ -11,7 +11,6 @@
   "catalogue.itemCount": "{count} items",
   "catalogue.pickCategory": "Choose a category",
   "catalogue.termLabel": "Lease term:",
-  "catalogue.noDownPayment": "no down payment",
   "catalogue.filter.monthlyMin": "Monthly payment from (€)",
   "catalogue.filter.monthlyMax": "Monthly payment up to (€)",
   "catalogue.filter.condition": "Condition at least",
@@ -40,7 +39,6 @@
   "asset.modelYear": "Model year",
   "asset.usage": "Lifetime usage",
   "asset.previousLives": "Previous leases",
-  "asset.listPrice": "List price excl. VAT",
   "asset.priceListVersion": "Price list {version}",
   "asset.noPrice": "No price on this date",
   "usage.km": "{value} km",
@@ -511,5 +509,9 @@
   "date.invalid": "Write the date as dd.mm.yyyy, e.g. 06.11.2026",
   "date.between": "Choose a date from {min} to {max}",
   "date.from": "Choose {min} or later",
-  "date.until": "Choose {max} or earlier"
+  "date.until": "Choose {max} or earlier",
+  "catalogue.vat.label": "Prices",
+  "catalogue.vat.incl": "With VAT",
+  "catalogue.vat.excl": "Without VAT",
+  "catalogue.listPrice": "List price"
 }

@@ -94,7 +94,14 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
       return {
         asset,
         imageUrl: images[asset.id] ?? null,
-        listPriceCents: priceCents,
+        listPrice:
+          priceCents === null
+            ? null
+            : {
+                netCents: priceCents,
+                // Same half-up VAT rounding as every invoice (src/domain/vat.ts).
+                grossCents: vat.ok ? grossCents(priceCents, vat.rateBasisPoints) : null,
+              },
         secondLife: reprice !== undefined,
         monthly,
       };

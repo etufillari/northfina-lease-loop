@@ -28,7 +28,6 @@
   "asset.modelYear": "Vuosimalli",
   "asset.usage": "Käyttö yhteensä",
   "asset.previousLives": "Aiemmat vuokrakaudet",
-  "asset.listPrice": "Listahinta alv 0 %",
   "asset.priceListVersion": "Hinnasto {version}",
   "asset.noPrice": "Ei hintaa tälle päivälle",
   "usage.km": "{value} km",
@@ -393,7 +392,6 @@
   "me.action.view": "Näytä hakemus",
   "catalogue.pickCategory": "Valitse luokka",
   "catalogue.termLabel": "Vuokra-aika:",
-  "catalogue.noDownPayment": "ei käsirahaa",
   "catalogue.filter.monthlyMin": "Kuukausierä alkaen (€)",
   "catalogue.filter.monthlyMax": "Kuukausierä enintään (€)",
   "catalogue.filter.condition": "Kunto vähintään",
@@ -511,5 +509,9 @@
   "date.invalid": "Kirjoita päivä muodossa pp.kk.vvvv, esim. 06.11.2026",
   "date.between": "Valitse päivä väliltä {min}–{max}",
   "date.from": "Valitse {min} tai myöhemmin",
-  "date.until": "Valitse {max} tai aiemmin"
+  "date.until": "Valitse {max} tai aiemmin",
+  "catalogue.vat.label": "Hinnat",
+  "catalogue.vat.incl": "Sis. ALV",
+  "catalogue.vat.excl": "Ilman ALV:tä",
+  "catalogue.listPrice": "Listahinta"
 }

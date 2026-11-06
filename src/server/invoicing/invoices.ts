@@ -24,7 +24,7 @@ export function toInvoice(row: InvoiceRow): Invoice {
 /** An invoice as the screens see it: the rate is also given as a plain percentage. */
 export type InvoiceView = Invoice & { vat_rate_percent: number };
 
-function toView(invoice: Invoice): InvoiceView {
+function toInvoiceView(invoice: Invoice): InvoiceView {
   return { ...invoice, vat_rate_percent: invoice.vat_rate_basis_points / 100 };
 }
 
@@ -40,7 +40,7 @@ export async function listInvoices(
     },
     orderBy: [{ contract_id: 'asc' }, { sequence: 'asc' }],
   });
-  return rows.map((row) => toView(toInvoice(row)));
+  return rows.map((row) => toInvoiceView(toInvoice(row)));
 }
 
 /** One invoice, with the customer it belongs to. */
@@ -52,5 +52,7 @@ export async function getInvoice(
     where: { id },
     include: { contract: { select: { customer_id: true } } },
   });
-  return row ? { invoice: toView(toInvoice(row)), customerId: row.contract.customer_id } : null;
+  return row
+    ? { invoice: toInvoiceView(toInvoice(row)), customerId: row.contract.customer_id }
+    : null;
 }

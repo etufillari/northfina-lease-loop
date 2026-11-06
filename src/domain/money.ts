@@ -1,5 +1,8 @@
 // Money helpers. Amounts are always integer euro cents; only format at the edge (the UI).
 
+/** 25.5 % is 2550 basis points, so 100 % is this many. */
+export const BASIS_POINTS_PER_WHOLE = 10_000;
+
 /**
  * The one rounding rule for money: integer division, rounding half up. 10730.18 → 10730,
  * 25.5 → 26. Multiply first, using whole-number rates, then call this once per amount, so

@@ -9,12 +9,11 @@ import type {
   CoefficientTable,
   ResidualCurves,
 } from '@/data/schemas';
-import { roundedDivide } from '../money';
+import { BASIS_POINTS_PER_WHOLE, roundedDivide } from '../money';
 import { downPaymentLimits } from '../pricing/pricing';
 
 type AssetLifeFirstLease = Pick<AssetLife, 'started_on' | 'first_lease_price_cents'>;
 
-const BASIS_POINTS_PER_WHOLE = 10_000;
 const MONTHS_PER_YEAR = 12;
 
 /** Whole months from one ISO date to a later one, and 0 if `to` is earlier. */
@@ -82,7 +81,9 @@ export function marketValue(
   const curve = curves.curves[item.category];
   const adjustment = curves.usage_adjustment[item.category];
   const curvePoints = curveBasisPoints(curve, item.ageMonths);
-  const conditionPoints = Math.round(curves.condition_multiplier[item.condition] * 10_000);
+  const conditionPoints = Math.round(
+    curves.condition_multiplier[item.condition] * BASIS_POINTS_PER_WHOLE
+  );
   const usagePoints = usageBasisPoints(adjustment, item.usageValue);
 
   const whole = BigInt(BASIS_POINTS_PER_WHOLE) ** 3n;

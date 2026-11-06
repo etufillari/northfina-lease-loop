@@ -1,16 +1,13 @@
 // Ages from ISO dates, compared as text so that time zones cannot shift a birthday.
 // Someone born on 29 February has their birthday on 1 March in other years. Countries differ
 // (some use 28 February), so this takes the later date: an age limit is then never passed early.
+import { dateParts } from '../dates';
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LEAP_DAY = '02-29';
 const DAY_AFTER_LEAP_DAY = '03-01';
 
 function parts(isoDate: string): { year: number; monthDay: string } {
-  if (!ISO_DATE.test(isoDate)) {
-    throw new RangeError(`date must look like YYYY-MM-DD, got "${isoDate}"`);
-  }
-  return { year: Number(isoDate.slice(0, 4)), monthDay: isoDate.slice(5) };
+  return { year: dateParts(isoDate).year, monthDay: isoDate.slice(5) };
 }
 
 function isLeapYear(year: number): boolean {

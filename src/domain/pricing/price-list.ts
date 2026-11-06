@@ -1,11 +1,10 @@
 // Worked example 2: which net list price applies to an asset on a given day.
 import type { Asset, PriceList } from '@/data/schemas';
+import { isIsoDate } from '../dates';
 
 export type ListPriceResult =
   | { ok: true; priceCents: number; priceListVersion: number }
   | { ok: false; reason: 'unknown_asset' | 'no_price_list_on_date' };
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Returns the net list price (cents, VAT excluded) of `assetId` on `isoDate` (`YYYY-MM-DD`).
@@ -20,7 +19,7 @@ export function listPriceOn(
   assetId: string,
   isoDate: string
 ): ListPriceResult {
-  if (!ISO_DATE.test(isoDate)) {
+  if (!isIsoDate(isoDate)) {
     throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
   }
 

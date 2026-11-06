@@ -2,6 +2,7 @@
 // holds the rules; this file only reads them, so a new question needs no code.
 import type { Answers, AnswerValue } from '@/data/lease-schemas';
 import type { AskWhenCondition, AssetCategory, Customer, Question } from '@/data/schemas';
+import { isIsoDate } from '../dates';
 import { ageOn } from './age';
 
 type CustomerType = Customer['type'];
@@ -98,12 +99,11 @@ export type AnswerError = {
   reason: 'empty' | 'not_an_option' | 'not_a_date' | 'not_an_email' | 'not_cents' | 'not_a_list';
 };
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Rejects shapes and also days that do not exist, such as 2026-02-30. */
 function isRealDate(value: string): boolean {
-  if (!ISO_DATE.test(value)) return false;
+  if (!isIsoDate(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 }

@@ -16,7 +16,7 @@ import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import {
   listApplications,
   submitApplication,
-  viewsOf,
+  applicationViews,
   type ApplicationView,
 } from '@/server/application/applications';
 import { db } from '@/server/db';
@@ -51,6 +51,6 @@ export const GET = handleRoute(async (request) => {
 
   const searchParams = new URL(request.url).searchParams;
   const { decision } = querySchema.parse(Object.fromEntries(searchParams));
-  const views = await viewsOf(db, await listApplications(db, { decision, customerId }));
+  const views = await applicationViews(db, await listApplications(db, { decision, customerId }));
   return ok(actor.kind === 'signatory' ? views.filter(isWaitingForSignature) : views);
 });

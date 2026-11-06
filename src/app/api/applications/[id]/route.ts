@@ -4,7 +4,7 @@
 import { actingCustomerId, can } from '@/domain/identity';
 import { requireActor } from '@/server/auth/actor';
 import { fail, handleRoute, ok } from '@/server/api-response';
-import { getApplication, viewsOf } from '@/server/application/applications';
+import { getApplication, applicationViews } from '@/server/application/applications';
 import { db } from '@/server/db';
 
 export const GET = handleRoute(
@@ -19,7 +19,7 @@ export const GET = handleRoute(
       return fail(404, 'APPLICATION_NOT_FOUND', `No application with id "${id}"`);
     }
 
-    const [view] = await viewsOf(db, [application]);
+    const [view] = await applicationViews(db, [application]);
     return ok(view);
   }
 );

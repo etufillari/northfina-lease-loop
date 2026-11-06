@@ -2,10 +2,9 @@
 import type { QuoteResult } from '@/data/lease-schemas';
 import type { CoefficientTable } from '@/data/schemas';
 import { monthlyFactorFor } from './coefficient';
-import { roundedDivide } from '../money';
+import { BASIS_POINTS_PER_WHOLE, roundedDivide } from '../money';
 
 const MICROS_PER_WHOLE = 1_000_000;
-const BASIS_POINTS_PER_WHOLE = 10_000;
 
 export type QuoteInput = {
   /** The list price, or the relist price of a used item. */

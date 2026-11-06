@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addMonths } from './dates';
+import { addDays, addMonths, dateParts, isIsoDate } from './dates';
 
 describe('addDays', () => {
   it('adds days within a month', () => {
@@ -68,5 +68,23 @@ describe('addMonths', () => {
 
   it('throws on a date that is not ISO', () => {
     expect(() => addMonths('today', 1)).toThrow(RangeError);
+  });
+});
+
+describe('isIsoDate', () => {
+  it('accepts the YYYY-MM-DD shape only', () => {
+    expect(isIsoDate('2026-11-05')).toBe(true);
+    expect(isIsoDate('5.11.2026')).toBe(false);
+    expect(isIsoDate('2026-1-5')).toBe(false);
+  });
+});
+
+describe('dateParts', () => {
+  it('splits a date into numbers', () => {
+    expect(dateParts('2026-02-09')).toEqual({ year: 2026, month: 2, day: 9 });
+  });
+
+  it('throws on another shape', () => {
+    expect(() => dateParts('today')).toThrow(RangeError);
   });
 });

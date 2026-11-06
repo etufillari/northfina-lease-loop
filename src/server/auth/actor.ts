@@ -76,10 +76,11 @@ export async function requireCustomer(permission: Permission): Promise<Customer>
 }
 
 /**
- * Someone signing: a customer for themselves, or a signatory for their company. `customer` is
- * who the contract belongs to, and `signatoryId` is set when another person signs for them.
+ * A customer acting for themselves, or a signatory acting for their company. `customer` is who
+ * the record belongs to, and `signatoryId` is set when another person acts for them. Use
+ * `requireCustomer` for anything a signatory must not do, such as applying.
  */
-export async function requireSigner(
+export async function requireCustomerOrSignatory(
   permission: Permission
 ): Promise<{ customer: Customer; signatoryId?: string }> {
   const actor = await requireRole(permission);

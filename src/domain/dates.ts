@@ -4,8 +4,14 @@
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTHS_PER_YEAR = 12;
 
-function parts(isoDate: string): { year: number; month: number; day: number } {
-  if (!ISO_DATE.test(isoDate)) {
+/** True for the `YYYY-MM-DD` shape. It does not check that the day exists. */
+export function isIsoDate(value: string): boolean {
+  return ISO_DATE.test(value);
+}
+
+/** Splits an ISO date. A date in another shape is a bug in the caller, so it throws. */
+export function dateParts(isoDate: string): { year: number; month: number; day: number } {
+  if (!isIsoDate(isoDate)) {
     throw new RangeError(`date must look like YYYY-MM-DD, got "${isoDate}"`);
   }
   return {
@@ -20,7 +26,7 @@ function toIso(utcMillis: number): string {
 }
 
 export function addDays(isoDate: string, days: number): string {
-  const { year, month, day } = parts(isoDate);
+  const { year, month, day } = dateParts(isoDate);
   return toIso(Date.UTC(year, month - 1, day + days));
 }
 
@@ -30,7 +36,7 @@ export function addDays(isoDate: string, days: number): string {
  * clamped day sticks: 31 Jan + 2 months is 31 Mar, but 28 Feb + 1 month is 28 Mar.
  */
 export function addMonths(isoDate: string, months: number): string {
-  const { year, month, day } = parts(isoDate);
+  const { year, month, day } = dateParts(isoDate);
   const monthIndex = year * MONTHS_PER_YEAR + (month - 1) + months;
   const targetYear = Math.floor(monthIndex / MONTHS_PER_YEAR);
   const targetMonth = monthIndex - targetYear * MONTHS_PER_YEAR;

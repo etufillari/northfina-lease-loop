@@ -199,7 +199,7 @@ export type ApplicationView = Application & {
   contract_id: string | null;
 };
 
-export function toView(
+export function toApplicationView(
   application: Application,
   customer: Customer | undefined,
   minAge: number,
@@ -214,7 +214,7 @@ export function toView(
   };
 }
 
-export async function viewsOf(
+export async function applicationViews(
   db: PrismaClient,
   applications: readonly Application[]
 ): Promise<ApplicationView[]> {
@@ -230,7 +230,7 @@ export async function viewsOf(
   const contractIds = new Map(contracts.map((c) => [c.application_id, c.id]));
 
   return applications.map((application) =>
-    toView(
+    toApplicationView(
       application,
       customers.find((customer) => customer.id === application.customer_id),
       minAge,
@@ -334,7 +334,7 @@ export async function submitApplication(
 
   const application = toApplication(row);
   const minAge = minimumAge(prepared.questionBank);
-  return { ok: true, application: toView(application, request.customer, minAge, null) };
+  return { ok: true, application: toApplicationView(application, request.customer, minAge, null) };
 }
 
 // ---------------------------------------------------------------------------

@@ -182,7 +182,8 @@ function blockedReasons(
   }
 
   if (customerType === 'sole_trader' || customerType === 'company') {
-    if (!hasValidFinnishBusinessId(answerString(answers, 'q_business_id'))) {
+    const businessId = answerString(answers, 'q_business_id');
+    if (businessId?.trim() && !hasValidFinnishBusinessId(businessId)) {
       reasons.push({ code: 'invalid_business_id', questionId: 'q_business_id' });
     }
   }
@@ -215,7 +216,11 @@ export function evaluateApplication(
   const questionFlow = questionFlowFor(questionsFile, input, input.answers);
   const reasons = blockedReasons(input, questionFlow);
   if (reasons.some((reason) => reason.code !== 'pep_manual_review')) {
-    return { decision: 'rejected', reasons, questionFlow };
+    return {
+      decision: 'rejected',
+      reasons,
+      questionFlow: { ...questionFlow, nextQuestionId: null },
+    };
   }
   if (reasons.length > 0) return { decision: 'manual_review', reasons, questionFlow };
   if (questionFlow.missingQuestionIds.length > 0) {

@@ -5,6 +5,7 @@ import { createTestDb } from '../../../tests/helpers/test-db';
 import { seedAssets } from '../assets/assets';
 import { createApplication, type ApplicationSubmissionRequest } from '../applications/applications';
 import { createContract } from '../contracts/contracts';
+import { getCustomerContract } from '../contracts/contract-view';
 import { generateInvoices, listInvoices } from './invoices';
 import { seedCustomers } from '../assets/customers';
 import type { PrismaClient } from '../prisma-client';
@@ -175,5 +176,47 @@ describe('generateInvoices', () => {
     ).resolves.toEqual({ ok: false, reason: 'contract_not_active', status: 'completed' });
     expect(await db.invoice.count()).toBe(0);
     expect(await db.auditLog.count({ where: { action: 'invoices.generated' } })).toBe(0);
+  });
+});
+
+describe('getCustomerContract', () => {
+  it('returns the customer view and derives a schedule without writing invoices', async () => {
+    const contract = await createActiveContract();
+    const auditCount = await db.auditLog.count();
+
+    const view = await getCustomerContract(db, contract.id, '2026-11-06');
+
+    expect(view).not.toBeNull();
+    expect(view?.customer.id).toBe('cust-aino');
+    expect(view?.asset.id).toBe('ebike-003');
+    expect(view?.invoices).toHaveLength(36);
+    expect(view?.invoices[0]).toMatchObject({
+      status: 'scheduled',
+      paymentStatus: null,
+      dueOn: '2026-11-05',
+      totalCents: 13_466,
+    });
+    expect(view?.activity.map((entry) => entry.action)).toEqual(
+      expect.arrayContaining(['contract.signed', 'asset.history'])
+    );
+    expect(await db.invoice.count()).toBe(0);
+    expect(await db.auditLog.count()).toBe(auditCount);
+  });
+
+  it('uses persisted invoice and payment state when the schedule exists', async () => {
+    const contract = await createActiveContract();
+    await generateInvoices(db, { contractId: contract.id, actor: 'team-test' });
+
+    const view = await getCustomerContract(db, contract.id, '2026-11-06');
+
+    expect(view?.invoices[0]).toMatchObject({
+      status: 'issued',
+      paymentStatus: 'unpaid',
+      isOverdue: true,
+    });
+  });
+
+  it('returns null for a contract the customer cannot find', async () => {
+    await expect(getCustomerContract(db, 'missing', '2026-11-06')).resolves.toBeNull();
   });
 });

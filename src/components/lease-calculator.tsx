@@ -14,7 +14,7 @@ import { intlLocale, type Locale } from '@/i18n/locales';
 /** Long enough to skip the values a slider passes through while it is being dragged. */
 const QUOTE_DELAY_MS = 150;
 
-type LeaseCalculatorLabels = {
+export type LeaseCalculatorLabels = {
   downPayment: string;
   termLength: string;
   months: string;
@@ -27,6 +27,7 @@ type LeaseCalculatorLabels = {
   bandNote: string;
   unavailable: string;
   updateFailed: string;
+  continueToApplication: string;
 };
 
 type LeaseCalculatorProps = {
@@ -36,6 +37,7 @@ type LeaseCalculatorProps = {
   initialQuote: QuoteData;
   labels: LeaseCalculatorLabels;
   locale: Locale;
+  onContinue?: (quote: QuoteData) => void;
 };
 
 type QuoteFailure = 'unavailable' | 'failed';
@@ -72,6 +74,7 @@ export function LeaseCalculator({
   initialQuote,
   labels,
   locale,
+  onContinue,
 }: LeaseCalculatorProps) {
   const [termMonths, setTermMonths] = useState(limits.defaultTermMonths);
   const [position, setPosition] = useState(0);
@@ -200,7 +203,14 @@ export function LeaseCalculator({
         className={`transition-opacity ${isUpdating ? 'opacity-60' : ''}`}
       >
         {'quote' in outcome ? (
-          <QuoteSummary quote={outcome.quote} labels={labels} euro={euro} locale={locale} />
+          <QuoteSummary
+            quote={outcome.quote}
+            labels={labels}
+            euro={euro}
+            locale={locale}
+            continueDisabled={isUpdating}
+            onContinue={onContinue}
+          />
         ) : (
           <p className="rounded-xl bg-amber-50 p-4 text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
             {outcome.failure === 'unavailable' ? labels.unavailable : labels.updateFailed}
@@ -216,9 +226,18 @@ type QuoteSummaryProps = {
   labels: LeaseCalculatorLabels;
   euro: (cents: number) => string;
   locale: Locale;
+  continueDisabled: boolean;
+  onContinue?: (quote: QuoteData) => void;
 };
 
-function QuoteSummary({ quote, labels, euro, locale }: QuoteSummaryProps) {
+function QuoteSummary({
+  quote,
+  labels,
+  euro,
+  locale,
+  continueDisabled,
+  onContinue,
+}: QuoteSummaryProps) {
   const { pricing, vatPreview } = quote;
   const vatRate = formatNumber(vatPreview.ratePercent, locale);
 
@@ -239,6 +258,19 @@ function QuoteSummary({ quote, labels, euro, locale }: QuoteSummaryProps) {
         <Row label={labels.totalCost} value={euro(pricing.totalCostWithBuyoutCents)} />
       </dl>
       <p className="mt-4 text-xs text-stone-600 dark:text-stone-400">{labels.bandNote}</p>
+      {onContinue ? (
+        <button
+          type="button"
+          onClick={() => onContinue(quote)}
+          disabled={continueDisabled}
+          className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+        >
+          {labels.continueToApplication}
+          <span aria-hidden="true" className="ml-2">
+            →
+          </span>
+        </button>
+      ) : null}
     </>
   );
 }

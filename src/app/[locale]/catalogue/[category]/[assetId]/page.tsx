@@ -2,13 +2,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { LeaseCalculator } from '@/components/lease-calculator';
+import { CustomerApplicationFlow } from '@/components/customer-application-flow';
 import { assetCategorySchema } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets/assets';
+import { listCustomers } from '@/server/assets/customers';
 import { db } from '@/server/db';
 import { createLeaseOffer, type LeaseOfferResult } from '@/server/quotes/lease-offer';
 import { todayIso } from '@/server/today';
@@ -40,7 +41,10 @@ export default async function AssetLeasePage({
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const offer = await createLeaseOffer(db, asset.id, today);
+  const [offer, customers] = await Promise.all([
+    createLeaseOffer(db, asset.id, today),
+    listCustomers(db),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
@@ -63,13 +67,13 @@ export default async function AssetLeasePage({
             <time dateTime={today}>{formatIsoDate(today, locale)}</time>
           </p>
           <h2 className="mb-4 text-xl font-semibold">{t('lease.title')}</h2>
-          <LeaseCalculator
+          <CustomerApplicationFlow
             assetId={asset.id}
             date={today}
             limits={offer.limits}
             initialQuote={offer.quote}
             locale={locale}
-            labels={{
+            calculatorLabels={{
               downPayment: t('catalogue.downPayment'),
               termLength: t('catalogue.termLength'),
               months: t('catalogue.months'),
@@ -82,7 +86,37 @@ export default async function AssetLeasePage({
               bandNote: t('lease.bandNote'),
               unavailable: t('lease.unavailable'),
               updateFailed: t('lease.updateFailed'),
+              continueToApplication: t('lease.startApplication'),
             }}
+            labels={{
+              eyebrow: t('application.flow.eyebrow'),
+              title: t('application.flow.title'),
+              intro: t('application.flow.intro'),
+              applicant: t('application.flow.applicant'),
+              applicantHint: t('application.flow.applicantHint'),
+              questionnaire: t('application.flow.questionnaire'),
+              questionCount: t('application.flow.questionCount'),
+              whyWeAsk: t('application.flow.whyWeAsk'),
+              next: t('application.flow.next'),
+              back: t('application.flow.back'),
+              submit: t('application.flow.submit'),
+              submitting: t('application.flow.submitting'),
+              loading: t('application.flow.loading'),
+              previewFailed: t('application.flow.previewFailed'),
+              submitFailed: t('application.flow.submitFailed'),
+              answerRequired: t('application.flow.answerRequired'),
+              moneyHint: t('application.flow.moneyHint'),
+              listHint: t('application.flow.listHint'),
+              ready: t('application.flow.ready'),
+              readyBody: t('application.flow.readyBody'),
+              manualReview: t('application.flow.manualReview'),
+              rejected: t('application.flow.rejected'),
+              decisionBody: t('application.flow.decisionBody'),
+              decisionReasons: t('application.flow.decisionReasons'),
+              backToQuote: t('application.flow.backToQuote'),
+              noApplicant: t('application.flow.noApplicant'),
+            }}
+            customerOptions={customers.map(({ id, name, type }) => ({ id, name, type }))}
           />
         </>
       ) : (

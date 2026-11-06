@@ -10,3 +10,16 @@ export function formatEuro(cents: number, locale: string): string {
   }
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
+
+/**
+ * Parses a user-entered euro amount into integer cents without doing arithmetic on a
+ * floating-point euro value. One or two decimal places are accepted.
+ */
+export function parseEuroCents(value: string): number | undefined {
+  const normalized = value.trim().replace(',', '.');
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return undefined;
+
+  const [wholePart = '0', decimalPart = ''] = normalized.split('.');
+  const cents = BigInt(wholePart) * 100n + BigInt(decimalPart.padEnd(2, '0'));
+  return cents <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(cents) : undefined;
+}

@@ -8,6 +8,7 @@ import { contractNumber } from '@/domain/contract';
 import { invoiceLabel } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
+import { PayAllButton } from '@/components/pay-all-button';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
@@ -39,6 +40,20 @@ export default async function InvoicesPage({ params }: PageProps<'/[locale]/invo
       <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">
         {due.length > 0 ? t('invoices.toPayIntro', { count: due.length }) : t('invoices.allPaid')}
       </p>
+      {due.length > 0 ? (
+        <div className="mt-4">
+          <PayAllButton
+            label={t('invoices.payAll', {
+              count: due.length,
+              total: formatEuro(
+                due.reduce((sum, r) => sum + r.invoice.totalCents, 0),
+                intlLocale[locale]
+              ),
+            })}
+            failedLabel={t('pay.failed')}
+          />
+        </div>
+      ) : null}
 
       <Section title={t('invoices.toPay')} empty={t('invoices.nothingToPay')}>
         {due.map((r) => (

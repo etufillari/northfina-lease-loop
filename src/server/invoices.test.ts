@@ -5,7 +5,7 @@ import { createTestDb } from '../../tests/helpers/test-db';
 import { submitApplication } from './applications';
 import { seedAssets } from './assets';
 import { signContract } from './contracts';
-import { contractInvoices, payInvoice, receivedInvoices } from './invoices';
+import { contractInvoices, payAllDue, payInvoice, receivedInvoices } from './invoices';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -172,5 +172,29 @@ describe('payments and time travel', () => {
       status: 'paid',
       paidDate: '2026-12-06',
     });
+  });
+});
+
+describe('payAllDue', () => {
+  it('pays every due invoice of one contract, and nothing that is upcoming', async () => {
+    const contract = await ainosContract();
+    // On 10 Jan 2027 invoices 2 (Dec) and 3 (Jan) are due; 4 onwards are upcoming
+    expect(
+      await payAllDue(db, { contractId: contract.id, filter: null, actor: 'Aino' }, '2027-01-10')
+    ).toEqual({ paidCount: 2, paidCents: 8_430 + 8_463 });
+    expect(await db.invoicePayment.count()).toBe(2);
+    expect(
+      await payAllDue(db, { contractId: contract.id, filter: null, actor: 'Aino' }, '2027-01-10')
+    ).toEqual({ paidCount: 0, paidCents: 0 });
+  });
+
+  it('pays only the chosen customer’s invoices', async () => {
+    await ainosContract();
+    expect(
+      await payAllDue(db, { filter: { customerId: 'cust-mikko' }, actor: 'Mikko' }, '2027-01-10')
+    ).toEqual({ paidCount: 0, paidCents: 0 });
+    expect(
+      await payAllDue(db, { filter: { customerId: 'cust-aino' }, actor: 'Aino' }, '2027-01-10')
+    ).toMatchObject({ paidCount: 2 });
   });
 });

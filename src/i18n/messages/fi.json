@@ -361,5 +361,6 @@
   "end.pass.button": "Siirrä eteenpäin",
   "end.failed": "Se ei onnistunut. Yritä uudelleen.",
   "end.notYet": "Voit valita, kun sopimus on päättynyt, {date} jälkeisestä päivästä alkaen.",
-  "end.decided": "Tämän tuotteen kohtalosta on jo päätetty."
+  "end.decided": "Tämän tuotteen kohtalosta on jo päätetty.",
+  "invoices.payAll": "Maksa kaikki {count} ({total})"
 }

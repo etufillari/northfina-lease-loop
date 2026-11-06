@@ -361,5 +361,6 @@
   "end.pass.button": "Anna edasi",
   "end.failed": "See ei õnnestunud. Palun proovi uuesti.",
   "end.notYet": "Saad valida, kui liising on lõppenud, alates {date} järgmisest päevast.",
-  "end.decided": "Selle toote saatus on juba otsustatud."
+  "end.decided": "Selle toote saatus on juba otsustatud.",
+  "invoices.payAll": "Maksa kõik {count} ({total})"
 }

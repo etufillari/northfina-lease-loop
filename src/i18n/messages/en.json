@@ -361,5 +361,6 @@
   "end.pass.button": "Pass it on",
   "end.failed": "That didn’t work. Please try again.",
   "end.notYet": "You can choose once the lease has ended, from the day after {date}.",
-  "end.decided": "What happens to this item has already been decided."
+  "end.decided": "What happens to this item has already been decided.",
+  "invoices.payAll": "Pay all {count} ({total})"
 }

@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { HandoverResponse } from '@/components/handover-response';
+import { PayAllButton } from '@/components/pay-all-button';
 import { contractNumber } from '@/domain/contract';
 import { invoiceLabel } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
@@ -107,6 +108,18 @@ export default async function NotificationsPage({ params }: PageProps<'/[locale]
               </div>
             </Card>
           ))}
+          <li className="pt-2">
+            <PayAllButton
+              label={t('invoices.payAll', {
+                count: notes.dueInvoices.length,
+                total: formatEuro(
+                  notes.dueInvoices.reduce((sum, r) => sum + r.invoice.totalCents, 0),
+                  intlLocale[locale]
+                ),
+              })}
+              failedLabel={t('pay.failed')}
+            />
+          </li>
         </Section>
       ) : null}
 

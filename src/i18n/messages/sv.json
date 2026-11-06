@@ -361,5 +361,6 @@
   "end.pass.button": "För den vidare",
   "end.failed": "Det gick inte. Försök igen.",
   "end.notYet": "Du kan välja när avtalet har tagit slut, från dagen efter {date}.",
-  "end.decided": "Vad som händer med den här artikeln är redan bestämt."
+  "end.decided": "Vad som händer med den här artikeln är redan bestämt.",
+  "invoices.payAll": "Betala alla {count} ({total})"
 }

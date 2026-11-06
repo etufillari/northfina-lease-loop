@@ -1,13 +1,14 @@
 // The catalogue at /[locale]/catalogue (the home page is /[locale]): every asset with today's
 // net list price in one list, searchable, filterable and sortable. The first render uses the
-// filters in the URL (?q=&category=&status=&sort=); after that, CatalogueBrowser updates the
-// list live in the browser.
+// filters and page in the URL (?q=&category=&status=&sort=&page=&per=); after that,
+// CatalogueBrowser updates the list live in the browser, one page at a time.
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { CatalogueBrowser } from '@/components/catalogue-browser';
 
 import { parseCatalogueQuery } from '@/domain/catalogue';
+import { parseCataloguePaging } from '@/domain/catalogue-pages';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -30,7 +31,9 @@ export default async function CataloguePage({
   // The page decides what "today" is (the real date, or the time-travel date); domain code
   // never reads the clock.
   const { today } = await appDate();
-  const query = parseCatalogueQuery(await searchParams);
+  const search = await searchParams;
+  const query = parseCatalogueQuery(search);
+  const paging = parseCataloguePaging(search);
   // Items and prices as they were on the app's date (time travel goes both ways).
   const [items, priceLists] = await Promise.all([
     assetsOn(db, today),
@@ -66,6 +69,7 @@ export default async function CataloguePage({
         priceLists={priceLists}
         today={today}
         initialQuery={query}
+        initialPaging={paging}
         locale={locale}
       />
     </div>

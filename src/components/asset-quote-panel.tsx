@@ -63,6 +63,10 @@ const MIN_TERM = 12;
 const MAX_TERM = 48;
 const TERM_STEP = 12;
 
+function clampDownPayment(value: number, limits: DownPaymentLimits) {
+  return Math.min(limits.max_cents, Math.max(limits.min_cents, value));
+}
+
 export function AssetQuotePanel({
   assetId,
   available,
@@ -111,15 +115,15 @@ export function AssetQuotePanel({
           if (!body.success) {
             const limits = body.error.details?.down_payment_limits ?? null;
 
-            setDownPaymentLimits(limits);
+            if (limits) {
+              setDownPaymentLimits(limits);
 
-            if (
-              limits &&
-              downPayment < limits.min_cents &&
-              body.error.details?.reason === 'below_minimum'
-            ) {
-              setDownPayment(limits.min_cents);
-              return;
+              const adjustedDownPayment = clampDownPayment(downPayment, limits);
+
+              if (adjustedDownPayment !== downPayment) {
+                setDownPayment(adjustedDownPayment);
+                return;
+              }
             }
 
             throw new Error(body.error.message);
@@ -128,8 +132,18 @@ export function AssetQuotePanel({
           throw new Error(t('asset.quoteUnavailable'));
         }
 
+        const limits = body.data.down_payment_limits;
+
+        setDownPaymentLimits(limits);
+
+        const adjustedDownPayment = clampDownPayment(downPayment, limits);
+
+        if (adjustedDownPayment !== downPayment) {
+          setDownPayment(adjustedDownPayment);
+          return;
+        }
+
         setQuote(body.data);
-        setDownPaymentLimits(body.data.down_payment_limits);
         onUnitPriceChange(body.data.unit_price_cents);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
@@ -249,7 +263,13 @@ export function AssetQuotePanel({
                 const value = Number(event.target.value);
 
                 if (Number.isInteger(value)) {
-                  setQuantity(Math.min(1000, Math.max(1, value)));
+                  const nextQuantity = Math.min(1000, Math.max(1, value));
+
+                  if (nextQuantity < quantity) {
+                    setDownPayment(0);
+                  }
+
+                  setQuantity(nextQuantity);
                 }
               }}
               className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-800"
@@ -322,6 +342,7 @@ export function AssetQuotePanel({
               </p>
             )}
           </div>
+
           {quote && !loadingQuote && <ApplyForLeasingCta assetId={assetId} locale={locale} t={t} />}
         </>
       )}

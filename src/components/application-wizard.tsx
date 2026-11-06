@@ -21,6 +21,7 @@ import {
 import { addMonthsClamped } from '@/domain/calendar';
 import { MAX_START_MONTHS_AHEAD } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
+import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { isSentinel, previousAnswered } from './wizard-back';
@@ -90,6 +91,8 @@ export function ApplicationWizard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [warning, setWarning] = useState<string | null>(null);
+  // Why the last answer was refused (the server checks every answer's shape).
+  const [answerError, setAnswerError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(asOf ?? today);
   const [saveDefaults, setSaveDefaults] = useState(false);
@@ -179,8 +182,12 @@ export function ApplicationWizard({
     if (body.success) {
       setState(body.data);
       setWarning(body.data.warning);
+      setAnswerError(null);
       setEditingId(null);
       setDraft('');
+    } else {
+      // Never fail silently: say why the answer was not taken.
+      setAnswerError(body.error?.message ?? t('common.error'));
     }
   }
 
@@ -194,7 +201,10 @@ export function ApplicationWizard({
         body: JSON.stringify({ questionId: item.id, answer: item.value, actor }),
       });
       const body = await response.json();
-      if (!body.success) break;
+      if (!body.success) {
+        setAnswerError(body.error?.message ?? t('common.error'));
+        break;
+      }
       latest = body.data;
     }
     setBusy(false);
@@ -291,7 +301,9 @@ export function ApplicationWizard({
         <h1 className="text-2xl font-semibold">{t('apply.title')}</h1>
         <p className="mt-4 rounded-xl bg-amber-50 p-4 text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
           {blocked.rule === 'age_under'
-            ? t('apply.blockedAge', { date: blocked.eligibleFrom ?? '' })
+            ? t('apply.blockedAge', {
+                date: blocked.eligibleFrom ? formatIsoDate(blocked.eligibleFrom, locale) : '',
+              })
             : t('apply.blockedCountry')}
         </p>
         <AnsweredList
@@ -377,6 +389,11 @@ export function ApplicationWizard({
             </button>
           </section>
         ) : null}
+        {showBatch && answerError ? (
+          <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-400">
+            {answerError}
+          </p>
+        ) : null}
 
         {current && !showBatch ? (
           <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
@@ -421,6 +438,11 @@ export function ApplicationWizard({
             {warning ? (
               <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">
                 {t('apply.businessIdWarning')}
+              </p>
+            ) : null}
+            {answerError ? (
+              <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-400">
+                {answerError}
               </p>
             ) : null}
           </section>

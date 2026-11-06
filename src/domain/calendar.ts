@@ -18,6 +18,16 @@ export function daysInMonth(year: number, month: number): number {
   return month === 2 && isLeapYear(year) ? 29 : base;
 }
 
+/** True for a real calendar date written `YYYY-MM-DD` (2026-02-29 is not one). */
+export function isIsoDate(value: string): boolean {
+  try {
+    parseIso(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function parseIso(isoDate: string): { year: number; month: number; day: number } {
   if (!ISO_DATE.test(isoDate)) {
     throw new RangeError(`expected YYYY-MM-DD, got "${isoDate}"`);
@@ -70,6 +80,17 @@ export function addDays(isoDate: string, days: number): string {
   let date = isoDate;
   for (let i = 0; i < days; i++) date = nextDay(date);
   return date;
+}
+
+/**
+ * The day someone born `birthIso` turns `years` old: the first day `yearsOld` reaches it.
+ * A 29 February birthday falls on 1 March in a year without one (as `yearsOld` counts it).
+ */
+export function birthdayAt(birthIso: string, years: number): string {
+  const birth = parseIso(birthIso);
+  const year = birth.year + years;
+  if (birth.month === 2 && birth.day === 29 && !isLeapYear(year)) return toIso(year, 3, 1);
+  return toIso(year, birth.month, birth.day);
 }
 
 /** Full years of age on `onIso` for someone born `birthIso` (birthday counts). */

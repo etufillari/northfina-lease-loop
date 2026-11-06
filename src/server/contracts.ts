@@ -20,6 +20,8 @@ export type SignResult =
       reason:
         | 'not_found'
         | 'not_signable'
+        | 'not_signatory'
+        | 'not_applicant'
         | 'hold_expired'
         | 'quote_expired'
         | 'start_before_signing'
@@ -45,6 +47,16 @@ export async function signApplication(
   if (!application) return { ok: false, reason: 'not_found' };
   if (application.status !== 'approved' && application.status !== 'awaiting_signature') {
     return { ok: false, reason: 'not_signable' };
+  }
+  // Only the right person signs (card 6): a company applicant who may not sign waits for the
+  // authorised signatory; an approved application is signed by the applicant themselves.
+  if (application.status === 'awaiting_signature') {
+    const signatory = (application.signatory_email ?? '').trim().toLowerCase();
+    if (!signatory || input.actor.trim().toLowerCase() !== signatory) {
+      return { ok: false, reason: 'not_signatory' };
+    }
+  } else if (input.actor !== application.customer_id) {
+    return { ok: false, reason: 'not_applicant' };
   }
   if (application.hold_until && input.asOf > application.hold_until) {
     return { ok: false, reason: 'hold_expired' };

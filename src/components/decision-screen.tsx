@@ -91,7 +91,10 @@ export function DecisionScreen({
                   {reason.rule === 'min_age' && reason.outcome === 'failed' ? (
                     <p className="text-stone-600 dark:text-stone-400">
                       {t('reason.min_age.eligibleFrom', {
-                        date: String(reason.params?.eligibleFrom ?? ''),
+                        date:
+                          typeof reason.params?.eligibleFrom === 'string'
+                            ? formatIsoDate(reason.params.eligibleFrom, locale)
+                            : '',
                       })}
                     </p>
                   ) : null}

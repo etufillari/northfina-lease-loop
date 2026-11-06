@@ -476,7 +476,7 @@
   "buyout.priceLabel": "Purchase price",
   "buyout.buyAtEnd": "Buy at the end of the term",
   "buyout.buyNow": "Buy it now",
-  "buyout.optedIn": "You are buying this at the end of the term: {total} incl. VAT, invoiced on {date}.",
+  "buyout.optedIn": "You are buying this at the end of the term: {amount}, invoiced on {date}.",
   "buyout.undo": "Change my mind",
   "buyout.confirmTitle": "Buy this item?",
   "buyout.net": "Price excl. VAT",

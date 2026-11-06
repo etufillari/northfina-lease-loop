@@ -476,7 +476,7 @@
   "buyout.priceLabel": "Inlösenpris",
   "buyout.buyAtEnd": "Köp loss vid periodens slut",
   "buyout.buyNow": "Köp loss nu",
-  "buyout.optedIn": "Du köper loss den här vid periodens slut: {total} inkl. moms, faktureras {date}.",
+  "buyout.optedIn": "Du köper loss den här vid periodens slut: {amount}, faktureras {date}.",
   "buyout.undo": "Jag ångrar mig",
   "buyout.confirmTitle": "Köpa loss artikeln?",
   "buyout.net": "Pris exkl. moms",

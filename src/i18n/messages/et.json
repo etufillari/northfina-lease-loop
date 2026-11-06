@@ -476,7 +476,7 @@
   "buyout.priceLabel": "Lunastushind",
   "buyout.buyAtEnd": "Lunasta perioodi lõpus",
   "buyout.buyNow": "Lunasta kohe",
-  "buyout.optedIn": "Lunastad selle perioodi lõpus: {total} koos käibemaksuga, arve {date}.",
+  "buyout.optedIn": "Lunastad selle perioodi lõpus: {amount}, arve {date}.",
   "buyout.undo": "Muutsin meelt",
   "buyout.confirmTitle": "Kas lunastada ese?",
   "buyout.net": "Hind ilma käibemaksuta",

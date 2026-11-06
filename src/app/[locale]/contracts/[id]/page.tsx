@@ -34,6 +34,12 @@ export default async function ContractPage({
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
   const endsOn = termEndsOn(contract);
+  // Consumers see prices with VAT, businesses net (docs/DECISIONS.md, VAT).
+  const holder = await db.customer.findUnique({
+    where: { id: contract.customer_id },
+    select: { type: true },
+  });
+  const pricesInclVat = holder?.type === 'consumer';
   const leasedAssets = await db.asset.findMany({
     where: { id: { in: contract.assets.map((a) => a.asset_id) } },
     select: { id: true, make: true, model: true },
@@ -110,6 +116,7 @@ export default async function ContractPage({
           endsOn={endsOn}
           today={asOf}
           buyoutInvoice={buyout.ok ? buyout.preview : null}
+          pricesInclVat={pricesInclVat}
           purchaseAtEnd={contract.purchase_at_end}
           termMonthsTotal={contract.term_months}
         />

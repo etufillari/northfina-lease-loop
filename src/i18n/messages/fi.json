@@ -476,7 +476,7 @@
   "buyout.priceLabel": "Lunastushinta",
   "buyout.buyAtEnd": "Lunasta kauden lopussa",
   "buyout.buyNow": "Lunasta nyt",
-  "buyout.optedIn": "Lunastat tämän kauden lopussa: {total} sis. alv, laskutetaan {date}.",
+  "buyout.optedIn": "Lunastat tämän kauden lopussa: {amount}, laskutetaan {date}.",
   "buyout.undo": "Muutin mieleni",
   "buyout.confirmTitle": "Lunastetaanko tuote?",
   "buyout.net": "Hinta ilman alv:tä",

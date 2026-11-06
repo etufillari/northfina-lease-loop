@@ -30,6 +30,7 @@ export function ContractActions({
   endsOn,
   today,
   buyoutInvoice,
+  pricesInclVat,
   purchaseAtEnd,
   termMonthsTotal,
 }: {
@@ -41,6 +42,8 @@ export function ContractActions({
   today: string;
   /** The buyout invoice as it would be issued; null when no VAT rate is known for it. */
   buyoutInvoice: BuyoutInvoicePreview | null;
+  /** Consumers see prices with VAT, businesses net. */
+  pricesInclVat: boolean;
   purchaseAtEnd: boolean;
   termMonthsTotal: number;
 }) {
@@ -122,6 +125,7 @@ export function ContractActions({
             personaId={personaId}
             suffix={suffix}
             invoice={buyoutInvoice}
+            pricesInclVat={pricesInclVat}
             purchaseAtEnd={purchaseAtEnd}
             termOver={termOver}
           />

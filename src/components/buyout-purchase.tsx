@@ -16,6 +16,7 @@ export function BuyoutPurchase({
   personaId,
   suffix,
   invoice,
+  pricesInclVat,
   purchaseAtEnd,
   termOver,
 }: {
@@ -25,6 +26,8 @@ export function BuyoutPurchase({
   suffix: string;
   /** Null when no VAT rate is known for the invoice date. */
   invoice: BuyoutInvoicePreview | null;
+  /** Consumers see the price with VAT, businesses net. */
+  pricesInclVat: boolean;
   /** The customer already chose to buy at the end of the term. */
   purchaseAtEnd: boolean;
   termOver: boolean;
@@ -63,6 +66,10 @@ export function BuyoutPurchase({
 
   const confirm = () =>
     termOver ? post('end-of-term', { action: 'buy' }) : post('buyout-option', { optIn: true });
+  const shownPrice = pricesInclVat ? invoice.totalCents : invoice.netCents;
+  const vatLabel = pricesInclVat
+    ? t('price.inclVat', { rate: invoice.vatRatePercent })
+    : t('price.exclVat');
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -71,7 +78,7 @@ export function BuyoutPurchase({
           <p className="text-sm text-emerald-900 dark:text-emerald-200">
             ✓{' '}
             {t('buyout.optedIn', {
-              total: euro(invoice.totalCents),
+              amount: `${euro(shownPrice)} ${vatLabel}`,
               date: formatIsoDate(invoice.invoiceDate, locale),
             })}
           </p>
@@ -89,9 +96,9 @@ export function BuyoutPurchase({
           <div>
             <p className="text-xs text-stone-600 dark:text-stone-400">{t('buyout.priceLabel')}</p>
             <p className="text-lg font-semibold tabular-nums">
-              {euro(invoice.netCents)}{' '}
+              {euro(shownPrice)}{' '}
               <span className="text-sm font-normal text-stone-600 dark:text-stone-400">
-                {t('price.exclVat')}
+                {vatLabel}
               </span>
             </p>
           </div>

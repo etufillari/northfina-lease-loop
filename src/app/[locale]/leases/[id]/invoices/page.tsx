@@ -1,0 +1,57 @@
+// One lease's invoices: what has been issued and paid, and what is still to come.
+import { headers } from 'next/headers';
+import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
+import { connection } from 'next/server';
+import { LeaseInvoices } from '@/components/lease-invoices';
+import { loadCustomers } from '@/data/load';
+import { applicantCustomerId, leaseAccess } from '@/domain/catalogue';
+import { isLocale } from '@/i18n/locales';
+import { getT } from '@/i18n/get-t';
+import { getAuth } from '@/server/auth-instance';
+import { db } from '@/server/db';
+import { getCustomerInvoices } from '@/server/features/contracts/get-customer-invoices';
+import { findCustomerForUser } from '@/server/features/customers/find-customer-for-user';
+import { todayIso } from '@/server/today';
+
+export default async function LeaseInvoicesPage({
+  params,
+}: PageProps<'/[locale]/leases/[id]/invoices'>) {
+  const { locale, id } = await params;
+  if (!isLocale(locale)) notFound();
+
+  // Render on every request: opening the page issues whatever is due today.
+  await connection();
+
+  const session = await getAuth().api.getSession({
+    headers: await headers(),
+    query: { disableRefresh: true },
+  });
+  const access = leaseAccess(session?.user.accountType);
+  if (!session) redirect(`/${locale}/login`);
+  if (access !== 'customer') redirect(`/${locale}`);
+
+  const profile = await findCustomerForUser(db, session.user.id);
+  const customerId = profile?.id ?? applicantCustomerId(await loadCustomers());
+  if (!customerId) notFound();
+
+  const result = await getCustomerInvoices(db, {
+    contractId: id,
+    customerId,
+    asOfDate: todayIso(),
+  });
+  if (!result.ok) notFound();
+
+  const t = getT(locale);
+  return (
+    <>
+      {!profile && (
+        <aside className="profile-banner">
+          {t('profile.banner')}
+          <Link href={`/${locale}/profile`}>{t('profile.completeProfile')}</Link>
+        </aside>
+      )}
+      <LeaseInvoices {...result.value} locale={locale} today={todayIso()} />
+    </>
+  );
+}

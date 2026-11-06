@@ -16,6 +16,19 @@ export type AuditEntry = {
 
 export type TransactionClient = Prisma.TransactionClient;
 
+/** Writes one audit row on a transaction the caller already has (see `withAudit`). */
+export async function writeAuditEntry(tx: TransactionClient, entry: AuditEntry) {
+  await tx.auditLog.create({
+    data: {
+      actor: entry.actor,
+      action: entry.action,
+      entity_type: entry.entityType,
+      entity_id: entry.entityId,
+      details_json: entry.details === undefined ? null : JSON.stringify(entry.details),
+    },
+  });
+}
+
 /**
  * Runs `work` inside a transaction and records `entry` in the audit log.
  * Use the `tx` you are given for every write in `work`; writes through `db` would
@@ -31,15 +44,7 @@ export async function withAudit<T>(
 ): Promise<T> {
   return db.$transaction(async (tx) => {
     const result = await work(tx);
-    await tx.auditLog.create({
-      data: {
-        actor: entry.actor,
-        action: entry.action,
-        entity_type: entry.entityType,
-        entity_id: entry.entityId,
-        details_json: entry.details === undefined ? null : JSON.stringify(entry.details),
-      },
-    });
+    await writeAuditEntry(tx, entry);
     return result;
   });
 }
@@ -57,6 +62,7 @@ export type AuditLogEntry = {
 /** The newest audit rows first. */
 export async function listAuditLog(db: PrismaClient, limit = 50): Promise<AuditLogEntry[]> {
   const rows = await db.auditLog.findMany({
+    where: { NOT: { action: { startsWith: 'auth.' } } },
     orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     take: limit,
   });

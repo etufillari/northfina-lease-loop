@@ -9,6 +9,9 @@ import { quoteAssetIds } from '@/server/quotes';
 type Db = PrismaClient;
 
 /** Statuses that wait for a person on the staff side. */
+/** Holds owned by the waiting-list rules, which staff decisions leave alone. */
+const WAITLIST_HOLDS = ['waitlist_offer', 'waitlist_pool'];
+
 export const STAFF_QUEUE_STATUSES = ['manual_review', 'awaiting_signature'] as const;
 export type StaffQueueStatus = (typeof STAFF_QUEUE_STATUSES)[number];
 
@@ -103,10 +106,17 @@ export async function approveApplication(
         where: { id: application.id },
         data: { status, hold_until: holdUntil },
       });
-      // Replace this customer's hold on every item with a fresh 7-day one.
+      // Replace this customer's hold on every item with a fresh 7-day one. A waiting-list
+      // offer hold stays: it ends by the waiting-list rules (signing closes the entry; an
+      // offer that lapses is passed to the next person), see src/server/waitlist-actions.ts.
       for (const assetId of assetIds) {
         await tx.reservation.updateMany({
-          where: { asset_id: assetId, customer_id: application.customer_id, active: true },
+          where: {
+            asset_id: assetId,
+            customer_id: application.customer_id,
+            active: true,
+            kind: { notIn: WAITLIST_HOLDS },
+          },
           data: { active: false },
         });
         await tx.reservation.create({
@@ -156,10 +166,16 @@ export async function declineApplication(
       });
       for (const assetId of assetIds) {
         await tx.reservation.updateMany({
-          where: { asset_id: assetId, customer_id: application.customer_id, active: true },
+          where: {
+            asset_id: assetId,
+            customer_id: application.customer_id,
+            active: true,
+            kind: { notIn: WAITLIST_HOLDS },
+          },
           data: { active: false },
         });
-        // Only release an item if no one else still holds it.
+        // Only release an item if no one else still holds it (a waiting-list offer still
+        // holds it until it lapses and passes to the next person in line).
         const otherHolds = await tx.reservation.count({
           where: { asset_id: assetId, active: true },
         });

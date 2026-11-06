@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
-import { PERSONA_COOKIE } from './persona-cookie';
+import { PERSONA_COOKIE, STAFF_PERSONA } from './persona-cookie';
 
 type CustomerOption = { id: string; name: string; type: string };
 
@@ -81,15 +81,16 @@ export function PersonaPicker({ locale, initialId }: { locale: Locale; initialId
               {customer.name}
             </option>
           ))}
+          <option value={STAFF_PERSONA}>{t('persona.staff')}</option>
           <option value="__new__">{t('persona.new')}</option>
         </select>
       </label>
       {selected ? (
         <Link
-          href={`/${locale}/me`}
+          href={`/${locale}/${selected === STAFF_PERSONA ? 'staff' : 'me'}`}
           className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
         >
-          {t('persona.myPage')}
+          {selected === STAFF_PERSONA ? t('persona.staffDesk') : t('persona.myPage')}
         </Link>
       ) : null}
     </div>

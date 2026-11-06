@@ -262,5 +262,7 @@
   "passport.co2Formula": "{manufacturing} kg uue valmistamiseks × (1 − {share} hoolduseks) × {fraction} järelejäänud väärtus ({value} / {original}).",
   "passport.co2Lives": "Kirjas iga elu alguses",
   "passport.co2Life": "Elu {life}, alates {date}: {kg} kg",
-  "passport.noCo2": "Hinnakirjas v1 pole hinda, seega järelejäänud väärtust ei saa mõõta."
+  "passport.noCo2": "Hinnakirjas v1 pole hinda, seega järelejäänud väärtust ei saa mõõta.",
+  "persona.staff": "Töötajad",
+  "persona.staffDesk": "Töölaud"
 }

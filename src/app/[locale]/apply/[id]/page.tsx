@@ -3,7 +3,7 @@
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { ApplicationWizard } from '@/components/application-wizard';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 
@@ -14,7 +14,7 @@ export default async function ApplyPage({
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
   const { asOf } = await asOfFromPage(await searchParams);
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">

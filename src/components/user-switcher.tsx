@@ -114,6 +114,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
       }
 
       router.refresh();
+      window.location.reload();
     } catch {
       setError(true);
 

@@ -149,7 +149,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
       : t('staff.applications.title');
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-1">
       {applicationsHref && (
         <Link
           href={applicationsHref}
@@ -171,7 +171,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
           onChange={(event) => void onChange(event.target.value)}
           aria-busy={loading || busy}
           aria-invalid={error || undefined}
-          className="min-w-0 flex-1 appearance-none rounded-lg border-0 bg-stone-900 px-2 py-2 text-sm text-stone-100 [color-scheme:dark] shadow-none outline-none focus:border-0 focus:outline-none focus:ring-0 disabled:opacity-50"
+          className="min-w-0 flex-1 appearance-none rounded-lg border-0 bg-stone-900 px-1 py-2 text-sm text-stone-100 [color-scheme:dark] shadow-none outline-none focus:border-0 focus:outline-none focus:ring-0 disabled:opacity-50"
         >
           <option value="" disabled className="bg-stone-900 text-stone-400">
             {loading ? t('session.loading') : t('session.guest')}
@@ -202,7 +202,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
           type="button"
           onClick={() => void onChange('')}
           disabled={loading || busy || !currentId}
-          className="shrink-0 rounded-lg border border-stone-700 px-3 py-2 text-sm font-medium text-stone-300 transition-colors hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="shrink-0 rounded-lg border border-stone-700 px-2 py-2 text-sm font-medium text-stone-300 transition-colors hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {t('session.logout')}
         </button>

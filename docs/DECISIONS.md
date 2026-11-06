@@ -96,10 +96,25 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   1 Jan of `model_year`; linear interpolation between curve points, last value held; times
   the condition multiplier; usage adjustment capped — all per `data/residual-curves.json`.
 - **Refurbishment:** mandatory items always (safety inspection, data wipe, battery past its
-  threshold). A condition upgrade only when no matching waiter accepts the item as-is AND
-  the value gain exceeds the cost — and at most one upgrade per return. Under €300 after
-  all that → kept for parts.
-- **Re-price:** financed = residual value + refurbishment costs, through the normal bands.
+  threshold; a new battery resets the usage counter, so its usage factor is back to 1.00×).
+  Northfina pays for the work, so every piece of it must pay for itself against the
+  alternative (6 Nov, replacing "gain exceeds cost" only):
+  - an item worth less after its mandatory work than that work costs → kept for parts;
+  - at most **one** condition upgrade per return, and only when it pays: on an item that is
+    listable already (`good`+, ≥ €300) the value it adds must exceed its cost — so a good
+    item nobody takes can become like-new; on an item that cannot be listed without it, the
+    value after all the work must reach €300 and exceed everything spent on it;
+  - a worthwhile upgrade serves a waiter first, else the catalogue. Under €300 after all
+    that → kept for parts.
+- **Re-price:** financed = the **market value after the work** (condition after any upgrade,
+  usage after any reset), through the normal bands. The work is not added on top: that
+  charged a new battery twice, once in the higher value and again as a cost (6 Nov). Card 9:
+  ebike-007 → wait-02 at €64.97/month for 12 months (financed €1,159.76).
+- **Waiting list:** customers join in the app (one place per category, first come first
+  served from the join date). An offer holds the item (or a full set for a multi-item
+  waiter) for 7 days; accepting starts a normal application at the second-life price, no
+  down payment, preferred term. Declining or not answering takes the person off the list
+  and passes the item to the next person in line at the same price.
 - **Matching:** filter by category, minimum condition, budget ≥ new rent, deadline not past;
   then **first come, first served** on `joined_on` (field added to the data for this).
 - **Passport:** every lifecycle change appends an AssetEvent; the asset page shows the full

@@ -13,7 +13,7 @@ expect, what we do now, and what to do or explain.
 
 ### Must fix or decide
 
-- [ ] **Card 6: a saved "waiting for signature" state for a single item.** Hosts: after "no" to
+- [x] **Card 6: a saved "waiting for signature" state for a single item.** Done in #26: Admin → Signatures lets staff act as the signatory and sign (contract and invoices on the applicant's account) or decline with a note; the quoted price holds for its 14 days. Hosts: after "no" to
       "can you sign?", ask for the signatory's email (we do); the contract is saved as _waiting
       for signature_, tied to that email, and survives a reload. The applicant can't sign or
       activate it, and no invoices exist until it is signed. Bonus: finish the handoff with a

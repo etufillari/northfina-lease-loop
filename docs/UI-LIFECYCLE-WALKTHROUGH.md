@@ -63,3 +63,7 @@ See [PROGRESS.md](PROGRESS.md) and [PITCH-OUTLINE.md](PITCH-OUTLINE.md).
 ## Fresh test after approval-date fix
 
 The local test database has been cleared and the 30 original assets restored. Restart the development server and reload before testing. Repair and review buttons now use the item’s saved lifecycle dates, including future demo dates. Choosing an end option is followed by the usage/return-request form; submit that form to notify the company.
+
+## Invoice browsing and PDF
+
+Company All operations generates one next invoice per click. In the customer view, open Transactions to filter saved invoices by asset. Click an invoice number to view/download its PDF. The customer can access only their own invoices. Forecasts remain separate from issued invoices; neither implies payment.

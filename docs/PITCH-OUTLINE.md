@@ -12,7 +12,7 @@ Use this as slide copy and speaking notes. Reserve most of the four minutes for 
 
 **On slide:** Customer agreement → invoices → physical return → workshop → company approval → next customer
 
-**Show:** Select an approved customer and an available asset. Quote and sign. Open My leases and show the saved rent and invoices. Sign in to the company workshop to generate invoices. In customer My leases use “Demo: finish this lease” and confirm; the completed lease shows explained Return, Pass on and Buyout choices. In the customer view choose Return, enter usage and submit the request. Enter Company operations, show its return notification, confirm physical receipt, inspect, confirm required work and approve the proposal. Open its used offer, switch customers and create the next lease. Show that the asset ID is unchanged and contract IDs differ.
+**Show:** Select an approved customer and an available asset. Quote and sign. Open My leases and show the saved rent and invoices. Invoice numbers open the saved PDF viewer; use Transactions to browse invoices by asset if time permits. Sign in to the company workshop to generate invoices. In customer My leases use “Demo: finish this lease” and confirm; the completed lease shows explained Return, Pass on and Buyout choices. In the customer view choose Return, enter usage and submit the request. Enter Company operations, show its return notification, confirm physical receipt, inspect, confirm required work and approve the proposal. Open its used offer, switch customers and create the next lease. Show that the asset ID is unchanged and contract IDs differ.
 
 **Say:** “Ending the contract does not mean the item has arrived. The operator records receipt and completes required work before the asset becomes available again.”
 
@@ -32,7 +32,7 @@ Use this as slide copy and speaking notes. Reserve most of the four minutes for 
 
 **Say:** “Money is stored in integer cents. Monthly anniversaries follow the original start day, clamped when a month is shorter. A January 31 lease reaches February’s last day and returns to the original day when possible. We test leap years, boundaries and thousands of generated schedules.”
 
-**Evidence:** Current automated suite has 301 tests across 50 files, including 2,880 deterministic generated schedule cases. Recheck these counts if the code changes.
+**Evidence:** Current automated suite has 304 tests across 51 files, including 2,880 deterministic generated schedule cases. Recheck these counts if the code changes.
 
 ## Slide 5 — What we chose and what comes next (3:25–4:00)
 

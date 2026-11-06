@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ReturnRequest } from './return-request';
 import { usageUnitSchema } from '@/data/schemas';
 import { DemoLeaseCompletion } from './demo-lease-completion';
@@ -142,7 +143,14 @@ export async function LeaseEnginePanel({
           }}
         />
       )}
-      <h3 className="font-semibold">{t('engine.invoices')}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-semibold">{t('engine.costDetails')}</h3>
+        {!operator && (
+          <Link className="ui-secondary text-sm" href={`/${locale}/invoices`}>
+            {t('invoices.title')}
+          </Link>
+        )}
+      </div>
       {operator && (
         <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
           {t('engine.demoNote')}
@@ -224,7 +232,18 @@ export async function LeaseEnginePanel({
                   key={invoice.invoiceId}
                   className="border-t border-stone-200 dark:border-stone-700"
                 >
-                  <td className="px-2 py-2">{invoice.number}</td>
+                  <td className="px-2 py-2">
+                    {operator ? (
+                      invoice.number
+                    ) : (
+                      <Link
+                        className="font-semibold underline underline-offset-4"
+                        href={`/${locale}/invoices/${invoice.invoiceId}`}
+                      >
+                        {invoice.number}
+                      </Link>
+                    )}
+                  </td>
                   <td className="px-2 py-2">{invoice.issueDate}</td>
                   <td className="px-2 py-2">{invoice.dueDate}</td>
                   <td className="px-2 py-2">{formatEuro(invoice.netCents, intlLocale[locale])}</td>

@@ -20,7 +20,7 @@ export function LeaseEngineActions({ contractId, leaseId, status, pendingPeriods
     try {
       const requests =
         action === 'generate'
-          ? pendingPeriods.map((periodIndex) => ({
+          ? pendingPeriods.slice(0, 1).map((periodIndex) => ({
               path: `/api/leases/${leaseId}/invoices`,
               body: { periodIndex },
               key: `ui:${leaseId}:${periodIndex}`,

@@ -1,6 +1,6 @@
 # Lease Loop — current progress
 
-Updated 6 November 2026. Local branch: `feat/lease-lifecycle-team-handoff`, based on team main `92db65e`. Your teammate’s company profile, return-request form and approval workflow are integrated with the local demo, access and smart-point improvements. Combined work is not pushed yet.
+Updated 6 November 2026. Local branch: `feat/lease-lifecycle-team-handoff`, based on team main `f50304f`. Your teammate’s company profile, return-request form and approval workflow are integrated with the local demo, access and smart-point improvements. Combined work is prepared on the team handoff branch.
 
 ## Working loop
 
@@ -32,7 +32,7 @@ Also implemented: conditional question flow, a documented early-exit cap, requir
 
 ## Validation
 
-Latest full gate: `npm run check:all` — 301 tests across 50 files, formatting, lint, typecheck, file-size, no-AI scan, coverage and production build.
+Latest full gate: `npm run check:all` — 304 tests across 51 files, formatting, lint, typecheck, file-size, no-AI scan, coverage and production build.
 
 An isolated SQLite HTTP/render smoke verified customer mutation denials, company sign-in, pending→approval→offer, the full two-customer loop, replay, cards 9/10, buyout and pass-on. User dev.db was not used for the smoke test. The new migration was applied additively to it.
 
@@ -57,3 +57,7 @@ At the user’s request, local dev.db was backed up, reset and reseeded. Verifie
 ## Dark mode and UI polish
 
 Customer and company views now share paired light/dark surfaces, readable controls, consistent buttons, clearer status panels and more spacious invoice tables. Catalogue, account, workshop, language menu and return notifications include dark styling. Shared body/surface/secondary/button text color pairs were checked numerically at or above 4.5:1 contrast. This is not a full accessibility audit; visual browser review remains pending because browser access is unavailable.
+
+## Latest teammate merge: invoices and PDF
+
+Integrated team main `f50304f` (PR 20): invoice browsing by asset, saved invoice viewer/PDF download and active sidebar navigation. Customer end choices, demo completion, company permissions, return notifications, VAT forecasts and dark-mode improvements are retained. Company invoice generation now creates one next invoice per click. PDF access is customer-scoped and errors use the safe API envelope. Invoice pages share the dark palette and show all saved invoices rather than silently truncating the list.

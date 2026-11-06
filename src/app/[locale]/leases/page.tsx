@@ -66,7 +66,13 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                             : t('account.endOfTerm.dateError')}
                       </span>
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+                    <span
+                      className={
+                        lease.status === 'COMPLETED' || lease.status === 'TERMINATED'
+                          ? 'rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800'
+                          : 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800'
+                      }
+                    >
                       {leaseStatusLabels[lease.status]}
                     </span>
                     <svg

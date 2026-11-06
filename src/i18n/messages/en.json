@@ -40,6 +40,7 @@
   "asset.previousLives": "Previous leases",
   "asset.listPrice": "List price excl. VAT",
   "asset.priceListVersion": "Price list {version}",
+  "asset.secondLifePrice": "Second-life price",
   "asset.noPrice": "No price on this date",
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",

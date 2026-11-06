@@ -1,7 +1,7 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/pricing/price-list';
+import type { AssetPriceResult } from '@/domain/pricing/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 type AssetCardProps = {
   asset: Asset;
-  price: ListPriceResult;
+  price: AssetPriceResult;
   leasePrice: number;
   locale: Locale;
   t: Translate;
@@ -69,9 +69,9 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
               <p>{t('asset.listPrice')}</p>
               {price.ok ? (
                 <p>
-                  {t('asset.priceListVersion', {
-                    version: price.priceListVersion,
-                  })}
+                  {price.priceListVersion === null
+                    ? t('asset.secondLifePrice')
+                    : t('asset.priceListVersion', { version: price.priceListVersion })}
                 </p>
               ) : null}
             </div>

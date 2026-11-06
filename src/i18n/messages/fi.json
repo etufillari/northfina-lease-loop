@@ -40,6 +40,7 @@
   "asset.previousLives": "Aiemmat vuokrakaudet",
   "asset.listPrice": "Listahinta alv 0 %",
   "asset.priceListVersion": "Hinnasto {version}",
+  "asset.secondLifePrice": "Toisen elämän hinta",
   "asset.noPrice": "Ei hintaa tälle päivälle",
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",

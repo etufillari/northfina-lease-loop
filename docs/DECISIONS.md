@@ -43,8 +43,16 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 - A **quote** locks the price-list version. It is valid through the end of the **next**
   calendar day (card 2: quoted Thu 5 Nov on v1, signed Fri 6 Nov → the v1 price is locked,
   and the app says why).
-- **Holds are 7 days** everywhere: approved application awaiting signature, waiting-for-the-
-  signatory, a waiting-list turn, a second-life offer.
+- **Holds** (one table, `src/domain/holds.ts`): approved application awaiting signature 7
+  days, waiting for the company's signatory 7 days, end-of-term nomination 7 days,
+  waiting-list offer **3** days (the item sits idle while others wait). A hold is valid
+  through its `until` day and lapses the day after. A quote's price is not a hold: valid on
+  its day and the next (card 2).
+- **Holds lapse by themselves** (6 Nov): an overnight job ends what lapsed — an unsigned
+  approval expires and frees its items, an unanswered offer passes to the next person in
+  line (whose offer can lapse in turn), an unused nomination ends. In the demo the clock is
+  the time-travel bar, so moving it forward runs that job for each day on which something
+  lapses, in date order, logged as `system`. Staff can still release by hand.
 - **Start date:** chosen by the customer, at most 3 months ahead. The 18-year age rule is
   checked on the start date; a decline says when the applicant can come back.
 - **Question flow:** a pure engine evaluates `ask_when` from `data/questions.json` — nothing
@@ -140,7 +148,7 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 
 - Every domain function takes an ISO date; `src/server/today.ts` supplies "today", and an
   as-of override doubles as the demo's time-travel mode. Time travel only moves forward,
-  by +1 day / week / month buttons with no date picker (contracts, invoices and offers are written on their day, so going back would contradict
+  by +1 day / week / month or a jump to a later date (contracts, invoices and offers are written on their day, so going back would contradict
   the records); "Reset demo" rebuilds the database from the data pack in one audited
   transaction and restarts on 1 Jan 2026, the first day of price list v1, so every scenario
   card can be replayed going forward. The demo controls sit in their own bar above the nav.

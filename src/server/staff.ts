@@ -1,7 +1,7 @@
 // The staff desk: the queue of applications a person has to act on, and the two decisions
 // staff can take on a manual review. Signing for an absent signatory reuses
 // signApplication (src/server/contracts.ts) with the signatory's e-mail as the actor.
-import { addDays } from '@/domain/calendar';
+import { holdUntil as holdUntilFor } from '@/domain/holds';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
@@ -100,7 +100,7 @@ export async function approveApplication(
   const answers = JSON.parse(application.answers_json) as Record<string, unknown>;
   const cannotSign = answers['q_customer_type'] === 'company' && answers['q_can_sign'] === 'no';
   const status = cannotSign ? 'awaiting_signature' : 'approved';
-  const holdUntil = addDays(input.asOf, 7);
+  const holdUntil = holdUntilFor(cannotSign ? 'signatory' : 'approval', input.asOf);
   const assetIds = quoteAssetIds(application.quote);
 
   await withAudit(

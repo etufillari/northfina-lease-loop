@@ -150,5 +150,6 @@
   "account.applications.financedAmount": "Rahoitettava määrä",
   "account.applications.contractAvailable": "Sopimus saatavilla",
   "account.applications.manualReviewDescription": "Hakemuksesi odottaa manuaalista käsittelyä.",
-  "account.applications.continueToContract": "Jatka sopimukseen"
+  "account.applications.continueToContract": "Jatka sopimukseen",
+  "staff.applications.title": "Hakemukset"
 }

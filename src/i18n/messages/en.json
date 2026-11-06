@@ -483,5 +483,7 @@
   "usage.unit.engine_hours": "engine hours",
   "usage.sinceBattery": "Since the last new battery",
   "usage.sinceService": "Since the last major service",
-  "passport.detail.reading": "meter {reading} (+{added} on this lease)"
+  "passport.detail.reading": "meter {reading} (+{added} on this lease)",
+  "apply.backToItem": "Back to the item",
+  "apply.backToFleet": "Back to the fleet"
 }

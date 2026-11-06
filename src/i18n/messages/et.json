@@ -483,5 +483,7 @@
   "usage.unit.engine_hours": "mootoritunnid",
   "usage.sinceBattery": "Pärast viimast akuvahetust",
   "usage.sinceService": "Pärast viimast suurhooldust",
-  "passport.detail.reading": "näit {reading} (+{added} selle rendiga)"
+  "passport.detail.reading": "näit {reading} (+{added} selle rendiga)",
+  "apply.backToItem": "Tagasi toote juurde",
+  "apply.backToFleet": "Tagasi autopargi juurde"
 }

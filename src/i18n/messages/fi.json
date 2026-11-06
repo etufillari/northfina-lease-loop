@@ -483,5 +483,7 @@
   "usage.unit.engine_hours": "käyttötunnit",
   "usage.sinceBattery": "Edellisen akun vaihdon jälkeen",
   "usage.sinceService": "Edellisen huollon jälkeen",
-  "passport.detail.reading": "mittari {reading} (+{added} tällä vuokrauksella)"
+  "passport.detail.reading": "mittari {reading} (+{added} tällä vuokrauksella)",
+  "apply.backToItem": "Takaisin tuotteeseen",
+  "apply.backToFleet": "Takaisin kalustoon"
 }

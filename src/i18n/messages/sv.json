@@ -483,5 +483,7 @@
   "usage.unit.engine_hours": "motortimmar",
   "usage.sinceBattery": "Sedan senaste nya batteriet",
   "usage.sinceService": "Sedan senaste stora service",
-  "passport.detail.reading": "mätare {reading} (+{added} under det här avtalet)"
+  "passport.detail.reading": "mätare {reading} (+{added} under det här avtalet)",
+  "apply.backToItem": "Tillbaka till artikeln",
+  "apply.backToFleet": "Tillbaka till flottan"
 }

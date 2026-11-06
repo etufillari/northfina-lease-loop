@@ -346,6 +346,8 @@ export const secondLifeRequestSchema = z.strictObject({
   joined_on: isoDateSchema,
   /** How many items this entry wants (wait-08's three office laptops). Default: one. */
   quantity: z.number().int().positive().default(1),
+  /** The customer behind the entry, when they have an account (wait-02 is Pekka, the courier). */
+  customer_id: z.string().min(1).optional(),
   who: z.string(),
 });
 export type SecondLifeRequest = z.infer<typeof secondLifeRequestSchema>;

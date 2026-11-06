@@ -15,19 +15,22 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  usage_value             Int
+  previous_lives          Int
+  status                  String // available | reserved | returned
+  // Set by the second-life desk: refurbished value + refurbishment, quoted instead of the
+  // catalogue list price from then on (docs/DECISIONS.md "Re-price").
+  second_life_price_cents Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   @@index([category])
 }
@@ -172,15 +175,18 @@ model Invoice {
 
 // Why an asset is reserved, for whom and until when. Every `reserved` status has one.
 model Reservation {
-  id          String   @id @default(cuid())
-  asset_id    String
-  customer_id String?
-  kind        String // approval_hold | awaiting_signatory | waitlist_offer | nomination
-  until       String // ISO date, 7 days by default
-  active      Boolean  @default(true)
-  created_at  DateTime @default(now())
+  id                String   @id @default(cuid())
+  asset_id          String
+  customer_id       String?
+  kind              String // approval_hold | awaiting_signatory | waitlist_offer | waitlist_pool | nomination
+  until             String // ISO date, 7 days by default
+  // The waiting-list entry a waitlist_offer or waitlist_pool hold is for.
+  waitlist_entry_id String?
+  active            Boolean  @default(true)
+  created_at        DateTime @default(now())
 
   @@index([asset_id, active])
+  @@index([waitlist_entry_id])
 }
 
 // The second-life waiting list, seeded from data/second-life-demand.json.
@@ -195,10 +201,17 @@ model WaitlistEntry {
   // How many items this entry wants; an offer fills it one asset at a time.
   quantity                   Int      @default(1)
   who                        String
-  status                     String   @default("waiting") // waiting | offered | leased | removed
+  // waiting | offered | accepted (application started) | leased | removed
+  status                     String   @default("waiting")
+  // The customer behind the entry; null for data-pack waiters with no account.
+  customer_id                String?
+  // Why an entry left the list: left | declined | offer_expired.
+  left_reason                String?
   offered_asset_id           String?
   created_at                 DateTime @default(now())
   updated_at                 DateTime @updatedAt
+
+  @@index([customer_id])
 }
 
 // The item passport: every lifecycle event of an asset, across all its lives.

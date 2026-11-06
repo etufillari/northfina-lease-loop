@@ -7,6 +7,7 @@
     "preferred_term_months": 24,
     "needed_by": "2026-11-20",
     "joined_on": "2026-10-03",
+    "customer_id": "cust-sanna",
     "who": "Student in Helsinki"
   },
   {
@@ -17,6 +18,7 @@
     "preferred_term_months": 12,
     "needed_by": "2026-11-10",
     "joined_on": "2026-10-01",
+    "customer_id": "cust-pekka",
     "who": "Delivery courier, accepts scratches"
   },
   {

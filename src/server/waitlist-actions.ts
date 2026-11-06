@@ -2,10 +2,10 @@
 //
 // - A customer joins with what they need (category, budget, minimum condition, term,
 //   deadline, how many) and gets a place in the first-come-first-served queue.
-// - When the desk offers them an item (or a full set), they accept — which starts a normal
+// - When the desk offers them an item (or a whole set), they accept — which starts a normal
 //   application at the second-life price, no down payment, at their preferred term — or
 //   decline. Signing the lease marks the entry `leased` (src/server/contracts.ts).
-// - Declining, or letting the 7-day offer hold run out, takes them off the list and passes
+// - Declining, or letting the 3-day offer hold run out, takes them off the list and passes
 //   the items to the next person in line. Expired holds are passed on by staff from the desk.
 // Every change is one audited transaction.
 import { loadCoefficientTable } from '@/data/load';
@@ -13,7 +13,7 @@ import type { AssetCategory, AssetCondition } from '@/data/schemas';
 import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
 import { startApplication } from './applications';
 import { withAudit } from './audit';
-import { OFFER_RESERVATION, passItemsOn, pooledAssetsByWaiter } from './second-life-pools';
+import { OFFER_RESERVATION, passItemsOn } from './second-life-offers';
 import { STAFF_PERSONA as STAFF_ACTOR } from '@/components/persona-cookie';
 
 type Db = PrismaClient;
@@ -119,14 +119,13 @@ export async function offeredItems(db: Db, entryId: string) {
 
 export type LeaveResult = { ok: true } | { ok: false; reason: EntryFailure };
 
-/** Leaves the queue. Anything already held in a pool for them is passed on. */
+/** Leaves the queue. Nothing is ever held for someone still waiting, so nothing moves. */
 export async function leaveWaitlist(
   db: Db,
   input: { entryId: string; actor: string; asOf: string }
 ): Promise<LeaveResult> {
   const found = await ownEntry(db, input.entryId, input.actor, ['waiting']);
   if (!found.ok) return found;
-  const pooled = (await pooledAssetsByWaiter(db))[input.entryId] ?? [];
   await withAudit(
     db,
     {
@@ -134,17 +133,12 @@ export async function leaveWaitlist(
       action: 'waitlist.left',
       entityType: 'waitlist_entry',
       entityId: input.entryId,
-      details: { pooledAssetIds: pooled },
     },
-    async (tx) => {
-      await tx.waitlistEntry.update({
+    (tx) =>
+      tx.waitlistEntry.update({
         where: { id: input.entryId },
         data: { status: 'removed', left_reason: 'left' },
-      });
-      if (pooled.length > 0) {
-        await passItemsOn(tx, { assetIds: pooled, asOf: input.asOf, reason: 'waiter_left' });
-      }
-    }
+      })
   );
   return { ok: true };
 }

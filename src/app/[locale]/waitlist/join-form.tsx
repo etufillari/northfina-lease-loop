@@ -113,7 +113,7 @@ export function JoinForm({
   return (
     <form
       onSubmit={submit}
-      className="mt-4 grid gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2 dark:border-stone-800 dark:bg-stone-900"
+      className="mt-4 grid items-end gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2 dark:border-stone-800 dark:bg-stone-900"
     >
       <label className="text-sm font-medium">
         {t('waitlist.join.category')}
@@ -129,29 +129,32 @@ export function JoinForm({
           ))}
         </select>
       </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="text-sm font-medium">
-          {t('waitlist.join.budgetMin')}
-          <input
-            className={field}
-            inputMode="decimal"
-            value={minBudget}
-            onChange={(e) => setMinBudget(e.target.value)}
-            placeholder="0"
-          />
-        </label>
-        <label className="text-sm font-medium">
-          {t('waitlist.join.budgetMax')}
-          <input
-            className={field}
-            inputMode="decimal"
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
-            placeholder="45"
-            required
-          />
-        </label>
-      </div>
+      <fieldset className="text-sm">
+        <legend className="font-medium">{t('waitlist.join.budget')}</legend>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-stone-700 dark:text-stone-300">
+            {t('waitlist.join.budgetMin')}
+            <input
+              className={field}
+              inputMode="decimal"
+              value={minBudget}
+              onChange={(e) => setMinBudget(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+          <label className="text-stone-700 dark:text-stone-300">
+            {t('waitlist.join.budgetMax')}
+            <input
+              className={field}
+              inputMode="decimal"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              placeholder="45"
+              required
+            />
+          </label>
+        </div>
+      </fieldset>
       <label className="text-sm font-medium">
         {t('waitlist.join.minCondition')}
         <select

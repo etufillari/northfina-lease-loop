@@ -13,8 +13,6 @@ import { PhotoUpload } from './photo-upload';
 
 const OUTCOME_STYLE = {
   offer: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
-  complete_pool: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
-  pool: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
   list_available: 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100',
   parts_bin: 'bg-stone-200 text-stone-800 dark:bg-stone-700 dark:text-stone-100',
 } as const;
@@ -188,12 +186,12 @@ export function DecisionCard({
   );
 }
 
-/** Who gets the item, by outcome: one person, a set being collected, a full set, or nobody. */
+/** Who gets the item: one person, one person with a whole set, or nobody. */
 function WhoGetsIt({ locale, preview }: { locale: Locale; preview: SecondLifePreview }) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const { outcome, winner, winnerQuote } = preview;
-  if (outcome.kind === 'list_available' || outcome.kind === 'parts_bin' || !winner) {
+  if (outcome.kind !== 'offer' || !winner) {
     return (
       <p className="mt-1 text-sm">
         {t(`secondLife.reason.${outcome.kind === 'parts_bin' ? 'parts_bin' : 'list_available'}`)}
@@ -202,9 +200,9 @@ function WhoGetsIt({ locale, preview }: { locale: Locale; preview: SecondLifePre
   }
   const rent = winnerQuote ? euro(winnerQuote.monthlyNetRentCents) : '–';
   const term = winnerQuote?.termMonths ?? winner.preferred_term_months;
-  if (outcome.kind === 'offer') {
-    return (
-      <p className="mt-1 text-sm">
+  return (
+    <div className="mt-1 space-y-1 text-sm">
+      <p>
         {t('secondLife.winner', {
           id: winner.id,
           who: winner.who,
@@ -213,24 +211,18 @@ function WhoGetsIt({ locale, preview }: { locale: Locale; preview: SecondLifePre
           term,
         })}
       </p>
-    );
-  }
-  const base = { id: winner.id, who: winner.who, quantity: outcome.quantity };
-  return (
-    <div className="mt-1 space-y-1 text-sm">
-      <p>
-        {outcome.kind === 'pool'
-          ? t('secondLife.pool.holding', {
-              ...base,
-              filled: outcome.filled,
-              date: formatIsoDate(winner.needed_by, locale),
-            })
-          : t('secondLife.pool.complete', base)}
-      </p>
-      <p>{t('secondLife.pool.rent', { rent, term })}</p>
-      {preview.pooledAssetIds.length > 0 && (
-        <p className="text-stone-600 dark:text-stone-400">
-          {t('secondLife.pool.held', { assets: preview.pooledAssetIds.join(', ') })}
+      {preview.setPartners.length > 0 && (
+        <p>
+          {t('secondLife.setWith', {
+            quantity: winner.quantity,
+            assets: preview.setPartners
+              .map((p) =>
+                p.monthlyNetRentCents === null
+                  ? p.assetId
+                  : `${p.assetId} (${euro(p.monthlyNetRentCents)})`
+              )
+              .join(', '),
+          })}
         </p>
       )}
     </div>

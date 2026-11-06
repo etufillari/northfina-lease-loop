@@ -1,5 +1,5 @@
 'use client';
-// One desk action (execute a card, release a pool). The server recomputes everything; the
+// One desk action (execute a card, pass on a lapsed offer). The server recomputes everything; the
 // button only says who pressed it (the persona) and on which day (the time-travel date).
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

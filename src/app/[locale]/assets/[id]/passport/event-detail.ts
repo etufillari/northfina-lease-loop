@@ -86,19 +86,6 @@ export function eventDetail(locale: Locale, event: PassportEvent): string | null
         ? t('passport.detail.offerSet', { ...values, count: setSize })
         : t('passport.detail.offer', values);
     }
-    case 'pooled_for_waiter': {
-      const filled = num(d.filled);
-      const quantity = num(d.quantity);
-      const until = str(d.until);
-      return filled !== null && quantity !== null && until
-        ? t('passport.detail.pooled', {
-            who: str(d.who) ?? str(d.waiterId) ?? '',
-            filled,
-            quantity,
-            until: formatIsoDate(until, locale),
-          })
-        : null;
-    }
     case 'offer_accepted':
       return t('passport.detail.accepted', { who: str(d.who) ?? str(d.waiterId) ?? '' });
     case 'offer_ended':
@@ -108,13 +95,6 @@ export function eventDetail(locale: Locale, event: PassportEvent): string | null
       );
     case 'listed_available':
       return t('passport.detail.listed');
-    case 'pool_released': {
-      const filled = num(d.filled);
-      const quantity = num(d.quantity);
-      return filled !== null && quantity !== null
-        ? t('passport.detail.released', { filled, quantity })
-        : null;
-    }
     default:
       return null;
   }

@@ -10,7 +10,6 @@ import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { listReturnedDecisions } from '@/server/second-life';
-import { listPools } from '@/server/second-life-pools';
 import { listExpiredOffers } from '@/server/waitlist-actions';
 import { DecisionCard } from './decision-card';
 import { HoldsSection } from './holds-section';
@@ -39,9 +38,8 @@ export default async function SecondLifePage({
     );
   }
 
-  const [desk, pools, expiredOffers] = await Promise.all([
+  const [desk, expiredOffers] = await Promise.all([
     listReturnedDecisions(db, asOf),
-    listPools(db, asOf),
     listExpiredOffers(db, asOf),
   ]);
 
@@ -55,7 +53,6 @@ export default async function SecondLifePage({
 
       <HoldsSection
         locale={locale}
-        pools={pools}
         expiredOffers={expiredOffers}
         personaId={persona}
         asOfParam={asOfParam}

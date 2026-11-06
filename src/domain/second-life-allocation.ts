@@ -1,15 +1,15 @@
-// Shares the whole returns desk out in one pass, on top of the frozen `secondLifeDecision`.
+// Shares the whole returns desk out in one pass, on top of `secondLifeDecision`.
 //
 // Two rules the single-item decision cannot see:
 // 1. One person, one offer. Items are decided in desk order (asset id) and a waiter who wins
 //    one is gone from the list for the next, so the desk never shows the same person winning
 //    two cards.
-// 2. Pooling for multi-item entries. When the first-come winner of an item wants several
-//    (wait-08: three office laptops), the item is held for them instead of being offered.
-//    They stay at the top of the list, so the next suitable items are pooled for them too, and
-//    the whole set is offered together once the pool is full. Their budget is compared with
-//    the rent of ONE item: the per-item reading of `max_monthly_net_rent_cents` that the
-//    frozen matcher already uses (whether it is per item or for the set is still open).
+// 2. Sets are offered whole, and nothing is held back for them. A waiter who wants several
+//    (wait-08: three office laptops) wins an item only when the rest of their set is free at
+//    the same moment: refurbished items already listed in the catalogue (the "shelf") that fit
+//    them too. Then the item and its partners are offered together. Otherwise they are skipped
+//    for this item, which goes to the next person in line straight away. Their budget is
+//    compared with the rent of ONE item (the per-item reading the matcher uses).
 import type {
   Asset,
   AssetCategory,
@@ -28,87 +28,7 @@ import {
 
 export type DeskItem = { asset: Asset; originalListPriceCents: number };
 
-export type DeskOutcome =
-  | { kind: 'offer'; waiterId: string }
-  /** Held for a multi-item waiter: `filled` of `quantity` are pooled once this one is. */
-  | { kind: 'pool'; waiterId: string; filled: number; quantity: number }
-  /** This item fills the pool: every pooled item is offered to the waiter together. */
-  | { kind: 'complete_pool'; waiterId: string; quantity: number }
-  | { kind: 'list_available' }
-  | { kind: 'parts_bin' };
-
-/** The outcomes that hand an item to someone on the waiting list. */
-export type WinnerOutcome = Extract<DeskOutcome, { waiterId: string }>;
-
-export type DeskAllocation = {
-  assetId: string;
-  decision: SecondLifeDecision;
-  outcome: DeskOutcome;
-};
-
-/**
- * The waiting-list queue for one pass: hands a winner their item (or the next item of their
- * set) and takes them off the list once they are served.
- */
-function waitingQueue(
-  demand: readonly SecondLifeRequest[],
-  pooled: Readonly<Record<string, number>>
-) {
-  let remaining = [...demand];
-  const filled: Record<string, number> = { ...pooled };
-  return {
-    remaining: () => remaining,
-    assign(winner: SecondLifeRequest): WinnerOutcome {
-      const leave = () => {
-        remaining = remaining.filter((w) => w.id !== winner.id);
-      };
-      if (winner.quantity <= 1) {
-        leave();
-        return { kind: 'offer', waiterId: winner.id };
-      }
-      const count = (filled[winner.id] ?? 0) + 1;
-      filled[winner.id] = count;
-      if (count >= winner.quantity) {
-        leave();
-        return { kind: 'complete_pool', waiterId: winner.id, quantity: winner.quantity };
-      }
-      return { kind: 'pool', waiterId: winner.id, filled: count, quantity: winner.quantity };
-    },
-  };
-}
-
-/**
- * @param items     the returned assets with their v1 price, in any order
- * @param demand    waiters still waiting (already-offered people left out by the caller)
- * @param pooled    items already held per waiter id from earlier desk runs
- */
-export function allocateDesk(
-  items: readonly DeskItem[],
-  input: {
-    asOfDate: string;
-    demand: readonly SecondLifeRequest[];
-    pooled: Readonly<Record<string, number>>;
-  },
-  data: { curves: ResidualCurves; costs: RefurbishmentCosts; table: CoefficientTable }
-): DeskAllocation[] {
-  const ordered = [...items].sort((a, b) => a.asset.id.localeCompare(b.asset.id));
-  const queue = waitingQueue(input.demand, input.pooled);
-
-  return ordered.map(({ asset, originalListPriceCents }) => {
-    const decision = secondLifeDecision(
-      { asset, originalListPriceCents, asOfDate: input.asOfDate },
-      { ...data, demand: queue.remaining() }
-    );
-    const winner = queue.remaining().find((w) => w.id === decision.winnerId);
-    if (!winner) {
-      const kind = decision.action === 'parts_bin' ? 'parts_bin' : 'list_available';
-      return { assetId: asset.id, decision, outcome: { kind } };
-    }
-    return { assetId: asset.id, decision, outcome: queue.assign(winner) };
-  });
-}
-
-/** An item already refurbished and priced by the desk, looking for its next person. */
+/** An item already refurbished and priced by the desk. */
 export type RefurbishedItem = {
   assetId: string;
   category: AssetCategory;
@@ -117,51 +37,199 @@ export type RefurbishedItem = {
   financedCents: number;
 };
 
+export type OfferOutcome = {
+  kind: 'offer';
+  waiterId: string;
+  /** Free items offered together with this one to complete a multi-item set, by asset id. */
+  withAssetIds: string[];
+};
+
+export type DeskOutcome = OfferOutcome | { kind: 'list_available' } | { kind: 'parts_bin' };
+
+export type DeskAllocation = {
+  assetId: string;
+  decision: SecondLifeDecision;
+  outcome: DeskOutcome;
+};
+
+const byJoinOrder = (a: WaiterVerdict, b: WaiterVerdict) =>
+  a.joinedOn.localeCompare(b.joinedOn) || a.id.localeCompare(b.id);
+
+/**
+ * The waiting-list queue for one pass. `free` is everything that can complete a set: the
+ * shelf, plus (for a hand-over) the batch's own items.
+ */
+function waitingQueue(
+  demand: readonly SecondLifeRequest[],
+  free: readonly RefurbishedItem[],
+  asOfDate: string,
+  table: CoefficientTable
+) {
+  let remaining = [...demand];
+  let pool = [...free].sort((a, b) => a.assetId.localeCompare(b.assetId));
+  const fits = (item: RefurbishedItem, waiter: SecondLifeRequest) =>
+    matchWaitingList(
+      {
+        category: item.category,
+        condition: item.condition,
+        financedCents: item.financedCents,
+        asOfDate,
+      },
+      [waiter],
+      table
+    ).winner !== null;
+  return {
+    remaining: () => remaining,
+    /** The free items that complete `winner`'s set with one more item, or null if too few. */
+    partners(winner: SecondLifeRequest, besides: string): string[] | null {
+      if (winner.quantity <= 1) return [];
+      const matching = pool.filter((item) => item.assetId !== besides && fits(item, winner));
+      return matching.length >= winner.quantity - 1
+        ? matching.slice(0, winner.quantity - 1).map((item) => item.assetId)
+        : null;
+    },
+    assign(winner: SecondLifeRequest, withAssetIds: string[]): OfferOutcome {
+      remaining = remaining.filter((w) => w.id !== winner.id);
+      pool = pool.filter((item) => !withAssetIds.includes(item.assetId));
+      return { kind: 'offer', waiterId: winner.id, withAssetIds };
+    },
+    take(assetId: string) {
+      pool = pool.filter((item) => item.assetId !== assetId);
+    },
+    putBack(item: RefurbishedItem) {
+      pool = [...pool, item].sort((a, b) => a.assetId.localeCompare(b.assetId));
+    },
+  };
+}
+
+/** A waiter skipped because their set cannot be completed now, with this item's rent. */
+function setIncomplete(winner: SecondLifeRequest, considered: WaiterVerdict[]): WaiterVerdict {
+  const rent = considered.find((v) => v.id === winner.id)?.monthlyNetRentCents;
+  return {
+    id: winner.id,
+    joinedOn: winner.joined_on,
+    outcome: 'set_incomplete',
+    ...(rent === undefined ? {} : { monthlyNetRentCents: rent }),
+  };
+}
+
+/**
+ * @param items   the returned assets with their v1 price, in any order
+ * @param demand  waiters still waiting (already-offered people left out by the caller)
+ * @param shelf   refurbished items listed and free right now: they can complete a set
+ */
+export function allocateDesk(
+  items: readonly DeskItem[],
+  input: {
+    asOfDate: string;
+    demand: readonly SecondLifeRequest[];
+    shelf: readonly RefurbishedItem[];
+  },
+  data: { curves: ResidualCurves; costs: RefurbishmentCosts; table: CoefficientTable }
+): DeskAllocation[] {
+  const ordered = [...items].sort((a, b) => a.asset.id.localeCompare(b.asset.id));
+  const queue = waitingQueue(input.demand, input.shelf, input.asOfDate, data.table);
+
+  return ordered.map(({ asset, originalListPriceCents }) => {
+    const skipped: WaiterVerdict[] = [];
+    let demand = queue.remaining();
+    for (;;) {
+      const decision = secondLifeDecision(
+        { asset, originalListPriceCents, asOfDate: input.asOfDate },
+        { ...data, demand }
+      );
+      const winner = demand.find((w) => w.id === decision.winnerId);
+      const withSkipped = { ...decision, considered: [...decision.considered, ...skipped] };
+      withSkipped.considered.sort(byJoinOrder);
+      if (!winner) {
+        const kind = decision.action === 'parts_bin' ? 'parts_bin' : 'list_available';
+        return { assetId: asset.id, decision: withSkipped, outcome: { kind } };
+      }
+      const partners = queue.partners(winner, asset.id);
+      if (partners) {
+        return {
+          assetId: asset.id,
+          decision: withSkipped,
+          outcome: queue.assign(winner, partners),
+        };
+      }
+      skipped.push(setIncomplete(winner, decision.considered));
+      demand = demand.filter((w) => w.id !== winner.id);
+    }
+  });
+}
+
 export type HandoverAllocation = {
   assetId: string;
-  outcome: WinnerOutcome | { kind: 'list_available' };
+  /** `in_set`: offered as part of the set led by another item of the same batch. */
+  outcome: OfferOutcome | { kind: 'in_set'; waiterId: string } | { kind: 'list_available' };
   considered: WaiterVerdict[];
 };
 
 /**
- * Passes refurbished items on when an offer ends (declined, expired, or a pool released): no
- * new refurbishment and no re-pricing, just the next person in line at the price the desk
- * set, with the same one-offer-per-person and pooling rules as the desk.
+ * Passes refurbished items on when an offer ends (declined or expired): no new refurbishment
+ * and no re-pricing, just the next person in line at the price the desk set, with the same
+ * one-offer-per-person and whole-set rules as the desk. The batch's own items can complete a
+ * set too, so a declined set of three can go straight to the next person who wants three.
  */
 export function allocateRefurbished(
   items: readonly RefurbishedItem[],
   input: {
     asOfDate: string;
     demand: readonly SecondLifeRequest[];
-    pooled: Readonly<Record<string, number>>;
+    shelf: readonly RefurbishedItem[];
   },
   table: CoefficientTable
 ): HandoverAllocation[] {
   const ordered = [...items].sort((a, b) => a.assetId.localeCompare(b.assetId));
-  const queue = waitingQueue(input.demand, input.pooled);
+  const queue = waitingQueue(input.demand, [...input.shelf, ...ordered], input.asOfDate, table);
+  const results = new Map<string, HandoverAllocation>();
 
-  return ordered.map((item) => {
-    const match = matchWaitingList(
-      {
-        category: item.category,
-        condition: item.condition,
-        financedCents: item.financedCents,
-        asOfDate: input.asOfDate,
-      },
-      queue.remaining(),
-      table
-    );
-    if (!match.winner) {
-      return {
-        assetId: item.assetId,
-        outcome: { kind: 'list_available' },
-        considered: match.considered,
-      };
+  for (const item of ordered) {
+    if (results.has(item.assetId)) continue;
+    queue.take(item.assetId);
+    const skipped: WaiterVerdict[] = [];
+    let demand = queue.remaining();
+    for (;;) {
+      const match = matchWaitingList(
+        {
+          category: item.category,
+          condition: item.condition,
+          financedCents: item.financedCents,
+          asOfDate: input.asOfDate,
+        },
+        demand,
+        table
+      );
+      const considered = [...match.considered, ...skipped].sort(byJoinOrder);
+      if (!match.winner) {
+        // Listed: it is on the shelf now, so a later item's set may still take it.
+        queue.putBack(item);
+        results.set(item.assetId, {
+          assetId: item.assetId,
+          outcome: { kind: 'list_available' },
+          considered,
+        });
+        break;
+      }
+      const partners = queue.partners(match.winner, item.assetId);
+      if (partners) {
+        const outcome = queue.assign(match.winner, partners);
+        results.set(item.assetId, { assetId: item.assetId, outcome, considered });
+        for (const partner of partners) {
+          if (!ordered.some((i) => i.assetId === partner)) continue;
+          const earlier = results.get(partner);
+          results.set(partner, {
+            assetId: partner,
+            outcome: { kind: 'in_set', waiterId: match.winner.id },
+            considered: earlier?.considered ?? [],
+          });
+        }
+        break;
+      }
+      skipped.push(setIncomplete(match.winner, match.considered));
+      demand = demand.filter((w) => w.id !== match.winner!.id);
     }
-    return {
-      assetId: item.assetId,
-      outcome: queue.assign(match.winner),
-      considered: match.considered,
-    };
-  });
+  }
+  return ordered.map((item) => results.get(item.assetId)!);
 }

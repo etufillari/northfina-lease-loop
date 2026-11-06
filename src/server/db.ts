@@ -5,8 +5,11 @@ import { createPrismaClient, type PrismaClient } from './prisma-client';
 
 const globalForPrisma = globalThis as typeof globalThis & { leaseLoopDb?: PrismaClient };
 
-export const db: PrismaClient = globalForPrisma.leaseLoopDb ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.leaseLoopDb = db;
-}
+export const db: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client =
+      globalForPrisma.leaseLoopDb ?? (globalForPrisma.leaseLoopDb = createPrismaClient());
+    const val = Reflect.get(client, prop);
+    return typeof val === 'function' ? val.bind(client) : val;
+  },
+});

@@ -1,39 +1,98 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
-import type { Asset, AssetStatus } from '@/data/schemas';
+import type { Asset, AssetStatus, CoefficientTable, VatRates } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { ContractDrawerTrigger } from './contract';
+import type { SecondLifeData } from './second-life-panel';
 
-const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
-  available: {
-    badge:
-      'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
-    dot: 'bg-emerald-600 dark:bg-emerald-400',
-  },
-  reserved: {
-    badge:
-      'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800',
-    dot: 'bg-amber-500 dark:bg-amber-400',
-  },
-  returned: {
-    badge:
-      'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
-    dot: 'bg-sky-600 dark:bg-sky-400',
-  },
+// Available = green check, reserved = amber hourglass, returned = blue loop arrows, sold = stone check.
+const statusColors: Record<AssetStatus, string> = {
+  available: 'text-emerald-600 dark:text-emerald-400',
+  reserved: 'text-amber-600 dark:text-amber-400',
+  leased: 'text-blue-600 dark:text-blue-400',
+  returned: 'text-sky-600 dark:text-sky-400',
+  sold: 'text-stone-600 dark:text-stone-400',
 };
+
+function StatusIcon({ status }: { status: AssetStatus }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-6"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {status === 'reserved' ? (
+        <>
+          <path d="M6 3h12M6 21h12" />
+          <path d="M7 3v3.5a5 5 0 0 0 2 4l3 1.5-3 1.5a5 5 0 0 0-2 4V21" />
+          <path d="M17 3v3.5a5 5 0 0 1-2 4L12 12l3 1.5a5 5 0 0 1 2 4V21" />
+        </>
+      ) : status === 'returned' ? (
+        // Two arrows chasing each other, like the logo: back in the loop.
+        <>
+          <path d="M4.5 11a8 8 0 0 1 13.7-4.7L20 8" />
+          <path d="M20 3v5h-5" />
+          <path d="M19.5 13a8 8 0 0 1-13.7 4.7L4 16" />
+          <path d="M4 21v-5h5" />
+        </>
+      ) : (
+        <path d="M4 12.5 9.5 18 20 6.5" />
+      )}
+    </svg>
+  );
+}
+
+/** An icon with the status text as a tooltip (hover or keyboard focus) and for screen readers. */
+function StatusBadge({ status, t }: { status: AssetStatus; t: Translate }) {
+  return (
+    <span
+      tabIndex={0}
+      className={`group/status relative shrink-0 rounded-full p-0.5 ${statusColors[status]}`}
+    >
+      <StatusIcon status={status} />
+      <span className="sr-only">
+        {t('status.label')}: {t(`status.${status}`)}
+      </span>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-full right-0 z-10 mt-1 hidden rounded-md bg-stone-900 px-2 py-1 text-xs font-medium whitespace-nowrap text-white shadow group-hover/status:block group-focus/status:block dark:bg-stone-100 dark:text-stone-900"
+      >
+        {t(`status.${status}`)}
+      </span>
+    </span>
+  );
+}
 
 type AssetCardProps = {
   asset: Asset;
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  coefficientTable?: CoefficientTable;
+  vatRates?: VatRates;
+  isoDate?: string;
+  secondLife?: SecondLifeData;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  price,
+  locale,
+  t,
+  coefficientTable,
+  vatRates,
+  isoDate,
+  secondLife,
+}: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
-  const status = statusStyles[asset.status];
 
   return (
     <article
@@ -47,13 +106,7 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
             {asset.model}
           </h3>
         </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
+        <StatusBadge status={asset.status} t={t} />
       </div>
 
       <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
@@ -70,13 +123,29 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
         <div className="text-xs text-stone-600 dark:text-stone-400">
           <p>{t('asset.listPrice')}</p>
           {price.ok ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
+            <p>
+              {price.isRelisted
+                ? t('secondLife.relistPriceLabel')
+                : t('asset.priceListVersion', { version: price.priceListVersion })}
+            </p>
           ) : null}
         </div>
         <p className="text-right text-xl font-semibold tabular-nums">
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
       </div>
+
+      {coefficientTable && vatRates && isoDate ? (
+        <ContractDrawerTrigger
+          asset={asset}
+          price={price}
+          coefficientTable={coefficientTable}
+          vatRates={vatRates}
+          isoDate={isoDate}
+          locale={locale}
+          secondLife={secondLife}
+        />
+      ) : null}
     </article>
   );
 }

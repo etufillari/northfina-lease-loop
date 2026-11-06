@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPriceLists } from '@/data/load';
 import type { PriceList } from '@/data/schemas';
-import { listPriceOn } from './price-list';
+import { contractListPrice, effectiveAssetPriceOn, listPriceOn } from './price-list';
 
 let priceLists: PriceList[];
 beforeAll(async () => {
@@ -63,5 +63,65 @@ describe('listPriceOn', () => {
 
   it('throws on a date that is not YYYY-MM-DD, because that is a bug in the caller', () => {
     expect(() => listPriceOn(priceLists, 'ebike-001', '6.11.2026')).toThrow(RangeError);
+  });
+});
+
+describe('effectiveAssetPriceOn', () => {
+  it('uses relist_price_cents when present on a relisted asset', () => {
+    expect(
+      effectiveAssetPriceOn(
+        priceLists,
+        { id: 'ebike-007', relist_price_cents: 92_781 },
+        '2026-11-05'
+      )
+    ).toEqual({
+      ok: true,
+      priceCents: 92_781,
+      priceListVersion: 1,
+      isRelisted: true,
+    });
+  });
+
+  it('falls back to listPriceOn when relist_price_cents is absent or null', () => {
+    expect(
+      effectiveAssetPriceOn(priceLists, { id: 'ebike-003', relist_price_cents: null }, '2026-11-05')
+    ).toEqual({
+      ok: true,
+      priceCents: 389_000,
+      priceListVersion: 1,
+    });
+  });
+
+  it('rejects invalid dates or non-integer relist_price_cents', () => {
+    expect(() => effectiveAssetPriceOn(priceLists, { id: 'ebike-003' }, 'bad-date')).toThrow(
+      RangeError
+    );
+    expect(() =>
+      effectiveAssetPriceOn(priceLists, { id: 'ebike-003', relist_price_cents: -10 }, '2026-11-05')
+    ).toThrow(RangeError);
+  });
+});
+
+describe('contractListPrice', () => {
+  const catalogue = { ok: true, priceCents: 262_400, priceListVersion: 2 } as const;
+  const offer = { priceCents: 249_900, priceListVersion: 1 };
+
+  it('uses the price locked in the offer when the contract was signed under one', () => {
+    expect(contractListPrice({ offer, catalogue })).toEqual({
+      ok: true,
+      priceCents: 249_900,
+      priceListVersion: 1,
+    });
+  });
+
+  it('uses the catalogue price without an offer, failures included', () => {
+    expect(contractListPrice({ offer: null, catalogue })).toEqual(catalogue);
+    const missing = { ok: false, reason: 'unknown_asset' } as const;
+    expect(contractListPrice({ offer: null, catalogue: missing })).toEqual(missing);
+  });
+
+  it('keeps an offer price even when the catalogue has no price for that day', () => {
+    const missing = { ok: false, reason: 'no_price_list_on_date' } as const;
+    expect(contractListPrice({ offer, catalogue: missing })).toMatchObject({ ok: true });
   });
 });

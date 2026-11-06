@@ -9,11 +9,14 @@ export async function createTestDb() {
   const dir = await mkdtemp(path.join(tmpdir(), 'lease-loop-db-'));
   const file = path.join(dir, 'test.db');
   await copyFile(inject('templateDatabasePath'), file);
+  process.env.DATABASE_URL = `file:${file}`;
   const db = createPrismaClient(`file:${file}`);
+  (globalThis as typeof globalThis & { leaseLoopDb?: typeof db }).leaseLoopDb = db;
   return {
     db,
     async cleanup() {
       await db.$disconnect();
+      delete (globalThis as typeof globalThis & { leaseLoopDb?: typeof db }).leaseLoopDb;
       await rm(dir, { recursive: true, force: true });
     },
   };

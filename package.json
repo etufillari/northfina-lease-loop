@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "prisma generate && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
@@ -21,7 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "check:file-size": "node scripts/check-file-size.mjs",
     "check:no-ai": "node scripts/check-no-ai.mjs",
-    "check:all": "npm run format:check && npm run lint && npm run typecheck && npm run check:file-size && npm run check:no-ai && npm run test:coverage && npm run build",
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "check:all": "npm run format:check && npm run lint && npm run typecheck && npm run check:file-size && npm run check:no-ai && npm run check:migrations && npm run test:coverage && npm run build",
     "db:setup": "node scripts/ensure-env.mjs && prisma generate && prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
     "db:reset": "node scripts/ensure-env.mjs && prisma migrate reset --force && prisma db seed",
@@ -42,6 +43,7 @@
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.1",
+    "@hegeldev/hegel": "^0.5.1",
     "@next/eslint-plugin-next": "^16.4.5",
     "@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
     "@tailwindcss/postcss": "^4.3.3",
@@ -51,6 +53,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fast-check": "^4.10.2",
     "globals": "^17.14.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
@@ -76,6 +79,7 @@
     "prisma": true,
     "@prisma/engines": true,
     "esbuild": true,
-    "fsevents": false
+    "fsevents": false,
+    "koffi": true
   }
 }

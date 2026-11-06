@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { parsePriceSelection } from './price-selection';
+import { downPaymentRange } from './pricing';
+import {
+  nearestTerm,
+  parseEuroInput,
+  parsePriceSelection,
+  snapDownPayment,
+} from './price-selection';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -57,5 +63,55 @@ describe('parsePriceSelection', () => {
       termMonths: 24,
       downPaymentCents: 0,
     });
+  });
+});
+
+describe('nearestTerm', () => {
+  const terms = [12, 24, 36, 48];
+
+  it('keeps an offered term', () => {
+    expect(nearestTerm(terms, 24)).toBe(24);
+  });
+
+  it('picks the closest offered term, the shorter one on a tie', () => {
+    expect(nearestTerm(terms, 40)).toBe(36);
+    expect(nearestTerm(terms, 30)).toBe(24);
+    expect(nearestTerm(terms, 1)).toBe(12);
+    expect(nearestTerm(terms, 120)).toBe(48);
+  });
+
+  it('has nothing to pick from an empty list', () => {
+    expect(nearestTerm([], 36)).toBeNull();
+  });
+});
+
+describe('snapDownPayment', () => {
+  it('snaps to the step and clamps into the range', () => {
+    const range = downPaymentRange(FARM_006, table);
+    if (!range.ok) throw new Error('farm-006 should be leasable');
+    expect(snapDownPayment(2_049_900, range)).toBe(2_000_000);
+    expect(snapDownPayment(2_050_000, range)).toBe(2_100_000);
+    expect(snapDownPayment(0, range)).toBe(1_000_000);
+    expect(snapDownPayment(99_999_999, range)).toBe(range.maxCents);
+  });
+});
+
+describe('parseEuroInput', () => {
+  it('reads whole euros and up to two decimals with a dot or a comma', () => {
+    expect(parseEuroInput('20000')).toBe(2_000_000);
+    expect(parseEuroInput('1234,5')).toBe(123_450);
+    expect(parseEuroInput('1234.05')).toBe(123_405);
+    expect(parseEuroInput('0.1')).toBe(10);
+  });
+
+  it('ignores spaces used as thousands separators and a trailing euro sign', () => {
+    expect(parseEuroInput('20 000')).toBe(2_000_000);
+    expect(parseEuroInput('20\u00a0000 €')).toBe(2_000_000);
+  });
+
+  it('refuses anything that is not an amount', () => {
+    for (const text of ['', ' ', '-5', 'abc', '1.234', '1,2,3', '12e3']) {
+      expect(parseEuroInput(text)).toBeNull();
+    }
   });
 });

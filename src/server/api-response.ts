@@ -90,5 +90,12 @@ export async function readJsonBody<S extends z.ZodType>(
   } catch {
     throw new ApiError(400, 'INVALID_JSON', 'The request body must be valid JSON');
   }
+  if (body !== null && typeof body === 'object' && !Array.isArray(body)) {
+    // Identity comes from the signed-in user, never the body. Browser tabs loaded before
+    // that change still send these fields, and a strict schema would reject the whole
+    // request — so they are dropped here, not declared in every route's schema.
+    delete (body as Record<string, unknown>).actor;
+    delete (body as Record<string, unknown>).customerId;
+  }
   return schema.parse(body);
 }

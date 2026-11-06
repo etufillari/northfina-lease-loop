@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  getAsset,
+  listAssets,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -20,6 +27,17 @@ afterAll(async () => {
 beforeEach(async () => {
   await db.auditLog.deleteMany();
   await db.asset.deleteMany();
+});
+
+describe('getAsset', () => {
+  it('returns the asset with this id', async () => {
+    await seedAssets(db, dataPack);
+    expect(await getAsset(db, 'ebike-003')).toEqual(dataPack.find((a) => a.id === 'ebike-003'));
+  });
+
+  it('returns null for an unknown id', async () => {
+    expect(await getAsset(db, 'nope')).toBeNull();
+  });
 });
 
 describe('seedAssets', () => {

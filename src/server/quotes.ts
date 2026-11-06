@@ -2,7 +2,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Quote as QuoteRow } from '@/generated/prisma/client';
 import { assetStatusSchema } from '@/data/schemas';
-import { forecastCost } from '@/domain/invoicing';
 import {
   calculateQuote,
   quoteFromPriceList,
@@ -10,7 +9,7 @@ import {
   type AssetQuoteResult,
   type QuoteBreakdown,
 } from '@/domain/pricing';
-import type { VatAmounts } from '@/domain/vat';
+import { priceQuote, type PricedQuote } from '@/domain/quote-costs';
 import { withAudit } from './audit';
 import { refusal, type PricingData } from './pricing-data';
 import type { PrismaClient } from './prisma-client';
@@ -22,24 +21,11 @@ export type QuoteRequest = {
   termMonths: number;
 };
 
-/** A quote plus what it costs with VAT if the lease started on the quote date. */
-export type PricedQuote = AssetQuote & {
-  /** The first month's rent with VAT. This is the amount to test affordability against. */
-  firstRent: VatAmounts;
-  totals: { netCents: number; vatCents: number; grossCents: number };
-  buyout: VatAmounts & { invoiceDate: string };
-  totalWithBuyoutGrossCents: number;
-};
-
-/** Pure quote → quote with VAT figures, forecast with the VAT rates known today. */
+/** Quote → quote with VAT figures, or the API error for a date with no VAT rate. */
 export function withCosts(quote: AssetQuote, data: PricingData): PricedQuote {
-  const result = forecastCost({ ...quote, startDate: quote.quotedOn }, data.vatRates);
+  const result = priceQuote(quote, data.vatRates);
   if (!result.ok) throw refusal(result.reason, { date: result.date });
-
-  const { invoices, ...costs } = result.forecast;
-  const firstRent = invoices.find((invoice) => invoice.kind === 'rent');
-  if (!firstRent) throw new Error('a schedule always has a rent invoice');
-  return { ...quote, ...costs, firstRent };
+  return result.quote;
 }
 
 function unwrap(result: AssetQuoteResult): AssetQuote {

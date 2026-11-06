@@ -18,7 +18,6 @@ type ApplicationsListProps = {
 type ApplicationListItem = {
   id: string;
   asset_id: string;
-  quantity: number;
   quote_date: string;
   start_on: string;
   term_months: number;
@@ -125,11 +124,6 @@ export default function ApplicationsList({ locale }: ApplicationsListProps) {
               <p className="mt-1 text-sm font-medium text-stone-200">
                 {application.term_months} {t('account.applications.months')}
               </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-stone-500">{t('account.applications.quantity')}</p>
-              <p className="mt-1 text-sm font-medium text-stone-200">{application.quantity}</p>
             </div>
 
             <div>

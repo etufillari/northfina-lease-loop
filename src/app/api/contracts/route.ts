@@ -6,14 +6,14 @@
 import { z } from 'zod';
 import { can } from '@/domain/identity';
 import { ApiError, fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { requireActor, requireSigner } from '@/server/auth/actor';
+import { requireActor, requireCustomerOrSignatory } from '@/server/auth/actor';
 import { contractViews, listContracts, signContract } from '@/server/contract/contracts';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ application_id: z.string().trim().min(1) });
 
 export const POST = handleRoute(async (request) => {
-  const signer = await requireSigner('contract.sign');
+  const signer = await requireCustomerOrSignatory('contract.sign');
   const body = await readJsonBody(request, bodySchema);
 
   const result = await signContract(db, { applicationId: body.application_id, ...signer });

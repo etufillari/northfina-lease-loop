@@ -4,10 +4,12 @@ import { loadAssets } from '@/data/load';
 import { seedAssets } from '@/server/assets/assets';
 import type { PrismaClient } from '@/server/prisma-client';
 import { todayIso } from '@/server/date/today';
+import { AINO, TEST_SECRET, actAs } from '../../../../../../tests/helpers/act-as';
 import { createTestDb } from '../../../../../../tests/helpers/test-db';
 import { GET } from './route';
 
 const testDb = vi.hoisted(() => ({ current: undefined as PrismaClient | undefined }));
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
 vi.mock('@/server/db', () => ({
   get db() {
     return testDb.current;
@@ -17,12 +19,15 @@ vi.mock('@/server/db', () => ({
 let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
+  vi.stubEnv('JWT_SECRET', TEST_SECRET);
+  await actAs(null);
   const created = await createTestDb();
   testDb.current = created.db;
   cleanup = created.cleanup;
   await seedAssets(created.db, await loadAssets());
 });
 afterAll(async () => {
+  vi.unstubAllEnvs();
   await cleanup();
 });
 
@@ -44,17 +49,6 @@ describe('GET /api/assets/:id/quote', () => {
       monthly_total_cents: 13_466,
       total_if_returned_cents: 386_280,
       total_if_bought_cents: 444_630,
-    });
-  });
-
-  it('prices several units together with the quantity parameter', async () => {
-    const { status, body } = await getQuote('ebike-004', 'term=36&quantity=4&on=2026-11-06');
-    expect(status).toBe(200);
-    expect(body.data).toMatchObject({
-      quantity: 4,
-      unit_price_cents: 576_400,
-      base_price_cents: 2_305_600,
-      band: 'C',
     });
   });
 
@@ -83,6 +77,23 @@ describe('GET /api/assets/:id/quote', () => {
       });
     } finally {
       await testDb.current?.appSetting.deleteMany();
+    }
+  });
+
+  it('quotes an item held for someone only for that person', async () => {
+    const asset = { where: { id: 'ebike-003' } };
+    await testDb.current?.asset.update({ ...asset, data: { reserved_for: 'cust-aino' } });
+    try {
+      expect((await getQuote('ebike-003', 'term=36')).status).toBe(409);
+
+      await actAs({ sub: 'cust-lena', role: 'client' });
+      expect((await getQuote('ebike-003', 'term=36')).status).toBe(409);
+
+      await actAs(AINO);
+      expect((await getQuote('ebike-003', 'term=36')).status).toBe(200);
+    } finally {
+      await actAs(null);
+      await testDb.current?.asset.update({ ...asset, data: { reserved_for: null } });
     }
   });
 
@@ -128,9 +139,7 @@ describe('GET /api/assets/:id/quote', () => {
     ['a fraction of a cent', 'term=36&down=0.5'],
     ['a date in the wrong format', 'term=36&on=5.11.2026'],
     ['an unknown parameter', 'term=36&months=12'],
-    ['a quantity of zero', 'term=36&quantity=0'],
-    ['a quantity that is not whole', 'term=36&quantity=1.5'],
-    ['a quantity above the limit', 'term=36&quantity=1001'],
+    ['quantity, which is no longer accepted', 'term=36&quantity=2'],
   ])('answers 400 for %s', async (_name, query) => {
     const { status, body } = await getQuote('ebike-003', query);
     expect(status).toBe(400);

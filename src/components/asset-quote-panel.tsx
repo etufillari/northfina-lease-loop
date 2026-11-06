@@ -6,6 +6,7 @@ import type { Locale } from '@/i18n/locales';
 import type { Translate } from '@/i18n/get-t';
 
 import { formatEuro } from '@/domain/money';
+import { DEFAULT_TERM_MONTHS } from '@/domain/pricing/pricing';
 import { intlLocale } from '@/i18n/locales';
 
 import { ApplyForLeasingCta } from '@/components/apply-for-leasing-cta';
@@ -15,7 +16,7 @@ type AssetQuotePanelProps = {
   available: boolean;
   locale: Locale;
   t: Translate;
-  onUnitPriceChange: (cents: number | null) => void;
+  onPriceChange: (cents: number | null) => void;
 };
 
 type DownPaymentLimits = {
@@ -24,7 +25,7 @@ type DownPaymentLimits = {
 };
 
 type AssetQuote = {
-  unit_price_cents: number;
+  base_price_cents: number;
   quote_date: string;
   vat_rate_percent: number;
   monthly_vat_cents: number;
@@ -72,10 +73,9 @@ export function AssetQuotePanel({
   available,
   locale,
   t,
-  onUnitPriceChange,
+  onPriceChange,
 }: AssetQuotePanelProps) {
-  const [term, setTerm] = useState(36);
-  const [quantity, setQuantity] = useState(1);
+  const [term, setTerm] = useState(DEFAULT_TERM_MONTHS);
   const [downPayment, setDownPayment] = useState(0);
 
   const [quote, setQuote] = useState<AssetQuote | null>(null);
@@ -87,22 +87,23 @@ export function AssetQuotePanel({
 
   useEffect(() => {
     if (!available) {
-      onUnitPriceChange(null);
+      onPriceChange(null);
       return;
     }
 
     const controller = new AbortController();
 
     const timeout = window.setTimeout(async () => {
+      // The previous quote stays on screen until this one arrives, so the panel does not jump.
+      let adjusting = false;
+
       try {
         setLoadingQuote(true);
-        setQuote(null);
         setQuoteError(null);
 
         const query = new URLSearchParams({
           term: String(term),
           down: String(downPayment),
-          quantity: String(quantity),
         });
 
         const response = await fetch(`/api/assets/${assetId}/quote?${query.toString()}`, {
@@ -121,6 +122,7 @@ export function AssetQuotePanel({
               const adjustedDownPayment = clampDownPayment(downPayment, limits);
 
               if (adjustedDownPayment !== downPayment) {
+                adjusting = true;
                 setDownPayment(adjustedDownPayment);
                 return;
               }
@@ -139,23 +141,25 @@ export function AssetQuotePanel({
         const adjustedDownPayment = clampDownPayment(downPayment, limits);
 
         if (adjustedDownPayment !== downPayment) {
+          adjusting = true;
           setDownPayment(adjustedDownPayment);
           return;
         }
 
         setQuote(body.data);
-        onUnitPriceChange(body.data.unit_price_cents);
+        onPriceChange(body.data.base_price_cents);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           return;
         }
 
         setQuote(null);
-        onUnitPriceChange(null);
+        onPriceChange(null);
 
         setQuoteError(error instanceof Error ? error.message : t('asset.quoteUnavailable'));
       } finally {
-        if (!controller.signal.aborted) {
+        // While adjusting, the next request is on its way, so this one is not finished.
+        if (!controller.signal.aborted && !adjusting) {
           setLoadingQuote(false);
         }
       }
@@ -165,7 +169,7 @@ export function AssetQuotePanel({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [assetId, available, term, downPayment, quantity, onUnitPriceChange, t]);
+  }, [assetId, available, term, downPayment, onPriceChange, t]);
 
   return (
     <aside className="h-fit rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-6">
@@ -244,46 +248,17 @@ export function AssetQuotePanel({
             )}
           </div>
 
-          {/* Quantity */}
-          <div className="mt-7">
-            <label
-              htmlFor="quantity"
-              className="text-sm font-medium text-stone-700 dark:text-stone-300"
-            >
-              {t('asset.quantity')}
-            </label>
-
-            <input
-              id="quantity"
-              type="number"
-              min={1}
-              max={1000}
-              value={quantity}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-
-                if (Number.isInteger(value)) {
-                  const nextQuantity = Math.min(1000, Math.max(1, value));
-
-                  if (nextQuantity < quantity) {
-                    setDownPayment(0);
-                  }
-
-                  setQuantity(nextQuantity);
-                }
-              }}
-              className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-800"
-            />
-          </div>
-
           {/* Quote result */}
           <div className="mt-8 rounded-xl bg-stone-50 p-4 dark:bg-stone-800/60 sm:p-5">
-            {loadingQuote ? (
+            {!quote && loadingQuote ? (
               <p className="text-sm text-stone-500 dark:text-stone-400">
                 {t('asset.updatingQuote')}
               </p>
             ) : quote ? (
-              <>
+              <div
+                aria-busy={loadingQuote}
+                className={`transition-opacity ${loadingQuote ? 'opacity-60' : ''}`}
+              >
                 <p className="text-xs text-stone-600 dark:text-stone-400">
                   {t('asset.monthlyPaymentIncludingVat')}
                 </p>
@@ -306,10 +281,7 @@ export function AssetQuotePanel({
                     value={formatMoney(quote.monthly_vat_cents)}
                   />
 
-                  <QuoteFact
-                    label={t('asset.unitListPrice')}
-                    value={formatMoney(quote.unit_price_cents)}
-                  />
+                  <QuoteFact label={t('asset.price')} value={formatMoney(quote.base_price_cents)} />
 
                   <QuoteFact
                     label={t('asset.totalFinanced')}
@@ -335,7 +307,7 @@ export function AssetQuotePanel({
                 <p className="mt-5 text-xs text-stone-500 dark:text-stone-400">
                   {t('asset.quoteDate')}: {quote.quote_date}
                 </p>
-              </>
+              </div>
             ) : (
               <p className="text-sm text-red-600 dark:text-red-400">
                 {quoteError ?? t('asset.quoteUnavailable')}
@@ -343,7 +315,16 @@ export function AssetQuotePanel({
             )}
           </div>
 
-          {quote && !loadingQuote && <ApplyForLeasingCta assetId={assetId} locale={locale} t={t} />}
+          {quote && (
+            <ApplyForLeasingCta
+              assetId={assetId}
+              termMonths={term}
+              downPaymentCents={downPayment}
+              disabled={loadingQuote}
+              locale={locale}
+              t={t}
+            />
+          )}
         </>
       )}
     </aside>

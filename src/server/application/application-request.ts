@@ -4,17 +4,16 @@
 import { z } from 'zod';
 import { answersSchema } from '@/data/lease-schemas';
 import { fail } from '../api-response';
-import type { RequestFailureReason, SubmitResult } from './applications';
+import type { SubmitResult } from './applications';
 
 export const applicationRequestSchema = z.strictObject({
   asset_id: z.string().trim().min(1),
-  quantity: z.number().int().positive().max(1000).default(1),
   term_months: z.number().int().positive(),
   down_payment_cents: z.number().int().nonnegative().default(0),
   answers: answersSchema.default({}),
 });
 
-type Failure = Extract<SubmitResult, { ok: false }> | { ok: false; reason: RequestFailureReason };
+type Failure = Extract<SubmitResult, { ok: false }>;
 
 /** The error response for a request that could not become (or describe) an application. */
 export function failureResponse(failure: Failure, assetId: string): Response {
@@ -25,11 +24,11 @@ export function failureResponse(failure: Failure, assetId: string): Response {
       return fail(409, 'ASSET_NOT_AVAILABLE', 'This item cannot be leased right now');
     case 'answers_invalid':
       return fail(422, 'ANSWERS_INVALID', 'Some answers are not valid', {
-        errors: 'errors' in failure ? failure.errors : [],
+        errors: failure.errors,
       });
     case 'answers_missing':
       return fail(422, 'ANSWERS_MISSING', 'Some questions have no answer yet', {
-        question_ids: 'question_ids' in failure ? failure.question_ids : [],
+        question_ids: failure.question_ids,
       });
     default:
       return fail(422, 'QUOTE_NOT_AVAILABLE', 'This deal cannot be priced', {

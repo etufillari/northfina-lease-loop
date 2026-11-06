@@ -15,13 +15,12 @@ const translations: Record<string, string> = {
   'asset.estimatedLeasePrice': 'Estimated lease price',
   'asset.leaseTerm': 'Lease term',
   'asset.month': 'month',
-  'asset.quantity': 'Quantity',
   'asset.downPayment': 'Down payment',
   'asset.updatingQuote': 'Updating quote...',
   'asset.monthlyPaymentIncludingVat': 'Monthly payment including VAT',
   'asset.netMonthlyRent': 'Net monthly rent',
   'asset.vat': 'VAT',
-  'asset.unitListPrice': 'Unit list price',
+  'asset.price': 'Price excl. VAT',
   'asset.totalFinanced': 'Total financed',
   'asset.buyout': 'Buyout',
   'asset.totalIfReturned': 'Total if returned',
@@ -38,7 +37,7 @@ const translations: Record<string, string> = {
 const t = ((key: string) => translations[key] ?? key) as Translate;
 
 const quote = {
-  unit_price_cents: 189900,
+  base_price_cents: 189900,
   quote_date: '2026-11-06',
   vat_rate_percent: 25.5,
   monthly_vat_cents: 2550,
@@ -83,10 +82,10 @@ function renderPanel(
   props: Partial<{
     assetId: string;
     available: boolean;
-    onUnitPriceChange: (cents: number | null) => void;
+    onPriceChange: (cents: number | null) => void;
   }> = {}
 ) {
-  const onUnitPriceChange = props.onUnitPriceChange ?? vi.fn();
+  const onPriceChange = props.onPriceChange ?? vi.fn();
 
   const result = render(
     <AssetQuotePanel
@@ -94,13 +93,13 @@ function renderPanel(
       available={props.available ?? true}
       locale={locale}
       t={t}
-      onUnitPriceChange={onUnitPriceChange}
+      onPriceChange={onPriceChange}
     />
   );
 
   return {
     ...result,
-    onUnitPriceChange,
+    onPriceChange,
   };
 }
 
@@ -122,19 +121,18 @@ describe('AssetQuotePanel', () => {
     expect(screen.getByRole('heading', { name: 'Estimated lease price' })).toBeInTheDocument();
 
     expect(screen.getByLabelText('Lease term')).toHaveValue('36');
-    expect(screen.getByLabelText('Quantity')).toHaveValue(1);
     expect(screen.getByLabelText('Down payment')).toBeInTheDocument();
   });
 
   it('fetches and displays the initial quote', async () => {
     const fetchMock = mockFetch(successResponse);
-    const { onUnitPriceChange } = renderPanel();
+    const { onPriceChange } = renderPanel();
 
     await flushDebounce();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/assets/asset-001/quote?term=36&down=0&quantity=1',
+      '/api/assets/asset-001/quote?term=36&down=0',
       expect.objectContaining({
         signal: expect.any(AbortSignal),
       })
@@ -146,14 +144,14 @@ describe('AssetQuotePanel', () => {
 
     expect(screen.getByText('Net monthly rent')).toBeInTheDocument();
     expect(screen.getByText('VAT (25.5%)')).toBeInTheDocument();
-    expect(screen.getByText('Unit list price')).toBeInTheDocument();
+    expect(screen.getByText('Price excl. VAT')).toBeInTheDocument();
     expect(screen.getByText('Total financed')).toBeInTheDocument();
     expect(screen.getByText('Buyout')).toBeInTheDocument();
     expect(screen.getByText('Total if returned')).toBeInTheDocument();
     expect(screen.getByText('Total if bought')).toBeInTheDocument();
     expect(screen.getByText('Quote date: 2026-11-06')).toBeInTheDocument();
 
-    expect(onUnitPriceChange).toHaveBeenCalledWith(189900);
+    expect(onPriceChange).toHaveBeenCalledWith(189900);
   });
 
   it('requests a new quote when the lease term changes', async () => {
@@ -171,26 +169,7 @@ describe('AssetQuotePanel', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenLastCalledWith(
-      '/api/assets/asset-001/quote?term=48&down=0&quantity=1',
-      expect.any(Object)
-    );
-  });
-
-  it('requests a new quote when the quantity changes', async () => {
-    const fetchMock = mockFetch(successResponse);
-
-    renderPanel();
-
-    await flushDebounce();
-
-    fireEvent.change(screen.getByLabelText('Quantity'), {
-      target: { value: '3' },
-    });
-
-    await flushDebounce();
-
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      '/api/assets/asset-001/quote?term=36&down=0&quantity=3',
+      '/api/assets/asset-001/quote?term=48&down=0',
       expect.any(Object)
     );
   });
@@ -209,7 +188,7 @@ describe('AssetQuotePanel', () => {
     await flushDebounce();
 
     expect(fetchMock).toHaveBeenLastCalledWith(
-      '/api/assets/asset-001/quote?term=36&down=10000&quantity=1',
+      '/api/assets/asset-001/quote?term=36&down=10000',
       expect.any(Object)
     );
   });
@@ -258,7 +237,7 @@ describe('AssetQuotePanel', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenLastCalledWith(
-      '/api/assets/asset-001/quote?term=36&down=5000&quantity=1',
+      '/api/assets/asset-001/quote?term=36&down=5000',
       expect.any(Object)
     );
     expect(
@@ -301,7 +280,7 @@ describe('AssetQuotePanel', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     expect(fetchMock).toHaveBeenLastCalledWith(
-      '/api/assets/asset-001/quote?term=36&down=5000&quantity=1',
+      '/api/assets/asset-001/quote?term=36&down=5000',
       expect.any(Object)
     );
 
@@ -312,7 +291,7 @@ describe('AssetQuotePanel', () => {
 
   it('shows unavailable message when the asset cannot be leased', () => {
     const fetchMock = mockFetch(successResponse);
-    const { onUnitPriceChange } = renderPanel({
+    const { onPriceChange } = renderPanel({
       available: false,
     });
 
@@ -321,12 +300,12 @@ describe('AssetQuotePanel', () => {
     ).toBeInTheDocument();
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(onUnitPriceChange).toHaveBeenCalledWith(null);
+    expect(onPriceChange).toHaveBeenCalledWith(null);
 
     expect(screen.queryByRole('link', { name: 'Apply for leasing' })).not.toBeInTheDocument();
   });
 
-  it('clears the unit price when quote fetching fails', async () => {
+  it('clears the price when quote fetching fails', async () => {
     mockFetch(
       {
         success: false,
@@ -338,11 +317,93 @@ describe('AssetQuotePanel', () => {
       false
     );
 
-    const { onUnitPriceChange } = renderPanel();
+    const { onPriceChange } = renderPanel();
 
     await flushDebounce();
 
-    expect(onUnitPriceChange).toHaveBeenCalledWith(null);
+    expect(onPriceChange).toHaveBeenCalledWith(null);
+  });
+
+  it('carries the term and down payment chosen on the sliders to the application', async () => {
+    mockFetch(successResponse);
+    renderPanel();
+    await flushDebounce();
+
+    fireEvent.change(screen.getByLabelText('Lease term'), { target: { value: '24' } });
+    await flushDebounce();
+    fireEvent.change(screen.getByLabelText('Down payment'), { target: { value: '10000' } });
+    await flushDebounce();
+
+    expect(screen.getByRole('link', { name: /Apply for leasing/ })).toHaveAttribute(
+      'href',
+      '/en/assets/asset-001/apply?term=24&down=10000'
+    );
+  });
+
+  it('keeps the previous quote on screen while a new one loads', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(successResponse) })
+      .mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel();
+    await flushDebounce();
+
+    fireEvent.change(screen.getByLabelText('Lease term'), { target: { value: '24' } });
+    await flushDebounce();
+
+    expect(
+      screen.getByText(formatEuro(quote.monthly_total_cents, intlLocale[locale]))
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Updating quote...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unable to calculate quote.')).not.toBeInTheDocument();
+  });
+
+  it('turns off the Apply button until the new quote arrives', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(successResponse) })
+      .mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel();
+    await flushDebounce();
+    expect(screen.getByRole('link', { name: /Apply for leasing/ })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Lease term'), { target: { value: '24' } });
+    await flushDebounce();
+
+    expect(screen.queryByRole('link', { name: /Apply for leasing/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Apply for leasing')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('shows no error while the down payment is being raised to the minimum', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: vi.fn().mockResolvedValue({
+          success: false,
+          error: {
+            code: 'QUOTE_NOT_AVAILABLE',
+            message: 'This deal cannot be priced',
+            details: {
+              reason: 'above_maximum',
+              down_payment_limits: { min_cents: 5000, max_cents: 50000 },
+            },
+          },
+        }),
+      })
+      .mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel();
+    await flushDebounce();
+
+    expect(screen.getByText('Updating quote...')).toBeInTheDocument();
+    expect(screen.queryByText('Unable to calculate quote.')).not.toBeInTheDocument();
+    expect(screen.queryByText('This deal cannot be priced')).not.toBeInTheDocument();
   });
 
   it('displays the leasing application CTA when a quote is available', async () => {
@@ -366,7 +427,7 @@ describe('AssetQuotePanel', () => {
 
     expect(screen.getByRole('link', { name: 'Apply for leasing' })).toHaveAttribute(
       'href',
-      '/en/assets/asset-001/apply'
+      '/en/assets/asset-001/apply?term=36&down=0'
     );
   });
 

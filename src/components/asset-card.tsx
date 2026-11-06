@@ -2,6 +2,7 @@
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { AssetPriceResult } from '@/domain/pricing/price-list';
+import type { LeaseEstimate } from '@/domain/pricing/pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -13,12 +14,13 @@ import Link from 'next/link';
 type AssetCardProps = {
   asset: Asset;
   price: AssetPriceResult;
-  leasePrice: number;
+  lease: LeaseEstimate | null;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
+  const monthlyPrice = lease && formatEuro(lease.monthlyTotalCents, intlLocale[locale]);
   const isRelisted = price.ok && price.priceListVersion === null;
   const headingId = `asset-${asset.id}`;
   const fallbackImage = categoryFallbackImages[asset.category];
@@ -45,7 +47,7 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
               {asset.model}
             </h3>
           </div>
-          <AssetStatusBadge status={asset.status} t={t} />
+          <AssetStatusBadge status={asset.status} heldForYou={asset.held_for_you} t={t} />
         </div>
 
         <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
@@ -78,19 +80,21 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
             </p>
           </div>
 
-          {/* Estimated lease price */}
-          {price.ok && (
+          {/* Estimated lease price, with VAT like the headline on the item page */}
+          {lease && monthlyPrice && (
             <div className="mt-4 rounded-xl bg-stone-50 px-3 py-3 dark:bg-stone-800/60">
               <div className="flex items-end justify-between gap-3">
                 <div className="text-xs text-stone-600 dark:text-stone-400">
                   <p>{t('asset.estimatedLeasePrice')}</p>
                   <p>{t('asset.estimatedLeaseVat')}</p>
-                  <p>{t('asset.leaseDuration', { months: 12 })}</p>
+                  <p>{t('asset.leaseDuration', { months: lease.termMonths })}</p>
                 </div>
 
                 <div className="text-right">
                   <p className="text-xl font-semibold tabular-nums">
-                    {formatEuro(leasePrice, intlLocale[locale])}
+                    {lease.requiresDownPayment
+                      ? t('asset.fromPrice', { price: monthlyPrice })
+                      : monthlyPrice}
                   </p>
                   <p className="text-sm text-stone-500 dark:text-stone-400">/ {t('asset.month')}</p>
                 </div>

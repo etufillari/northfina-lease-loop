@@ -29,7 +29,6 @@ const application = {
   id: 'app-1',
   customer_id: 'cust-aino',
   asset_id: 'ebike-003',
-  quantity: 1,
   quote_date: '2026-11-05',
   start_on: '2026-11-05',
   price_list_version: 2,
@@ -50,13 +49,13 @@ const contract = {
   application_id: 'app-1',
   customer_id: 'cust-aino',
   asset_id: 'ebike-003',
-  quantity: 1,
   quote_date: '2026-11-05',
   signed_on: '2026-11-05',
   signed_by: 'cust-aino',
   start_on: '2026-11-05',
   planned_end_on: '2029-11-04',
   actual_end_on: null,
+  passed_to: null,
   status: 'active',
 };
 

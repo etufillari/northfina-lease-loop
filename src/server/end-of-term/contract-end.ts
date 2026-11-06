@@ -1,14 +1,15 @@
 // Ending a contract: the customer's choice, and closing the ones nobody decided in time.
 // Either way one transaction closes the contract, the asset and the asset life together.
 import type { Contract } from '@/data/lease-schemas';
-import { loadVatRates } from '@/data/load';
-import type { Customer } from '@/data/schemas';
+import { loadCustomers, loadSecondLifeDemand, loadVatRates } from '@/data/load';
+import { assetCategorySchema, type Customer } from '@/data/schemas';
 import {
   assetStatusAfter,
   buyoutInvoice,
   choiceDeadline,
   endChoice,
   endProblem,
+  passOnCandidates,
   type EndOutcome,
 } from '@/domain/end-of-term/end-of-term';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -22,9 +23,15 @@ const SYSTEM_ACTOR = 'system';
 
 async function closeContract(
   db: PrismaClient,
-  input: { contract: Contract; outcome: EndOutcome; endDate: string; actor: string }
+  input: {
+    contract: Contract;
+    outcome: EndOutcome;
+    endDate: string;
+    actor: string;
+    passedTo?: string;
+  }
 ): Promise<void> {
-  const { contract, outcome, endDate, actor } = input;
+  const { contract, outcome, endDate, actor, passedTo = null } = input;
   const assetStatus = assetStatusAfter(outcome);
   const invoice =
     outcome === 'bought_out' ? buyoutInvoice(contract, await loadVatRates(), endDate) : null;
@@ -42,6 +49,7 @@ async function closeContract(
         automatic: actor === SYSTEM_ACTOR,
         asset_id: contract.asset_id,
         asset_status: { from: 'leased', to: assetStatus },
+        passed_to: passedTo,
         buyout_invoice_cents: invoice?.total_cents ?? null,
       },
     },
@@ -49,11 +57,14 @@ async function closeContract(
       // The condition is in the update itself, so a contract can only be closed once.
       const closed = await tx.contract.updateMany({
         where: { id: contract.id, status: 'active' },
-        data: { status: outcome, actual_end_on: endDate },
+        data: { status: outcome, actual_end_on: endDate, passed_to: passedTo },
       });
       if (closed.count === 0) throw new AlreadyEnded();
 
-      await tx.asset.update({ where: { id: contract.asset_id }, data: { status: assetStatus } });
+      await tx.asset.update({
+        where: { id: contract.asset_id },
+        data: { status: assetStatus, reserved_for: passedTo },
+      });
       await tx.assetLife.updateMany({
         where: { contract_id: contract.id },
         data: { ended_on: endDate, outcome },
@@ -67,15 +78,56 @@ export type EndResult =
   | { ok: true; contract: ContractView }
   | {
       ok: false;
-      reason: 'contract_not_found' | 'already_ended' | 'not_due' | 'window_closed';
+      reason:
+        | 'contract_not_found'
+        | 'already_ended'
+        | 'not_due'
+        | 'window_closed'
+        | 'invalid_pass_on_target';
     };
+
+/** The customers this contract's item can be passed on to. */
+export async function contractPassOnCandidates(
+  db: PrismaClient,
+  contract: Contract
+): Promise<Customer[]> {
+  const [customers, demand, asset] = await Promise.all([
+    loadCustomers(),
+    loadSecondLifeDemand(),
+    db.asset.findUniqueOrThrow({ where: { id: contract.asset_id }, select: { category: true } }),
+  ]);
+  const category = assetCategorySchema.parse(asset.category);
+  return passOnCandidates(customers, demand, category, contract.customer_id);
+}
+
+export type PassOnCandidatesResult =
+  | { ok: true; candidates: { id: string; name: string }[] }
+  | { ok: false; reason: 'contract_not_found' | 'already_ended' };
+
+/** Who the owner can choose, showing only what they need to pick someone. */
+export async function listPassOnCandidates(
+  db: PrismaClient,
+  input: { contractId: string; customer: Customer }
+): Promise<PassOnCandidatesResult> {
+  const contract = await getContract(db, input.contractId);
+  if (!contract || contract.customer_id !== input.customer.id) {
+    return { ok: false, reason: 'contract_not_found' };
+  }
+  if (contract.status !== 'active') return { ok: false, reason: 'already_ended' };
+
+  const candidates = await contractPassOnCandidates(db, contract);
+  return {
+    ok: true,
+    candidates: candidates.map(({ id, name }) => ({ id, name })),
+  };
+}
 
 /** The customer's own choice at the end of the lease. */
 export async function endContract(
   db: PrismaClient,
-  input: { contractId: string; customer: Customer; outcome: EndOutcome }
+  input: { contractId: string; customer: Customer; outcome: EndOutcome; passedTo?: string }
 ): Promise<EndResult> {
-  const { contractId, customer, outcome } = input;
+  const { contractId, customer, outcome, passedTo } = input;
   const contract = await getContract(db, contractId);
   if (!contract) return { ok: false, reason: 'contract_not_found' };
 
@@ -84,8 +136,18 @@ export async function endContract(
   if (problem === 'not_owner') return { ok: false, reason: 'contract_not_found' };
   if (problem !== null) return { ok: false, reason: problem };
 
+  if (passedTo !== undefined && outcome !== 'passed_on') {
+    return { ok: false, reason: 'invalid_pass_on_target' };
+  }
+  if (outcome === 'passed_on') {
+    const candidates = await contractPassOnCandidates(db, contract);
+    if (!candidates.some((candidate) => candidate.id === passedTo)) {
+      return { ok: false, reason: 'invalid_pass_on_target' };
+    }
+  }
+
   try {
-    await closeContract(db, { contract, outcome, endDate: today, actor: customer.id });
+    await closeContract(db, { contract, outcome, endDate: today, actor: customer.id, passedTo });
   } catch (error) {
     if (error instanceof AlreadyEnded) return { ok: false, reason: 'already_ended' };
     throw error;

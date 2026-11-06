@@ -2,13 +2,13 @@
 // The contract and invoices signing would create today, for the customer to read first.
 // Saves nothing. The dates move if they sign on a later day; `calculated_on` says which day.
 import { fail, handleRoute, ok } from '@/server/api-response';
-import { requireSigner } from '@/server/auth/actor';
+import { requireCustomerOrSignatory } from '@/server/auth/actor';
 import { previewContract } from '@/server/contract/contracts';
 import { db } from '@/server/db';
 
 export const GET = handleRoute(
   async (_request, { params }: RouteContext<'/api/applications/[id]/contract-preview'>) => {
-    const signer = await requireSigner('contract.sign');
+    const signer = await requireCustomerOrSignatory('contract.sign');
     const { id } = await params;
 
     const result = await previewContract(db, { applicationId: id, ...signer });

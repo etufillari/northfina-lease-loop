@@ -130,6 +130,7 @@ describe('toAsset', () => {
       ...toAssetRowData(first),
       status: 'stolen',
       relist_price_cents: null,
+      reserved_for: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

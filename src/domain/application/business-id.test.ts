@@ -22,6 +22,7 @@ describe('isValidBusinessId', () => {
       { id: 'cust-haapala', valid: true },
       { id: 'cust-norvi', valid: true },
       { id: 'cust-broken-id', valid: false },
+      { id: 'cust-wait-11', valid: true },
     ]);
   });
 

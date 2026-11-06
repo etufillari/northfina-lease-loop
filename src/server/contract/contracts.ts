@@ -10,6 +10,7 @@ import {
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import type { Customer, PriceList } from '@/data/schemas';
 import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/contract/contract';
+import { isHeldForSomeoneElse } from '@/domain/assets/status';
 import { choiceDeadline, endChoice, type EndChoice } from '@/domain/end-of-term/end-of-term';
 import { invoiceSchedule } from '@/domain/invoicing/invoicing';
 import { listPriceOn } from '@/domain/pricing/price-list';
@@ -25,13 +26,13 @@ export function toContract(row: ContractRow): Contract {
     application_id: row.application_id,
     customer_id: row.customer_id,
     asset_id: row.asset_id,
-    quantity: row.quantity,
     quote_date: row.quote_date,
     signed_on: row.signed_on,
     signed_by: row.signed_by,
     start_on: row.start_on,
     planned_end_on: row.planned_end_on,
     actual_end_on: row.actual_end_on,
+    passed_to: row.passed_to,
     status: row.status,
     price_list_version: row.price_list_version,
     base_price_cents: row.base_price_cents,
@@ -64,7 +65,7 @@ function listPriceOnSigning(
 ): number | null {
   const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
   const isListed = contract.price_list_version !== null && listPrice.ok;
-  return isListed ? listPrice.priceCents * contract.quantity : null;
+  return isListed ? listPrice.priceCents : null;
 }
 
 export async function contractViews(
@@ -112,6 +113,7 @@ async function draftContract(
     id,
     ...buildContract(application, locked.quote, await currentDate(db)),
     signed_by: signedBy,
+    passed_to: null,
   };
   return { contract, invoices: invoiceSchedule(contract, await loadVatRates()) };
 }
@@ -121,7 +123,10 @@ function signatoryEmail(application: Application): string | null {
   return typeof email === 'string' ? email : null;
 }
 
-export type ContractPreview = Omit<Contract, 'id' | 'status' | 'actual_end_on' | 'signed_by'> & {
+export type ContractPreview = Omit<
+  Contract,
+  'id' | 'status' | 'actual_end_on' | 'signed_by' | 'passed_to'
+> & {
   /** The dates assume signing on this day. Signing later moves them. */
   calculated_on: string;
   list_price_on_signing_cents: number | null;
@@ -160,9 +165,11 @@ export async function previewContract(
 
   const asset = await db.asset.findUniqueOrThrow({
     where: { id: application.asset_id },
-    select: { status: true },
+    select: { status: true, reserved_for: true },
   });
-  if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
+  if (asset.status !== 'available' || isHeldForSomeoneElse(asset.reserved_for, customer.id)) {
+    return { ok: false, reason: 'asset_not_available' };
+  }
 
   const { contract, invoices } = await draftContract(
     db,
@@ -170,7 +177,14 @@ export async function previewContract(
     'preview',
     signatoryId ?? customer.id
   );
-  const { id: _id, status: _status, actual_end_on: _end, signed_by: _by, ...terms } = contract;
+  const {
+    id: _id,
+    status: _status,
+    actual_end_on: _end,
+    signed_by: _by,
+    passed_to: _to,
+    ...terms
+  } = contract;
 
   return {
     ok: true,
@@ -262,8 +276,12 @@ export async function signContract(
       },
       async (tx) => {
         const taken = await tx.asset.updateMany({
-          where: { id: contract.asset_id, status: 'available' },
-          data: { status: 'leased' },
+          where: {
+            id: contract.asset_id,
+            status: 'available',
+            OR: [{ reserved_for: null }, { reserved_for: customer.id }],
+          },
+          data: { status: 'leased', reserved_for: null },
         });
         if (taken.count === 0) throw new AssetNotAvailable();
 

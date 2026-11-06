@@ -14,10 +14,10 @@ type AssetDetailsProps = {
   asset: Asset;
   locale: Locale;
   t: Translate;
-  unitPriceCents: number | null;
+  priceCents: number | null;
 };
 
-export function AssetDetails({ asset, locale, t, unitPriceCents }: AssetDetailsProps) {
+export function AssetDetails({ asset, locale, t, priceCents }: AssetDetailsProps) {
   return (
     <section className="min-w-0">
       <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-stone-100 dark:bg-stone-800">
@@ -35,16 +35,16 @@ export function AssetDetails({ asset, locale, t, unitPriceCents }: AssetDetailsP
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
 
-          <AssetStatusBadge status={asset.status} t={t} />
+          <AssetStatusBadge status={asset.status} heldForYou={asset.held_for_you} t={t} />
         </div>
 
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">{asset.model}</h1>
 
-        {unitPriceCents !== null && (
+        {priceCents !== null && (
           <div className="mt-5">
             <p className="text-sm text-stone-600 dark:text-stone-400">{t('asset.listPrice')}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
-              {formatEuro(unitPriceCents, intlLocale[locale])}
+              {formatEuro(priceCents, intlLocale[locale])}
             </p>
           </div>
         )}

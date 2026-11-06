@@ -24,7 +24,6 @@ import { quoteAsset, type AssetQuote, type QuoteAssetFailureReason } from '../pr
 export type ApplicationRequest = {
   customer: Customer;
   assetId: string;
-  quantity: number;
   termMonths: number;
   downPaymentCents: number;
   answers: Answers;
@@ -73,15 +72,15 @@ async function prepare(
   db: PrismaClient,
   request: ApplicationRequest
 ): Promise<({ ok: true } & Prepared) | { ok: false; reason: RequestFailureReason }> {
-  const { assetId, quantity, termMonths, downPaymentCents, answers } = request;
+  const { assetId, termMonths, downPaymentCents, answers } = request;
   const date = await currentDate(db);
 
   const priced = await quoteAsset(db, {
+    customerId: request.customer.id,
     assetId,
     date,
     termMonths,
     downPaymentCents,
-    quantity,
   });
 
   let quote: AssetQuote | null = null;
@@ -174,7 +173,6 @@ export function toApplication(row: ApplicationRow): Application {
     id: row.id,
     customer_id: row.customer_id,
     asset_id: row.asset_id,
-    quantity: row.quantity,
     quote_date: row.quote_date,
     start_on: row.start_on,
     price_list_version: row.price_list_version,
@@ -199,7 +197,7 @@ export type ApplicationView = Application & {
   contract_id: string | null;
 };
 
-export function toView(
+export function toApplicationView(
   application: Application,
   customer: Customer | undefined,
   minAge: number,
@@ -214,7 +212,7 @@ export function toView(
   };
 }
 
-export async function viewsOf(
+export async function applicationViews(
   db: PrismaClient,
   applications: readonly Application[]
 ): Promise<ApplicationView[]> {
@@ -230,7 +228,7 @@ export async function viewsOf(
   const contractIds = new Map(contracts.map((c) => [c.application_id, c.id]));
 
   return applications.map((application) =>
-    toView(
+    toApplicationView(
       application,
       customers.find((customer) => customer.id === application.customer_id),
       minAge,
@@ -305,7 +303,6 @@ export async function submitApplication(
       entityId: id,
       details: {
         asset_id: request.assetId,
-        quantity: request.quantity,
         term_months: request.termMonths,
         decision: verdict.decision,
         reasons: verdict.reasons,
@@ -317,7 +314,6 @@ export async function submitApplication(
           id,
           customer_id: request.customer.id,
           asset_id: request.assetId,
-          quantity: request.quantity,
           quote_date: prepared.date,
           start_on: prepared.date,
           price_list_version: prepared.priceListVersion,
@@ -334,7 +330,7 @@ export async function submitApplication(
 
   const application = toApplication(row);
   const minAge = minimumAge(prepared.questionBank);
-  return { ok: true, application: toView(application, request.customer, minAge, null) };
+  return { ok: true, application: toApplicationView(application, request.customer, minAge, null) };
 }
 
 // ---------------------------------------------------------------------------

@@ -150,3 +150,47 @@ export async function relistAsset(
     throw error;
   }
 }
+
+export type ReleaseResult =
+  { ok: true; asset: Asset } | { ok: false; reason: 'asset_not_found' | 'asset_not_held' };
+
+class NotHeld extends Error {}
+
+/** Lets anyone lease an item again, when the person it was held for did not take it. */
+export async function releaseAsset(
+  db: PrismaClient,
+  input: { assetId: string; actor: string }
+): Promise<ReleaseResult> {
+  const { assetId, actor } = input;
+
+  const existing = await db.asset.findUnique({
+    where: { id: assetId },
+    select: { reserved_for: true },
+  });
+  if (!existing) return { ok: false, reason: 'asset_not_found' };
+
+  try {
+    const row = await withAudit(
+      db,
+      {
+        actor,
+        action: 'asset.released',
+        entityType: 'asset',
+        entityId: assetId,
+        details: { held_for: existing.reserved_for },
+      },
+      async (tx) => {
+        const released = await tx.asset.updateMany({
+          where: { id: assetId, reserved_for: { not: null } },
+          data: { reserved_for: null },
+        });
+        if (released.count === 0) throw new NotHeld();
+        return tx.asset.findUniqueOrThrow({ where: { id: assetId } });
+      }
+    );
+    return { ok: true, asset: toAsset(row) };
+  } catch (error) {
+    if (error instanceof NotHeld) return { ok: false, reason: 'asset_not_held' };
+    throw error;
+  }
+}

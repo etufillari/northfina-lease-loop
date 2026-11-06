@@ -8,7 +8,7 @@ import {
   requireActor,
   requireCustomer,
   requireRole,
-  requireSigner,
+  requireCustomerOrSignatory,
   sessionSecret,
 } from './actor';
 import { SESSION_COOKIE_NAME, signSession } from './session';
@@ -134,26 +134,28 @@ describe('getActor, requireActor and requireRole', () => {
     expect(actor).toMatchObject({ kind: 'staff', role: 'dealer' });
   });
 
-  it('requireSigner gives a client as themselves', async () => {
+  it('requireCustomerOrSignatory gives a client as themselves', async () => {
     const token = await signSession({ sub: 'cust-aino', role: 'client' }, secret);
     mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
-    const signer = await requireSigner('contract.sign');
+    const signer = await requireCustomerOrSignatory('contract.sign');
     expect(signer.customer.id).toBe('cust-aino');
     expect(signer.signatoryId).toBeUndefined();
   });
 
-  it('requireSigner gives a signatory with the company they sign for', async () => {
+  it('requireCustomerOrSignatory gives a signatory with the company they sign for', async () => {
     const token = await signSession({ sub: 'sign-norvi-ceo', role: 'signatory' }, secret);
     mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
-    const signer = await requireSigner('contract.sign');
+    const signer = await requireCustomerOrSignatory('contract.sign');
     expect(signer.customer.id).toBe('cust-norvi');
     expect(signer.signatoryId).toBe('sign-norvi-ceo');
   });
 
-  it('requireSigner refuses staff', async () => {
+  it('requireCustomerOrSignatory refuses staff', async () => {
     const token = await signSession({ sub: 'staff-admin', role: 'admin' }, secret);
     mockedCookies.mockResolvedValue(cookieJarWith(token) as never);
-    await expect(requireSigner('contract.sign')).rejects.toMatchObject({ status: 403 });
+    await expect(requireCustomerOrSignatory('contract.sign')).rejects.toMatchObject({
+      status: 403,
+    });
   });
 
   it('requireCustomer refuses a signatory', async () => {

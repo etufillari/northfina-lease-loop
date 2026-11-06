@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { identityId } from '@/domain/identity';
 import { requireRole } from '@/server/auth/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { reviewApplication, viewsOf } from '@/server/application/applications';
+import { reviewApplication, applicationViews } from '@/server/application/applications';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({ decision: z.enum(['approved', 'rejected']) });
@@ -27,7 +27,7 @@ export const POST = handleRoute(
       return fail(409, 'APPLICATION_NOT_IN_REVIEW', 'This application is not waiting for review');
     }
 
-    const [view] = await viewsOf(db, [result.application]);
+    const [view] = await applicationViews(db, [result.application]);
     return ok(view);
   }
 );

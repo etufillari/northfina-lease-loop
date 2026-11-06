@@ -1,4 +1,4 @@
-// POST /api/applications   body: { asset_id, quantity?, term_months, down_payment_cents?, answers }
+// POST /api/applications   body: { asset_id, term_months, down_payment_cents?, answers }
 //   A client applies. The server prices the deal on its own date and decides:
 //   approved, rejected (with reasons) or manual_review.
 // GET /api/applications[?decision=manual_review]
@@ -16,7 +16,7 @@ import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import {
   listApplications,
   submitApplication,
-  viewsOf,
+  applicationViews,
   type ApplicationView,
 } from '@/server/application/applications';
 import { db } from '@/server/db';
@@ -33,7 +33,6 @@ export const POST = handleRoute(async (request) => {
   const result = await submitApplication(db, {
     customer,
     assetId: body.asset_id,
-    quantity: body.quantity,
     termMonths: body.term_months,
     downPaymentCents: body.down_payment_cents,
     answers: body.answers,
@@ -51,6 +50,6 @@ export const GET = handleRoute(async (request) => {
 
   const searchParams = new URL(request.url).searchParams;
   const { decision } = querySchema.parse(Object.fromEntries(searchParams));
-  const views = await viewsOf(db, await listApplications(db, { decision, customerId }));
+  const views = await applicationViews(db, await listApplications(db, { decision, customerId }));
   return ok(actor.kind === 'signatory' ? views.filter(isWaitingForSignature) : views);
 });

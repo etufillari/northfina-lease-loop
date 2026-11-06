@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import ApplicationFlow from '@/components/application/application-flow';
 
+import { DEFAULT_TERM_MONTHS } from '@/domain/pricing/pricing';
 import { isLocale } from '@/i18n/locales';
 
 type PageProps = {
@@ -12,7 +13,6 @@ type PageProps = {
   searchParams: Promise<{
     term?: string;
     down?: string;
-    quantity?: string;
   }>;
 };
 
@@ -43,10 +43,8 @@ export default async function ApplyPage({ params, searchParams }: PageProps) {
 
   const locale = localeParam;
 
-  const requestedTerm = parsePositiveInt(query.term, 36);
-  const termMonths = VALID_TERMS.includes(requestedTerm) ? requestedTerm : 36;
-
-  const quantity = Math.min(1000, parsePositiveInt(query.quantity, 1));
+  const requestedTerm = parsePositiveInt(query.term, DEFAULT_TERM_MONTHS);
+  const termMonths = VALID_TERMS.includes(requestedTerm) ? requestedTerm : DEFAULT_TERM_MONTHS;
 
   const downPaymentCents = parseNonNegativeInt(query.down, 0);
 
@@ -56,7 +54,6 @@ export default async function ApplyPage({ params, searchParams }: PageProps) {
         <ApplicationFlow
           assetId={id}
           locale={locale}
-          quantity={quantity}
           termMonths={termMonths}
           downPaymentCents={downPaymentCents}
         />

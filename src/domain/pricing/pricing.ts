@@ -2,10 +2,10 @@
 import type { QuoteResult } from '@/data/lease-schemas';
 import type { CoefficientTable } from '@/data/schemas';
 import { monthlyFactorFor } from './coefficient';
-import { roundedDivide } from '../money';
+import { BASIS_POINTS_PER_WHOLE, roundedDivide } from '../money';
+import { vatCents } from '../vat';
 
 const MICROS_PER_WHOLE = 1_000_000;
-const BASIS_POINTS_PER_WHOLE = 10_000;
 
 export type QuoteInput = {
   /** The list price, or the relist price of a used item. */
@@ -16,6 +16,9 @@ export type QuoteInput = {
   termMonths: number;
 };
 
+/** The term the item page starts on, and the one catalogue estimates use. */
+export const DEFAULT_TERM_MONTHS = 36;
+
 export type DownPaymentLimitsResult =
   { ok: true; minCents: number; maxCents: number } | { ok: false; reason: 'below_minimum' };
 
@@ -23,7 +26,7 @@ export type DownPaymentLimitsResult =
  * The down payments that keep the financed amount inside the table, for a slider.
  * The table's smallest and largest financed amounts decide, so the limits follow the data.
  * `ok: false` means the price is under the minimum, so no down payment can make the deal valid.
- * The limits do not depend on the term. Pass the price for all units when leasing several.
+ * The limits do not depend on the term.
  */
 export function downPaymentLimits(
   table: CoefficientTable,
@@ -78,5 +81,41 @@ export function quote(table: CoefficientTable, input: QuoteInput): QuoteResult {
       monthly_net_rent_cents: roundedDivide(financedCents * factorMicros, MICROS_PER_WHOLE),
       buyout_cents: roundedDivide(financedCents * buyoutBasisPoints, BASIS_POINTS_PER_WHOLE),
     },
+  };
+}
+
+export type LeaseEstimate = {
+  monthlyTotalCents: number;
+  termMonths: number;
+  /** The item cannot be leased with nothing down, so the rent assumes the minimum. */
+  requiresDownPayment: boolean;
+};
+
+/**
+ * A catalogue estimate: the monthly rent with VAT at the default term, with the smallest down
+ * payment the item allows. `null` when the price cannot be financed at all. The VAT rate is
+ * the one given, so a lease running past a rate change will cost a little more or less.
+ */
+export function leaseEstimate(
+  table: CoefficientTable,
+  basePriceCents: number,
+  vatRateBasisPoints: number
+): LeaseEstimate | null {
+  const limits = downPaymentLimits(table, basePriceCents);
+  if (!limits.ok) return null;
+
+  const result = quote(table, {
+    basePriceCents,
+    priceListVersion: null,
+    downPaymentCents: limits.minCents,
+    termMonths: DEFAULT_TERM_MONTHS,
+  });
+  if (!result.ok) return null;
+
+  const rent = result.quote.monthly_net_rent_cents;
+  return {
+    monthlyTotalCents: rent + vatCents(rent, vatRateBasisPoints),
+    termMonths: DEFAULT_TERM_MONTHS,
+    requiresDownPayment: limits.minCents > 0,
   };
 }

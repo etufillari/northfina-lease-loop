@@ -57,10 +57,10 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
   const [loadingAsset, setLoadingAsset] = useState(true);
   const [assetError, setAssetError] = useState<string | null>(null);
 
-  const [unitPriceCents, setUnitPriceCents] = useState<number | null>(null);
+  const [priceCents, setPriceCents] = useState<number | null>(null);
 
-  const handleUnitPriceChange = useCallback((cents: number | null) => {
-    setUnitPriceCents(cents);
+  const handlePriceChange = useCallback((cents: number | null) => {
+    setPriceCents(cents);
   }, []);
 
   // Load the asset from the existing catalogue API.
@@ -72,7 +72,7 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
         setLoadingAsset(true);
         setAssetError(null);
         setAsset(null);
-        setUnitPriceCents(null);
+        setPriceCents(null);
 
         const response = await fetch('/api/assets', {
           signal: controller.signal,
@@ -171,14 +171,14 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
       </Link>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-        <AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={unitPriceCents} />
+        <AssetDetails asset={asset} locale={locale} t={t} priceCents={priceCents} />
 
         <AssetQuotePanel
           assetId={asset.id}
           available={asset.status === 'available'}
           locale={locale}
           t={t}
-          onUnitPriceChange={handleUnitPriceChange}
+          onPriceChange={handlePriceChange}
         />
       </div>
     </main>

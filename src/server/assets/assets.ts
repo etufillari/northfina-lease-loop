@@ -23,6 +23,7 @@ export function toAsset(row: AssetRow): Asset {
       ? {}
       : { first_lease_price_cents: row.first_lease_price_cents }),
     ...(row.relist_price_cents === null ? {} : { relist_price_cents: row.relist_price_cents }),
+    ...(row.reserved_for === null ? {} : { reserved_for: row.reserved_for }),
   });
 }
 

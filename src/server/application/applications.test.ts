@@ -50,7 +50,6 @@ function customer(id: string): Customer {
 const card1 = (overrides: Partial<ApplicationRequest> = {}): ApplicationRequest => ({
   customer: customer('cust-aino'),
   assetId: 'ebike-003',
-  quantity: 1,
   termMonths: 36,
   downPaymentCents: 0,
   answers: ainoEbikeAnswers,
@@ -61,7 +60,6 @@ const card1 = (overrides: Partial<ApplicationRequest> = {}): ApplicationRequest 
 const card7 = (overrides: Partial<ApplicationRequest> = {}): ApplicationRequest => ({
   customer: customer('cust-haapala'),
   assetId: 'farm-002',
-  quantity: 1,
   termMonths: 48,
   downPaymentCents: 2_000_000,
   answers: haapalaFarmAnswers,
@@ -79,7 +77,6 @@ describe('submitApplication: approved (card 1)', () => {
     expect(await submitOk(card1())).toMatchObject({
       customer_id: 'cust-aino',
       asset_id: 'ebike-003',
-      quantity: 1,
       quote_date: '2026-11-05',
       start_on: '2026-11-05',
       price_list_version: 1,
@@ -130,20 +127,20 @@ describe('submitApplication: approved (card 1)', () => {
     expect(application.decision).toBe('approved');
     expect(application.answers).not.toHaveProperty('q_pep');
   });
+});
 
-  it('prices several units together (card 6) and approves Norvi, who cannot sign yet', async () => {
+describe('submitApplication: a company whose applicant cannot sign (card 6)', () => {
+  it('approves Norvi, because who may sign is checked at signing', async () => {
     const application = await submitOk({
       customer: customer('cust-norvi'),
       assetId: 'ebike-004',
-      quantity: 4,
       termMonths: 36,
       downPaymentCents: 0,
       answers: norviEbikeAnswers,
     });
     expect(application).toMatchObject({
-      quantity: 4,
-      base_price_cents: 2_196_000,
-      financed_cents: 2_196_000,
+      base_price_cents: 549_000,
+      financed_cents: 549_000,
       decision: 'approved',
     });
   });
@@ -154,7 +151,6 @@ describe('submitApplication: rejected', () => {
     const application = await submitOk({
       customer: customer('cust-mikko'),
       assetId: 'laptop-008',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
@@ -170,7 +166,6 @@ describe('submitApplication: rejected', () => {
     const application = await submitOk({
       customer: customer('cust-mikko'),
       assetId: 'laptop-008',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       answers: {
@@ -195,7 +190,6 @@ describe('submitApplication: rejected', () => {
     const result = await submitApplication(db, {
       customer: customer('cust-mikko'),
       assetId: 'laptop-008',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
@@ -214,7 +208,6 @@ describe('submitApplication: rejected', () => {
     const application = await submitOk({
       customer: customer('cust-broken-id'),
       assetId: 'laptop-001',
-      quantity: 1,
       termMonths: 24,
       downPaymentCents: 0,
       answers: {
@@ -241,7 +234,7 @@ describe('submitApplication: rejected', () => {
       q_monthly_income: 90_000,
       q_usage_purpose: 'commuting',
     };
-    const base = { customer: customer('cust-sanna'), assetId: 'ebike-004', quantity: 1 };
+    const base = { customer: customer('cust-sanna'), assetId: 'ebike-004' };
     const twelve = await submitOk({ ...base, termMonths: 12, downPaymentCents: 0, answers });
     expect(twelve).toMatchObject({ decision: 'rejected', reasons: ['affordability'] });
     const twentyFour = await submitOk({ ...base, termMonths: 24, downPaymentCents: 0, answers });
@@ -291,7 +284,6 @@ describe('submitApplication: leasing as a different type', () => {
     const application = await submitOk({
       customer: customer('cust-mikko'),
       assetId: 'laptop-008',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       answers: companyAnswers,
@@ -474,7 +466,6 @@ describe('describeQuestions', () => {
     const result = await describeQuestions(db, {
       customer: customer('cust-mikko'),
       assetId: 'laptop-008',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },

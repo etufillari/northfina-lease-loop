@@ -46,7 +46,6 @@ beforeEach(async () => {
   const waiting = await submitApplication(db, {
     customer: find('cust-haapala'),
     assetId: 'farm-002',
-    quantity: 1,
     termMonths: 48,
     downPaymentCents: 2_000_000,
     answers: haapalaFarmAnswers,
@@ -54,7 +53,6 @@ beforeEach(async () => {
   const approved = await submitApplication(db, {
     customer: find('cust-aino'),
     assetId: 'ebike-003',
-    quantity: 1,
     termMonths: 36,
     downPaymentCents: 0,
     answers: ainoEbikeAnswers,

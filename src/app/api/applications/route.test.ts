@@ -144,6 +144,7 @@ describe('POST /api/applications', () => {
     ],
     ['a fractional down payment', { down_payment_cents: 0.5 }, 400, 'VALIDATION_ERROR'],
     ['a missing term', { term_months: undefined }, 400, 'VALIDATION_ERROR'],
+    ['quantity, which is no longer accepted', { quantity: 2 }, 400, 'VALIDATION_ERROR'],
     [
       'an answer that is too long',
       { answers: { ...ainoEbikeAnswers, q_full_name: 'a'.repeat(1001) } },

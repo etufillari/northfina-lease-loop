@@ -1,18 +1,25 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { invoiceSchema } from '@/data/lease-schemas';
-import { loadVatRates } from '@/data/load';
-import type { VatRates } from '@/data/schemas';
+import { loadCustomers, loadSecondLifeDemand, loadVatRates } from '@/data/load';
+import type { Customer, SecondLifeRequest, VatRates } from '@/data/schemas';
 import {
   assetStatusAfter,
   buyoutInvoice,
   choiceDeadline,
   endChoice,
   endProblem,
+  passOnCandidates,
 } from './end-of-term';
 
 let vatRates: VatRates;
+let customers: Customer[];
+let demand: SecondLifeRequest[];
 beforeAll(async () => {
-  vatRates = await loadVatRates();
+  [vatRates, customers, demand] = await Promise.all([
+    loadVatRates(),
+    loadCustomers(),
+    loadSecondLifeDemand(),
+  ]);
 });
 
 /** Card 1: its planned end is 4 Nov 2029, so the window closes on 11 Nov 2029. */
@@ -129,5 +136,32 @@ describe('buyoutInvoice', () => {
   it('throws if the data has no VAT rate, because that is a bug in the data', () => {
     const noRates: VatRates = { ...vatRates, rates: [] };
     expect(() => buyoutInvoice(contract, noRates, '2029-11-05')).toThrow(RangeError);
+  });
+});
+
+describe('passOnCandidates', () => {
+  const ids = (list: Customer[]) => list.map((customer) => customer.id);
+
+  it('offers waiting customers for the item category', () => {
+    expect(ids(passOnCandidates(customers, demand, 'e_bike', 'cust-aino'))).toEqual([
+      'cust-wait-01',
+      'cust-wait-02',
+    ]);
+    expect(ids(passOnCandidates(customers, demand, 'laptop', 'cust-aino'))).toEqual([
+      'cust-wait-06',
+    ]);
+    expect(ids(passOnCandidates(customers, demand, 'farm_machine', 'cust-aino'))).toEqual([
+      'cust-wait-11',
+    ]);
+  });
+
+  it('leaves out the owner', () => {
+    expect(ids(passOnCandidates(customers, demand, 'e_bike', 'cust-wait-01'))).toEqual([
+      'cust-wait-02',
+    ]);
+  });
+
+  it('offers nobody who is not on the waiting list', () => {
+    expect(passOnCandidates(customers, [], 'e_bike', 'cust-aino')).toEqual([]);
   });
 });

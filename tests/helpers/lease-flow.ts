@@ -32,12 +32,11 @@ export async function applyFor(
   customerId: string,
   assetId: string,
   answers: Answers,
-  deal: { termMonths?: number; downPaymentCents?: number; quantity?: number } = {}
+  deal: { termMonths?: number; downPaymentCents?: number } = {}
 ) {
   const result = await submitApplication(db, {
     customer: await findCustomer(customerId),
     assetId,
-    quantity: deal.quantity ?? 1,
     termMonths: deal.termMonths ?? 36,
     downPaymentCents: deal.downPaymentCents ?? 0,
     answers,

@@ -95,7 +95,6 @@ export const applicationSchema = z.strictObject({
   id: z.string().min(1),
   customer_id: z.string().min(1),
   asset_id: z.string().min(1),
-  quantity: positiveIntSchema,
   quote_date: isoDateSchema,
   /** Planned contract start. Age is judged on this date, and the contract copies it. */
   start_on: isoDateSchema,
@@ -122,7 +121,6 @@ export const contractSchema = z.strictObject({
   application_id: z.string().min(1),
   customer_id: z.string().min(1),
   asset_id: z.string().min(1),
-  quantity: positiveIntSchema,
   quote_date: isoDateSchema,
   signed_on: isoDateSchema,
   /** Who signed: the customer, or a signatory for a company. Empty on older contracts. */
@@ -130,6 +128,8 @@ export const contractSchema = z.strictObject({
   start_on: isoDateSchema,
   planned_end_on: isoDateSchema,
   actual_end_on: isoDateSchema.nullable(),
+  /** The customer it was passed on to, when the status is `passed_on`. */
+  passed_to: z.string().min(1).nullable(),
   status: contractStatusSchema,
 });
 export type Contract = z.infer<typeof contractSchema>;

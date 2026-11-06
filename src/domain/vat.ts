@@ -1,8 +1,6 @@
 // VAT. A contract locks net rent only; VAT always comes from the rate on the invoice date.
 import type { VatRates } from '@/data/schemas';
-import { roundedDivide } from './money';
-
-const BASIS_POINTS_PER_WHOLE = 10_000;
+import { BASIS_POINTS_PER_WHOLE, roundedDivide } from './money';
 
 export type VatRateResult =
   { ok: true; rateBasisPoints: number } | { ok: false; reason: 'no_vat_rate_on_date' };

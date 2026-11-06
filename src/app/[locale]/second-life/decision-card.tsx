@@ -9,6 +9,7 @@ import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { SecondLifePreview } from '@/server/second-life';
 import { DeskActionButton } from './desk-action-button';
+import { PhotoUpload } from './photo-upload';
 
 const OUTCOME_STYLE = {
   offer: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
@@ -162,13 +163,16 @@ export function DecisionCard({
         >
           {t('secondLife.passportLink')} →
         </Link>
-        <DeskActionButton
-          locale={locale}
-          path={`/api/second-life/${asset.id}/execute`}
-          label={t('secondLife.execute')}
-          personaId={personaId}
-          asOfParam={asOfParam}
-        />
+        <span className="flex flex-wrap gap-3">
+          <PhotoUpload locale={locale} assetId={asset.id} personaId={personaId} />
+          <DeskActionButton
+            locale={locale}
+            path={`/api/second-life/${asset.id}/execute`}
+            label={t('secondLife.execute')}
+            personaId={personaId}
+            asOfParam={asOfParam}
+          />
+        </span>
       </footer>
     </article>
   );

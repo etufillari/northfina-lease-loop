@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
+import { AssetImage } from '@/components/asset-card';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { PriceConfigurator } from '@/components/price-configurator';
 import { formatEuro } from '@/domain/money';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
+import { assetImageUrl } from '@/server/asset-images';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 
@@ -42,19 +44,34 @@ export default async function AssetPage({
           <h1 className="text-3xl font-semibold tracking-tight">{asset.model}</h1>
         </div>
         <p className="text-sm text-stone-600 dark:text-stone-400">
-          {t(`category.${asset.category}` as Parameters<typeof t>[0])} ·{' '}
-          {t(`condition.${asset.condition}` as Parameters<typeof t>[0])} ·{' '}
-          {t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
-            value: formatNumber(asset.usage_value, locale),
-          })}{' '}
-          ·{' '}
-          <Link
-            href={`/${locale}/assets/${asset.id}/passport${asOfParam ? `?asOf=${asOfParam}` : ''}`}
-            className="font-medium text-emerald-800 hover:underline dark:text-emerald-300"
-          >
-            {t('secondLife.passportLink')}
-          </Link>
+          {t(`category.${asset.category}` as Parameters<typeof t>[0])}
         </p>
+      </div>
+
+      <div className="mt-6 grid gap-6 sm:grid-cols-2">
+        <AssetImage
+          imageUrl={assetImageUrl(asset)}
+          category={asset.category}
+          alt={`${asset.make} ${asset.model}`}
+          className="aspect-[3/2] w-full rounded-2xl border border-stone-200 object-cover dark:border-stone-800"
+        />
+        <dl className="grid content-start grid-cols-2 gap-x-4 gap-y-4 text-sm">
+          <AssetFact
+            label={t('condition.label')}
+            value={t(`condition.${asset.condition}` as Parameters<typeof t>[0])}
+          />
+          <AssetFact label={t('asset.modelYear')} value={String(asset.model_year)} />
+          <AssetFact
+            label={t('asset.usage')}
+            value={t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
+              value: formatNumber(asset.usage_value, locale),
+            })}
+          />
+          <AssetFact
+            label={t('asset.previousLives')}
+            value={formatNumber(asset.previous_lives, locale)}
+          />
+        </dl>
       </div>
 
       <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -80,9 +97,15 @@ export default async function AssetPage({
           {t('asset.notAvailable')}
         </p>
       )}
-      <p className="mt-6 text-xs text-stone-500 dark:text-stone-400">
-        {t('catalogue.pricesOn', { date: asOf })}
-      </p>
+    </div>
+  );
+}
+
+function AssetFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+      <dd className="text-base font-medium">{value}</dd>
     </div>
   );
 }

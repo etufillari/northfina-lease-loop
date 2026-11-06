@@ -56,14 +56,19 @@ export function nextStepFor(
   }
 }
 
-/** The customer's open applications, the ones they can act on first, then newest first. */
+/**
+ * The customer's open applications, the ones they can act on first, then newest first.
+ * Drafts are left out: an application abandoned before submitting is not kept for later
+ * (a waitlist-accepted draft is still reachable from its waiting-list entry).
+ */
 export async function listCustomerOpenApplications(
   db: Db,
   customerId: string,
   asOf: string
 ): Promise<CustomerApplication[]> {
+  const listed = OPEN_APPLICATION_STATUSES.filter((status) => status !== 'draft');
   const applications = await db.application.findMany({
-    where: { customer_id: customerId, status: { in: [...OPEN_APPLICATION_STATUSES] } },
+    where: { customer_id: customerId, status: { in: listed } },
     include: { quote: true },
     orderBy: [{ updated_at: 'desc' }, { id: 'asc' }],
   });

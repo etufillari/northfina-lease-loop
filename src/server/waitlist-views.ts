@@ -91,14 +91,17 @@ async function buildViews(db: Db, entries: WaitlistEntry[], asOf: string) {
   return views;
 }
 
-/** One customer's entries, newest first. */
+/** One customer's entries, newest first. An entry they chose to leave is not shown again. */
 export async function customerWaitlist(
   db: Db,
   customerId: string,
   asOf: string
 ): Promise<WaitlistView[]> {
   const entries = await db.waitlistEntry.findMany({
-    where: { customer_id: customerId },
+    where: {
+      customer_id: customerId,
+      NOT: { status: 'removed', left_reason: 'left' },
+    },
     orderBy: [{ joined_on: 'desc' }, { id: 'desc' }],
   });
   return buildViews(db, entries, asOf);

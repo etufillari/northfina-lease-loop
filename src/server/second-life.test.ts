@@ -34,6 +34,7 @@ describe('toSecondLifeRequest', () => {
       id: 'wait-02',
       category: 'e_bike',
       max_monthly_net_rent_cents: 9000,
+      min_monthly_net_rent_cents: 0,
       min_condition: 'fair',
       preferred_term_months: 12,
       needed_by: '2026-11-10',
@@ -104,7 +105,7 @@ describe('scenario card 9: ebike-007', () => {
     expect(desk.every((row) => row.result.ok)).toBe(true);
   });
 
-  it('executes it: passport events, reset usage, one more life, a 7-day offer hold', async () => {
+  it('executes it: passport events, reset usage, one more life, a 3-day offer hold', async () => {
     const result = await executeSecondLife(db, {
       assetId: 'ebike-007',
       actor: 'staff-desk',
@@ -139,7 +140,7 @@ describe('scenario card 9: ebike-007', () => {
     const reservation = await db.reservation.findFirstOrThrow({
       where: { asset_id: 'ebike-007', active: true },
     });
-    expect(reservation).toMatchObject({ kind: 'waitlist_offer', until: '2026-11-12' });
+    expect(reservation).toMatchObject({ kind: 'waitlist_offer', until: '2026-11-08' });
 
     const waiter = await db.waitlistEntry.findUniqueOrThrow({ where: { id: 'wait-02' } });
     expect(waiter).toMatchObject({ status: 'offered', offered_asset_id: 'ebike-007' });

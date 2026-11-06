@@ -98,6 +98,30 @@ describe('matchWaitingList', () => {
     expect(byId['wait-09']).toBe('lost_first_come_first_served');
   });
 
+  it('skips a waiter whose minimum budget is above the rent (budget is a range)', () => {
+    // wait-06 would win, but with a minimum of €30/month a €17.93 laptop is below their range.
+    const raised = demand.map((w) =>
+      w.id === 'wait-06' ? { ...w, min_monthly_net_rent_cents: 3_000 } : w
+    );
+    const result = matchWaitingList(
+      { category: 'laptop', condition: 'good', financedCents: 65_000, asOfDate: '2026-11-05' },
+      raised,
+      table
+    );
+    expect(result.winner?.id).not.toBe('wait-06');
+    const wait06 = result.considered.find((c) => c.id === 'wait-06');
+    expect(wait06?.outcome).toBe('under_budget');
+  });
+
+  it('a minimum of zero (the default) never excludes anyone', () => {
+    const result = matchWaitingList(
+      { category: 'laptop', condition: 'good', financedCents: 65_000, asOfDate: '2026-11-05' },
+      demand,
+      table
+    );
+    expect(result.considered.some((c) => c.outcome === 'under_budget')).toBe(false);
+  });
+
   it('drops entries whose deadline has passed on the as-of date', () => {
     const result = matchWaitingList(
       { category: 'laptop', condition: 'good', financedCents: 65_000, asOfDate: '2026-11-16' },

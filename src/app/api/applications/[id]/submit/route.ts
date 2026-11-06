@@ -29,6 +29,12 @@ export const POST = handleRoute(
         return fail(409, 'NOT_A_DRAFT', 'This application was already submitted');
       if (result.reason === 'incomplete')
         return fail(422, 'INCOMPLETE', 'Some questions are still unanswered');
+      if (result.reason === 'bad_start_date')
+        return fail(
+          422,
+          'BAD_START_DATE',
+          'The start date must be from today up to 3 months ahead'
+        );
       return fail(422, 'NO_VAT_RATE', 'No VAT rate is known for this date');
     }
     return ok(result.state);

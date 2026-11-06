@@ -338,6 +338,8 @@ export const secondLifeRequestSchema = z.strictObject({
   id: z.string().min(1),
   category: assetCategorySchema,
   max_monthly_net_rent_cents: centsSchema,
+  /** The low end of the budget range: an offer must cost at least this much. Default: 0. */
+  min_monthly_net_rent_cents: centsSchema.default(0),
   /** Worst condition this person accepts. */
   min_condition: assetConditionSchema,
   preferred_term_months: z.number().int().positive(),

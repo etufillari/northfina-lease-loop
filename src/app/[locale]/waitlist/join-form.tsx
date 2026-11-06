@@ -1,9 +1,11 @@
 'use client';
-// Joining the second-life waiting list: what you need, what you can pay, and by when.
-// The budget is typed in euros and sent as integer cents.
+// Joining the second-life waiting list: what you need, what you can pay (a monthly range),
+// and by when. Budgets are typed in euros and sent as integer cents; an absurdly large
+// number is clamped to the cap instead of erroring. The catalogue's "no matches" prompt
+// prefills this form through the URL.
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { euroInputToCents } from '@/domain/euro-input';
+import { euroInputToCentsClamped } from '@/domain/euro-input';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
@@ -11,23 +13,53 @@ const CATEGORIES = ['e_bike', 'laptop', 'farm_machine'] as const;
 const CONDITIONS = ['fair', 'good', 'like_new', 'new'] as const;
 const TERMS = [12, 24, 36, 48] as const;
 
+/** The API cap (€100,000 / month in cents): larger budgets are saved as this. */
+const MAX_BUDGET_CENTS = 10_000_000;
+
+export type JoinPrefill = {
+  category?: string;
+  minBudget?: string;
+  maxBudget?: string;
+  minCondition?: string;
+  term?: string;
+};
+
+function pick<T extends readonly (string | number)[]>(
+  options: T,
+  value: string | number | undefined,
+  fallback: T[number]
+): T[number] {
+  return value !== undefined && (options as readonly (string | number)[]).includes(value)
+    ? (value as T[number])
+    : fallback;
+}
+
 export function JoinForm({
   locale,
   customerId,
   asOf,
   asOfParam,
+  prefill = {},
 }: {
   locale: Locale;
   customerId: string;
   asOf: string;
   asOfParam: string | null;
+  prefill?: JoinPrefill;
 }) {
   const t = getT(locale);
   const router = useRouter();
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('e_bike');
-  const [budget, setBudget] = useState('');
-  const [minCondition, setMinCondition] = useState<(typeof CONDITIONS)[number]>('good');
-  const [term, setTerm] = useState<(typeof TERMS)[number]>(24);
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(
+    pick(CATEGORIES, prefill.category, 'e_bike')
+  );
+  const [minBudget, setMinBudget] = useState(prefill.minBudget ?? '');
+  const [budget, setBudget] = useState(prefill.maxBudget ?? '');
+  const [minCondition, setMinCondition] = useState<(typeof CONDITIONS)[number]>(
+    pick(CONDITIONS, prefill.minCondition, 'good')
+  );
+  const [term, setTerm] = useState<(typeof TERMS)[number]>(
+    pick(TERMS, prefill.term === undefined ? undefined : Number(prefill.term), 24)
+  );
   const [neededBy, setNeededBy] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +67,12 @@ export function JoinForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const cents = euroInputToCents(budget);
-    if (cents === null) return setError(t('waitlist.join.badBudget'));
+    const maxCents = euroInputToCentsClamped(budget, MAX_BUDGET_CENTS);
+    if (maxCents === null) return setError(t('waitlist.join.badBudget'));
+    const minCents =
+      minBudget.trim() === '' ? 0 : euroInputToCentsClamped(minBudget, MAX_BUDGET_CENTS);
+    if (minCents === null) return setError(t('waitlist.join.badBudget'));
+    if (minCents > maxCents) return setError(t('waitlist.join.badRange'));
     if (!neededBy) return setError(t('waitlist.join.badDate'));
     setBusy(true);
     setError(null);
@@ -47,7 +83,8 @@ export function JoinForm({
         body: JSON.stringify({
           customerId,
           category,
-          maxMonthlyNetRentCents: cents,
+          maxMonthlyNetRentCents: maxCents,
+          minMonthlyNetRentCents: minCents,
           minCondition,
           preferredTermMonths: term,
           neededBy,
@@ -58,6 +95,7 @@ export function JoinForm({
       const body = await response.json();
       if (body.success) {
         setBudget('');
+        setMinBudget('');
         setNeededBy('');
         router.refresh();
       } else {
@@ -91,17 +129,29 @@ export function JoinForm({
           ))}
         </select>
       </label>
-      <label className="text-sm font-medium">
-        {t('waitlist.join.budget')}
-        <input
-          className={field}
-          inputMode="decimal"
-          value={budget}
-          onChange={(e) => setBudget(e.target.value)}
-          placeholder="45"
-          required
-        />
-      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-sm font-medium">
+          {t('waitlist.join.budgetMin')}
+          <input
+            className={field}
+            inputMode="decimal"
+            value={minBudget}
+            onChange={(e) => setMinBudget(e.target.value)}
+            placeholder="0"
+          />
+        </label>
+        <label className="text-sm font-medium">
+          {t('waitlist.join.budgetMax')}
+          <input
+            className={field}
+            inputMode="decimal"
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+            placeholder="45"
+            required
+          />
+        </label>
+      </div>
       <label className="text-sm font-medium">
         {t('waitlist.join.minCondition')}
         <select

@@ -127,7 +127,7 @@ describe('pooling laptops for wait-08', () => {
     for (const id of ['laptop-006', 'laptop-007']) {
       const holds = await test.db.reservation.findMany({ where: { asset_id: id, active: true } });
       expect(holds).toEqual([
-        expect.objectContaining({ kind: 'waitlist_offer', until: '2026-11-12' }),
+        expect.objectContaining({ kind: 'waitlist_offer', until: '2026-11-08' }),
       ]);
       const offer = await test.db.assetEvent.findFirstOrThrow({
         where: { asset_id: id, type: 'offered_to_waiter' },

@@ -1,7 +1,7 @@
-// One catalogue item. A server component: it renders to HTML and ships no JavaScript.
+// One catalogue item: photo, facts and the monthly price at the chosen term (no down
+// payment). Rendered inside the client-side catalogue browser.
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -34,60 +34,130 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   },
 };
 
+export const CATEGORY_ICON: Record<string, string> = {
+  e_bike: '🚲',
+  laptop: '💻',
+  farm_machine: '🚜',
+};
+
+export function AssetImage({
+  imageUrl,
+  category,
+  alt,
+  className = 'aspect-[3/2] w-full rounded-t-2xl object-cover',
+}: {
+  imageUrl: string | null;
+  category: string;
+  alt: string;
+  className?: string;
+}) {
+  if (imageUrl) {
+    // eslint-disable-next-line @next/next/no-img-element -- local files of unknown size
+    return <img src={imageUrl} alt={alt} className={className} />;
+  }
+  return (
+    <div
+      aria-hidden="true"
+      className={`flex items-center justify-center bg-stone-100 text-5xl dark:bg-stone-800 ${className}`}
+    >
+      {CATEGORY_ICON[category] ?? '📦'}
+    </div>
+  );
+}
+
 type AssetCardProps = {
   asset: Asset;
-  price: ListPriceResult;
+  imageUrl: string | null;
+  /** Monthly rent at the chosen term, no down payment; null when it cannot be priced. */
+  monthly: { netCents: number; grossCents: number } | null;
+  termMonths: number;
+  vatRatePercent: number | null;
   /** Priced at the second-life desk's re-price instead of the price list. */
   secondLife?: boolean;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, price, secondLife = false, locale, t }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  imageUrl,
+  monthly,
+  termMonths,
+  vatRatePercent,
+  secondLife = false,
+  locale,
+  t,
+}: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
 
   return (
     <article
       aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
-          <h3 id={headingId} className="text-lg leading-snug font-semibold">
-            {asset.model}
-          </h3>
+      <AssetImage
+        imageUrl={imageUrl}
+        category={asset.category}
+        alt={`${asset.make} ${asset.model}`}
+      />
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
+            <h3 id={headingId} className="text-lg leading-snug font-semibold">
+              {asset.model}
+            </h3>
+          </div>
+          <p
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
+          >
+            <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
+            <span className="sr-only">{t('status.label')}: </span>
+            {t(`status.${asset.status}`)}
+          </p>
         </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
-      </div>
 
-      <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
-        <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
-        <Fact
-          label={t('asset.usage')}
-          value={t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
-        />
-        <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
-      </dl>
+        <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
+          <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
+          <Fact
+            label={t('asset.usage')}
+            value={t(`usage.${asset.usage.unit}`, {
+              value: formatNumber(asset.usage.value, locale),
+            })}
+          />
+          <Fact
+            label={t('asset.previousLives')}
+            value={formatNumber(asset.previous_lives, locale)}
+          />
+        </dl>
 
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-        <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{secondLife ? t('asset.secondLifePrice') : t('asset.listPrice')}</p>
-          {price.ok && !secondLife ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
-          ) : null}
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
+          <div className="text-xs text-stone-600 dark:text-stone-400">
+            <p>
+              {t('catalogue.monthlyFor', { months: termMonths })}
+              {secondLife ? ` · ${t('asset.secondLifePrice')}` : ''}
+            </p>
+            {monthly && vatRatePercent !== null ? (
+              <p>
+                {t('price.inclVat', { rate: vatRatePercent })} · {t('catalogue.noDownPayment')}
+              </p>
+            ) : null}
+          </div>
+          <p className="text-right text-xl font-semibold tabular-nums">
+            {monthly ? (
+              <>
+                {formatEuro(monthly.grossCents, intlLocale[locale])}
+                <span className="text-sm font-normal text-stone-600 dark:text-stone-400">
+                  {t('common.perMonth')}
+                </span>
+              </>
+            ) : (
+              t('asset.noPrice')
+            )}
+          </p>
         </div>
-        <p className="text-right text-xl font-semibold tabular-nums">
-          {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
-        </p>
       </div>
     </article>
   );

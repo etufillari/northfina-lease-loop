@@ -85,6 +85,7 @@ describe('toAsset', () => {
       ...toAssetRowData(first),
       status: 'stolen',
       second_life_price_cents: null,
+      image_path: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

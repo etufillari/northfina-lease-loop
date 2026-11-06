@@ -17,7 +17,7 @@ export default async function ApplyPage({
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <ApplicationWizard
         locale={locale}
         applicationId={id}

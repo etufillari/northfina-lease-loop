@@ -85,7 +85,7 @@ describe('card 10: Sanna leases ebike-008 from the waiting list', () => {
           monthlyNetRentCents: 1194,
         },
       ],
-      until: '2026-11-12',
+      until: '2026-11-08',
       expired: false,
     });
   });
@@ -258,10 +258,10 @@ describe('card 9: Pekka declines ebike-007', () => {
 });
 
 describe('an offer nobody answers', () => {
-  it('is not expired while its 7-day hold lasts', async () => {
-    expect(await listExpiredOffers(db, '2026-11-12')).toEqual([]);
+  it('is not expired while its 3-day hold lasts', async () => {
+    expect(await listExpiredOffers(db, '2026-11-08')).toEqual([]);
     expect(
-      await expireOffer(db, { entryId: 'wait-13', actor: 'staff', asOf: '2026-11-12' })
+      await expireOffer(db, { entryId: 'wait-13', actor: 'staff', asOf: '2026-11-08' })
     ).toEqual({ ok: false, reason: 'not_expired' });
   });
 

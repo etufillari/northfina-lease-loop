@@ -25,6 +25,8 @@ export type JoinInput = {
   customerId: string;
   category: AssetCategory;
   maxMonthlyNetRentCents: number;
+  /** The low end of the budget range; 0 means no lower bound. */
+  minMonthlyNetRentCents?: number;
   minCondition: AssetCondition;
   preferredTermMonths: number;
   neededBy: string;
@@ -78,6 +80,7 @@ export async function joinWaitlist(db: Db, input: JoinInput): Promise<JoinResult
           who: customer.name,
           category: input.category,
           max_monthly_net_rent_cents: input.maxMonthlyNetRentCents,
+          min_monthly_net_rent_cents: input.minMonthlyNetRentCents ?? 0,
           min_condition: input.minCondition,
           preferred_term_months: input.preferredTermMonths,
           needed_by: input.neededBy,

@@ -9,16 +9,21 @@ import { db } from '@/server/db';
 import { joinWaitlist } from '@/server/waitlist-actions';
 import { waitlistFailure } from './failure';
 
-const bodySchema = z.strictObject({
-  customerId: z.string().trim().min(1),
-  category: assetCategorySchema,
-  maxMonthlyNetRentCents: z.number().int().positive().max(10_000_000),
-  minCondition: assetConditionSchema,
-  preferredTermMonths: z.number().int().positive(),
-  neededBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  quantity: z.number().int().min(1).max(10),
-  actor: z.string().trim().min(1).max(100),
-});
+const bodySchema = z
+  .strictObject({
+    customerId: z.string().trim().min(1),
+    category: assetCategorySchema,
+    maxMonthlyNetRentCents: z.number().int().positive().max(10_000_000),
+    minMonthlyNetRentCents: z.number().int().min(0).max(10_000_000).default(0),
+    minCondition: assetConditionSchema,
+    preferredTermMonths: z.number().int().positive(),
+    neededBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    quantity: z.number().int().min(1).max(10),
+    actor: z.string().trim().min(1).max(100),
+  })
+  .refine((body) => body.minMonthlyNetRentCents <= body.maxMonthlyNetRentCents, {
+    message: 'The minimum budget cannot be above the maximum',
+  });
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, bodySchema);

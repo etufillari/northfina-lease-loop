@@ -1,6 +1,6 @@
 // Holds on refurbished items for people on the waiting list, and passing items on.
 //
-// - An offer holds an item (or a whole set) for one waiter for 7 days: an active
+// - An offer holds an item (or a whole set) for one waiter for 3 days: an active
 //   `waitlist_offer` Reservation that names the entry (and the customer, when there is one).
 // - A pool holds items for a waiter who wants several (wait-08: three laptops) until their
 //   `needed_by`: active `waitlist_pool` Reservations. When the last item arrives the whole
@@ -18,7 +18,7 @@ import { withAudit, type TransactionClient } from './audit';
 import { toSecondLifeRequest } from './waitlist';
 
 /** Second-life offers hold the item for the waiter this many days (docs/DECISIONS.md). */
-export const OFFER_HOLD_DAYS = 7;
+export const OFFER_HOLD_DAYS = 3;
 export const POOL_RESERVATION = 'waitlist_pool';
 export const OFFER_RESERVATION = 'waitlist_offer';
 

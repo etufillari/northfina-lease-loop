@@ -80,7 +80,9 @@ describe('listCustomerOpenApplications', () => {
     expect(ids).not.toContain(signed);
     expect(ids).not.toContain(declined);
     expect(ids).not.toContain(other);
-    expect(new Set(ids)).toEqual(new Set([draft, review, approved]));
+    // An abandoned draft is not kept for later: it never shows on "My page".
+    expect(ids).not.toContain(draft);
+    expect(new Set(ids)).toEqual(new Set([review, approved]));
     // The two the customer can act on come before the one waiting for a person.
     expect(list.at(-1)).toMatchObject({ applicationId: review, nextStep: 'wait_for_review' });
     expect(list.find((a) => a.applicationId === approved)).toMatchObject({
@@ -91,7 +93,6 @@ describe('listCustomerOpenApplications', () => {
       termMonths: 36,
       isTransfer: false,
     });
-    expect(list.find((a) => a.applicationId === draft)?.nextStep).toBe('continue');
   });
 
   it('marks an approval whose hold ran out as expired', async () => {

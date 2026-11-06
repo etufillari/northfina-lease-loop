@@ -29,6 +29,9 @@ model Asset {
   // Set by the second-life desk: refurbished value + refurbishment, quoted instead of the
   // catalogue list price from then on (docs/DECISIONS.md "Re-price").
   second_life_price_cents Int?
+  // A photo uploaded by staff (e.g. after refurbishment), served from public/images/assets/.
+  // Null means the conventional <id>.jpg in that folder, when such a file exists.
+  image_path              String?
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
@@ -56,6 +59,8 @@ model Customer {
   beneficial_owners_json   String?
   // Answers the customer chose to save as defaults, JSON { questionId: answer }.
   saved_defaults_json      String?
+  // The catalogue category this customer last browsed; the catalogue opens on it next time.
+  preferred_category       String?
   created_at               DateTime @default(now())
   updated_at               DateTime @updatedAt
 }
@@ -92,12 +97,14 @@ model Application {
   quote                 Quote     @relation(fields: [quote_id], references: [id])
   quote_id              String
   customer_id           String
-  // draft | approved | awaiting_signature | manual_review | declined | signed | expired
+  // draft | approved | awaiting_signature | manual_review | declined | signed | expired | cancelled
   status                String    @default("draft")
   answers_json          String    @default("{}")
   decision_reasons_json String?
   signatory_email       String?
   hold_until            String? // ISO date: the 7-day hold after approval
+  // The lease start date the customer chose when submitting; signing uses it as given.
+  start_date            String?
   // Set when this application takes over an existing contract via a transfer link:
   // approval + signature transfer that contract instead of creating a new one.
   transfer_contract_id  String?
@@ -194,6 +201,8 @@ model WaitlistEntry {
   id                         String   @id
   category                   String
   max_monthly_net_rent_cents Int
+  // The low end of the budget range: an offer must cost at least this much per month.
+  min_monthly_net_rent_cents Int      @default(0)
   min_condition              String
   preferred_term_months      Int
   needed_by                  String

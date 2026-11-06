@@ -12,7 +12,7 @@ import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
 import { customerWaitlist, staffWaitlist } from '@/server/waitlist-views';
 import { EntryCard } from './entry-card';
-import { JoinForm } from './join-form';
+import { JoinForm, type JoinPrefill } from './join-form';
 
 export default async function WaitlistPage({
   params,
@@ -23,7 +23,18 @@ export default async function WaitlistPage({
   await connection();
 
   const t = getT(locale);
-  const { asOf, asOfParam } = await asOfFromPage(await searchParams);
+  const query = await searchParams;
+  const { asOf, asOfParam } = await asOfFromPage(query);
+  // The catalogue's "no matches" prompt prefills the join form through the URL.
+  const single = (value: string | string[] | undefined) =>
+    typeof value === 'string' ? value : undefined;
+  const prefill: JoinPrefill = {
+    category: single(query.category),
+    minBudget: single(query.minBudget),
+    maxBudget: single(query.maxBudget),
+    minCondition: single(query.minCondition),
+    term: single(query.term),
+  };
   const raw = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
   const customerId = customerPersona(raw);
   const customer = customerId ? await getCustomer(db, customerId) : null;
@@ -40,6 +51,7 @@ export default async function WaitlistPage({
           customerId={customer.id}
           asOf={asOf}
           asOfParam={asOfParam}
+          prefill={prefill}
         />
       ) : isStaff ? (
         <StaffSection locale={locale} asOf={asOf} asOfParam={asOfParam} />
@@ -57,11 +69,13 @@ async function CustomerSection({
   customerId,
   asOf,
   asOfParam,
+  prefill,
 }: {
   locale: Parameters<typeof getT>[0];
   customerId: string;
   asOf: string;
   asOfParam: string | null;
+  prefill: JoinPrefill;
 }) {
   const t = getT(locale);
   const views = await customerWaitlist(db, customerId, asOf);
@@ -90,7 +104,13 @@ async function CustomerSection({
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {t('waitlist.join.intro')}
         </p>
-        <JoinForm locale={locale} customerId={customerId} asOf={asOf} asOfParam={asOfParam} />
+        <JoinForm
+          locale={locale}
+          customerId={customerId}
+          asOf={asOf}
+          asOfParam={asOfParam}
+          prefill={prefill}
+        />
       </section>
     </>
   );

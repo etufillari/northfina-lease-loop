@@ -67,6 +67,7 @@ export type WaiterVerdict = {
     | 'condition_below_minimum'
     | 'deadline_passed'
     | 'over_budget'
+    | 'under_budget'
     | 'unpriceable';
   monthlyNetRentCents?: number;
 };
@@ -117,6 +118,10 @@ export function matchWaitingList(
     const rent = quote.quote.monthlyNetRentCents;
     if (rent > waiter.max_monthly_net_rent_cents) {
       considered.push({ ...base, outcome: 'over_budget', monthlyNetRentCents: rent });
+      continue;
+    }
+    if (rent < waiter.min_monthly_net_rent_cents) {
+      considered.push({ ...base, outcome: 'under_budget', monthlyNetRentCents: rent });
       continue;
     }
     if (winner === null) {

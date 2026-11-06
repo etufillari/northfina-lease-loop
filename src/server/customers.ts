@@ -88,6 +88,28 @@ export function createCustomer(
   );
 }
 
+/** Remembers which catalogue category the customer browses, so it opens there next time. */
+export function savePreferredCategory(
+  db: DbClient,
+  input: { customerId: string; category: string; actor: string }
+) {
+  return withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: 'customer.preferred_category_saved',
+      entityType: 'customer',
+      entityId: input.customerId,
+      details: { category: input.category },
+    },
+    (tx) =>
+      tx.customer.update({
+        where: { id: input.customerId },
+        data: { preferred_category: input.category },
+      })
+  );
+}
+
 /** Saves answers as prefill defaults — only on the customer's explicit opt-in. */
 export function saveDefaults(
   db: DbClient,

@@ -3,7 +3,8 @@
 import { loadQuestions, loadVatRates } from '@/data/load';
 import type { Question } from '@/data/schemas';
 import { validateFinnishBusinessId } from '@/domain/business-id';
-import { addDays } from '@/domain/calendar';
+import { addDays, addMonthsClamped } from '@/domain/calendar';
+import { MAX_START_MONTHS_AHEAD } from '@/domain/contract';
 import { evaluateEligibility, type CustomerType } from '@/domain/eligibility';
 import {
   firstBlockedAnswer,
@@ -29,6 +30,8 @@ export type ApplicationState = {
     decisionReasons: unknown;
     signatoryEmail: string | null;
     holdUntil: string | null;
+    /** The lease start date chosen at submission; null while still a draft. */
+    startDate: string | null;
     isTransfer: boolean;
   };
   quote: {
@@ -44,6 +47,8 @@ export type ApplicationState = {
     monthlyNetRentCents: number;
     netTotalCents: number;
     buyoutNetCents: number;
+    /** Make and model per asset, for the running summary next to the questions. */
+    assets: Array<{ id: string; make: string; model: string }>;
   };
   /** The questions that apply right now, in order, ready for the UI. */
   visibleQuestions: Array<Pick<Question, 'id' | 'type' | 'text' | 'why_we_ask' | 'options'>>;
@@ -142,11 +147,19 @@ async function buildState(
         : null,
       signatoryEmail: rows.application.signatory_email,
       holdUntil: rows.application.hold_until,
+      startDate: rows.application.start_date,
       isTransfer: rows.application.transfer_contract_id !== null,
     },
     quote: {
       id: rows.quote.id,
       assetIds: quoteAssetIds(rows.quote),
+      assets: (
+        await db.asset.findMany({
+          where: { id: { in: quoteAssetIds(rows.quote) } },
+          select: { id: true, make: true, model: true },
+          orderBy: { id: 'asc' },
+        })
+      ).map((a) => ({ id: a.id, make: a.make, model: a.model })),
       quoteDate: rows.quote.quote_date,
       priceListVersion: rows.quote.price_list_version,
       listPriceCents: rows.quote.list_price_cents,
@@ -309,7 +322,10 @@ export async function answerQuestion(
 
 export type SubmitResult =
   | { ok: true; state: ApplicationState }
-  | { ok: false; reason: 'not_found' | 'not_a_draft' | 'incomplete' | 'no_vat_rate_on_date' };
+  | {
+      ok: false;
+      reason: 'not_found' | 'not_a_draft' | 'incomplete' | 'no_vat_rate_on_date' | 'bad_start_date';
+    };
 
 /**
  * The decision: evaluate the six eligibility rules against the answers, reserve the asset
@@ -322,6 +338,13 @@ export async function submitApplication(
   const rows = await loadRows(db, input.applicationId);
   if (!rows) return { ok: false, reason: 'not_found' };
   if (rows.application.status !== 'draft') return { ok: false, reason: 'not_a_draft' };
+  // Not in the past and at most 3 months out — the same window signing enforces later.
+  if (
+    input.startDate < input.asOf ||
+    input.startDate > addMonthsClamped(input.asOf, MAX_START_MONTHS_AHEAD)
+  ) {
+    return { ok: false, reason: 'bad_start_date' };
+  }
 
   const [{ questions }, vatRates, table] = await Promise.all([
     loadQuestions(),
@@ -379,6 +402,7 @@ export async function submitApplication(
           status,
           decision_reasons_json: JSON.stringify(decision.reasons),
           hold_until: holdUntil,
+          start_date: input.startDate,
           signatory_email: str('q_signatory_email'),
         },
       });
@@ -393,6 +417,68 @@ export async function submitApplication(
               until: holdUntil!,
             },
           });
+        }
+      }
+    }
+  );
+  const fresh = await loadRows(db, input.applicationId);
+  return { ok: true, state: await buildState(db, fresh!, input.asOf) };
+}
+
+export type CancelResult =
+  | { ok: true; state: ApplicationState }
+  | { ok: false; reason: 'not_found' | 'not_yours' | 'not_cancellable' };
+
+/** Statuses a customer may still walk away from: nothing is signed yet. */
+const CANCELLABLE = ['approved', 'manual_review', 'awaiting_signature'];
+
+/**
+ * The customer cancels their own application before signing: the holds are released and the
+ * items go straight back to available — the lease never started, so no life is added.
+ */
+export async function cancelApplication(
+  db: Db,
+  input: { applicationId: string; actor: string; asOf: string }
+): Promise<CancelResult> {
+  const rows = await loadRows(db, input.applicationId);
+  if (!rows) return { ok: false, reason: 'not_found' };
+  if (input.actor !== rows.application.customer_id) return { ok: false, reason: 'not_yours' };
+  if (!CANCELLABLE.includes(rows.application.status)) {
+    return { ok: false, reason: 'not_cancellable' };
+  }
+
+  await withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: 'application.cancelled',
+      entityType: 'application',
+      entityId: input.applicationId,
+      details: { from: rows.application.status, assetIds: quoteAssetIds(rows.quote) },
+    },
+    async (tx) => {
+      await tx.application.update({
+        where: { id: input.applicationId },
+        data: { status: 'cancelled', hold_until: null },
+      });
+      for (const assetId of quoteAssetIds(rows.quote)) {
+        await tx.reservation.updateMany({
+          where: {
+            asset_id: assetId,
+            customer_id: rows.application.customer_id,
+            active: true,
+            kind: { notIn: ['waitlist_offer'] },
+          },
+          data: { active: false },
+        });
+        // Only release the item if nobody else still holds it (a waiting-list offer keeps
+        // holding it until it lapses and passes on).
+        const otherHolds = await tx.reservation.count({
+          where: { asset_id: assetId, active: true },
+        });
+        const asset = await tx.asset.findUnique({ where: { id: assetId } });
+        if (otherHolds === 0 && asset?.status === 'reserved') {
+          await tx.asset.update({ where: { id: assetId }, data: { status: 'available' } });
         }
       }
     }

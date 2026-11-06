@@ -53,12 +53,20 @@ export function EntryCard({
               : t(`category.${entry.category}` as MessageKey)}
           </h3>
           <p className="text-sm text-stone-600 dark:text-stone-400">
-            {t('waitlist.needs', {
-              condition: t(`condition.${entry.min_condition}` as MessageKey),
-              budget: euro(entry.max_monthly_net_rent_cents),
-              term: entry.preferred_term_months,
-              date: formatIsoDate(entry.needed_by, locale),
-            })}
+            {entry.min_monthly_net_rent_cents > 0
+              ? t('waitlist.needsRange', {
+                  condition: t(`condition.${entry.min_condition}` as MessageKey),
+                  min: euro(entry.min_monthly_net_rent_cents),
+                  max: euro(entry.max_monthly_net_rent_cents),
+                  term: entry.preferred_term_months,
+                  date: formatIsoDate(entry.needed_by, locale),
+                })
+              : t('waitlist.needs', {
+                  condition: t(`condition.${entry.min_condition}` as MessageKey),
+                  budget: euro(entry.max_monthly_net_rent_cents),
+                  term: entry.preferred_term_months,
+                  date: formatIsoDate(entry.needed_by, locale),
+                })}
           </p>
         </div>
         <span
@@ -70,14 +78,7 @@ export function EntryCard({
 
       {entry.status === 'waiting' && (
         <div className="mt-3 space-y-1 text-sm">
-          {view.position !== null ? (
-            <p>
-              {t('waitlist.position', {
-                position: view.position,
-                category: t(`category.${entry.category}` as MessageKey),
-              })}
-            </p>
-          ) : (
+          {view.position === null && (
             <p className="text-stone-600 dark:text-stone-400">{t('waitlist.pastDeadline')}</p>
           )}
           {view.pooledAssetIds.length > 0 && (

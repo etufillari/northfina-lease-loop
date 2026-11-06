@@ -13,6 +13,7 @@ import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { listAssets } from '@/server/assets';
+import { assetImageUrls } from '@/server/asset-images';
 import { db } from '@/server/db';
 import { secondLifePrices } from '@/server/quotes';
 
@@ -24,11 +25,13 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
   const t = getT(locale);
   const { asOf } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
-  const [assets, priceLists, secondLife] = await Promise.all([
+  const [assets, priceLists, secondLife, imageRows] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
     secondLifePrices(db),
+    db.asset.findMany({ select: { id: true, image_path: true } }),
   ]);
+  const images = assetImageUrls(imageRows);
 
   const leasable = assets
     .filter((asset) => asset.status === 'available' || asset.status === 'returned')
@@ -40,6 +43,11 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
         make: asset.make,
         model: asset.model,
         condition: asset.condition,
+        modelYear: asset.model_year,
+        usageUnit: asset.usage.unit,
+        usageValue: asset.usage.value,
+        previousLives: asset.previous_lives,
+        imageUrl: images[asset.id] ?? null,
         // A refurbished item is priced at the desk's re-price, not the new-item price list.
         priceCents: price.ok ? (secondLife[asset.id] ?? price.priceCents) : null,
       };

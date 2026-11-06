@@ -38,6 +38,7 @@ function exclusionText(
         budget: formatEuro(candidate.request.max_monthly_net_rent_cents, intlTag),
       });
     case 'not_financeable':
+    default:
       return t('secondLife.excludedReason.not_financeable');
   }
 }

@@ -17,30 +17,9 @@ import type {
   VatRates,
 } from '@/data/schemas';
 
-const EPSILON = 1e-9;
+import { fractionToBp, fractionToPpm, percentToBp, toWholeNumber } from '@/domain/rounding';
 
-function toExactInt(scaled: number, original: number, unit: string): number {
-  const rounded = Math.round(scaled);
-  if (!Number.isFinite(scaled) || Math.abs(scaled - rounded) > EPSILON) {
-    throw new Error(`${original} cannot be stored exactly as ${unit}`);
-  }
-  // Math.round(-0.0001) is -0; store a plain 0.
-  return rounded === 0 ? 0 : rounded;
-}
-
-/** 25.5 (%) → 2550 basis points. */
-export const percentToBp = (percent: number) => toExactInt(percent * 100, percent, 'basis points');
-
-/** 0.95 (a share or multiplier) → 9500 basis points. */
-export const fractionToBp = (fraction: number) =>
-  toExactInt(fraction * 10_000, fraction, 'basis points');
-
-/** 0.027584 → 27584 parts per million. */
-export const fractionToPpm = (fraction: number) =>
-  toExactInt(fraction * 1_000_000, fraction, 'parts per million');
-
-/** 165 → 165; 165.5 throws. */
-export const toWholeNumber = (value: number) => toExactInt(value, value, 'a whole number');
+export { fractionToBp, fractionToPpm, percentToBp, toWholeNumber };
 
 // --- price-lists.json --------------------------------------------------------
 

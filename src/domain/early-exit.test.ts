@@ -168,6 +168,17 @@ describe('calculateEarlyExit', () => {
     expect(quote.returnItem.netCents).toBe(70_646);
   });
 
+  it('shows what finishing the contract would still cost, for comparison (card 8)', async () => {
+    const quote = calculateEarlyExit(await cardInput('2027-05-05'));
+    // 29 × 10 730 + 58 350: the €3,695.20 in ARCHITECTURE.md §7, nothing discounted.
+    expect(quote.finish).toEqual({
+      remainingRentsNominalCents: 311_170,
+      buyoutNetCents: 58_350,
+      totalCents: 369_520,
+    });
+    expect(quote.finish.totalCents).toBeGreaterThan(quote.buyout.netCents);
+  });
+
   it('charges VAT at the rate on the exit date (26 % from 2027)', async () => {
     const quote = calculateEarlyExit(await cardInput('2027-05-05'));
 

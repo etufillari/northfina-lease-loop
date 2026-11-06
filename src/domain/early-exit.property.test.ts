@@ -340,8 +340,13 @@ describe('early-exit property tests (Hegel: Fair early exit)', () => {
           usage: { unit, value: 500 },
         });
 
-        // Better condition has higher or equal market value
-        expect(q1.marketValue.valueCents).toBeGreaterThanOrEqual(q2.marketValue.valueCents);
+        // Better condition is credited at least as much. The market value shown can come from
+        // a different valuation (as returned, or after a new battery: whichever credits less),
+        // so it is only comparable when both quotes used the same one.
+        expect(q1.returnCreditCents).toBeGreaterThanOrEqual(q2.returnCreditCents);
+        if (q1.refurbishment.resetsUsage === q2.refurbishment.resetsUsage) {
+          expect(q1.marketValue.valueCents).toBeGreaterThanOrEqual(q2.marketValue.valueCents);
+        }
         // Worse condition has higher or equal return expenses
         expect(q2.returnItem.netCents).toBeGreaterThanOrEqual(q1.returnItem.netCents);
 

@@ -8,48 +8,16 @@ import {
   calculateContractQuote,
   clampDownPaymentCents,
   downPaymentBoundsFor,
-  vatRateOn,
 } from './contract-pricing';
+import { addMonthsClamped } from './calendar';
+import { mulDivRound } from './rounding';
+import { vatRateOn } from './vat';
 
 let table: CoefficientTable;
 let vatRates: VatRates;
 
 beforeAll(async () => {
   [table, vatRates] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
-});
-
-describe('vatRateOn', () => {
-  it('returns 25.5 % on 2026-11-05 and 2026-12-31', () => {
-    expect(vatRateOn(vatRates, '2026-11-05')).toEqual({
-      ok: true,
-      ratePercent: 25.5,
-      fictional: false,
-    });
-    expect(vatRateOn(vatRates, '2026-12-31')).toEqual({
-      ok: true,
-      ratePercent: 25.5,
-      fictional: false,
-    });
-  });
-
-  it('switches to the fictional 26.0 % rate on 2027-01-01', () => {
-    expect(vatRateOn(vatRates, '2027-01-01')).toEqual({
-      ok: true,
-      ratePercent: 26.0,
-      fictional: true,
-    });
-  });
-
-  it('returns no_vat_rate_on_date before the earliest rate', () => {
-    expect(vatRateOn(vatRates, '2010-01-01')).toEqual({
-      ok: false,
-      reason: 'no_vat_rate_on_date',
-    });
-  });
-
-  it('throws on malformed ISO dates', () => {
-    expect(() => vatRateOn(vatRates, '05-11-2026')).toThrow(RangeError);
-  });
 });
 
 describe('availableTermsFromTable & downPaymentBoundsFor', () => {
@@ -128,15 +96,19 @@ describe('calculateContractQuote', () => {
         termMonths: 36,
         band: expect.objectContaining({ band: 'B', annual_interest_percent: 7.9 }),
         factor: 0.027584,
+        factorPpm: 27_584,
+        annualInterestBp: 790,
         monthlyNetRentCents: 10_730,
         vatRatePercent: 25.5,
+        vatRateBp: 2_550,
         vatRateFictional: false,
         monthlyVatCents: 2_736,
         monthlyGrossRentCents: 13_466,
         buyoutPercent: 15,
         buyoutNetCents: 58_350,
         totalRentNetCents: 386_280,
-        totalRentGrossCents: 484_776,
+        // Sum of the rows: 2 invoices at 25.5 % (13 466) + 34 at 26 % from Jan 2027 (13 520).
+        totalRentGrossCents: 486_612,
         totalLeaseNetCents: 386_280,
         totalWithBuyoutNetCents: 444_630,
       },
@@ -379,8 +351,17 @@ describe('contract-pricing property tests (Hegel: Money that adds up)', () => {
         // Total rent adds up: net total = monthly net * term
         expect(quote.totalRentNetCents).toBe(quote.monthlyNetRentCents * termMonths);
 
-        // Total rent gross adds up: gross total = monthly gross * term
-        expect(quote.totalRentGrossCents).toBe(quote.monthlyGrossRentCents * termMonths);
+        // Total rent gross adds up row by row: each invoice is charged VAT at the rate on its
+        // own date (ARCHITECTURE.md §6.3), so a term that spans a VAT change is not simply
+        // monthly gross × term.
+        let expectedGrossCents = 0;
+        for (let i = 0; i < termMonths; i += 1) {
+          const vat = vatRateOn(vatRates, addMonthsClamped(isoDate, i));
+          if (!vat.ok) throw new Error('every invoice date has a VAT rate in the data pack');
+          expectedGrossCents +=
+            quote.monthlyNetRentCents + mulDivRound(quote.monthlyNetRentCents, vat.rateBp, 10_000);
+        }
+        expect(quote.totalRentGrossCents).toBe(expectedGrossCents);
 
         // Total lease net = down payment + total rent net
         expect(quote.totalLeaseNetCents).toBe(quote.downPaymentCents + quote.totalRentNetCents);

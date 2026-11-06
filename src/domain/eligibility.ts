@@ -4,10 +4,11 @@
 import type { CoefficientTable, Question } from '@/data/schemas';
 import { isValidBusinessId } from './business-id';
 import { monthlyFactorFor } from './coefficient';
+import { LEASE_CONFIG } from './config';
 import { pruneAnswers, visibleQuestions, type AnswerValue, type FlowDeal } from './question-flow';
 
-/** Share of monthly net income a consumer may spend on rent incl. VAT: 30 % (rule `affordability`). */
-const AFFORDABILITY_PERCENT = 30;
+/** Share of monthly net income a consumer may spend on rent incl. VAT (rule `affordability`). */
+const AFFORDABILITY_PERCENT = LEASE_CONFIG.affordabilityPercent;
 
 /**
  * One reason behind a decision. `rule` is the id of an eligibility rule (`min_age`, `residency`,

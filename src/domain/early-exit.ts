@@ -26,9 +26,14 @@
 // Rounding rule (RULES.md): all money is integer euro cents. The present value is the only
 // non-integer step, and it is computed without floating point: the annual rate becomes whole
 // basis points (7.9 % -> 790 bp), so 1 + r is the exact fraction (120 000 + bp) / 120 000 and
-// the balance is one exact BigInt fraction, rounded half up ONCE to whole cents. Every other
-// line is an integer, and the "interest not charged" line is derived (balance minus the
-// nominal amounts), so the lines always add up to the total.
+// the balance is one exact BigInt fraction, rounded half up ONCE to whole cents (`roundRatio`,
+// the money core's rule from rounding.ts). Every other line is an integer, and the "interest
+// not charged" line is derived (balance minus the nominal amounts), so the lines always add up
+// to the total.
+//
+// Each quote also carries `finish`: what completing the contract normally would still cost
+// (the remaining rents and the buyout, nothing discounted), so both exits can be shown next to
+// it. There is no exit fee and no remarketing haircut (ARCHITECTURE.md §7).
 import {
   type AssetCategory,
   type AssetCondition,
@@ -44,15 +49,14 @@ import {
   calculateResidualMarketValue,
   interpolateResidualCurve,
 } from './end-of-term';
+import { addMonthsClamped, compareIso, isValidIsoDate } from './calendar';
 import type { ContractQuote } from './contract-pricing';
-import { addMonthsClamped } from './invoice-schedule';
 import {
   type FixedRefurbishmentRule,
   fixedRefurbishmentFor,
   type RefurbishmentPlan,
 } from './refurbishment';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+import { percentToBp, roundRatio } from './rounding';
 
 /**
  * Counts the rent rows billed on or before `asOf`: row 1 falls on `signedOn`, row n on
@@ -60,18 +64,20 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  * 0 means the exit date is before the lease starts.
  */
 export function billedMonthsAsOf(signedOn: string, termMonths: number, asOf: string): number {
-  if (!ISO_DATE.test(signedOn)) {
-    throw new RangeError(`signedOn must look like YYYY-MM-DD, got "${signedOn}"`);
+  if (!isValidIsoDate(signedOn)) {
+    throw new RangeError(`signedOn must be a real YYYY-MM-DD date, got "${signedOn}"`);
   }
-  if (!ISO_DATE.test(asOf)) {
-    throw new RangeError(`asOf must look like YYYY-MM-DD, got "${asOf}"`);
+  if (!isValidIsoDate(asOf)) {
+    throw new RangeError(`asOf must be a real YYYY-MM-DD date, got "${asOf}"`);
   }
   if (!Number.isInteger(termMonths) || termMonths <= 0) {
     throw new RangeError(`termMonths must be a positive integer, got ${termMonths}`);
   }
 
   let billed = 0;
-  while (billed < termMonths && addMonthsClamped(signedOn, billed) <= asOf) billed += 1;
+  while (billed < termMonths && compareIso(addMonthsClamped(signedOn, billed), asOf) <= 0) {
+    billed += 1;
+  }
   return billed;
 }
 
@@ -106,7 +112,8 @@ export function outstandingBalanceCents(input: {
 
   // 1 + r = (12 × 10 000 + bp) / (12 × 10 000). Over the common denominator N^m:
   //   balance = (Σ_{i=1..m} rent × D^i × N^(m−i)  +  buyout × D^m) / N^m
-  const bp = BigInt(percentToBasisPoints(annualInterestPercent));
+  // percentToBp throws if the rate has more than two decimals: it has no exact bp value.
+  const bp = BigInt(percentToBp(annualInterestPercent));
   const den = 120_000n;
   const num = den + bp;
   const m = remainingMonths;
@@ -116,27 +123,7 @@ export function outstandingBalanceCents(input: {
   for (let i = 1; i <= m; i += 1) {
     numerator += rent * den ** BigInt(i) * num ** BigInt(m - i);
   }
-  return roundHalfUp(numerator, num ** BigInt(m));
-}
-
-/**
- * A percentage from the data pack as whole basis points (7.9 -> 790). Throws if the rate has
- * more than two decimals, because it then cannot be stored exactly.
- */
-function percentToBasisPoints(percent: number): number {
-  const scaled = percent * 100;
-  const bp = Math.round(scaled);
-  if (Math.abs(scaled - bp) > 1e-9) {
-    throw new RangeError(`annualInterestPercent ${percent} has more than two decimals`);
-  }
-  return bp;
-}
-
-/** `numerator / denominator` rounded half up, for non-negative numerators. */
-function roundHalfUp(numerator: bigint, denominator: bigint): number {
-  const quotient = numerator / denominator;
-  const rounded = (numerator % denominator) * 2n >= denominator ? quotient + 1n : quotient;
-  return Number(rounded);
+  return roundRatio(numerator, num ** BigInt(m));
 }
 
 /** One line of the step-by-step calculation. `key` is translated in the UI with `params`. */
@@ -193,6 +180,8 @@ export type EarlyExitQuote = {
   buyout: EarlyExitOption;
   /** Give the item back and pay the shortfall (the asset becomes returned). */
   returnItem: EarlyExitOption;
+  /** What finishing the contract normally would still cost, nothing discounted. */
+  finish: { remainingRentsNominalCents: number; buyoutNetCents: number; totalCents: number };
 };
 
 export type EarlyExitInput = {
@@ -371,6 +360,11 @@ export function calculateEarlyExit(input: EarlyExitInput): EarlyExitQuote {
     returnCreditCents,
     buyout: asOption(balanceCents, baseLines),
     returnItem: asOption(returnNetCents, returnLines),
+    finish: {
+      remainingRentsNominalCents: nominalRemainingRentsCents,
+      buyoutNetCents,
+      totalCents: nominalRemainingRentsCents + buyoutNetCents,
+    },
   };
 }
 

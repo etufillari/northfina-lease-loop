@@ -52,8 +52,8 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Translate }) {
         </div>
       </div>
 
-      <div className="border-t border-ink-700">
-        <p className="mx-auto max-w-6xl px-4 py-4 sm:px-6">{t('footer.copyright')}</p>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <p className="border-t-2 border-ink-500 py-4">{t('footer.copyright')}</p>
       </div>
     </footer>
   );

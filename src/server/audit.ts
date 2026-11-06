@@ -3,6 +3,9 @@
 // can never hold a change that nobody can explain.
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 
+/** The actor on work nobody asked for, such as the scheduler's. */
+export const SYSTEM_ACTOR = 'system';
+
 export type AuditEntry = {
   /** Who did it: a user id, or `system` for scheduled work. */
   actor: string;

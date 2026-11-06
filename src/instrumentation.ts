@@ -4,7 +4,13 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
   const { db } = await import('./server/db');
+  const { currentDate } = await import('./server/date/app-date');
   const { closeDueContracts } = await import('./server/end-of-term/contract-end');
   const { startContractScheduler } = await import('./server/end-of-term/scheduler');
-  startContractScheduler(() => closeDueContracts(db));
+  const { refreshFutureVat } = await import('./server/invoicing/future-vat');
+
+  startContractScheduler(async () => {
+    await closeDueContracts(db);
+    await refreshFutureVat(db, await currentDate(db));
+  });
 }

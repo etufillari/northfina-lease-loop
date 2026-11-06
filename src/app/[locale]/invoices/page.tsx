@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { z } from 'zod';
+import { EarlyExitOptions } from '@/components/early-exit-options';
 import { EndOfTermOptions } from '@/components/end-of-term-options';
 import { MonthlyInvoices } from '@/components/monthly-invoices';
 import {
@@ -16,14 +17,16 @@ import {
   loadSecondLifeDemand,
   loadVatRates,
 } from '@/data/load';
-import { isoDateSchema } from '@/data/schemas';
+import { assetConditionSchema, isoDateSchema } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
+import { earlyExitForContract } from '@/domain/early-exit';
 import {
   calculateAvoidedCo2,
   calculateBuyoutSettlement,
   calculateResidualMarketValue,
   matchSecondLifeWaitingList,
 } from '@/domain/end-of-term';
+import { addMonthsClamped } from '@/domain/invoice-schedule';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
@@ -38,6 +41,10 @@ const querySchema = z.object({
   term: z.coerce.number().int().positive(),
   down: z.coerce.number().int().min(0).default(0),
   signedOn: isoDateSchema.optional(),
+  // Early exit: the month of the term to leave in (1 = the first rent) and the condition the
+  // item is returned in. Both are only inputs to the calculation, nothing is stored.
+  exitMonth: z.coerce.number().int().min(1).optional(),
+  condition: assetConditionSchema.optional(),
 });
 
 export default async function InvoicesPage({
@@ -127,6 +134,23 @@ export default async function InvoicesPage({
     relistPriceCents,
     firstListPriceCents: quote.listPriceCents,
   });
+
+  // Early exit: leave in the chosen month (the date of that month's rent row), default month 1.
+  const exitMonth = Math.min(query.data.exitMonth ?? 1, quote.termMonths);
+  const exitCondition = query.data.condition ?? 'good';
+  const earlyExit = earlyExitForContract({
+    quote,
+    signedOn,
+    exitMonth,
+    condition: exitCondition,
+    asset,
+    residualCurves,
+    vatRates,
+  });
+  const exitMonthChoices = Array.from({ length: quote.termMonths }, (_, index) => ({
+    month: index + 1,
+    date: formatIsoDate(addMonthsClamped(signedOn, index), locale),
+  }));
 
   const summaryRows: [string, string][] = [
     [t('apply.deal.item'), `${asset.make} ${asset.model}`],
@@ -238,6 +262,18 @@ export default async function InvoicesPage({
             model: asset.model,
             serial_number: asset.serial_number,
           }}
+        />
+
+        {/* Early exit: what leaving before the end of the term costs, step by step */}
+        <EarlyExitOptions
+          locale={locale}
+          quote={earlyExit}
+          contract={{ asset: asset.id, term: quote.termMonths, down, signedOn }}
+          exitMonth={exitMonth}
+          condition={exitCondition}
+          monthChoices={exitMonthChoices}
+          firstListPriceCents={quote.listPriceCents}
+          leaseEnded={asset.status === 'sold' || asset.status === 'returned'}
         />
 
         {/* End of term options (Buy, Return, Pass on) */}

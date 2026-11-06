@@ -161,7 +161,7 @@ export async function reserveAsset(
         throw new ReservationConflictError('already_reserved');
       }
 
-      const token = input.token?.trim() || randomUUID();
+      const token = randomUUID();
       const expiryIso = calculateReservationExpiry(currentDate, timeoutMinutes);
 
       auditEntry.action = 'asset.reserved';
@@ -212,6 +212,12 @@ export async function reserveAsset(
 export type ReleaseReservationResult =
   { ok: true } | { ok: false; reason: 'not_found' | 'token_mismatch' };
 
+class ReleaseError extends Error {
+  constructor(public readonly reason: 'not_found' | 'token_mismatch') {
+    super(reason);
+  }
+}
+
 /**
  * Releases an active reservation when an application is abandoned, cancelled, or rejected.
  * Reverts the asset status to 'available' and writes an audit row atomically.
@@ -225,45 +231,56 @@ export async function releaseReservation(
     reason: ReservationReleaseReason;
   }
 ): Promise<ReleaseReservationResult> {
-  const active = await db.assetReservation.findFirst({
-    where: { asset_id: input.assetId, status: 'active' },
-    orderBy: { created_at: 'desc' },
-  });
-
-  if (!active) return { ok: false, reason: 'not_found' };
-  if (active.token !== input.token) return { ok: false, reason: 'token_mismatch' };
-
-  await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'asset.reservation_cancelled',
-      entityType: 'asset',
-      entityId: input.assetId,
-      details: {
-        from: 'reserved',
-        to: 'available',
-        token: input.token,
-        reason: input.reason,
+  try {
+    await withAudit(
+      db,
+      {
+        actor: input.actor,
+        action: 'asset.reservation_cancelled',
+        entityType: 'asset',
+        entityId: input.assetId,
+        details: {
+          from: 'reserved',
+          to: 'available',
+          token: input.token,
+          reason: input.reason,
+        },
       },
-    },
-    async (tx) => {
-      await tx.assetReservation.update({
-        where: { id: active.id },
-        data: { status: 'released' },
-      });
-      await tx.asset.update({
-        where: { id: input.assetId },
-        data: { status: 'available' },
-      });
-    }
-  );
+      async (tx) => {
+        const active = await tx.assetReservation.findFirst({
+          where: { asset_id: input.assetId, status: 'active' },
+          orderBy: { created_at: 'desc' },
+        });
+        if (!active) throw new ReleaseError('not_found');
+        if (active.token !== input.token) throw new ReleaseError('token_mismatch');
 
-  return { ok: true };
+        await tx.assetReservation.update({
+          where: { id: active.id },
+          data: { status: 'released' },
+        });
+        await tx.asset.update({
+          where: { id: input.assetId },
+          data: { status: 'available' },
+        });
+      }
+    );
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ReleaseError) {
+      return { ok: false, reason: error.reason };
+    }
+    throw error;
+  }
 }
 
 export type ExpireReservationResult =
   { ok: true } | { ok: false; reason: 'not_found' | 'not_expired' };
+
+class ExpireError extends Error {
+  constructor(public readonly reason: 'not_found' | 'not_expired') {
+    super(reason);
+  }
+}
 
 /**
  * Expires an active reservation that reached its timeout.
@@ -278,31 +295,32 @@ export async function expireReservation(
   }
 ): Promise<ExpireReservationResult> {
   const currentDate = input.now ?? new Date();
-  const active = await db.assetReservation.findFirst({
-    where: { asset_id: input.assetId, status: 'active' },
-    orderBy: { created_at: 'desc' },
-  });
+  const auditEntry = {
+    actor: input.actor ?? 'system',
+    action: 'asset.reservation_expired',
+    entityType: 'asset',
+    entityId: input.assetId,
+    details: {} as Record<string, unknown>,
+  };
 
-  if (!active) return { ok: false, reason: 'not_found' };
-  if (!isReservationExpired(active.expires_at, currentDate)) {
-    return { ok: false, reason: 'not_expired' };
-  }
+  try {
+    await withAudit(db, auditEntry, async (tx) => {
+      const active = await tx.assetReservation.findFirst({
+        where: { asset_id: input.assetId, status: 'active' },
+        orderBy: { created_at: 'desc' },
+      });
+      if (!active) throw new ExpireError('not_found');
+      if (!isReservationExpired(active.expires_at, currentDate)) {
+        throw new ExpireError('not_expired');
+      }
 
-  await withAudit(
-    db,
-    {
-      actor: input.actor ?? 'system',
-      action: 'asset.reservation_expired',
-      entityType: 'asset',
-      entityId: input.assetId,
-      details: {
+      auditEntry.details = {
         from: 'reserved',
         to: 'available',
         token: active.token,
         reason: 'timeout',
-      },
-    },
-    async (tx) => {
+      };
+
       await tx.assetReservation.update({
         where: { id: active.id },
         data: { status: 'expired' },
@@ -311,10 +329,14 @@ export async function expireReservation(
         where: { id: input.assetId },
         data: { status: 'available' },
       });
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ExpireError) {
+      return { ok: false, reason: error.reason };
     }
-  );
-
-  return { ok: true };
+    throw error;
+  }
 }
 
 /**
@@ -328,40 +350,44 @@ export async function completeReservation(
     actor: string;
   }
 ): Promise<{ ok: boolean }> {
-  const active = await db.assetReservation.findFirst({
-    where: {
-      asset_id: input.assetId,
-      status: 'active',
-      ...(input.token ? { token: input.token } : {}),
-    },
-    orderBy: { created_at: 'desc' },
-  });
+  const auditEntry = {
+    actor: input.actor,
+    action: 'asset.reservation_completed',
+    entityType: 'asset',
+    entityId: input.assetId,
+    details: {} as Record<string, unknown>,
+  };
 
-  if (!active) return { ok: false };
+  try {
+    await withAudit(db, auditEntry, async (tx) => {
+      const active = await tx.assetReservation.findFirst({
+        where: {
+          asset_id: input.assetId,
+          status: 'active',
+          ...(input.token ? { token: input.token } : {}),
+        },
+        orderBy: { created_at: 'desc' },
+      });
+      if (!active) throw new ReleaseError('not_found');
 
-  await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'asset.reservation_completed',
-      entityType: 'asset',
-      entityId: input.assetId,
-      details: {
+      auditEntry.details = {
         token: active.token,
         reason: 'contract_signed',
-      },
-    },
-    async (tx) => {
+      };
+
       await tx.assetReservation.update({
         where: { id: active.id },
         data: { status: 'completed' },
       });
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ReleaseError) {
+      return { ok: false };
     }
-  );
-
-  return { ok: true };
+    throw error;
+  }
 }
-
 /**
  * Returns the currently active reservation for an asset, or null if none or expired.
  * If expired at `now`, triggers automatic expiration via withAudit.

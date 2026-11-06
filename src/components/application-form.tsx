@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Question } from '@/data/schemas';
 import type { EligibilityDecision } from '@/domain/eligibility';
 import type { AnswerValue } from '@/domain/question-flow';
-import { formatRemainingTime } from '@/domain/reservation';
+import { formatRemainingTime, shouldReleaseReservationOnDecision } from '@/domain/reservation';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { DecisionPanel } from './decision-panel';
@@ -293,15 +293,25 @@ export function ApplicationForm({
 
   // Automatically cancel and release reservation if application is rejected
   useEffect(() => {
-    if (state.status === 'ready' && state.data.decision.decision === 'no' && signTarget && token) {
+    if (
+      state.status === 'ready' &&
+      shouldReleaseReservationOnDecision(state.data.decision.decision) &&
+      signTarget &&
+      token &&
+      resState === 'active'
+    ) {
       sessionStorage.removeItem(`lease_loop_res_${signTarget.assetId}`);
       fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/reserve`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, reason: 'rejected' }),
-      }).catch(() => {});
+      })
+        .then(() => {
+          setResState('released');
+        })
+        .catch(() => {});
     }
-  }, [state, signTarget, token]);
+  }, [state, signTarget, token, resState]);
 
   async function handleCancelApplication() {
     if (signTarget && token && resState === 'active') {
@@ -402,14 +412,11 @@ export function ApplicationForm({
     const actor = getSigningActor(answers);
 
     try {
-      const response = await fetch(
-        `/api/assets/${encodeURIComponent(signTarget!.assetId)}/status`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'reserved', actor, token: token ?? undefined }),
-        }
-      );
+      const response = await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'reserved', actor, token: token ?? undefined }),
+      });
       const json = (await response.json()) as { success?: boolean };
       if (!response.ok || !json.success) {
         throw new Error('sign failed');
@@ -418,10 +425,10 @@ export function ApplicationForm({
       sessionStorage.removeItem(`lease_loop_res_${signTarget.assetId}`);
 
       const params = new URLSearchParams({
-        asset: signTarget!.assetId,
-        term: String(signTarget!.termMonths),
-        down: String(signTarget!.downPaymentCents),
-        signedOn: signTarget!.signedOn,
+        asset: signTarget.assetId,
+        term: String(signTarget.termMonths),
+        down: String(signTarget.downPaymentCents),
+        signedOn: signTarget.signedOn,
       });
       router.push(`/${locale}/invoices?${params.toString()}`);
     } catch {
@@ -431,7 +438,8 @@ export function ApplicationForm({
       setSignError(t('apply.signError'));
     }
   }
-  const isRejected = state.status === 'ready' && state.data.decision.decision === 'no';
+  const isRejected =
+    state.status === 'ready' && shouldReleaseReservationOnDecision(state.data.decision.decision);
   const displayResState: ReservationState =
     isRejected && resState === 'active' ? 'released' : resState;
   const data = state.status === 'ready' ? state.data : null;
@@ -481,6 +489,22 @@ export function ApplicationForm({
               className="mt-[12px] rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] hover:bg-[#1354a5]"
             >
               {t('invoices.backToCatalogue')}
+            </button>
+          </div>
+        ) : null}
+
+        {displayResState === 'error' ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-[12px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[#5c360a] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <p className="font-semibold">{t('apply.error')}</p>
+            <button
+              type="button"
+              onClick={handleReReserve}
+              className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] hover:bg-[#1354a5]"
+            >
+              {t('apply.reservation.renew')}
             </button>
           </div>
         ) : null}

@@ -4,6 +4,7 @@ import type { Asset } from '@/data/schemas';
 import { seedAssets } from '@/server/assets';
 import { db } from '@/server/db';
 import { createTestDb } from '../../../../../../tests/helpers/test-db';
+import { PATCH as patchStatus } from '../status/route';
 import { DELETE, GET, POST } from './route';
 
 let cleanup: () => Promise<void>;
@@ -45,6 +46,14 @@ function get(id: string, token?: string) {
   const url = `http://localhost/api/assets/${id}/reserve${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   const request = new Request(url, { method: 'GET' });
   return GET(request, { params: Promise.resolve({ id }) });
+}
+
+function patch(id: string, body: unknown) {
+  const request = new Request(`http://localhost/api/assets/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return patchStatus(request, { params: Promise.resolve({ id }) });
 }
 
 describe('POST /api/assets/:id/reserve', () => {
@@ -98,6 +107,23 @@ describe('POST /api/assets/:id/reserve', () => {
     const res = await post('unknown-id', { actor: 'customer' });
     expect(res.status).toBe(404);
   });
+
+  it('generates a fresh token when re-reserving after a released or expired reservation', async () => {
+    const first = await post('ebike-001', { actor: 'customer-1' });
+    const firstJson = await first.json();
+    const oldToken = firstJson.data.reservation.token;
+
+    const released = await del('ebike-001', { token: oldToken, reason: 'rejected' });
+    expect(released.status).toBe(200);
+
+    const second = await post('ebike-001', { actor: 'customer-1', token: oldToken });
+    const secondJson = await second.json();
+
+    expect(second.status).toBe(200);
+    expect(secondJson.success).toBe(true);
+    expect(secondJson.data.renewed).toBe(false);
+    expect(secondJson.data.reservation.token).not.toBe(oldToken);
+  });
 });
 
 describe('DELETE /api/assets/:id/reserve', () => {
@@ -121,6 +147,22 @@ describe('DELETE /api/assets/:id/reserve', () => {
     await post('ebike-001', { actor: 'customer' });
     const res = await del('ebike-001', { token: 'wrong-token' });
     expect(res.status).toBe(403);
+  });
+
+  it('rejects signing when applicant token was released and another applicant reserved the asset', async () => {
+    const resA = await post('ebike-001', { actor: 'alice' });
+    const tokenA = (await resA.json()).data.reservation.token;
+
+    // Alice is rejected and releases her reservation
+    await del('ebike-001', { token: tokenA, reason: 'rejected' });
+
+    // Bob reserves the asset
+    const resB = await post('ebike-001', { actor: 'bob' });
+    expect(resB.status).toBe(200);
+
+    // Alice tries to sign using her released tokenA
+    const signA = await patch('ebike-001', { status: 'reserved', actor: 'alice', token: tokenA });
+    expect(signA.status).toBe(409);
   });
 });
 

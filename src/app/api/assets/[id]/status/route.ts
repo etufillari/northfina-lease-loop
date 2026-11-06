@@ -19,12 +19,23 @@ export const PATCH = handleRoute(
     const { id } = await params;
     const body = await readJsonBody(request, bodySchema);
 
+    if (body.token) {
+      const completed = await completeReservation(db, {
+        assetId: id,
+        token: body.token,
+        actor: body.actor,
+      });
+      if (!completed.ok) {
+        return fail(
+          409,
+          'RESERVATION_CONFLICT',
+          'Reservation is no longer active or token does not match'
+        );
+      }
+    }
+
     const result = await changeAssetStatus(db, { id, status: body.status, actor: body.actor });
     if (!result.ok) return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);
-
-    if (body.token) {
-      await completeReservation(db, { assetId: id, token: body.token, actor: body.actor });
-    }
 
     return ok(result.asset);
   }

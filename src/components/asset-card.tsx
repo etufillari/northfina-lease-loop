@@ -195,11 +195,13 @@ export function AssetCard({
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-stone-600 dark:text-stone-400">
-              {secondLife ? t('asset.secondLifePrice') : t('catalogue.listPrice')}
-            </p>
-            <p className="font-medium tabular-nums">
+            {/* Mirrors the monthly column: the amount first and as big, the label and the
+                VAT note in small print below it. */}
+            <p className="text-2xl font-semibold tabular-nums">
               {listCents !== null ? euro(listCents) : t('asset.noPrice')}
+            </p>
+            <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+              {secondLife ? t('asset.secondLifePrice') : t('catalogue.listPrice')}
             </p>
             {listCents !== null ? (
               <p className="text-xs text-stone-600 dark:text-stone-400">{vatNote}</p>

@@ -95,3 +95,8 @@ export function contractStage(
   if (today > contract.endDate) return 'ended';
   return 'active';
 }
+
+/** Short, readable contract number from its id: the first 8 characters, upper case. */
+export function contractNumber(id: string): string {
+  return id.slice(0, 8).toUpperCase();
+}

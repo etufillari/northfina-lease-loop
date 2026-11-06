@@ -3,6 +3,7 @@ import {
   addDays,
   addMonths,
   checkSignable,
+  contractNumber,
   contractPeriod,
   contractStage,
   daysBetween,
@@ -106,5 +107,11 @@ describe('contractStage', () => {
 
   it('has ended from the day after the last day', () => {
     expect(contractStage(lease, '2029-11-05')).toBe('ended');
+  });
+});
+
+describe('contractNumber', () => {
+  it('is the first 8 characters of the id in upper case', () => {
+    expect(contractNumber('1a2b3c4d-0000-4000-8000-000000000000')).toBe('1A2B3C4D');
   });
 });

@@ -5,7 +5,9 @@ import {
   invoiceSchedule,
   splitByDate,
   sumInvoices,
+  invoiceLabel,
   upcomingVatChange,
+  withStatus,
   type Invoice,
 } from './invoicing';
 
@@ -134,5 +136,35 @@ describe('upcomingVatChange', () => {
 
   it('has nothing to warn about when the rate never changes', () => {
     expect(upcomingVatChange(schedule('2027-02-01', 12, 1_000), '2027-02-01')).toBeNull();
+  });
+});
+
+describe('withStatus', () => {
+  const invoices = () => schedule('2026-11-05', 12, 1_000);
+
+  it('is upcoming before the invoice date, due from it, and paid once paid', () => {
+    const statuses = withStatus(
+      invoices(),
+      [{ invoiceNumber: 1, paidDate: '2026-11-06' }],
+      '2026-12-05'
+    );
+    expect(statuses.slice(0, 3).map((i) => [i.number, i.status, i.paidDate])).toEqual([
+      [1, 'paid', '2026-11-06'],
+      [2, 'due', null],
+      [3, 'upcoming', null],
+    ]);
+  });
+
+  it('keeps every invoice upcoming before the lease starts', () => {
+    expect(withStatus(invoices(), [], '2026-11-04').every((i) => i.status === 'upcoming')).toBe(
+      true
+    );
+  });
+});
+
+describe('invoiceLabel', () => {
+  it('joins the contract number and a two-digit month', () => {
+    expect(invoiceLabel('1A2B3C4D', 5)).toBe('1A2B3C4D-05');
+    expect(invoiceLabel('1A2B3C4D', 48)).toBe('1A2B3C4D-48');
   });
 });

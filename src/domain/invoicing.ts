@@ -104,3 +104,29 @@ export function upcomingVatChange(
   const previous = invoices[index - 1];
   return invoice && previous ? { invoice, previous } : null;
 }
+
+export type InvoiceStatus = 'upcoming' | 'due' | 'paid';
+export type InvoicePaymentRecord = { invoiceNumber: number; paidDate: string };
+export type InvoiceWithStatus = Invoice & { status: InvoiceStatus; paidDate: string | null };
+
+/**
+ * Each invoice's status on `today`: paid if a payment is recorded for it, otherwise due once
+ * its date is reached, otherwise upcoming.
+ */
+export function withStatus(
+  invoices: readonly Invoice[],
+  payments: readonly InvoicePaymentRecord[],
+  today: string
+): InvoiceWithStatus[] {
+  const paidOn = new Map(payments.map((p) => [p.invoiceNumber, p.paidDate]));
+  return invoices.map((invoice) => {
+    const paidDate = paidOn.get(invoice.number) ?? null;
+    const status: InvoiceStatus = paidDate ? 'paid' : invoice.dueDate <= today ? 'due' : 'upcoming';
+    return { ...invoice, status, paidDate };
+  });
+}
+
+/** A readable invoice number: the contract number and the month, e.g. "1A2B3C4D-05". */
+export function invoiceLabel(contractNumber: string, invoiceNumber: number): string {
+  return `${contractNumber}-${String(invoiceNumber).padStart(2, '0')}`;
+}

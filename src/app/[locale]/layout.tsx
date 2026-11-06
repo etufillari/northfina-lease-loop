@@ -58,6 +58,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               >
                 {t('nav.myLeases')}
               </Link>
+              <Link
+                href={`/${locale}/second-life`}
+                className="rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-950 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-white"
+              >
+                {t('nav.secondLife')}
+              </Link>
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>
           </div>

@@ -59,6 +59,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 current={travelling ? asOfCookie! : todayIso()}
                 travelling={travelling}
               />
+              <Link
+                href={`/${locale}/second-life`}
+                className="text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+              >
+                {t('secondLife.title')}
+              </Link>
               <PersonaPicker locale={locale} initialId={persona} />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>

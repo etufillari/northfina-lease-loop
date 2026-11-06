@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useId, useState } from 'react';
 import type { Asset, CoefficientTable, VatRates } from '@/data/schemas';
 import {
   availableTermsFromTable,
@@ -49,6 +50,7 @@ export function Contract({
   onClose,
   onUseTerms,
 }: ContractProps) {
+  const router = useRouter();
   const t = getT(locale);
   const intlTag = intlLocale[locale];
   const headingId = useId();
@@ -71,6 +73,8 @@ export function Contract({
     clampDownPaymentCents(initialDownPaymentCents, bounds)
   );
   const [isBreakdownOpen, setIsBreakdownOpen] = useState<boolean>(defaultBreakdownOpen);
+  const [isReserving, setIsReserving] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   const termMonths = selectedTermMonths;
   const downPaymentCents = clampDownPaymentCents(rawDownPaymentCents, bounds);
@@ -98,6 +102,42 @@ export function Contract({
     ...coefficientTable.bands.map((b) => b.max_financed_cents)
   );
 
+  async function handleApplyClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (!activeQuote || isReserving) return;
+    e.preventDefault();
+    setIsReserving(true);
+    setApplyError(null);
+
+    try {
+      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}/reserve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actor: 'customer' }),
+      });
+      const json = (await response.json()) as {
+        success: boolean;
+        data?: { reservation: { token: string } };
+      };
+
+      if (response.ok && json.success && json.data) {
+        const token = json.data.reservation.token;
+        router.push(
+          `/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}&token=${encodeURIComponent(token)}`
+        );
+      } else if (response.status === 409) {
+        setApplyError(t('apply.reservation.conflict'));
+        setIsReserving(false);
+      } else {
+        router.push(
+          `/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`
+        );
+      }
+    } catch {
+      router.push(
+        `/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`
+      );
+    }
+  }
   return (
     <section
       aria-labelledby={headingId}
@@ -403,14 +443,24 @@ export function Contract({
           </button>
         ) : null}
 
+        {applyError ? (
+          <p
+            role="alert"
+            className="w-full text-right text-[0.875rem] font-semibold text-[#DC2626] dark:text-red-400"
+          >
+            {applyError}
+          </p>
+        ) : null}
+
         {/* Spine step 3: the application carries the chosen term and net down payment. */}
         {!onUseTerms ? (
           isAssetAvailable && activeQuote ? (
             <Link
               href={`/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`}
+              onClick={handleApplyClick}
               className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500"
             >
-              {t('contract.applyButton')}
+              {isReserving ? t('apply.checking') : t('contract.applyButton')}
             </Link>
           ) : (
             <button
@@ -438,60 +488,6 @@ function BreakdownRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export type ContractDrawerTriggerProps = Omit<ContractProps, 'onClose'>;
-
-/**
- * Interactive button + modal/panel trigger for opening `Contract` from a catalogue card.
- */
-export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const t = getT(props.locale);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  return (
-    <div className="mt-[16px]">
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        aria-expanded={isOpen}
-        className={`w-full rounded-[8px] px-[16px] py-[8px] text-[0.875rem] font-semibold transition-colors ${
-          isOpen
-            ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
-            : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500'
-        }`}
-      >
-        {isOpen ? t('contract.hideButton') : t('contract.openButton')}
-      </button>
-
-      {isOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${props.asset.make} ${props.asset.model}`}
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/60 p-[16px] backdrop-blur-xs dark:bg-black/70"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setIsOpen(false);
-            }
-          }}
-        >
-          <div className="my-auto max-h-[92dvh] w-full max-w-2xl overflow-y-auto">
-            <Contract {...props} onClose={() => setIsOpen(false)} />
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+export { ContractDrawerTrigger, type ContractDrawerTriggerProps } from './contract-drawer';
 
 export default Contract;

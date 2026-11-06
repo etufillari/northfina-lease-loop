@@ -15,6 +15,7 @@ import { listPriceOn } from '@/domain/price-list';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
+import { getActiveReservation } from '@/server/reservations';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
@@ -22,6 +23,7 @@ const querySchema = z.object({
   asset: z.string().min(1),
   term: z.coerce.number().int().positive(),
   down: z.coerce.number().int().min(0).default(0),
+  token: z.string().optional(),
 });
 
 export default async function ApplyPage({ params, searchParams }: PageProps<'/[locale]/apply'>) {
@@ -33,8 +35,10 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   const query = querySchema.safeParse(await searchParams);
   if (!query.success) return <Message text={t('apply.invalidDeal')} />;
 
-  const { asset: assetId, term, down } = query.data;
+  const { asset: assetId, term, down, token } = query.data;
   const today = todayIso();
+  // Check and expire any overdue reservation before listing assets so status is never stale
+  const activeReservation = await getActiveReservation(db, assetId);
   const [assets, priceLists, coefficientTable, vatRates] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
@@ -43,8 +47,18 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   ]);
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message text={t('apply.notFound')} />;
-  if (asset.status !== 'available') return <Message text={t('apply.unavailable')} />;
-
+  if (asset.status === 'reserved') {
+    const isTokenHolder = Boolean(token && activeReservation && activeReservation.token === token);
+    if (!isTokenHolder) {
+      return (
+        <Message
+          text={activeReservation ? t('apply.reservation.conflict') : t('apply.unavailable')}
+        />
+      );
+    }
+  } else if (asset.status !== 'available') {
+    return <Message text={t('apply.unavailable')} />;
+  }
   const price = listPriceOn(priceLists, asset.id, today);
   if (!price.ok) return <Message text={t('asset.noPrice')} />;
 
@@ -101,6 +115,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
         <ApplicationForm
           locale={locale}
           deal={deal}
+          initialToken={token}
           signTarget={
             quote
               ? {

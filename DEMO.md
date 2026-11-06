@@ -207,6 +207,21 @@ Log in as Lena Tamm, click **My applications**, then **Continue to contract** on
 2. Log in as anyone else. **Expect:** it shows as Reserved and can't be leased.
 3. Log in as Dealer desk. **Expect:** Held items says "Held for Jonas Lind". Click **Release**, and it is available to everyone.
 
+### Notifications
+
+Short pop-ups that disappear after 6 seconds. You need **two logged-in people at once**, and tabs in one browser share a login, so use a second browser or a private window. Only people with the app open get them: nothing is saved for later.
+
+| In one window              | Do this                          | The other window sees               |
+| -------------------------- | -------------------------------- | ----------------------------------- |
+| Northfina admin            | Approve or reject Haapala's case | Haapala: application result         |
+| Haapalan Tila Oy           | Apply for another farm item      | Northfina admin: new review case    |
+| Dealer desk                | Release `ebike-002`              | Jonas Lind: the hold has ended      |
+| Kettu Koodi, on 1 Jan 2027 | Pass `laptop-009` on to Noora    | Noora Heikkinen: passed on to you   |
+| Dealer desk                | Re-list that `laptop-009`        | Noora Heikkinen: ready for you      |
+| Anna Norvi                 | Sign the `laptop-010` contract   | Norvi Logistics Oy: contract signed |
+
+Dealers and signatories get no notifications, and admins only get new review cases.
+
 ### Audit log
 
 Log in as Dealer desk or Northfina admin and click **Audit log**. Every change shows who made it, what it was and when, newest first. Customers see "Staff only". The times are real clock times, so they don't follow the demo date.

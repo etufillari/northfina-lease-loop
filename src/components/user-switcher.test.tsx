@@ -4,6 +4,9 @@ import { messages } from '@/i18n/get-t';
 import { UserSwitcher } from './user-switcher';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('./notification-toasts', () => ({
+  NotificationToasts: () => <div data-testid="notifications" />,
+}));
 
 type User = { id: string; name: string; role: string; kind: string };
 
@@ -95,6 +98,24 @@ describe('UserSwitcher', () => {
       await screen.findByRole('link', { name: messages.en['account.applications.title'] })
     ).toHaveAttribute('href', '/en/account/applications');
     expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
+
+  it.each([
+    ['a customer', 0, true],
+    ['an admin', 1, true],
+    ['a dealer', 2, false],
+  ])('connects notifications for %s: %#', async (_who, index, expected) => {
+    await renderAs(users[index] ?? null);
+    await screen.findAllByRole('link');
+
+    expect(screen.queryAllByTestId('notifications')).toHaveLength(expected ? 1 : 0);
+  });
+
+  it('connects no notifications for a signatory', async () => {
+    await renderAs(signatory, [...users, signatory]);
+    await screen.findAllByRole('link');
+
+    expect(screen.queryByTestId('notifications')).toBeNull();
   });
 
   it('gives a customer no staff links', async () => {

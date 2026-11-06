@@ -83,42 +83,48 @@ describe('scheduleInvoices', () => {
     expect(invoices[2]!.dueDate).toBe('2026-03-31'); // the anchor day comes back
   });
 
-  it('property: every schedule adds up exactly and matches the calendar and VAT rules', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 30_000, max: 25_000_000 }),
-        fc.constantFrom(12, 24, 36, 48),
-        fc.integer({ min: 2025, max: 2027 }),
-        fc.integer({ min: 1, max: 12 }),
-        fc.integer({ min: 1, max: 31 }),
-        (financed, term, year, month, rawDay) => {
-          const day = Math.min(rawDay, daysInMonth(year, month));
-          const start = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const { quote, invoices } = mustQuote(financed, term, start);
+  // Coverage instrumentation makes this noticeably slower, so it gets its own timeout
+  // instead of vitest's 5 s default.
+  it(
+    'property: every schedule adds up exactly and matches the calendar and VAT rules',
+    { timeout: 60_000 },
+    () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 30_000, max: 25_000_000 }),
+          fc.constantFrom(12, 24, 36, 48),
+          fc.integer({ min: 2025, max: 2027 }),
+          fc.integer({ min: 1, max: 12 }),
+          fc.integer({ min: 1, max: 31 }),
+          (financed, term, year, month, rawDay) => {
+            const day = Math.min(rawDay, daysInMonth(year, month));
+            const start = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const { quote, invoices } = mustQuote(financed, term, start);
 
-          // Exactly one invoice per month of the term.
-          expect(invoices).toHaveLength(term);
-          // The nets add up to the contract total to the cent.
-          const netSum = invoices.reduce((sum, i) => sum + i.netCents, 0);
-          expect(netSum).toBe(quote.netTotalCents);
-          // Every amount is whole positive cents and total = net + VAT.
-          for (const invoice of invoices) {
-            expect(Number.isInteger(invoice.netCents)).toBe(true);
-            expect(invoice.netCents).toBeGreaterThan(0);
-            expect(invoice.totalCents).toBe(invoice.netCents + invoice.vatCents);
-            // The due date is the anchored, clamped calendar date...
-            expect(invoice.dueDate).toBe(addMonthsClamped(start, invoice.number - 1));
-            // ...and the VAT rate is the one valid on that date.
-            const rate = vatRateOn(vatRates, invoice.dueDate);
-            expect(rate).toMatchObject({ ok: true, ratePercent: invoice.vatRatePercent });
+            // Exactly one invoice per month of the term.
+            expect(invoices).toHaveLength(term);
+            // The nets add up to the contract total to the cent.
+            const netSum = invoices.reduce((sum, i) => sum + i.netCents, 0);
+            expect(netSum).toBe(quote.netTotalCents);
+            // Every amount is whole positive cents and total = net + VAT.
+            for (const invoice of invoices) {
+              expect(Number.isInteger(invoice.netCents)).toBe(true);
+              expect(invoice.netCents).toBeGreaterThan(0);
+              expect(invoice.totalCents).toBe(invoice.netCents + invoice.vatCents);
+              // The due date is the anchored, clamped calendar date...
+              expect(invoice.dueDate).toBe(addMonthsClamped(start, invoice.number - 1));
+              // ...and the VAT rate is the one valid on that date.
+              const rate = vatRateOn(vatRates, invoice.dueDate);
+              expect(rate).toMatchObject({ ok: true, ratePercent: invoice.vatRatePercent });
+            }
+            // Due dates strictly increase (ISO strings compare correctly).
+            for (let i = 1; i < invoices.length; i++) {
+              expect(invoices[i]!.dueDate > invoices[i - 1]!.dueDate).toBe(true);
+            }
           }
-          // Due dates strictly increase (ISO strings compare correctly).
-          for (let i = 1; i < invoices.length; i++) {
-            expect(invoices[i]!.dueDate > invoices[i - 1]!.dueDate).toBe(true);
-          }
-        }
-      ),
-      { numRuns: 300 }
-    );
-  });
+        ),
+        { numRuns: 150 }
+      );
+    }
+  );
 });

@@ -11,7 +11,11 @@ import type { Locale } from '@/i18n/locales';
 
 type Status = 'idle' | 'busy' | 'invalid' | 'error';
 
-function useAsOf() {
+/**
+ * Sets or clears the demo date. Once the server accepts it, the page refreshes, or `then` runs
+ * instead (the demo panel's Run buttons open the page where a card starts, D-058).
+ */
+export function useAsOf(then?: () => void) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>('idle');
 
@@ -24,7 +28,8 @@ function useAsOf() {
     } | null;
     if (body?.success) {
       setStatus('idle');
-      router.refresh();
+      if (then) then();
+      else router.refresh();
       return;
     }
     setStatus(body?.error?.code === 'INVALID_AS_OF_DATE' ? 'invalid' : 'error');
@@ -42,7 +47,7 @@ function useAsOf() {
   };
 }
 
-function StatusMessage({ status, locale }: { status: Status; locale: Locale }) {
+export function StatusMessage({ status, locale }: { status: Status; locale: Locale }) {
   const t = getT(locale);
   if (status === 'invalid') {
     return (

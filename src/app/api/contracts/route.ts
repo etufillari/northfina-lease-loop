@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { listContracts, signContract } from '@/server/contracts';
+import { createCustomerAccess } from '@/server/customer-access';
 import { db } from '@/server/db';
 import { loadPricingData } from '@/server/pricing-data';
 import { todayIso } from '@/server/today';
@@ -43,5 +44,9 @@ export const POST = handleRoute(async (request) => {
     signedOn: signingDay,
     startDate: startDate ?? signingDay,
   });
-  return ok(contract, { status: 201 });
+  const access = await createCustomerAccess(db, {
+    contractId: contract.id,
+    actor: body.actor,
+  });
+  return ok({ contract, access }, { status: 201 });
 });

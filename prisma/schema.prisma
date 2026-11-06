@@ -91,11 +91,44 @@ model Contract {
   contract_net_total_cents Int
   price_lock_json          String // which price was locked and why
   invoices                 Invoice[]
+  access_tokens            CustomerAccessToken[]
   return_requests          ReturnRequest[]
 
   @@index([asset_id])
   @@index([customer_id])
   @@index([end_date])
+}
+
+// Passwordless customer access. Only the SHA-256 token hash is stored.
+model CustomerAccessToken {
+  id           String   @id
+  created_at   DateTime @default(now())
+  expires_at   DateTime
+  token_hash   String   @unique
+  contract_id  String
+  contract     Contract @relation(fields: [contract_id], references: [id])
+
+  @@index([contract_id])
+  @@index([expires_at])
+}
+
+// A submitted application and the decision made from its answers.
+// Answers and reasons are immutable JSON snapshots for explainability and audit history.
+model Application {
+  id                  String   @id
+  created_at          DateTime @default(now())
+  quote_id            String?
+  customer_id         String?
+  category            String
+  financed_cents      Int
+  contract_start_date String
+  decision            String // approved | declined | manual_review
+  reasons_json        String
+  answers_json        String
+
+  @@index([quote_id])
+  @@index([customer_id])
+  @@index([created_at])
 }
 
 // A customer's request to return a leased asset, followed by dealer inspection,

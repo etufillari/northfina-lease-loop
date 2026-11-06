@@ -41,6 +41,23 @@ editing the same page, route, translation key, or Prisma migration in parallel.
 - Test too-young, company-signatory, large-ticket/manual-review, and happy-path
   application scenarios.
 
+#### Person 2 implementation sequence
+
+1. Define typed application state and question-flow result contracts without
+   depending on Prisma or Person 1's implementation.
+2. Implement and test question targeting from `ask_when`, including deal
+   fields and earlier answers.
+3. Implement answer pruning when a changed answer makes later questions
+   irrelevant, plus blocking-question evaluation.
+4. Implement eligibility decisions and Finnish business-ID validation using
+   explicit, explainable reason codes.
+5. Add application API persistence through the shared response envelope and
+   audit conventions.
+6. Build the customer quote/application/contract timeline components as
+   consumers of Person 1's APIs.
+7. Add localized customer strings in all four locales and verify the selected
+   challenge scenarios.
+
 ### Person 3 — Second life and dealer operations
 
 - Own `src/domain/second-life.ts`, `src/domain/end-of-term.ts`, and

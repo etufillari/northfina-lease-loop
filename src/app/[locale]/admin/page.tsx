@@ -1,6 +1,6 @@
-// Admin: a control room for demonstrations. Totals on the app's date, VAT changes on the fly,
-// every contract, and the latest audit log entries. Having the page open is enough: like the
-// rest of this demo there is no real login.
+// Admin: a control room for demonstrations. Totals and the fleet's CO₂ saving on the app's
+// date, VAT changes on the fly, every contract, and the latest audit log entries. Having the
+// page open is enough: like the rest of this demo there is no real login.
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
@@ -8,7 +8,7 @@ import { connection } from 'next/server';
 import { VatAdmin } from '@/components/vat-admin';
 import { contractNumber, contractStage } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
-import { formatIsoDate } from '@/i18n/format';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { adminOverview } from '@/server/admin';
@@ -81,6 +81,35 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
           sold: overview.assets.sold,
         })}
       </p>
+
+      <Panel title={t('co2.fleetTitle')}>
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <dt className="text-sm text-stone-600 dark:text-stone-400">{t('co2.reuseSaved')}</dt>
+            <dd className="text-2xl font-semibold tabular-nums">
+              {t('co2.kg', { kg: formatNumber(overview.impact.reuseSavedKg, locale) })}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-stone-600 dark:text-stone-400">{t('co2.moneySaved')}</dt>
+            <dd className="text-2xl font-semibold tabular-nums">
+              {euro(overview.impact.moneySavedCents)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-stone-600 dark:text-stone-400">{t('co2.ridingSaved')}</dt>
+            <dd className="text-2xl font-semibold tabular-nums">
+              {t('co2.kg', { kg: formatNumber(overview.impact.ridingSavedKg, locale) })}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
+          {t('co2.fleetDetail', {
+            items: overview.impact.itemsReused,
+            lives: overview.impact.reuseLives,
+          })}
+        </p>
+      </Panel>
 
       <Panel title={t('secondLife.title')}>
         <div className="flex flex-wrap items-center justify-between gap-4">

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetHistoryPanel } from '@/components/asset-history-panel';
+import { Co2Panel } from '@/components/co2-panel';
 import { PriceCalculator } from '@/components/price-calculator';
 import { StatusBadge } from '@/components/status-badge';
 import { loadCoefficientTable, loadCustomers } from '@/data/load';
@@ -20,6 +21,7 @@ import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { assetOn } from '@/server/asset-state';
+import { itemImpact } from '@/server/co2';
 import { contractOn } from '@/domain/state-on';
 import { TimeTravelNotice } from '@/components/time-travel-notice';
 import { listContractsForAsset } from '@/server/contracts';
@@ -67,11 +69,12 @@ export default async function AssetPage({
   const asset = item.asset;
 
   const t = getT(locale);
-  const [viewer, customers, allContracts, allRefurbishments] = await Promise.all([
+  const [viewer, customers, allContracts, allRefurbishments, impact] = await Promise.all([
     currentViewer(),
     loadCustomers(),
     listContractsForAsset(db, asset.id),
     listRefurbishments(db, asset.id),
+    itemImpact(item, today),
   ]);
   const contracts = allContracts.flatMap((c) => contractOn(c, today) ?? []);
   const refurbishments = allRefurbishments.filter((r) => r.date <= today);
@@ -209,6 +212,7 @@ export default async function AssetPage({
       ) : null}
 
       <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
+      <Co2Panel impact={impact} isEbike={asset.category === 'e_bike'} locale={locale} t={t} />
     </div>
   );
 }

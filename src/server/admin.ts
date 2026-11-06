@@ -1,10 +1,12 @@
 // The admin page's overview on the app's date: how many contracts are in each stage, how the
-// applications were decided, what has been billed and paid, where the items are, and the
-// latest entries of the audit log.
+// applications were decided, what has been billed and paid, where the items are, the fleet's
+// circular impact, and the latest entries of the audit log.
 import type { PrismaClient } from '@/generated/prisma/client';
+import type { FleetImpact } from '@/domain/co2';
 import { contractStage } from '@/domain/contract';
 import { listContracts, type Contract } from './contracts';
 import { assetsOn } from './asset-state';
+import { fleetImpactOn } from './co2';
 import { receivedInvoices } from './invoices';
 
 export type AdminOverview = {
@@ -21,17 +23,19 @@ export type AdminOverview = {
   invoices: { dueCount: number; dueCents: number; paidCount: number; paidCents: number };
   assets: { available: number; leased: number; reserved: number; returned: number; sold: number };
   allContracts: Contract[];
+  impact: FleetImpact;
   audit: { id: number; createdAt: string; actor: string; action: string; entity: string }[];
 };
 
 export async function adminOverview(db: PrismaClient, todayIso: string): Promise<AdminOverview> {
   // Invoices first: reading them issues any that are due, so the audit log below includes that.
   const received = await receivedInvoices(db, null, todayIso);
-  const [contracts, decisions, items, audit] = await Promise.all([
+  const [contracts, decisions, items, audit, impact] = await Promise.all([
     listContracts(db, null, todayIso),
     db.application.groupBy({ by: ['decision'], _count: { _all: true } }),
     assetsOn(db, todayIso),
     db.auditLog.findMany({ orderBy: { id: 'desc' }, take: 15 }),
+    fleetImpactOn(db, todayIso),
   ]);
 
   const stages = { not_started: 0, active: 0, ended: 0, returned: 0, bought: 0, passed_on: 0 };
@@ -68,6 +72,7 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
       sold: byStatus.sold ?? 0,
     },
     allContracts: contracts,
+    impact,
     audit: audit.map((row) => ({
       id: row.id,
       createdAt: row.created_at.toISOString(),

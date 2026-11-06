@@ -77,7 +77,8 @@ export default async function QuotePage({ params }: PageProps<'/[locale]/quotes/
               quote.assetId
             )}
           </h1>
-          {status === 'open' ? (
+          {/* Only while the quote can still be signed: not once someone else has the item. */}
+          {status === 'open' && blocked === null ? (
             <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1 text-xs font-semibold ring-1 ring-line ring-inset">
               <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-500" />
               {t('quote.validUntil', { date: formatIsoDate(quote.validUntil, locale) })}

@@ -153,5 +153,6 @@
   "account.applications.contractAvailable": "Avtal tillgängligt",
   "account.applications.manualReviewDescription": "Din ansökan väntar på manuell granskning.",
   "account.applications.continueToContract": "Fortsätt till avtalet",
+  "account.applications.contractSigned": "Undertecknat",
   "staff.applications.title": "Ansökningar"
 }

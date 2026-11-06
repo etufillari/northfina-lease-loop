@@ -63,7 +63,19 @@ export type SecondLifePreview = {
   setPartners: Array<{ assetId: string; monthlyNetRentCents: number | null }>;
 };
 
-export type SecondLifeFailure = 'not_found' | 'not_returned' | 'no_v1_price';
+export type SecondLifeFailure = 'not_found' | 'not_returned' | 'no_v1_price' | 'nominated';
+
+/**
+ * Returned items held for a nominated successor: the desk leaves them alone until the
+ * nomination is used or lapses, so it never offers or lists an item someone was promised.
+ */
+async function nominatedAssetIds(db: Db, asOf: string): Promise<Set<string>> {
+  const holds = await db.reservation.findMany({
+    where: { kind: 'nomination', active: true, until: { gte: asOf } },
+    select: { asset_id: true },
+  });
+  return new Set(holds.map((hold) => hold.asset_id));
+}
 export type SecondLifePreviewResult =
   { ok: true; preview: SecondLifePreview } | { ok: false; reason: SecondLifeFailure };
 
@@ -72,15 +84,18 @@ export async function listReturnedDecisions(
   db: Db,
   asOf: string
 ): Promise<Array<{ assetId: string; result: SecondLifePreviewResult }>> {
-  const [curves, costs, table, priceLists, rows, assetRows, shelf] = await Promise.all([
-    loadResidualCurves(),
-    loadRefurbishmentCosts(),
-    loadCoefficientTable(),
-    loadPriceLists(),
-    listWaitlist(db),
-    db.asset.findMany({ where: { status: 'returned' }, orderBy: { id: 'asc' } }),
-    shelfItems(db),
-  ]);
+  const [curves, costs, table, priceLists, rows, returnedRows, shelf, nominated] =
+    await Promise.all([
+      loadResidualCurves(),
+      loadRefurbishmentCosts(),
+      loadCoefficientTable(),
+      loadPriceLists(),
+      listWaitlist(db),
+      db.asset.findMany({ where: { status: 'returned' }, orderBy: { id: 'asc' } }),
+      shelfItems(db),
+      nominatedAssetIds(db, asOf),
+    ]);
+  const assetRows = returnedRows.filter((row) => !nominated.has(row.id));
   // Only people still waiting compete: someone already offered an item is not matched twice.
   const demand = rows.filter((row) => row.status === 'waiting').map(toSecondLifeRequest);
   const byId = new Map(demand.map((w) => [w.id, w]));
@@ -158,6 +173,7 @@ export async function previewSecondLife(
   const row = await db.asset.findUnique({ where: { id: assetId } });
   if (!row) return { ok: false, reason: 'not_found' };
   if (row.status !== 'returned') return { ok: false, reason: 'not_returned' };
+  if ((await nominatedAssetIds(db, asOf)).has(assetId)) return { ok: false, reason: 'nominated' };
   const desk = await listReturnedDecisions(db, asOf);
   return desk.find((entry) => entry.assetId === assetId)!.result;
 }

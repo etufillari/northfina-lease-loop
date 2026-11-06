@@ -28,7 +28,8 @@ export default async function TransferPage({
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
   const offer = await getTransferOffer(db, token);
 
-  if (!offer) {
+  // No link, or the term has reached its end: there is nothing left to take over.
+  if (!offer || asOf >= termEndsOn(offer.contract)) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-semibold tracking-tight">{t('transfer.title')}</h1>
@@ -43,6 +44,10 @@ export default async function TransferPage({
   const paidMonths = contract.invoices.filter(
     (i) => i.type === 'lease' && i.due_date <= asOf
   ).length;
+  // What the successor actually commits to: the lease invoices not yet due.
+  const stillToPayNetCents = contract.invoices
+    .filter((i) => i.type === 'lease' && i.due_date > asOf)
+    .reduce((sum, i) => sum + i.net_cents, 0);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
@@ -56,14 +61,15 @@ export default async function TransferPage({
 
       <dl className="mt-6 grid grid-cols-2 gap-4 rounded-2xl border border-stone-200 bg-white p-5 text-sm dark:border-stone-800 dark:bg-stone-900">
         <Fact
-          label={t('asset.listPrice')}
+          label={t('contract.product')}
           value={offer.assets.map((a) => `${a.make} ${a.model}`).join(', ')}
         />
         <Fact label={t('price.netRent')} value={euro(contract.monthly_net_rent_cents)} />
         <Fact
-          label={t('contract.term')}
-          value={t('price.months', { months: contract.term_months })}
+          label={t('transfer.monthsLeft')}
+          value={t('price.months', { months: contract.term_months - paidMonths })}
         />
+        <Fact label={t('transfer.stillToPay')} value={euro(stillToPayNetCents)} />
         <Fact label={t('contract.endsOn')} value={formatIsoDate(termEndsOn(contract), locale)} />
       </dl>
 

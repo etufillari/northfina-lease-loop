@@ -54,7 +54,14 @@ export function DecisionScreen({
 }) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  const textKey = status === 'signed' ? 'approved' : status;
+  // A cancelled take-over never freed an item: it ended because the lease was taken over
+  // by someone else (or withdrawn), so it gets its own wording.
+  const textKey =
+    status === 'signed'
+      ? 'approved'
+      : status === 'cancelled' && isTransfer
+        ? 'cancelledTransfer'
+        : status;
   // Only what did NOT pass is worth reading; an approval needs no rule list at all.
   const failing =
     status === 'approved' || status === 'signed' || status === 'cancelled'

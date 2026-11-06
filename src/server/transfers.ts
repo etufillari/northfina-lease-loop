@@ -7,20 +7,29 @@ import { loadCoefficientTable } from '@/data/load';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
+import { termEndsOn } from '@/server/lifecycle';
 
 type Db = PrismaClient;
 
-export type TransferLinkResult =
-  { ok: true; token: string } | { ok: false; reason: 'not_found' | 'not_active' };
+/** Applications that still hold a claim on a take-over (anything not yet finished). */
+const OPEN_STATUSES = ['draft', 'manual_review', 'approved', 'awaiting_signature'];
 
-/** The lessee creates (or re-uses) the shareable link for their contract. */
+export type TransferLinkResult =
+  { ok: true; token: string } | { ok: false; reason: 'not_found' | 'not_active' | 'term_over' };
+
+/**
+ * The lessee creates (or re-uses) the shareable link for their contract. Only while there
+ * is still a lease left to take over: from the last day of the term the customer buys,
+ * returns or nominates instead.
+ */
 export async function createTransferLink(
   db: Db,
-  input: { contractId: string; actor: string }
+  input: { contractId: string; actor: string; asOf: string }
 ): Promise<TransferLinkResult> {
   const contract = await db.contract.findUnique({ where: { id: input.contractId } });
   if (!contract) return { ok: false, reason: 'not_found' };
   if (contract.status !== 'active') return { ok: false, reason: 'not_active' };
+  if (input.asOf >= termEndsOn(contract)) return { ok: false, reason: 'term_over' };
   if (contract.transfer_token) return { ok: true, token: contract.transfer_token };
 
   const token = crypto.randomUUID();
@@ -51,7 +60,8 @@ export async function getTransferOffer(db: Db, token: string) {
 }
 
 export type TransferApplyResult =
-  { ok: true; applicationId: string } | { ok: false; reason: 'not_found' | 'own_contract' };
+  | { ok: true; applicationId: string }
+  | { ok: false; reason: 'not_found' | 'own_contract' | 'term_over' };
 
 /**
  * The recipient starts the take-over application. The cloned quote carries the contract's
@@ -66,6 +76,7 @@ export async function startTransferApplication(
   if (!offer) return { ok: false, reason: 'not_found' };
   const { contract } = offer;
   if (contract.customer_id === input.customerId) return { ok: false, reason: 'own_contract' };
+  if (input.asOf >= termEndsOn(contract)) return { ok: false, reason: 'term_over' };
 
   const table = await loadCoefficientTable();
   const factor = monthlyFactorFor(table, contract.financed_cents, contract.term_months);
@@ -116,11 +127,18 @@ export async function startTransferApplication(
 }
 
 export type ExecuteTransferResult =
-  { ok: true; contractId: string } | { ok: false; reason: 'not_found' | 'not_active' };
+  | { ok: true; contractId: string }
+  | { ok: false; reason: 'not_found' | 'not_active' | 'link_closed' };
 
 /**
  * Approval + signature move the contract: same locked rent, same remaining schedule, new
  * customer. The old lessee's obligations end here, and the passport says so.
+ *
+ * One take-over per link: the link must still be open (signing closes it), and every other
+ * open application to take over the same lease is cancelled in the same transaction — so a
+ * second approved applicant cannot take the lease from the person who just signed. The old
+ * lessee's personal choices do not travel with the lease: their "buy at the end" is reset
+ * and any nomination they made ends.
  */
 export async function executeTransfer(
   db: Db,
@@ -138,6 +156,8 @@ export async function executeTransfer(
   });
   if (!contract) return { ok: false, reason: 'not_found' };
   if (contract.status !== 'active') return { ok: false, reason: 'not_active' };
+  if (contract.transfer_token === null) return { ok: false, reason: 'link_closed' };
+  const assetIds = contract.assets.map((a) => a.asset_id);
 
   await withAudit(
     db,
@@ -151,11 +171,23 @@ export async function executeTransfer(
     async (tx) => {
       await tx.contract.update({
         where: { id: contract.id },
-        data: { customer_id: input.newCustomerId, transfer_token: null },
+        data: { customer_id: input.newCustomerId, transfer_token: null, purchase_at_end: false },
       });
       await tx.application.update({
         where: { id: input.applicationId },
         data: { status: 'signed' },
+      });
+      await tx.application.updateMany({
+        where: {
+          transfer_contract_id: contract.id,
+          id: { not: input.applicationId },
+          status: { in: OPEN_STATUSES },
+        },
+        data: { status: 'cancelled', hold_until: null },
+      });
+      await tx.reservation.updateMany({
+        where: { asset_id: { in: assetIds }, kind: 'nomination', active: true },
+        data: { active: false },
       });
       for (const link of contract.assets) {
         await tx.assetEvent.create({

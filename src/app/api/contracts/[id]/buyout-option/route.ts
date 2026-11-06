@@ -21,6 +21,8 @@ export const POST = handleRoute(
     });
     if (!result.ok) {
       if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
+      if (result.reason === 'nominated')
+        return fail(409, 'NOMINATED', 'A successor is nominated for this item');
       return fail(409, 'NOT_ACTIVE', 'This contract has already ended');
     }
     return ok({ done: true });

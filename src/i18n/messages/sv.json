@@ -159,7 +159,7 @@
   "exit.cancel": "Behåll min leasing",
   "endOfTerm.title": "Periodens slut",
   "endOfTerm.return": "Returnera",
-  "endOfTerm.notYet": "Möjligt från {date}",
+  "endOfTerm.notYet": "Köp loss, lämna tillbaka eller nominera en efterträdare från {date}",
   "me.title": "Min sida",
   "me.noPersona": "Välj vem du är i fältet ovan.",
   "me.contracts": "Mina avtal",
@@ -486,5 +486,17 @@
   "buyout.vatNote": "Moms tas ut enligt den sats som gäller på fakturadagen; här används den sats som är känd i dag.",
   "buyout.confirm": "Bekräfta köpet",
   "buyout.cancel": "Avbryt",
-  "exit.minimum": "En förtida avslutning betalar alltid för minst {months} månaders användning."
+  "exit.minimum": "En förtida avslutning betalar alltid för minst {months} månaders användning.",
+  "asset.nominatedForYou": "Den förra leasetagaren nominerade dig som efterträdare: artikeln är reserverad åt dig före kön.",
+  "endOfTerm.confirmReturn": "Lämna tillbaka artikeln och avsluta leasingen? Det går inte att ångra.",
+  "passOn.buyingNote": "Du valde att köpa loss artikeln, så den kan inte gå vidare till en efterträdare.",
+  "passOn.error.unknownNominee": "Ingen med den här e-postadressen har ett konto än. Be hen registrera sig först.",
+  "passOn.error.self": "Du kan inte nominera dig själv.",
+  "passOn.error.termNotEnded": "En efterträdare kan nomineras från periodens sista dag.",
+  "transfer.monthsLeft": "Månader kvar",
+  "transfer.stillToPay": "Kvar att betala (netto)",
+  "apply.error.assetUnavailable": "Tyvärr reserverade eller leasade någon annan artikeln under tiden. Välj en annan.",
+  "apply.error.transferClosed": "Någon annan har redan tagit över leasingen, eller så har länken dragits tillbaka.",
+  "decision.cancelledTransfer.title": "Övertagandet stängt",
+  "decision.cancelledTransfer.text": "Någon annan har tagit över leasingen, eller så har länken dragits tillbaka. Inget undertecknades i ditt namn."
 }

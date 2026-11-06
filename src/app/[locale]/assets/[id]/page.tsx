@@ -10,6 +10,7 @@ import { formatEuro } from '@/domain/money';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
+import { checkClaim } from '@/server/asset-claims';
 import { assetImageUrl } from '@/server/asset-images';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
@@ -28,6 +29,11 @@ export default async function AssetPage({
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  // A returned item is in maintenance — except for the successor nominated for it.
+  const nominatedForMe =
+    asset.status === 'returned' &&
+    persona !== null &&
+    (await checkClaim(db, { assetIds: [asset.id], customerId: persona, asOf })).ok;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
@@ -90,7 +96,12 @@ export default async function AssetPage({
         )}
       </p>
 
-      {asset.status === 'available' ? (
+      {nominatedForMe ? (
+        <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+          {t('asset.nominatedForYou')}
+        </p>
+      ) : null}
+      {asset.status === 'available' || nominatedForMe ? (
         <PriceConfigurator locale={locale} assetIds={[asset.id]} personaId={persona} asOf={asOf} />
       ) : (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

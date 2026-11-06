@@ -2,12 +2,13 @@
 // the normal question flow — same locked rent, no down payment — and the nomination route.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
+import { addDays } from '@/domain/calendar';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { answerQuestion, startApplication, submitApplication } from './applications';
 import { seedAssets } from './assets';
 import { getContract, signApplication } from './contracts';
 import { seedCustomers } from './customers';
-import { nominateSuccessor } from './lifecycle';
+import { nominateSuccessor, termEndsOn } from './lifecycle';
 import { createTransferLink, getTransferOffer, startTransferApplication } from './transfers';
 
 let db: Awaited<ReturnType<typeof createTestDb>>['db'];
@@ -76,11 +77,11 @@ describe('mid-lease transfer', () => {
     if (!signed.ok) throw new Error(signed.reason);
     contractId = signed.contractId;
 
-    const link = await createTransferLink(db, { contractId, actor: 'cust-aino' });
+    const link = await createTransferLink(db, { contractId, actor: 'cust-aino', asOf: AS_OF });
     if (!link.ok) throw new Error(link.reason);
     token = link.token;
     // Creating it again re-uses the same token.
-    const again = await createTransferLink(db, { contractId, actor: 'cust-aino' });
+    const again = await createTransferLink(db, { contractId, actor: 'cust-aino', asOf: AS_OF });
     expect(again).toEqual({ ok: true, token });
   });
 
@@ -149,16 +150,27 @@ describe('mid-lease transfer', () => {
     expect(await getTransferOffer(db, token)).toBeNull();
   });
 
-  it('nominates a successor by email, skipping the waiting list on the record', async () => {
-    const result = await nominateSuccessor(db, {
+  it('nominates a successor by email from the last day of the term, skipping the waiting list on the record', async () => {
+    // Mid-term a 7-day nomination would lapse years before it could be used.
+    const tooEarly = await nominateSuccessor(db, {
       contractId,
       email: 'olavi.niemi@example.com',
       actor: 'cust-lena',
       asOf: AS_OF,
     });
+    expect(tooEarly).toEqual({ ok: false, reason: 'term_not_ended' });
+
+    const contract = await getContract(db, contractId);
+    const lastDay = termEndsOn(contract!);
+    const result = await nominateSuccessor(db, {
+      contractId,
+      email: 'olavi.niemi@example.com',
+      actor: 'cust-lena',
+      asOf: lastDay,
+    });
     if (!result.ok) throw new Error(result.reason);
     const reservations = await db.reservation.findMany({ where: { kind: 'nomination' } });
     expect(reservations).toHaveLength(1);
-    expect(reservations[0]).toMatchObject({ until: '2026-11-12' });
+    expect(reservations[0]).toMatchObject({ until: addDays(lastDay, 7), active: true });
   });
 });

@@ -181,6 +181,15 @@ export async function endOfTerm(
         },
       });
       if (input.action === 'buy') {
+        // A bought item cannot pass to a nominated successor.
+        await tx.reservation.updateMany({
+          where: {
+            asset_id: { in: contract.assets.map((a) => a.asset_id) },
+            kind: 'nomination',
+            active: true,
+          },
+          data: { active: false },
+        });
         const net = contract.buyout_net_cents;
         await tx.invoice.create({
           data: {
@@ -216,13 +225,27 @@ export async function endOfTerm(
 }
 
 export type NominateResult =
-  | { ok: true; nomineeCustomerId: string | null }
-  | { ok: false; reason: 'not_found' | 'bad_status' };
+  | { ok: true; nomineeCustomerId: string }
+  | {
+      ok: false;
+      reason:
+        | 'not_found'
+        | 'bad_status'
+        | 'term_not_ended'
+        | 'buying'
+        | 'unknown_nominee'
+        | 'self_nomination';
+    };
 
 /**
  * "Pass it on", route (b): at (or after) the end of the term the customer names a
  * successor, who may apply for a new lease on the item and skips the waiting list. The
  * skip is explicit and logged, so the FCFS fairness story stays honest (docs/DECISIONS.md).
+ *
+ * Only from the last day of the term (a 7-day nomination made mid-term would lapse years
+ * before it could be used), never for an item the lessee has chosen to buy, only for an
+ * existing customer other than the lessee, and one at a time: nominating again replaces
+ * the earlier nomination.
  */
 export async function nominateSuccessor(
   db: Db,
@@ -236,7 +259,14 @@ export async function nominateSuccessor(
   if (contract.status !== 'active' && contract.status !== 'ended_returned') {
     return { ok: false, reason: 'bad_status' };
   }
+  if (contract.status === 'active' && input.asOf < termEndsOn(contract)) {
+    return { ok: false, reason: 'term_not_ended' };
+  }
+  if (contract.purchase_at_end) return { ok: false, reason: 'buying' };
   const nominee = await db.customer.findFirst({ where: { email: input.email } });
+  if (!nominee) return { ok: false, reason: 'unknown_nominee' };
+  if (nominee.id === contract.customer_id) return { ok: false, reason: 'self_nomination' };
+  const assetIds = contract.assets.map((a) => a.asset_id);
 
   await withAudit(
     db,
@@ -245,14 +275,18 @@ export async function nominateSuccessor(
       action: 'contract.successor_nominated',
       entityType: 'contract',
       entityId: input.contractId,
-      details: { email: input.email, nomineeCustomerId: nominee?.id ?? null },
+      details: { email: input.email, nomineeCustomerId: nominee.id },
     },
     async (tx) => {
+      await tx.reservation.updateMany({
+        where: { asset_id: { in: assetIds }, kind: 'nomination', active: true },
+        data: { active: false },
+      });
       for (const link of contract.assets) {
         await tx.reservation.create({
           data: {
             asset_id: link.asset_id,
-            customer_id: nominee?.id ?? null,
+            customer_id: nominee.id,
             kind: 'nomination',
             until: holdUntil('nomination', input.asOf),
           },
@@ -269,16 +303,32 @@ export async function nominateSuccessor(
       }
     }
   );
-  return { ok: true, nomineeCustomerId: nominee?.id ?? null };
+  return { ok: true, nomineeCustomerId: nominee.id };
 }
 
-/** The mid-lease "I want to buy it at the end" opt-in (excluded from affordability). */
+export type BuyoutOptionResult =
+  { ok: true } | { ok: false; reason: 'not_found' | 'not_active' | 'nominated' };
+
+/**
+ * The mid-lease "I want to buy it at the end" opt-in (excluded from affordability). Not
+ * while a successor is nominated: the item cannot go to both.
+ */
 export async function setBuyoutOption(
   db: Db,
   input: { contractId: string; optIn: boolean; actor: string }
-): Promise<EndOfTermResult> {
+): Promise<BuyoutOptionResult> {
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
+  if (input.optIn) {
+    const nominated = await db.reservation.count({
+      where: {
+        asset_id: { in: loaded.contract.assets.map((a) => a.asset_id) },
+        kind: 'nomination',
+        active: true,
+      },
+    });
+    if (nominated > 0) return { ok: false, reason: 'nominated' };
+  }
   await withAudit(
     db,
     {

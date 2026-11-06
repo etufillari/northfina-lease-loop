@@ -159,7 +159,7 @@
   "exit.cancel": "Jätka rendiga",
   "endOfTerm.title": "Perioodi lõpp",
   "endOfTerm.return": "Tagasta",
-  "endOfTerm.notYet": "Võimalik alates {date}",
+  "endOfTerm.notYet": "Lunastamine, tagastamine või järglase nimetamine alates {date}",
   "me.title": "Minu leht",
   "me.noPersona": "Vali ülaribalt, kes sa oled.",
   "me.contracts": "Minu lepingud",
@@ -486,5 +486,17 @@
   "buyout.vatNote": "Käibemaks arvestatakse arve kuupäeval kehtiva määraga; siin on kasutatud täna teadaolevat määra.",
   "buyout.confirm": "Kinnita lunastus",
   "buyout.cancel": "Tühista",
-  "exit.minimum": "Ennetähtaegne lõpetamine maksab alati vähemalt {months} kuu kasutuse eest."
+  "exit.minimum": "Ennetähtaegne lõpetamine maksab alati vähemalt {months} kuu kasutuse eest.",
+  "asset.nominatedForYou": "Eelmine rentnik nimetas sind oma järglaseks: see ese on sulle hoitud enne ootejärjekorda.",
+  "endOfTerm.confirmReturn": "Kas tagastada ese ja lõpetada rent? Seda ei saa tagasi võtta.",
+  "passOn.buyingNote": "Valisid eseme lunastada, seega ei saa seda järglasele edasi anda.",
+  "passOn.error.unknownNominee": "Selle e-postiga pole veel kontot. Palu tal esmalt registreeruda.",
+  "passOn.error.self": "Sa ei saa ennast nimetada.",
+  "passOn.error.termNotEnded": "Järglase saab nimetada alates perioodi viimasest päevast.",
+  "transfer.monthsLeft": "Kuid jäänud",
+  "transfer.stillToPay": "Veel maksta (neto)",
+  "apply.error.assetUnavailable": "Vabandust, keegi teine broneeris või rentis eseme vahepeal. Palun vali teine ese.",
+  "apply.error.transferClosed": "Keegi teine on selle rendi juba üle võtnud või link on tühistatud.",
+  "decision.cancelledTransfer.title": "Ülevõtmine suletud",
+  "decision.cancelledTransfer.text": "Keegi teine on selle rendi üle võtnud või link on tühistatud. Sinu nimel ei allkirjastatud midagi."
 }

@@ -21,7 +21,7 @@ import {
 import { addMonthsClamped } from '@/domain/calendar';
 import { MAX_START_MONTHS_AHEAD } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
-import { getT } from '@/i18n/get-t';
+import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { isSentinel, previousAnswered } from './wizard-back';
 
@@ -74,6 +74,16 @@ export function ApplicationWizard({
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const suffix = asOf ? `?asOf=${asOf}` : '';
   const actor = personaId ?? 'anonymous';
+  // Conflicts a customer can actually run into get a translated text; anything else falls
+  // back to the API's own message.
+  const apiError = (error: { code?: string; message?: string } | undefined) => {
+    const known: Record<string, MessageKey> = {
+      ASSET_UNAVAILABLE: 'apply.error.assetUnavailable',
+      TRANSFER_CLOSED: 'apply.error.transferClosed',
+    };
+    const key = error?.code ? known[error.code] : undefined;
+    return key ? t(key) : (error?.message ?? t('common.error'));
+  };
   const maxStartDate = addMonthsClamped(today, MAX_START_MONTHS_AHEAD);
 
   const [state, setState] = useState<WizardState | null>(null);
@@ -209,7 +219,7 @@ export function ApplicationWizard({
     const body = await response.json();
     setBusy(false);
     if (body.success) setState(body.data);
-    else setError(body.error?.message ?? t('common.error'));
+    else setError(apiError(body.error));
   }
 
   async function sign() {
@@ -224,7 +234,7 @@ export function ApplicationWizard({
     setBusy(false);
     if (!body.success) {
       // Never a dead button: say what the API objected to (e.g. a start date now in the past).
-      setError(body.error?.message ?? t('common.error'));
+      setError(apiError(body.error));
       return;
     }
     router.push(`/${locale}/contracts/${body.data.contractId}${suffix}`);
@@ -242,7 +252,7 @@ export function ApplicationWizard({
     const body = await response.json();
     setBusy(false);
     if (body.success) setState(body.data);
-    else setError(body.error?.message ?? t('common.error'));
+    else setError(apiError(body.error));
   }
 
   // ---- decision screen: the summary moves to the middle of the page ----------------

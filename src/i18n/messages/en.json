@@ -178,7 +178,7 @@
   "exit.cancel": "Keep my lease",
   "endOfTerm.title": "End of term",
   "endOfTerm.return": "Return it",
-  "endOfTerm.notYet": "Available from {date}",
+  "endOfTerm.notYet": "Buy, return or nominate a successor from {date}",
   "me.title": "My page",
   "me.noPersona": "Choose who you are in the top bar.",
   "me.contracts": "My contracts",
@@ -486,5 +486,17 @@
   "buyout.vatNote": "VAT is charged at the rate valid on the invoice date; this uses the rate known today.",
   "buyout.confirm": "Confirm purchase",
   "buyout.cancel": "Cancel",
-  "exit.minimum": "An early exit always pays for at least {months} months of use."
+  "exit.minimum": "An early exit always pays for at least {months} months of use.",
+  "asset.nominatedForYou": "The previous lessee nominated you as their successor: this item is held for you, ahead of the waiting list.",
+  "endOfTerm.confirmReturn": "Return the item and end the lease? This cannot be undone.",
+  "passOn.buyingNote": "You chose to buy this item, so it cannot be passed on to a successor.",
+  "passOn.error.unknownNominee": "Nobody with this email has an account yet. Ask them to sign up first.",
+  "passOn.error.self": "You cannot nominate yourself.",
+  "passOn.error.termNotEnded": "A successor can be nominated from the last day of the term.",
+  "transfer.monthsLeft": "Months left",
+  "transfer.stillToPay": "Still to pay (net)",
+  "apply.error.assetUnavailable": "Sorry, this item was reserved or leased by someone else in the meantime. Please choose another one.",
+  "apply.error.transferClosed": "This lease has already been taken over by someone else, or the link was withdrawn.",
+  "decision.cancelledTransfer.title": "Take-over closed",
+  "decision.cancelledTransfer.text": "This lease has been taken over by someone else, or its link was withdrawn. Nothing was signed in your name."
 }

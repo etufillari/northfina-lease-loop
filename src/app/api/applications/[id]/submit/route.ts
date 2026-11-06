@@ -29,6 +29,12 @@ export const POST = handleRoute(
         return fail(409, 'NOT_A_DRAFT', 'This application was already submitted');
       if (result.reason === 'incomplete')
         return fail(422, 'INCOMPLETE', 'Some questions are still unanswered');
+      if (result.reason === 'asset_unavailable')
+        return fail(
+          409,
+          'ASSET_UNAVAILABLE',
+          'This item was reserved by someone else in the meantime. Please choose another one.'
+        );
       if (result.reason === 'bad_start_date')
         return fail(
           422,

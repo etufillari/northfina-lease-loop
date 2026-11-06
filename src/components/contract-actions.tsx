@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { BuyoutInvoicePreview } from '@/domain/buyout';
 import { formatEuro } from '@/domain/money';
-import { getT } from '@/i18n/get-t';
+import { formatIsoDate } from '@/i18n/format';
+import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { BuyoutPurchase } from './buyout-purchase';
 
@@ -83,8 +84,18 @@ export function ContractActions({
     });
     const body = await response.json();
     setBusy(false);
-    if (body.success) setNominated(true);
-    else window.alert(body.error?.message ?? t('common.error'));
+    if (body.success) {
+      setNominated(true);
+      return;
+    }
+    const known: Record<string, MessageKey> = {
+      UNKNOWN_NOMINEE: 'passOn.error.unknownNominee',
+      SELF_NOMINATION: 'passOn.error.self',
+      BUYING: 'passOn.buyingNote',
+      TERM_NOT_ENDED: 'passOn.error.termNotEnded',
+    };
+    const key = known[body.error?.code as string];
+    window.alert(key ? t(key) : (body.error?.message ?? t('common.error')));
   }
 
   async function loadPreview() {
@@ -120,6 +131,11 @@ export function ContractActions({
         <h3 className="text-sm font-medium">
           {termOver ? t('endOfTerm.title') : t('buyout.title')}
         </h3>
+        {!termOver ? (
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            {t('endOfTerm.notYet', { date: formatIsoDate(endsOn, locale) })}
+          </p>
+        ) : null}
         <div className="mt-2">
           <BuyoutPurchase
             locale={locale}
@@ -149,22 +165,30 @@ export function ContractActions({
             <button
               type="button"
               disabled={busy}
-              onClick={() => post('end-of-term', { action: 'return' })}
+              onClick={() => {
+                if (window.confirm(t('endOfTerm.confirmReturn'))) {
+                  void post('end-of-term', { action: 'return' });
+                }
+              }}
               className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
             >
               {t('endOfTerm.return')}
             </button>
           </>
         )}
-        {!termOver ? (
-          <span className="text-xs text-stone-500">{t('endOfTerm.notYet', { date: endsOn })}</span>
-        ) : null}
       </div>
 
       <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
         <h3 className="text-sm font-semibold">{t('passOn.title')}</h3>
+        {/* During the term the lease can be taken over; from its last day a successor can
+            be nominated instead — unless the customer is buying the item. */}
+        {termOver && purchaseAtEnd ? (
+          <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+            {t('passOn.buyingNote')}
+          </p>
+        ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          {transferToken ? (
+          {termOver ? null : transferToken ? (
             <p className="text-sm">
               {t('passOn.linkHint')}{' '}
               <a
@@ -185,7 +209,9 @@ export function ContractActions({
             </button>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div
+          className={`mt-3 flex-wrap items-center gap-2 ${termOver && !purchaseAtEnd ? 'flex' : 'hidden'}`}
+        >
           <input
             type="email"
             value={nomineeEmail}

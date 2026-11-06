@@ -159,7 +159,7 @@
   "exit.cancel": "Pidä sopimukseni",
   "endOfTerm.title": "Kauden päättyminen",
   "endOfTerm.return": "Palauta",
-  "endOfTerm.notYet": "Mahdollista {date} alkaen",
+  "endOfTerm.notYet": "Lunastus, palautus tai seuraajan nimeäminen {date} alkaen",
   "me.title": "Oma sivu",
   "me.noPersona": "Valitse yläpalkista kuka olet.",
   "me.contracts": "Sopimukseni",
@@ -486,5 +486,17 @@
   "buyout.vatNote": "Alv peritään laskun päivänä voimassa olevan kannan mukaan; tässä on käytetty tänään tiedossa olevaa kantaa.",
   "buyout.confirm": "Vahvista lunastus",
   "buyout.cancel": "Peruuta",
-  "exit.minimum": "Ennenaikainen päättäminen maksaa aina vähintään {months} kuukauden käytön."
+  "exit.minimum": "Ennenaikainen päättäminen maksaa aina vähintään {months} kuukauden käytön.",
+  "asset.nominatedForYou": "Edellinen vuokralainen nimesi sinut seuraajakseen: tuote on varattu sinulle ennen jonotuslistaa.",
+  "endOfTerm.confirmReturn": "Palautetaanko tuote ja päätetäänkö vuokrasopimus? Tätä ei voi perua.",
+  "passOn.buyingNote": "Valitsit lunastaa tuotteen, joten sitä ei voi siirtää seuraajalle.",
+  "passOn.error.unknownNominee": "Tällä sähköpostilla ei ole vielä tiliä. Pyydä häntä rekisteröitymään ensin.",
+  "passOn.error.self": "Et voi nimetä itseäsi.",
+  "passOn.error.termNotEnded": "Seuraajan voi nimetä kauden viimeisestä päivästä alkaen.",
+  "transfer.monthsLeft": "Kuukausia jäljellä",
+  "transfer.stillToPay": "Maksettavaa jäljellä (netto)",
+  "apply.error.assetUnavailable": "Valitettavasti joku muu varasi tai vuokrasi tuotteen sillä välin. Valitse toinen tuote.",
+  "apply.error.transferClosed": "Joku muu on jo ottanut tämän vuokrasopimuksen, tai linkki on peruttu.",
+  "decision.cancelledTransfer.title": "Siirto suljettu",
+  "decision.cancelledTransfer.text": "Joku muu on ottanut tämän vuokrasopimuksen tai linkki on peruttu. Nimissäsi ei allekirjoitettu mitään."
 }

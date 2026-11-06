@@ -23,6 +23,16 @@ const failures: Record<string, [number, string, string]> = {
   start_too_far_ahead: [422, 'BAD_START_DATE', 'The lease can start at most 3 months ahead'],
   no_vat_rate_on_date: [422, 'NO_VAT_RATE', 'No VAT rate is known for this date'],
   unpriceable_amount: [422, 'NOT_PRICEABLE', 'This amount can no longer be priced'],
+  asset_unavailable: [
+    409,
+    'ASSET_UNAVAILABLE',
+    'This item has been leased or reserved by someone else in the meantime',
+  ],
+  transfer_closed: [
+    409,
+    'TRANSFER_CLOSED',
+    'This lease has already been taken over, or its transfer link was withdrawn',
+  ],
 };
 
 export const POST = handleRoute(

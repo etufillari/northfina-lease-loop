@@ -6,6 +6,7 @@ import { scheduleInvoices } from '@/domain/invoicing';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import type { Answers } from '@/domain/question-flow';
 import type { PrismaClient } from '@/generated/prisma/client';
+import { checkClaim } from '@/server/asset-claims';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
 import { executeTransfer } from '@/server/transfers';
@@ -24,7 +25,9 @@ export type SignResult =
         | 'start_before_signing'
         | 'start_too_far_ahead'
         | 'no_vat_rate_on_date'
-        | 'unpriceable_amount';
+        | 'unpriceable_amount'
+        | 'asset_unavailable'
+        | 'transfer_closed';
     };
 
 /**
@@ -57,9 +60,23 @@ export async function signApplication(
       actor: input.actor,
       asOf: input.asOf,
     });
-    if (!transferred.ok) return { ok: false, reason: 'not_signable' };
+    if (!transferred.ok) {
+      return {
+        ok: false,
+        reason: transferred.reason === 'link_closed' ? 'transfer_closed' : 'not_signable',
+      };
+    }
     return { ok: true, contractId: transferred.contractId };
   }
+
+  // Last line of defence: one physical item, one contract. Another customer may have signed
+  // for it (or holds it) since this application was approved.
+  const claim = await checkClaim(db, {
+    assetIds: quoteAssetIds(application.quote),
+    customerId: application.customer_id,
+    asOf: input.asOf,
+  });
+  if (!claim.ok) return { ok: false, reason: 'asset_unavailable' };
 
   const [table, vatRates] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
   const quote = application.quote;

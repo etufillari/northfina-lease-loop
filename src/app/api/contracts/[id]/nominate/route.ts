@@ -23,8 +23,24 @@ export const POST = handleRoute(
       asOf: asOfFrom(request),
     });
     if (!result.ok) {
-      if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
-      return fail(409, 'BAD_STATUS', 'Nomination is for active or returned leases');
+      const failures: Record<typeof result.reason, [number, string, string]> = {
+        not_found: [404, 'CONTRACT_NOT_FOUND', 'No such contract'],
+        bad_status: [409, 'BAD_STATUS', 'Nomination is for active or returned leases'],
+        term_not_ended: [
+          409,
+          'TERM_NOT_ENDED',
+          'A successor can be nominated from the last day of the term',
+        ],
+        buying: [409, 'BUYING', 'You chose to buy this item at the end of the term'],
+        unknown_nominee: [
+          404,
+          'UNKNOWN_NOMINEE',
+          'Nobody with this email has an account yet; ask them to sign up first',
+        ],
+        self_nomination: [409, 'SELF_NOMINATION', 'You cannot nominate yourself'],
+      };
+      const [status, code, message] = failures[result.reason];
+      return fail(status, code, message);
     }
     return ok(result);
   }

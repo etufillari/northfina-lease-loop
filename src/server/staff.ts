@@ -3,6 +3,7 @@
 // signApplication (src/server/contracts.ts) with the signatory's e-mail as the actor.
 import { holdUntil as holdUntilFor } from '@/domain/holds';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { checkClaim } from '@/server/asset-claims';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
 
@@ -77,7 +78,7 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
 
 export type StaffDecisionResult =
   | { ok: true; status: 'approved' | 'awaiting_signature' | 'declined'; holdUntil: string | null }
-  | { ok: false; reason: 'not_found' | 'not_reviewable' | 'self_decision' };
+  | { ok: false; reason: 'not_found' | 'not_reviewable' | 'self_decision' | 'asset_unavailable' };
 
 /**
  * A person approves a manual review. The 7-day hold restarts from the approval day, because
@@ -102,6 +103,17 @@ export async function approveApplication(
   const status = cannotSign ? 'awaiting_signature' : 'approved';
   const holdUntil = holdUntilFor(cannotSign ? 'signatory' : 'approval', input.asOf);
   const assetIds = quoteAssetIds(application.quote);
+  // A take-over holds nothing (its item stays leased); any other application must still be
+  // able to claim its items — someone else may have signed for them during the review.
+  const isTransfer = application.transfer_contract_id !== null;
+  if (!isTransfer) {
+    const claim = await checkClaim(db, {
+      assetIds,
+      customerId: application.customer_id,
+      asOf: input.asOf,
+    });
+    if (!claim.ok) return { ok: false, reason: 'asset_unavailable' };
+  }
 
   await withAudit(
     db,
@@ -120,7 +132,7 @@ export async function approveApplication(
       // Replace this customer's hold on every item with a fresh 7-day one. A waiting-list
       // offer hold stays: it ends by the waiting-list rules (signing closes the entry; an
       // offer that lapses is passed to the next person), see src/server/waitlist-actions.ts.
-      for (const assetId of assetIds) {
+      for (const assetId of isTransfer ? [] : assetIds) {
         await tx.reservation.updateMany({
           where: {
             asset_id: assetId,

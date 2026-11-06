@@ -15,6 +15,8 @@ export type SummaryQuote = {
   monthlyNetRentCents: number;
   netTotalCents: number;
   buyoutNetCents: number;
+  /** Set for a take-over: what is left of the lease is what the successor commits to. */
+  takeOver: { monthsLeft: number; stillToPayNetCents: number } | null;
 };
 
 export function ApplicationSummary({
@@ -46,15 +48,32 @@ export function ApplicationSummary({
         ))}
       </ul>
       <dl className="mt-4 space-y-1.5 border-t border-emerald-100 pt-3 text-sm dark:border-emerald-900">
-        <Row label={t('price.term')} value={t('price.months', { months: quote.termMonths })} />
-        <Row label={t('price.listPrice')} value={euro(quote.listPriceCents)} />
-        <Row label={t('price.downPayment')} value={euro(quote.downPaymentCents)} />
-        <Row
-          label={t('price.netRent')}
-          value={`${euro(quote.monthlyNetRentCents)} ${t('common.perMonth')}`}
-          bold
-        />
-        <Row label={t('apply.summary.netTotal')} value={euro(quote.netTotalCents)} />
+        {quote.takeOver ? (
+          <>
+            <Row
+              label={t('transfer.monthsLeft')}
+              value={t('price.months', { months: quote.takeOver.monthsLeft })}
+            />
+            <Row
+              label={t('price.netRent')}
+              value={`${euro(quote.monthlyNetRentCents)} ${t('common.perMonth')}`}
+              bold
+            />
+            <Row label={t('transfer.stillToPay')} value={euro(quote.takeOver.stillToPayNetCents)} />
+          </>
+        ) : (
+          <>
+            <Row label={t('price.term')} value={t('price.months', { months: quote.termMonths })} />
+            <Row label={t('price.listPrice')} value={euro(quote.listPriceCents)} />
+            <Row label={t('price.downPayment')} value={euro(quote.downPaymentCents)} />
+            <Row
+              label={t('price.netRent')}
+              value={`${euro(quote.monthlyNetRentCents)} ${t('common.perMonth')}`}
+              bold
+            />
+            <Row label={t('apply.summary.netTotal')} value={euro(quote.netTotalCents)} />
+          </>
+        )}
         <Row label={t('price.buyout')} value={euro(quote.buyoutNetCents)} />
         {startDate ? (
           <Row label={t('apply.startDate')} value={formatIsoDate(startDate, locale)} />

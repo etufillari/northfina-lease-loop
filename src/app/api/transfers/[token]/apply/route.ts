@@ -26,6 +26,13 @@ export const POST = handleRoute(
       if (result.reason === 'own_contract') {
         return fail(409, 'OWN_CONTRACT', 'This is already your lease');
       }
+      if (result.reason === 'term_over') {
+        return fail(
+          409,
+          'TERM_OVER',
+          'This lease has reached its end; there is nothing left to take over'
+        );
+      }
       return fail(404, 'TRANSFER_NOT_FOUND', 'This transfer link is no longer valid');
     }
     return ok({ applicationId: result.applicationId }, { status: 201 });

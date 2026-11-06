@@ -19,6 +19,7 @@ import {
 import { grossCents, vatRateOn } from '@/domain/vat';
 import { loadCoefficientTable } from '@/data/load';
 import type { PrismaClient } from '@/generated/prisma/client';
+import { checkClaim } from '@/server/asset-claims';
 import { withAudit } from '@/server/audit';
 import { buildLiveQuote, quoteAssetIds, quoteRowData } from '@/server/quotes';
 
@@ -50,6 +51,8 @@ export type ApplicationState = {
     buyoutNetCents: number;
     /** Make and model per asset, for the running summary next to the questions. */
     assets: Array<{ id: string; make: string; model: string }>;
+    /** A take-over commits to what is left of the lease, not the whole term. */
+    takeOver: { monthsLeft: number; stillToPayNetCents: number } | null;
   };
   /** The questions that apply right now, in order, ready for the UI. */
   visibleQuestions: Array<Pick<Question, 'id' | 'type' | 'text' | 'why_we_ask' | 'options'>>;
@@ -137,6 +140,23 @@ async function buildState(
       .map((q) => [q.id, defaults[q.id]!])
   );
 
+  const remaining = rows.application.transfer_contract_id
+    ? await db.invoice.findMany({
+        where: {
+          contract_id: rows.application.transfer_contract_id,
+          type: 'lease',
+          due_date: { gt: asOf },
+        },
+        select: { net_cents: true },
+      })
+    : null;
+  const takeOver = remaining
+    ? {
+        monthsLeft: remaining.length,
+        stillToPayNetCents: remaining.reduce((sum, i) => sum + i.net_cents, 0),
+      }
+    : null;
+
   return {
     application: {
       id: rows.application.id,
@@ -161,6 +181,7 @@ async function buildState(
           orderBy: { id: 'asc' },
         })
       ).map((a) => ({ id: a.id, make: a.make, model: a.model })),
+      takeOver,
       quoteDate: rows.quote.quote_date,
       priceListVersion: rows.quote.price_list_version,
       listPriceCents: rows.quote.list_price_cents,
@@ -214,26 +235,14 @@ export async function startApplication(
   }
   const assets = await db.asset.findMany({ where: { id: { in: input.assetIds } } });
   if (assets.length !== input.assetIds.length) return { ok: false, reason: 'unknown_asset' };
-  // A `returned` item is in maintenance until the second-life desk clears it.
-  if (assets.some((a) => a.status === 'leased' || a.status === 'sold' || a.status === 'returned')) {
-    return { ok: false, reason: 'asset_unavailable' };
-  }
-  // A reserved item is open only to the customer it is held for: a waiting-list offer or an
-  // end-of-term nomination names them on the Reservation.
-  const reserved = assets.filter((a) => a.status === 'reserved').map((a) => a.id);
-  if (reserved.length > 0) {
-    const holds = await db.reservation.findMany({
-      where: {
-        asset_id: { in: reserved },
-        active: true,
-        customer_id: input.customerId,
-        kind: { in: ['waitlist_offer', 'nomination'] },
-      },
-    });
-    if (reserved.some((id) => !holds.some((hold) => hold.asset_id === id))) {
-      return { ok: false, reason: 'asset_unavailable' };
-    }
-  }
+  // Leased, sold, held for someone else, or in maintenance (returned, unless nominated for
+  // this customer): see src/domain/claims.ts.
+  const claim = await checkClaim(db, {
+    assetIds: input.assetIds,
+    customerId: input.customerId,
+    asOf: input.asOf,
+  });
+  if (!claim.ok) return { ok: false, reason: 'asset_unavailable' };
   if (new Set(assets.map((a) => a.category)).size > 1) {
     return { ok: false, reason: 'mixed_categories' };
   }
@@ -326,7 +335,13 @@ export type SubmitResult =
   | { ok: true; state: ApplicationState }
   | {
       ok: false;
-      reason: 'not_found' | 'not_a_draft' | 'incomplete' | 'no_vat_rate_on_date' | 'bad_start_date';
+      reason:
+        | 'not_found'
+        | 'not_a_draft'
+        | 'incomplete'
+        | 'no_vat_rate_on_date'
+        | 'bad_start_date'
+        | 'asset_unavailable';
     };
 
 /**
@@ -346,6 +361,17 @@ export async function submitApplication(
     input.startDate > addMonthsClamped(input.asOf, MAX_START_MONTHS_AHEAD)
   ) {
     return { ok: false, reason: 'bad_start_date' };
+  }
+  // Someone else may have been approved for (or signed) the item since this draft started.
+  // A take-over is different: its item is leased to the current lessee by design.
+  const isTransfer = rows.application.transfer_contract_id !== null;
+  if (!isTransfer) {
+    const claim = await checkClaim(db, {
+      assetIds: quoteAssetIds(rows.quote),
+      customerId: rows.application.customer_id,
+      asOf: input.asOf,
+    });
+    if (!claim.ok) return { ok: false, reason: 'asset_unavailable' };
   }
 
   const [{ questions }, vatRates, table] = await Promise.all([
@@ -411,7 +437,9 @@ export async function submitApplication(
           signatory_email: str('q_signatory_email'),
         },
       });
-      if (status !== 'declined') {
+      // A take-over holds nothing: its item stays leased to the current lessee until signing
+      // moves the contract. Reserving it would put a leased item in the catalogue.
+      if (status !== 'declined' && !isTransfer) {
         for (const assetId of quoteAssetIds(rows.quote)) {
           await tx.asset.update({ where: { id: assetId }, data: { status: 'reserved' } });
           await tx.reservation.create({

@@ -1,0 +1,37 @@
+# Time log: wave 0a, the schema, the seed and the actor picker
+
+Real clock, Helsinki. Coding agent: Opus, in the worktree `sleepy-germain-94b2e7` (branch `claude/sleepy-germain-94b2e7`). Time limit 60 minutes.
+
+| When             | What                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-05 17:38 | Start. Base is `0ae9cea` (the brief named `2908278`; `0ae9cea` is one docs-only commit on top, so nothing to fast-forward). `node --version` → v22.22.2 on Windows. `npm ci` started in the background.                                                                                                                                                       |
+| 17:40            | Read `AGENTS.md`, the brief section 5 (D8, D10, D17) and section 6, `src/data/schemas.ts`, `data/customers.json`, the starter's `assets.ts`, seed, routes, i18n and the stack notes.                                                                                                                                                                          |
+| 17:42            | `src/domain/statuses.test.ts` then `statuses.ts`: the five Zod enums of section 6.                                                                                                                                                                                                                                                                            |
+| 17:44            | `prisma/schema.prisma`: `Customer`, `Quote`, `Application`, `Contract`, `Invoice`, `AssetEvent`, `ReturnAssessment`, back-relations on `Asset`.                                                                                                                                                                                                               |
+| 17:45            | `src/server/customers.test.ts` then `customers.ts` (`listCustomers`, `getCustomer`, `seedCustomers`), the seed calls it. `src/server/actor.test.ts` then `actor.ts`, `POST`/`DELETE /api/actor`, `src/components/actor-picker.tsx`, six `actor.*` keys in all four message files, README "Database" and "Who is acting".                                      |
+| 17:53            | `npm ci` done (about 13 minutes: the native builds). `npm run db:migrate -- --name wave0_schema` → `20261105155346_wave0_schema`. `npm run db:setup` seeds 30 assets and 10 customers. The four touched test files: 41 green on the first run.                                                                                                                |
+| 17:57            | **Blocked 3 minutes:** the commit failed with `cannot spawn …\.husky/pre-commit: Exec format error`. The worktree's `config.worktree` set `core.hooksPath` to the main checkout's raw `.husky` folder instead of husky's `.husky/_` wrappers. Fixed with `git config --worktree core.hooksPath .husky/_`; the hooks then ran and passed.                      |
+| 17:58            | Commits `7dbc214` `feat(schema)` and `7623718` `feat(actor)`.                                                                                                                                                                                                                                                                                                 |
+| 18:01            | Live check on `next dev`: `POST /api/actor` `cust-aino` → 200 with the `Set-Cookie`; unknown id → 404 `UNKNOWN_ACTOR`; wrong body → 400 `VALIDATION_ERROR`; `DELETE` → 200, cookie expired.                                                                                                                                                                   |
+| 18:05            | `npm run check:all`: `format:check` fails on every file of the repo, untouched ones too, because this Windows checkout has CRLF (`core.autocrlf`); the committed blobs are LF (`git ls-files --eol`), so CI is not affected. `prettier --check --end-of-line auto .` passes; lint, typecheck, file size, no-AI, 163 tests (coverage 96 %) and the build pass. |
+| 18:07            | Closed, 29 minutes.                                                                                                                                                                                                                                                                                                                                           |
+
+## Left undone
+
+- The picker is not mounted anywhere: wave 0c puts it in the header (`readActor(db)` and `listCustomers(db)` in the layout, the six `actor.*` labels). Its look in the browser is unchecked; only the route was checked live.
+- `POST /api/actor` is not in the route table or the OpenAPI file: `src/server/routes.ts` belongs to wave 0b. Its row: `POST` and `DELETE /api/actor`, body `actorBodySchema` from `src/server/actor.ts`, response `{ actor }`, errors `UNKNOWN_ACTOR` (404), `VALIDATION_ERROR`, `INVALID_JSON` (400).
+- No handler test for the route: it imports the app's `db`, and the logic it calls (`resolveActor`, the cookie headers) is tested.
+- Every other worktree made by the app likely has the same `core.hooksPath` problem; the fix is above.
+- `format:check` on this Windows checkout: a `.gitattributes` with `* text=auto eol=lf` (or `core.autocrlf false` and a fresh checkout) would make it pass locally; not done, it is outside this slice.
+
+## Choices made here
+
+- **No `preferred_locale` in the data pack.** The brief lists it on `Customer`; `customers.json` has no such field. Kept as a nullable column the seed leaves null, so no second migration is needed if the app wants it; `toCustomer` does not return it (the `Customer` shape is strict).
+- **`beneficial_owners`** (only `cust-haapala` has it) is stored as `beneficial_owners_json`, null when absent, so the row round-trips to exactly the file's object.
+- **`Invoice.period_start` / `period_end` are nullable**: a buyout or an early-exit invoice is not for a period. The invoices slice can always fill them.
+- **Ids** of the new models default to `cuid()`; a caller (a test, the scenario harness) may pass its own. `Contract.number` is unique and is the human one.
+- **Dates** in the new models are ISO day strings (`String`), as `AGENTS.md` rule 4 passes them; `DateTime` only for `created_at` / `updated_at`.
+- **The actor** is a plain string (a customer id, `admin` or `anonymous`), so it goes straight into `withAudit`. `POST /api/actor` answers 404 `UNKNOWN_ACTOR` for an id that is not a customer; `anonymous` cannot be chosen, `DELETE` is the way back.
+- **The picker** is a client component that fetches the route with JSON and calls `router.refresh()`; the page passes it the customers (`id`, `name`), the current actor and the labels.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; later schema work is in `docs/features/row-schemas.md` (D27) and the audit chain (D36).

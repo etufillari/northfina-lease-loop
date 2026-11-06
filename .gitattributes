@@ -1,0 +1,7 @@
+# Every text file is checked out with LF on every platform, so Prettier and the
+# editorconfig rule (end_of_line = lf) hold on Windows too. Binary files are untouched.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.db binary

@@ -1,7 +1,12 @@
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
-// SQLite has no enums here, so allowed values (category, condition, status) are
-// checked with Zod in src/data/schemas.ts before anything is written.
+// SQLite has no enums here, so allowed values (category, condition, status) are Zod enums:
+// src/data/schemas.ts for the asset values, src/domain/statuses.ts for decisions, contract
+// and invoice statuses, event kinds. The server function that writes a value parses it with
+// its schema itself, before the write; a route's body check alone is not enough.
+// Money is integer euro cents (`_cents`), rent factors integer millionths, VAT rates basis
+// points (`_bp`, 2550 = 25.5 %). Business dates are ISO day strings (`YYYY-MM-DD`); DateTime
+// is only for a row's own timestamps. Who owns which model: docs/kickoff-brief.md section 6.
 
 generator client {
   provider = "prisma-client"
@@ -25,11 +30,205 @@ model Asset {
   usage_unit     String // km | battery_cycles | engine_hours
   usage_value    Int
   previous_lives Int
-  status         String // available | reserved | returned
+  status         String // available | reserved | returned | leased | sold (D22)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
+  quotes             Quote[]
+  contracts          Contract[]
+  events             AssetEvent[]
+  return_assessments ReturnAssessment[]
+
   @@index([category])
+}
+
+// A test applicant from data/customers.json. One table for the three types: the fields a
+// type does not have are null (see `customerSchema` in src/data/schemas.ts).
+model Customer {
+  id                       String   @id
+  type                     String // consumer | sole_trader | company
+  name                     String
+  birth_date               String? // consumer, sole_trader
+  country                  String
+  city                     String
+  email                    String
+  employment               String? // consumer
+  monthly_net_income_cents Int? // consumer
+  business_id              String? // sole_trader, company
+  vat_registered           Boolean? // sole_trader, company
+  annual_revenue_cents     Int? // company
+  applicant_can_sign       Boolean? // company
+  beneficial_owners_json   String? // company, JSON array of names, null when the file has none
+  is_pep                   Boolean
+  story                    String
+  // Not in the data pack: the language to write to the customer in, set by the app if used.
+  preferred_locale         String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  applications Application[]
+  contracts    Contract[]
+  signatories  CompanySignatory[]
+}
+
+// A priced offer for an asset on a date, frozen so a later price list does not change it.
+model Quote {
+  id                   String   @id @default(cuid())
+  asset_id             String
+  quantity             Int      @default(1)
+  quote_date           String
+  valid_until          String
+  price_list_version   Int
+  list_price_cents     Int // per unit
+  down_payment_cents   Int
+  financed_cents       Int
+  band                 String
+  factor_millionths    Int
+  term_months          Int
+  monthly_net_cents    Int
+  buyout_cents         Int
+  vat_rate_bp_at_quote Int
+  // D90: the named next customer of a pass-on; only they may apply. Null: anyone (D55).
+  customer_id          String?
+  created_at           DateTime @default(now())
+
+  asset        Asset         @relation(fields: [asset_id], references: [id])
+  applications Application[]
+
+  @@index([asset_id])
+}
+
+// A customer's answers to the questions for a quote, and what the rules decided.
+model Application {
+  id           String   @id @default(cuid())
+  customer_id  String
+  quote_id     String
+  answers_json String // question id → answer
+  decision     String // approved | rejected | manual_review | awaiting_signatory | withdrawn
+  reasons_json String // [{ code, params }]
+  decided_on   String
+  reviewed_by  String? // the actor who decided a manual review
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  customer Customer  @relation(fields: [customer_id], references: [id])
+  quote    Quote     @relation(fields: [quote_id], references: [id])
+  contract Contract?
+
+  signature_requests SignatureRequest[]
+
+  @@index([customer_id])
+  @@index([quote_id])
+}
+
+// A signed lease. The prices are copied from the quote at signing and never change.
+model Contract {
+  id                     String   @id @default(cuid())
+  number                 String   @unique
+  application_id         String   @unique
+  customer_id            String
+  asset_id               String
+  quantity               Int      @default(1)
+  previous_contract_id   String? // the lease this asset had before (second life)
+  signed_on              String
+  start_date             String
+  end_date               String
+  term_months            Int
+  list_price_cents       Int // per unit
+  down_payment_cents     Int
+  financed_cents         Int
+  band                   String
+  factor_millionths      Int
+  monthly_net_cents      Int
+  buyout_cents           Int
+  vat_rate_bp_at_signing Int
+  price_list_version     Int
+  status                 String // active | bought | returned | passed_on | ended_early
+  ended_on               String?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  application        Application        @relation(fields: [application_id], references: [id])
+  customer           Customer           @relation(fields: [customer_id], references: [id])
+  asset              Asset              @relation(fields: [asset_id], references: [id])
+  previous_contract  Contract?          @relation("ContractChain", fields: [previous_contract_id], references: [id])
+  next_contracts     Contract[]         @relation("ContractChain")
+  invoices           Invoice[]
+  events             AssetEvent[]
+  return_assessments ReturnAssessment[]
+
+  @@index([customer_id])
+  @@index([asset_id])
+  @@index([previous_contract_id])
+}
+
+// One invoice of a contract. Gross = net + VAT, all in cents; the domain proves it.
+model Invoice {
+  id           String   @id @default(cuid())
+  contract_id  String
+  sequence     Int // 1, 2, 3 … within the contract
+  period_start String? // null for an invoice that is not for a period (buyout, early exit)
+  period_end   String?
+  issue_date   String
+  due_date     String
+  net_cents    Int
+  vat_rate_bp  Int
+  vat_cents    Int
+  gross_cents  Int
+  kind         String // down_payment | rent | buyout | early_exit
+  status       String // issued | paid | cancelled
+  paid_on      String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  contract Contract @relation(fields: [contract_id], references: [id])
+
+  @@unique([contract_id, sequence])
+  @@index([contract_id, due_date])
+}
+
+// The asset's passport: one row per thing that happened to it. The id is the order.
+model AssetEvent {
+  id           Int      @id @default(autoincrement())
+  asset_id     String
+  contract_id  String?
+  kind         String // leased | returned | assessed | refurbished | repriced | bought | passed_on
+  on_date      String
+  details_json String
+  created_at   DateTime @default(now())
+
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract? @relation(fields: [contract_id], references: [id])
+
+  @@index([asset_id, id])
+  @@index([contract_id])
+}
+
+// What a returned asset was found to be, what refurbishing it costs and where it goes next.
+model ReturnAssessment {
+  id                         String   @id @default(cuid())
+  asset_id                   String
+  contract_id                String? // the lease it came back from; null for an item the pack seeds as returned
+  assessed_on                String
+  condition                  String // as returned
+  usage_value                Int
+  refurbishment_json         String // [{ step, cost_cents }]
+  refurbish                  Boolean
+  new_condition              String // after refurbishment, or the same as `condition`
+  market_value_cents         Int
+  second_life_financed_cents Int
+  // An id from data/second-life-demand.json; unique, so two assessments at the same instant
+  // cannot both win one entry (D62, wave 3 finding 4). SQLite allows many NULLs.
+  matched_demand_id          String?  @unique
+  match_reasons_json         String // [{ code, params }]
+  assessment_json            String   @default("{}") // the D12 options and the D13 match, for the page
+  created_at                 DateTime @default(now())
+
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract? @relation(fields: [contract_id], references: [id])
+
+  @@index([asset_id])
+  @@index([contract_id])
 }
 
 // Who changed what, and when. Written in the same transaction as the change
@@ -42,7 +241,67 @@ model AuditLog {
   entity_type  String // e.g. asset
   entity_id    String
   details_json String? // JSON text, e.g. {"from":"available","to":"reserved"}
+  // The tamper-evident chain (docs/features/audit-chain.md): hash = SHA-256 of prev_hash + the
+  // canonical row. A unique prev_hash means two rows can never chain to the same row (a fork).
+  prev_hash    String?  @unique
+  hash         String?  @unique
+  // The seal (D81): base64 Ed25519 signature over "lease-loop/audit-row\n" + hash, made with the
+  // key in .env (AUDIT_SIGNING_KEY), never stored here. Nullable only for the migration.
+  signature    String?
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// The audit chain's head (review finding 11): one row (id 1), written by withAudit in the same
+// transaction as every audit row, with the row count and the newest hash. Deleting the newest
+// audit rows leaves a valid shorter chain; the verifier compares it with this head.
+model AuditHead {
+  id        Int     @id
+  length    Int
+  hash      String
+  // The seal (D81): base64 Ed25519 signature over "lease-loop/audit-head\n" + length + "\n" + hash,
+  // so a shorter head written after deleting the newest rows needs the key.
+  signature String?
+}
+
+// Who may sign for a company (D46): the company's own list of authorised signatories, as the
+// trade register and Suomi.fi e-Authorizations would give it in production. Owned by
+// src/server/signatories.ts. Days are ISO strings: valid from `valid_from` (null while the
+// entry waits for its signing link to be opened) up to, not including, `valid_to`.
+model CompanySignatory {
+  id          String   @id @default(cuid())
+  customer_id String
+  name        String
+  email       String // stored trimmed and lower case
+  granted_by  String // the granting signatory's id, or register_check_simulated
+  granted_on  String
+  valid_from  String?
+  valid_to    String?
+  created_at  DateTime @default(now())
+
+  customer           Customer           @relation(fields: [customer_id], references: [id])
+  signature_requests SignatureRequest[]
+
+  @@index([customer_id])
+}
+
+// The signing link sent to a signatory when a case waits for them (D46). The token is made
+// server-side with node:crypto; the link works up to, not including, `expires_on`.
+model SignatureRequest {
+  id             String  @id @default(cuid())
+  application_id String
+  signatory_id   String
+  token          String  @unique
+  sent_on        String
+  opened_on      String?
+  signed_on      String?
+  declined_on    String?
+  expires_on     String
+
+  application Application      @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  signatory   CompanySignatory @relation(fields: [signatory_id], references: [id])
+
+  @@index([application_id])
+  @@index([signatory_id])
 }

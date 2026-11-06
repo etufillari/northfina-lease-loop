@@ -1,0 +1,8 @@
+{
+  "note": "Lease Loop team rule (docs/decisions.md D43, issue #24), not part of the organiser's data pack. The longest lease term offered per item category, in months. A term the coefficient table offers but this file caps is not offered for that category: a laptop's residual curve is at 18 % by month 48 and its design life (D15) is 48 months, so a 48-month laptop lease would hand back an item with no second life. The caps never go above the coefficient table's longest term.",
+  "max_term_months": {
+    "e_bike": 48,
+    "laptop": 36,
+    "farm_machine": 48
+  }
+}

@@ -23,3 +23,14 @@ export const intlLocale: Record<Locale, string> = {
   sv: 'sv-FI',
   et: 'et-EE',
 };
+
+/**
+ * The same page in `locale`: `/fi/assets/x` + `?quote=…` → `/en/assets/x?quote=…`. The query
+ * (the stored quote, the down payment, the catalogue filters) is kept (review finding 14).
+ */
+export function localeHref(pathname: string, locale: Locale, search = ''): string {
+  const rest = pathname.split('/').slice(2).join('/');
+  const query =
+    search === '' || search === '?' ? '' : search.startsWith('?') ? search : `?${search}`;
+  return `${rest ? `/${locale}/${rest}` : `/${locale}`}${query}`;
+}

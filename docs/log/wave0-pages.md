@@ -1,0 +1,29 @@
+# Time log: wave 0c, the UI kit, the layout nav, the demo page and the audit page
+
+Real clock, Helsinki. Coding agent: Opus, in the worktree slot `dazzling-hugle-bf713b` (branch `claude/dazzling-hugle-bf713b`), cut from `0ae9cea` (the base `2908278` plus the AGENTS.md docs commit).
+
+| When             | What                                                                                                                                                                                                                                                                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-05 17:38 | Start. Node 22.22.2 present. `npm ci && npm run db:setup` started in the background; four `npm ci` ran at once (the three wave 0 slots plus one more), so the install took far longer than usual.                                                                                                                                               |
+| 17:40            | Read the brief (sections 4 and 8), the layout, the catalogue, the asset card, `globals.css`, `today.ts`, `audit.ts`, `api-response.ts`, the i18n helpers and the stack notes (cookies are read-only in a server component).                                                                                                                     |
+| 17:42            | Tests first: `src/server/demo-clock.test.ts` (`isIsoDay`, `resolveToday` valid / invalid / none, `todayForRequest` and `readDemoClock` over a mocked cookie store). Then `src/server/demo-clock.ts` and `POST /api/demo/clock`.                                                                                                                 |
+| 17:45            | The palette as tokens in `globals.css` (D21) and the kit in `src/components/ui/`. The asset card and the catalogue rebuilt on the kit; the catalogue reads the day through `todayForRequest()`.                                                                                                                                                 |
+| 17:48            | `formatTimestamp` in `src/i18n/format.ts` (Helsinki time) with its tests, for the audit table. The layout nav (`NavLinks`, with `aria-current`), the actor-picker slot, the demo page with its client `ClockForm`, the audit page. 42 message keys × 4 files.                                                                                   |
+| 17:52            | D21, the README's "Pages" and "Demo clock" sections, this log.                                                                                                                                                                                                                                                                                  |
+| 17:53            | The coordinator relayed a palette change: the team's design tokens (jotuel's `design-tokens` branch) replace the emerald brand. Rewrote `globals.css` (scales + roles), radii, the secondary button, fonts through `next/font/google`; D21 rewritten. Install finished.                                                                         |
+| 17:58            | Browser check at 375 px, dark and light: catalogue (en), demo (fi: jump to 1 Jan 2027, the badge flips to "moved"), catalogue follows the clock (sv: "Nettolistpriser 1 januari 2027"), audit (et empty state; en with two rows), reset. No console errors. The audit table's details column got a minimum width so rows stay short on a phone. |
+| 18:05            | `check:all` steps: lint, typecheck, file size, no-AI, 149 tests with coverage (97 % lines), build all green. `format:check` fails on 33 untouched files only: this Windows checkout has `core.autocrlf=true`, so they are CRLF on disk; CI checks out LF.                                                                                       |
+| 18:08            | Commits blocked: the worktree's `config.worktree` pointed `core.hooksPath` at the main checkout's raw `.husky/` ("Exec format error"). Set this worktree's hooksPath to `.husky/_` (husky's wrapper) so the hooks run; four commits made with the hooks passing.                                                                                |
+| 18:12            | Closed.                                                                                                                                                                                                                                                                                                                                         |
+
+## Left undone
+
+- The scenario-card buttons on the demo page: placeholders only, by design; each wave 1 slice adds its card's button.
+- The actor picker is not mounted: the slot is a comment in `src/app/[locale]/layout.tsx` between the nav and the language switcher, for wave 0a's `<ActorPicker />`.
+- The demo clock form needs JavaScript (it posts JSON); a no-JS fallback (a form post answered with a 303) was not built.
+- `?asOf=` on the demo routes (brief section 8) is not built; only the cookie.
+- No OpenAPI entry for `POST /api/demo/clock`: the route table and generator belong to wave 0b; add the row when it lands.
+- The footer still says "Starter skeleton — replace me".
+- Dark-mode contrast of the tokens was checked by eye, not measured.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; what was left is in `docs/reviews/wave-0.md` "Open".

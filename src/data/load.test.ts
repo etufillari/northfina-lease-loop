@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   loadAssets,
   loadCo2Factors,
+  loadConsumerLimits,
   loadCoefficientTable,
   loadCustomers,
   loadDataFile,
@@ -11,9 +12,15 @@ import {
   loadRefurbishmentCosts,
   loadResidualCurves,
   loadSecondLifeDemand,
+  loadTermLimits,
   loadVatRates,
 } from './load';
-import { coefficientTableSchema, priceListsFileSchema } from './schemas';
+import {
+  coefficientTableSchema,
+  consumerLimitsSchema,
+  priceListsFileSchema,
+  termLimitsSchema,
+} from './schemas';
 
 describe('data pack', () => {
   it('every file in data/ parses against its schema', async () => {
@@ -59,6 +66,79 @@ describe('data pack', () => {
     await expect(loadDataFile('assets.json', strict)).rejects.toThrow(
       /data\/assets\.json does not match its schema/
     );
+  });
+});
+
+describe("the team's term limits beside the pack (D43)", () => {
+  it("parses, says it is the team's rule and caps every category within the table's terms", async () => {
+    const [limits, table] = await Promise.all([loadTermLimits(), loadCoefficientTable()]);
+    expect(limits.note).toMatch(/team/i);
+    const terms = Object.keys(table.end_of_term_buyout_percent_of_financed).map(Number);
+    const longest = Math.max(...terms);
+    for (const [category, cap] of Object.entries(limits.max_term_months)) {
+      expect(cap, category).toBeGreaterThan(0);
+      expect(cap, category).toBeLessThanOrEqual(longest);
+    }
+    expect(Object.keys(limits.max_term_months).sort()).toEqual([
+      'e_bike',
+      'farm_machine',
+      'laptop',
+    ]);
+  });
+
+  it('rejects a missing category, an unknown one and a cap that is not a positive whole month', () => {
+    const good = {
+      note: 'team rule',
+      max_term_months: { e_bike: 48, laptop: 36, farm_machine: 48 },
+    };
+    expect(termLimitsSchema.safeParse(good).success).toBe(true);
+    const { laptop, ...missing } = good.max_term_months;
+    void laptop;
+    expect(termLimitsSchema.safeParse({ ...good, max_term_months: missing }).success).toBe(false);
+    expect(
+      termLimitsSchema.safeParse({
+        ...good,
+        max_term_months: { ...good.max_term_months, boat: 12 },
+      }).success
+    ).toBe(false);
+    for (const bad of [0, -12, 36.5]) {
+      expect(
+        termLimitsSchema.safeParse({
+          ...good,
+          max_term_months: { ...good.max_term_months, laptop: bad },
+        }).success,
+        String(bad)
+      ).toBe(false);
+    }
+  });
+});
+
+describe("the team's consumer limits beside the pack", () => {
+  it("parses, says it is the team's rule and holds the decided numbers", async () => {
+    const limits = await loadConsumerLimits();
+    expect(limits.note).toMatch(/team/i);
+    expect(limits.max_consumer_quantity).toEqual({ e_bike: 2, laptop: 2, farm_machine: 1 });
+    expect(limits.consumer_manual_review.farm_machine).toBe(true);
+    expect(limits.income_ceiling_cents).toBe(10_000_000);
+  });
+
+  it('rejects a missing or unknown category, a cap that is not a positive whole number and a zero ceiling', () => {
+    const good = {
+      note: 'team rule',
+      max_consumer_quantity: { e_bike: 2, laptop: 2, farm_machine: 1 },
+      consumer_manual_review: { e_bike: false, laptop: false, farm_machine: true },
+      income_ceiling_cents: 10_000_000,
+    };
+    expect(consumerLimitsSchema.safeParse(good).success).toBe(true);
+    const bad = [
+      { ...good, max_consumer_quantity: { e_bike: 2, laptop: 2 } },
+      { ...good, max_consumer_quantity: { ...good.max_consumer_quantity, boat: 1 } },
+      { ...good, max_consumer_quantity: { ...good.max_consumer_quantity, laptop: 0 } },
+      { ...good, max_consumer_quantity: { ...good.max_consumer_quantity, laptop: 1.5 } },
+      { ...good, income_ceiling_cents: 0 },
+      { ...good, extra: true },
+    ];
+    for (const value of bad) expect(consumerLimitsSchema.safeParse(value).success).toBe(false);
   });
 });
 

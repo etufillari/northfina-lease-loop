@@ -1,12 +1,358 @@
 @import 'tailwindcss';
 
+/*
+ * The Lease Loop look (docs/decisions.md D21, revised 2026-11-05): warm cream paper, forest
+ * green for the brand, terracotta as the one accent, deep teal for information. Pages never
+ * use these raw colours: they use the roles below.
+ *
+ * Fonts: Fredoka (rounded, semibold) for headings only, Nunito for text and numbers; both
+ * through next/font in the layout, falling back to system-ui.
+ *
+ * Spacing needs no tokens: Tailwind's 4 px step is the scale. Shadows are Tailwind's.
+ */
 @theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: var(--font-nunito), system-ui, sans-serif;
+  --font-heading: var(--font-fredoka), var(--font-nunito), system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --color-cream: #f6eedf;
+  --color-paper: #fffbf3;
+  --color-sand: #ece1cc;
+  --color-sand-line: #ddcfb4;
+  --color-sand-strong: #c9b896;
+  --color-ink-900: #1f2a2a;
+  --color-ink-600: #4b5551;
+  --color-forest-50: #eef3ec;
+  --color-forest-100: #dfe7dc;
+  --color-forest-200: #bfd2bb;
+  --color-forest-300: #8fb59a;
+  --color-forest-600: #2e6b4c;
+  --color-forest-700: #1f4a35;
+  --color-forest-800: #153526;
+  --color-forest-950: #0f1b16;
+  --color-terra-100: #f7e1d6;
+  --color-terra-200: #ecbda8;
+  --color-terra-500: #c4552d;
+  --color-terra-700: #9a3f1f;
+  --color-terra-900: #5e2410;
+  --color-teal-100: #d8e8e5;
+  --color-teal-200: #aacdc7;
+  --color-teal-600: #1d6b65;
+  --color-teal-800: #134e4a;
+  --color-ochre-100: #f6e6c4;
+  --color-ochre-200: #e7c98b;
+  --color-ochre-500: #b7811c;
+  --color-ochre-900: #5c3f08;
+
+  /* Shadows in the ink's hue: a card at rest, a raised panel, an item card. */
+  --shadow-card: 0 1px 0 var(--line), 0 8px 24px -16px rgb(31 42 42 / 0.25);
+  --shadow-panel: 0 24px 60px -30px rgb(31 42 42 / 0.45);
+  --shadow-item: 0 8px 24px -18px rgb(31 42 42 / 0.35);
 }
 
-/* A visible keyboard focus everywhere, in both color schemes. */
+/*
+ * The roles pages use. Pages use these and the kit in src/components/ui, never raw colour
+ * classes, so retuning the look is this file only. Each role is a CSS variable that changes
+ * with the colour scheme, so `bg-brand` is right in light and dark mode without `dark:`.
+ *
+ *   surface / raised / muted   the page (cream), a card (paper), a quiet strip (sand)
+ *   line, line-strong          dashed rules and borders; the secondary button's border
+ *   ink, ink-muted             text, secondary text
+ *   brand, focus               primary actions, links, the price tag; the focus ring (forest)
+ *   accent                     the one warm accent: eyebrows, stamps of later lives (terra)
+ *   success                    approved, paid, available                  (forest)
+ *   warning                    warnings, manual review                    (ochre)
+ *   danger                     rejected, overdue, destructive             (terra, deeper)
+ *   info                       information, reserved                      (teal)
+ *   staff                      the back-office strip for admin and demo tools (teal)
+ *
+ * A tone has four shades: -soft (a tinted background), -ink (text on -soft),
+ * -line (a border or ring on -soft) and -solid (a dot, an icon or a filled button).
+ */
+:root {
+  --surface: var(--color-cream);
+  --raised: var(--color-paper);
+  --muted: var(--color-sand);
+  --line: var(--color-sand-line);
+  --line-strong: var(--color-sand-strong);
+  --ink: var(--color-ink-900);
+  --ink-muted: var(--color-ink-600);
+
+  --brand: var(--color-forest-700);
+  --brand-hover: var(--color-forest-800);
+  --brand-contrast: var(--color-cream);
+  --brand-text: var(--color-forest-700);
+  --brand-soft: var(--color-forest-100);
+  --focus: var(--color-forest-700);
+
+  --accent: var(--color-terra-500);
+  --accent-ink: var(--color-terra-700);
+  --accent-soft: var(--color-terra-100);
+
+  --success-soft: var(--color-forest-100);
+  --success-ink: var(--color-forest-800);
+  --success-line: var(--color-forest-200);
+  --success-solid: var(--color-forest-600);
+
+  --warning-soft: var(--color-ochre-100);
+  --warning-ink: var(--color-ochre-900);
+  --warning-line: var(--color-ochre-200);
+  --warning-solid: var(--color-ochre-500);
+
+  --danger-soft: var(--color-terra-100);
+  --danger-ink: var(--color-terra-900);
+  --danger-line: var(--color-terra-200);
+  --danger-solid: var(--color-terra-700);
+  --danger-hover: var(--color-terra-900);
+
+  --info-soft: var(--color-teal-100);
+  --info-ink: var(--color-teal-800);
+  --info-line: var(--color-teal-200);
+  --info-solid: var(--color-teal-600);
+
+  --neutral-soft: var(--color-sand);
+  --neutral-ink: #3d4643;
+  --neutral-line: var(--color-sand-strong);
+  --neutral-solid: #8a7f6c;
+
+  --staff: var(--color-teal-800);
+  --staff-contrast: var(--color-paper);
+  --staff-hover: rgb(255 251 243 / 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: var(--color-forest-950);
+    --raised: #17251f;
+    --muted: #1f2f28;
+    --line: #2d4037;
+    --line-strong: #436054;
+    --ink: #f3ecdf;
+    --ink-muted: #bdb5a5;
+
+    /* The same hues, lighter: a primary button carries dark text on light forest. */
+    --brand: var(--color-forest-300);
+    --brand-hover: var(--color-forest-200);
+    --brand-contrast: var(--color-forest-950);
+    --brand-text: var(--color-forest-300);
+    --brand-soft: #22382d;
+    --focus: var(--color-forest-300);
+
+    --accent: #e08a66;
+    --accent-ink: #eda283;
+    --accent-soft: #3a2219;
+
+    --success-soft: #1c3428;
+    --success-ink: var(--color-forest-200);
+    --success-line: #2e5240;
+    --success-solid: var(--color-forest-300);
+
+    --warning-soft: #3a2c0d;
+    --warning-ink: var(--color-ochre-200);
+    --warning-line: #5f4813;
+    --warning-solid: #d9a43e;
+
+    --danger-soft: #3a1d12;
+    --danger-ink: var(--color-terra-200);
+    --danger-line: #6a2e18;
+    --danger-solid: #e08a66;
+    --danger-hover: #eda283;
+
+    --info-soft: #14302d;
+    --info-ink: var(--color-teal-200);
+    --info-line: #24504a;
+    --info-solid: #6fb3aa;
+
+    --neutral-soft: #24332c;
+    --neutral-ink: #ddd5c6;
+    --neutral-line: #3d5248;
+    --neutral-solid: #9d9585;
+
+    --staff: #1e4d48;
+    --staff-contrast: #f3ecdf;
+    --staff-hover: rgb(243 236 223 / 0.14);
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  --color-focus: var(--focus);
+
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-success-line: var(--success-line);
+  --color-success-solid: var(--success-solid);
+
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-warning-line: var(--warning-line);
+  --color-warning-solid: var(--warning-solid);
+
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-line: var(--danger-line);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-hover: var(--danger-hover);
+
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-info-line: var(--info-line);
+  --color-info-solid: var(--info-solid);
+
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-ink: var(--neutral-ink);
+  --color-neutral-line: var(--neutral-line);
+  --color-neutral-solid: var(--neutral-solid);
+
+  --color-staff: var(--staff);
+  --color-staff-contrast: var(--staff-contrast);
+  --color-staff-hover: var(--staff-hover);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: var(--brand-contrast);
+  }
+
+  input[type='range'] {
+    accent-color: var(--brand);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+/* A visible keyboard focus everywhere, in both colour schemes. */
 :focus-visible {
-  outline: 2px solid var(--color-emerald-600);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* On the teal staff strip the forest ring would vanish (about 1:1), so it is light there. */
+.staff-zone {
+  --focus: var(--staff-contrast);
+}
+
+/* The dashed rule of the paper look, for dividers that are not borders of a box. */
+.rule-dashed {
+  border-color: var(--line);
+  border-style: dashed;
+}
+
+/*
+ * The price tag: a pointed end with a punched hole. The hole shows the card behind it, so
+ * the tag reads as a physical tag hanging on the item.
+ */
+.price-tag {
+  position: relative;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 50%);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  padding-left: 2.25rem;
+}
+
+.price-tag::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 9999px;
+  background: var(--raised);
+}
+
+/* A new price flips in from below, like a split-flap digit. Transform only: the digits
+   stay readable on every frame, so a paused or skipped animation hides nothing. */
+@keyframes price-flip {
+  0% {
+    transform: translateY(30%) rotateX(55deg);
+  }
+  60% {
+    transform: translateY(-4%) rotateX(0deg);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.price-flip {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  animation: price-flip 240ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+/* A stamp is pressed onto the page: it lands a touch big, then settles. */
+@keyframes stamp-press {
+  0% {
+    transform: rotate(var(--stamp-tilt, -8deg)) scale(1.18);
+  }
+  70% {
+    transform: rotate(var(--stamp-tilt, -8deg)) scale(0.96);
+  }
+  100% {
+    transform: rotate(var(--stamp-tilt, -8deg)) scale(1);
+  }
+}
+
+.life-stamp {
+  transform: rotate(var(--stamp-tilt, -8deg));
+  animation: stamp-press 420ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+/* An audit entry's card rises into the details dock. */
+@keyframes audit-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.audit-card {
+  animation: audit-card-in 180ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .price-flip,
+  .life-stamp,
+  .audit-card {
+    animation: none;
+  }
 }

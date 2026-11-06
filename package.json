@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "node scripts/ensure-env.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -22,11 +23,15 @@
     "check:file-size": "node scripts/check-file-size.mjs",
     "check:no-ai": "node scripts/check-no-ai.mjs",
     "check:all": "npm run format:check && npm run lint && npm run typecheck && npm run check:file-size && npm run check:no-ai && npm run test:coverage && npm run build",
+    "setup": "node scripts/setup-worktree.mjs",
     "db:setup": "node scripts/ensure-env.mjs && prisma generate && prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
-    "db:reset": "node scripts/ensure-env.mjs && prisma migrate reset --force && prisma db seed",
+    "db:reset": "node scripts/ensure-env.mjs && tsx scripts/clear-audit-anchors.mjs && prisma migrate reset --force && prisma db seed",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "openapi": "tsx scripts/openapi.mjs && prettier --write docs/openapi.json",
+    "demo:tamper": "tsx scripts/tamper-audit.mjs",
+    "audit:anchor": "tsx scripts/anchor-audit-tsa.mjs",
     "postinstall": "prisma generate",
     "prepare": "node .husky/install.mjs"
   },
@@ -51,6 +56,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fast-check": "^4.10.2",
     "globals": "^17.14.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",

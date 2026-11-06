@@ -8,6 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   globalIgnores([
+    '.claude/**', // agent worktrees: full checkouts, linted in their own folder
     '.next/**',
     'out/**',
     'coverage/**',
@@ -51,10 +52,20 @@ export default defineConfig([
       'no-restricted-imports': [
         'error',
         {
+          // node:crypto's createHash is deterministic and does no I/O (the audit chain hashes
+          // rows with it); every other export of the module, randomUUID included, stays out.
+          paths: [
+            {
+              name: 'node:crypto',
+              allowImportNames: ['createHash'],
+              message: 'src/domain may take only createHash from node:crypto.',
+            },
+          ],
           patterns: [
             {
               group: [
                 'node:*',
+                '!node:crypto',
                 'fs',
                 'fs/*',
                 'path',

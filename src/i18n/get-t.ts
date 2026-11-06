@@ -14,10 +14,17 @@ export const messages: Record<Locale, Messages> = { en, fi, sv, et };
 export type TranslateValues = Record<string, string | number>;
 export type Translate = (key: MessageKey, values?: TranslateValues) => string;
 
-/** Returns `t(key, values?)` for a locale. `{name}` in a message is replaced by `values.name`. */
+/**
+ * Returns `t(key, values?)` for a locale. `{name}` in a message is replaced by `values.name`.
+ * A key cast from a server code that has no message yet shows as the key itself, so a new code
+ * never takes the page down (the parity tests still catch it).
+ */
 export function getT(locale: Locale): Translate {
   const dictionary = messages[locale];
-  return (key, values) => interpolate(dictionary[key], values);
+  return (key, values) => {
+    const template = dictionary[key] as string | undefined;
+    return template === undefined ? key : interpolate(template, values);
+  };
 }
 
 function interpolate(template: string, values?: TranslateValues): string {

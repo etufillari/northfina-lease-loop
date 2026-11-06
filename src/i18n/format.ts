@@ -12,3 +12,15 @@ export function formatIsoDate(isoDate: string, locale: Locale): string {
 export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(intlLocale[locale]).format(value);
 }
+
+/**
+ * An instant (an ISO timestamp, e.g. an audit row's `created_at`) as a short date and time in
+ * Helsinki time, the app's time zone: `2026-11-05T14:30:00.000Z` → "5 Nov 2026, 16:30" (en).
+ */
+export function formatTimestamp(isoTimestamp: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(intlLocale[locale], {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Europe/Helsinki',
+  }).format(new Date(isoTimestamp));
+}

@@ -1,0 +1,14 @@
+{
+  "note": "Lease Loop team rule (docs/decisions.md, the plausibility rules of the question flow), not part of the organiser's data pack. For a consumer: the most units of one category a single application may lease before a person checks it, the categories a person always checks, and the monthly net income above which a person checks that it is real. Companies and sole traders are not capped here.",
+  "max_consumer_quantity": {
+    "e_bike": 2,
+    "laptop": 2,
+    "farm_machine": 1
+  },
+  "consumer_manual_review": {
+    "e_bike": false,
+    "laptop": false,
+    "farm_machine": true
+  },
+  "income_ceiling_cents": 10000000
+}

@@ -1,4 +1,6 @@
 # Generated or not ours to format
+# Agent worktrees: full checkouts of their own, checked in their own folder
+.claude/
 node_modules/
 .next/
 out/

@@ -28,7 +28,16 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned']);
+/**
+ * Where an item is in the loop (docs/decisions.md D22). The data pack uses the first three;
+ * the app adds the other two:
+ * - `available`: can be quoted and leased;
+ * - `reserved`: held, cannot be leased (the data pack's meaning; no contract sets it);
+ * - `returned`: back from a lease, waiting for assessment and refurbishment;
+ * - `leased`: out on an active contract (set on `CONTRACT_SIGNED`);
+ * - `sold`: bought out at the end of a lease or on an early exit; it leaves the loop.
+ */
+export const assetStatusSchema = z.enum(['available', 'reserved', 'returned', 'leased', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */
@@ -178,7 +187,6 @@ export const vatRateSchema = z.strictObject({
   /** True for the made-up hackathon rate. */
   fictional: z.boolean().optional(),
 });
-export type VatRate = z.infer<typeof vatRateSchema>;
 
 export const vatRatesSchema = z.strictObject({
   country: countryCodeSchema,
@@ -266,7 +274,6 @@ export const questionsFileSchema = z.strictObject({
   eligibility_rules: z.array(eligibilityRuleSchema),
   questions: z.array(questionSchema).min(1),
 });
-export type QuestionsFile = z.infer<typeof questionsFileSchema>;
 
 // ---------------------------------------------------------------------------
 // data/customers.json: test applicants, each built to exercise one rule (read `story`).
@@ -389,3 +396,30 @@ export const co2FactorsSchema = z.strictObject({
   e_bike_avoided_car_km_kg_per_km: z.number().nonnegative(),
 });
 export type Co2Factors = z.infer<typeof co2FactorsSchema>;
+
+// ---------------------------------------------------------------------------
+// data/term-limits.json: the team's longest lease term per category (D43), beside the pack.
+// ---------------------------------------------------------------------------
+
+export const termLimitsSchema = z.strictObject({
+  /** Says this is the team's rule, not the organiser's pack. */
+  note: z.string(),
+  /** Category → the longest term offered, in months. Every category has one. */
+  max_term_months: z.record(assetCategorySchema, z.number().int().positive()),
+});
+export type TermLimits = z.infer<typeof termLimitsSchema>;
+
+// ---------------------------------------------------------------------------
+// data/consumer-limits.json: the team's plausibility limits for consumers, beside the pack.
+// ---------------------------------------------------------------------------
+
+export const consumerLimitsSchema = z.strictObject({
+  note: z.string(),
+  /** Units of one category a consumer may lease in one application before a person checks. */
+  max_consumer_quantity: z.record(assetCategorySchema, z.number().int().positive()),
+  /** True: a consumer's application for this category always goes to a person. */
+  consumer_manual_review: z.record(assetCategorySchema, z.boolean()),
+  /** A monthly net income above this many cents is checked by a person. */
+  income_ceiling_cents: z.number().int().positive(),
+});
+export type ConsumerLimits = z.infer<typeof consumerLimitsSchema>;

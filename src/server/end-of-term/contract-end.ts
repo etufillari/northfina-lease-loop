@@ -1,0 +1,133 @@
+// Ending a contract: the customer's choice, and closing the ones nobody decided in time.
+// Either way one transaction closes the contract, the asset and the asset life together.
+import type { Contract } from '@/data/lease-schemas';
+import { loadVatRates } from '@/data/load';
+import type { Customer } from '@/data/schemas';
+import {
+  assetStatusAfter,
+  buyoutInvoice,
+  choiceDeadline,
+  endChoice,
+  endProblem,
+  type EndOutcome,
+} from '@/domain/end-of-term/end-of-term';
+import type { PrismaClient } from '@/generated/prisma/client';
+import { withAudit } from '../audit';
+import { contractViews, getContract, toContract, type ContractView } from '../contract/contracts';
+import { currentDate } from '../date/app-date';
+
+class AlreadyEnded extends Error {}
+
+const SYSTEM_ACTOR = 'system';
+
+async function closeContract(
+  db: PrismaClient,
+  input: { contract: Contract; outcome: EndOutcome; endDate: string; actor: string }
+): Promise<void> {
+  const { contract, outcome, endDate, actor } = input;
+  const assetStatus = assetStatusAfter(outcome);
+  const invoice =
+    outcome === 'bought_out' ? buyoutInvoice(contract, await loadVatRates(), endDate) : null;
+
+  await withAudit(
+    db,
+    {
+      actor,
+      action: 'contract.ended',
+      entityType: 'contract',
+      entityId: contract.id,
+      details: {
+        outcome,
+        end_date: endDate,
+        automatic: actor === SYSTEM_ACTOR,
+        asset_id: contract.asset_id,
+        asset_status: { from: 'leased', to: assetStatus },
+        buyout_invoice_cents: invoice?.total_cents ?? null,
+      },
+    },
+    async (tx) => {
+      // The condition is in the update itself, so a contract can only be closed once.
+      const closed = await tx.contract.updateMany({
+        where: { id: contract.id, status: 'active' },
+        data: { status: outcome, actual_end_on: endDate },
+      });
+      if (closed.count === 0) throw new AlreadyEnded();
+
+      await tx.asset.update({ where: { id: contract.asset_id }, data: { status: assetStatus } });
+      await tx.assetLife.updateMany({
+        where: { contract_id: contract.id },
+        data: { ended_on: endDate, outcome },
+      });
+      if (invoice) await tx.invoice.create({ data: invoice });
+    }
+  );
+}
+
+export type EndResult =
+  | { ok: true; contract: ContractView }
+  | {
+      ok: false;
+      reason: 'contract_not_found' | 'already_ended' | 'not_due' | 'window_closed';
+    };
+
+/** The customer's own choice at the end of the lease. */
+export async function endContract(
+  db: PrismaClient,
+  input: { contractId: string; customer: Customer; outcome: EndOutcome }
+): Promise<EndResult> {
+  const { contractId, customer, outcome } = input;
+  const contract = await getContract(db, contractId);
+  if (!contract) return { ok: false, reason: 'contract_not_found' };
+
+  const today = await currentDate(db);
+  const problem = endProblem(contract, customer.id, today);
+  if (problem === 'not_owner') return { ok: false, reason: 'contract_not_found' };
+  if (problem !== null) return { ok: false, reason: problem };
+
+  try {
+    await closeContract(db, { contract, outcome, endDate: today, actor: customer.id });
+  } catch (error) {
+    if (error instanceof AlreadyEnded) return { ok: false, reason: 'already_ended' };
+    throw error;
+  }
+
+  const closed = await getContract(db, contractId);
+  if (!closed) throw new Error(`contract ${contractId} disappeared while closing`);
+  const [view] = await contractViews(db, [closed]);
+  if (!view) throw new Error('a contract view is always returned for a contract');
+  return { ok: true, contract: view };
+}
+
+/**
+ * Closes every active contract whose choice window has passed, as returned. It ends on the
+ * last day of the window, not the day this ran, so the record does not depend on when the
+ * scheduler happened to fire. Safe to run at any time: closed contracts are skipped.
+ */
+export async function closeExpiredContracts(
+  db: PrismaClient,
+  today: string
+): Promise<{ closed: string[] }> {
+  const rows = await db.contract.findMany({ where: { status: 'active' } });
+  const expired = rows.map(toContract).filter((c) => endChoice(c, today) === 'expired');
+
+  const closed: string[] = [];
+  for (const contract of expired) {
+    try {
+      await closeContract(db, {
+        contract,
+        outcome: 'returned',
+        endDate: choiceDeadline(contract),
+        actor: SYSTEM_ACTOR,
+      });
+      closed.push(contract.id);
+    } catch (error) {
+      if (!(error instanceof AlreadyEnded)) throw error;
+    }
+  }
+  return { closed };
+}
+
+/** `closeExpiredContracts` on the date the app runs on. */
+export async function closeDueContracts(db: PrismaClient): Promise<{ closed: string[] }> {
+  return closeExpiredContracts(db, await currentDate(db));
+}

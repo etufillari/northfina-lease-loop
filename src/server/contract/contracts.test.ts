@@ -347,7 +347,7 @@ describe('a signed contract never changes with the price list', () => {
 
     const contract = await getContract(db, signed.id);
     if (!contract) throw new Error('expected the contract');
-    const [view] = await contractViews([contract]);
+    const [view] = await contractViews(db, [contract]);
     expect(view?.list_price_on_signing_cents).toBe(389_000);
   });
 });
@@ -368,13 +368,13 @@ describe('reading contracts', () => {
 
   it('has no list price to compare for a re-listed item', async () => {
     const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
-    const [view] = await contractViews([{ ...signed, price_list_version: null }]);
+    const [view] = await contractViews(db, [{ ...signed, price_list_version: null }]);
     expect(view?.list_price_on_signing_cents).toBeNull();
   });
 
   it('multiplies the list price by the quantity', async () => {
     const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
-    const [view] = await contractViews([{ ...signed, quantity: 2 }]);
+    const [view] = await contractViews(db, [{ ...signed, quantity: 2 }]);
     expect(view?.list_price_on_signing_cents).toBe(778_000);
   });
 });

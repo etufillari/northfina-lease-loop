@@ -8,6 +8,7 @@ import { setDemoDate } from './date/app-date';
 import { submitApplication } from './application/applications';
 import { seedAssets } from './assets/assets';
 import { signContract } from './contract/contracts';
+import { endContract } from './end-of-term/contract-end';
 import { listInvoices } from './invoicing/invoices';
 import type { PrismaClient } from './prisma-client';
 import { quoteAsset } from './pricing/quotes';
@@ -94,5 +95,19 @@ describe('the lease loop', () => {
     expect(invoices.slice(0, 3).map((invoice) => invoice.total_cents)).toEqual([
       13_466, 13_466, 13_520,
     ]);
+
+    // 5. End of term
+    await setDemoDate(db, { date: '2029-11-04', actor: 'staff-admin' });
+    const ended = await endContract(db, {
+      contractId: signed.contract.id,
+      customer: aino,
+      outcome: 'returned',
+    });
+    expect(ended).toMatchObject({
+      ok: true,
+      contract: { status: 'returned', actual_end_on: '2029-11-04' },
+    });
+    const returned = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(returned.status).toBe('returned');
   });
 });

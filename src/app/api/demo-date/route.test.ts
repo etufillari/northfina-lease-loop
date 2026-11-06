@@ -4,6 +4,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { PrismaClient } from '@/server/prisma-client';
 import { SESSION_COOKIE_NAME, signSession } from '@/server/auth/session';
 import { todayIso } from '@/server/date/today';
+import { ainoEbikeAnswers } from '../../../../tests/helpers/applicants';
+import { applyFor, resetLeaseData, signFor } from '../../../../tests/helpers/lease-flow';
 import { createTestDb } from '../../../../tests/helpers/test-db';
 import { GET, PUT } from './route';
 
@@ -30,6 +32,10 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await db.auditLog.deleteMany();
+  await db.assetLife.deleteMany();
+  await db.invoice.deleteMany();
+  await db.contract.deleteMany();
+  await db.application.deleteMany();
   await db.appSetting.deleteMany();
 });
 
@@ -70,6 +76,22 @@ describe('PUT /api/demo-date', () => {
 
     const audit = await db.auditLog.findFirstOrThrow();
     expect(audit.actor).toBe('staff-admin');
+  });
+
+  it('closes contracts past their window straight away when the date moves', async () => {
+    await resetLeaseData(db);
+    const application = await applyFor(db, 'cust-aino', 'ebike-003', ainoEbikeAnswers);
+    const contract = await signFor(db, 'cust-aino', application.id);
+    await actAs(admin);
+
+    await putDate({ date: '2029-11-11' });
+    expect((await db.contract.findFirstOrThrow()).status).toBe('active');
+
+    await putDate({ date: '2029-11-12' });
+    expect(await db.contract.findUniqueOrThrow({ where: { id: contract.id } })).toMatchObject({
+      status: 'returned',
+      actual_end_on: '2029-11-11',
+    });
   });
 
   it('lets an admin go back to the real date', async () => {

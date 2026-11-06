@@ -7,11 +7,12 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ContractDrawerTrigger } from './contract';
 
-// Available = green check, reserved = amber hourglass, returned = blue loop arrows.
+// Available = green check, reserved = amber hourglass, returned = blue loop arrows, sold = stone check.
 const statusColors: Record<AssetStatus, string> = {
   available: 'text-emerald-600 dark:text-emerald-400',
   reserved: 'text-amber-600 dark:text-amber-400',
   returned: 'text-sky-600 dark:text-sky-400',
+  sold: 'text-stone-600 dark:text-stone-400',
 };
 
 function StatusIcon({ status }: { status: AssetStatus }) {

@@ -8,6 +8,7 @@ prisma/migrations/
 next-env.d.ts
 package-lock.json
 *.db
+.thinkrail/
 
 # Generated data pack (regenerate rather than reformat)
 data/*.json

@@ -139,7 +139,7 @@ describe('parseCatalogueParams', () => {
   it('reads a known status and treats an unknown one as any status', () => {
     expect(parse({ status: 'reserved' }).filter.status).toBe('reserved');
     expect(parse({ status: ['returned', 'available'] }).filter.status).toBe('returned');
-    expect(parse({ status: 'sold' }).filter.status).toBeNull();
+    expect(parse({ status: 'unknown_status' }).filter.status).toBeNull();
     expect(parse({ status: '' }).filter.status).toBeNull();
   });
 

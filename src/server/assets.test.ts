@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  listAssets,
+  resolveAssetEndOfTerm,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -74,6 +81,97 @@ describe('changeAssetStatus', () => {
     const result = await changeAssetStatus(db, { id: 'nope', status: 'reserved', actor: 'x' });
     expect(result).toEqual({ ok: false, reason: 'not_found' });
     expect(await db.auditLog.count()).toBe(0);
+  });
+});
+
+describe('resolveAssetEndOfTerm', () => {
+  it('handles buyout: sets status to sold and logs asset.bought_out', async () => {
+    await seedAssets(db, dataPack);
+
+    const result = await resolveAssetEndOfTerm(db, {
+      id: 'ebike-001',
+      action: 'buyout',
+      actor: 'customer-aino',
+      details: { buyoutGrossCents: 73229 },
+    });
+
+    expect(result).toMatchObject({ ok: true, asset: { id: 'ebike-001', status: 'sold' } });
+    const audit = await db.auditLog.findFirstOrThrow();
+    expect(audit).toMatchObject({
+      action: 'asset.bought_out',
+      actor: 'customer-aino',
+      entity_id: 'ebike-001',
+    });
+    expect(JSON.parse(audit.details_json ?? '')).toMatchObject({
+      from: 'available',
+      to: 'sold',
+      action: 'buyout',
+      buyoutGrossCents: 73229,
+    });
+  });
+
+  it('handles return: sets status to returned and logs asset.returned', async () => {
+    await seedAssets(db, dataPack);
+
+    const result = await resolveAssetEndOfTerm(db, {
+      id: 'laptop-001',
+      action: 'return',
+      actor: 'customer-mikko',
+    });
+
+    expect(result).toMatchObject({ ok: true, asset: { id: 'laptop-001', status: 'returned' } });
+    const audit = await db.auditLog.findFirstOrThrow();
+    expect(audit).toMatchObject({ action: 'asset.returned', entity_id: 'laptop-001' });
+  });
+
+  it('handles pass_on: sets status to returned and logs asset.passed_on', async () => {
+    await seedAssets(db, dataPack);
+
+    const result = await resolveAssetEndOfTerm(db, {
+      id: 'ebike-002',
+      action: 'pass_on',
+      actor: 'customer-norvi',
+      details: { matchedWaitlistId: 'wait-02', avoidedCo2Kg: 24.5 },
+    });
+
+    expect(result).toMatchObject({ ok: true, asset: { id: 'ebike-002', status: 'returned' } });
+    const audit = await db.auditLog.findFirstOrThrow();
+    expect(audit).toMatchObject({
+      action: 'asset.passed_on',
+      entity_id: 'ebike-002',
+    });
+    expect(JSON.parse(audit.details_json ?? '')).toMatchObject({
+      matchedWaitlistId: 'wait-02',
+      avoidedCo2Kg: 24.5,
+    });
+  });
+
+  it('keeps the real transition in the audit details when the caller sends colliding keys', async () => {
+    await seedAssets(db, dataPack);
+
+    await resolveAssetEndOfTerm(db, {
+      id: 'laptop-002',
+      action: 'return',
+      actor: 'customer-aino',
+      details: { from: 'forged', to: 'forged', action: 'forged', note: 'kept' },
+    });
+
+    const audit = await db.auditLog.findFirstOrThrow();
+    expect(JSON.parse(audit.details_json ?? '')).toEqual({
+      from: 'available',
+      to: 'returned',
+      action: 'return',
+      note: 'kept',
+    });
+  });
+
+  it('answers not_found for an unknown id', async () => {
+    const result = await resolveAssetEndOfTerm(db, {
+      id: 'nope',
+      action: 'buyout',
+      actor: 'test',
+    });
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
   });
 });
 

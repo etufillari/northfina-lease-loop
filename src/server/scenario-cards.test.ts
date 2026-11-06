@@ -219,10 +219,10 @@ describe('card 5 — too young: Mikko (17) applies for laptop-008', () => {
   });
 });
 
-describe('card 6 — who can sign? Norvi Logistics leases 4 e-bikes; the applicant cannot sign', () => {
-  // Assets are unique physical items, so "4 × ebike-004" is four distinct e-bikes in one
-  // fleet contract (docs/DECISIONS.md "Fleets"), banded on their total.
-  const FLEET = ['ebike-004', 'ebike-005', 'ebike-006', 'ebike-012'];
+describe('card 6 — who can sign? Norvi Logistics leases ebike-004; the applicant cannot sign', () => {
+  // The card says "4 × ebike-004"; the event hosts confirmed it means ONE ebike-004 (6 Nov).
+  // A fleet of distinct items works the same way (src/server/staff.test.ts).
+  const ITEMS = ['ebike-004'];
   const norviScript = {
     q_customer_type: 'company',
     q_email: 'fleet@norvi.example.com',
@@ -237,10 +237,10 @@ describe('card 6 — who can sign? Norvi Logistics leases 4 e-bikes; the applica
     q_usage_purpose: 'delivery',
   };
 
-  it('waits for the signatory; only the signatory can sign; then all four are leased', async () => {
+  it('waits for the signatory; only the signatory can sign; then the e-bike is leased', async () => {
     const state = await applyAndSubmit(db, {
       customerId: 'cust-norvi',
-      assetIds: FLEET,
+      assetIds: ITEMS,
       downPaymentCents: 0,
       termMonths: 36,
       script: norviScript,
@@ -260,10 +260,10 @@ describe('card 6 — who can sign? Norvi Logistics leases 4 e-bikes; the applica
     expect(await sign('cust-norvi')).toEqual({ ok: false, reason: 'not_signatory' });
     const signed = await sign('ceo@norvi.example.com');
     if (!signed.ok) throw new Error(signed.reason);
-    const assets = await db.asset.findMany({ where: { id: { in: FLEET } } });
+    const assets = await db.asset.findMany({ where: { id: { in: ITEMS } } });
     expect(assets.every((a) => a.status === 'leased')).toBe(true);
     const contract = await getContract(db, signed.contractId);
-    expect(contract?.assets.map((a) => a.asset_id).sort()).toEqual([...FLEET].sort());
+    expect(contract?.assets.map((a) => a.asset_id).sort()).toEqual([...ITEMS].sort());
   });
 });
 

@@ -413,7 +413,7 @@ export async function submitApplication(
     businessId: str('q_business_id'),
     monthlyNetIncomeCents: income,
     pepAnswer: str('q_pep') as 'yes' | 'no' | null,
-    startDate: input.startDate,
+    applicationDate: input.asOf,
     financedCents: rows.quote.financed_cents,
     termMonths: rows.quote.term_months,
     monthlyRentWithVatCents: grossCents(rows.quote.monthly_net_rent_cents, vat.rateBasisPoints),

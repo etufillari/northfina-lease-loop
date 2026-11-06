@@ -1,10 +1,8 @@
 // The staff desk: applications that need a person. Manual reviews (scenario card 7) get
 // approve / decline; companies whose applicant cannot sign (card 6) get "sign as signatory".
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
@@ -23,7 +21,9 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
 
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const actor = (await cookies()).get(PERSONA_COOKIE)?.value || 'staff';
+  // Staff decisions are always logged as staff, never as the customer persona picked in the
+  // header (the server also refuses a customer deciding on their own application).
+  const actor = 'staff';
   const queue = await listStaffQueue(db);
   const reviews = queue.filter((item) => item.status === 'manual_review');
   const signatures = queue.filter((item) => item.status === 'awaiting_signature');

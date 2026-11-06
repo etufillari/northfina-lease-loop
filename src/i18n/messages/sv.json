@@ -300,5 +300,6 @@
   "staff.error.alreadyHandled": "Någon har redan hanterat ansökan. Uppdatera listan för att se läget.",
   "staff.error.holdExpired": "Reservationen på 7 dagar har gått ut. Kunden måste ansöka igen.",
   "staff.error.quoteExpired": "Det offererade priset gäller inte längre. Kunden behöver en ny offert.",
-  "staff.error.badStartDate": "Startdatumet måste vara från i dag och högst 3 månader framåt."
+  "staff.error.badStartDate": "Startdatumet måste vara från i dag och högst 3 månader framåt.",
+  "staff.error.selfDecision": "Ingen kan godkänna eller avslå sin egen ansökan."
 }

@@ -300,5 +300,6 @@
   "staff.error.alreadyHandled": "Someone already handled this application. Update the list to see the latest.",
   "staff.error.holdExpired": "The 7-day hold has run out. The customer needs to apply again.",
   "staff.error.quoteExpired": "The quoted price is no longer valid. The customer needs a new quote.",
-  "staff.error.badStartDate": "The start date must be from today up to 3 months ahead."
+  "staff.error.badStartDate": "The start date must be from today up to 3 months ahead.",
+  "staff.error.selfDecision": "Nobody can approve or decline their own application."
 }

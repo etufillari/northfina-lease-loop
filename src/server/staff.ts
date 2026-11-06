@@ -65,7 +65,7 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
 
 export type StaffDecisionResult =
   | { ok: true; status: 'approved' | 'awaiting_signature' | 'declined'; holdUntil: string | null }
-  | { ok: false; reason: 'not_found' | 'not_reviewable' };
+  | { ok: false; reason: 'not_found' | 'not_reviewable' | 'self_decision' };
 
 /**
  * A person approves a manual review. The 7-day hold restarts from the approval day, because
@@ -82,6 +82,8 @@ export async function approveApplication(
   });
   if (!application) return { ok: false, reason: 'not_found' };
   if (application.status !== 'manual_review') return { ok: false, reason: 'not_reviewable' };
+  // Four-eyes rule: nobody decides on their own application.
+  if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
 
   const answers = JSON.parse(application.answers_json) as Record<string, unknown>;
   const cannotSign = answers['q_customer_type'] === 'company' && answers['q_can_sign'] === 'no';
@@ -135,6 +137,7 @@ export async function declineApplication(
   if (!(STAFF_QUEUE_STATUSES as readonly string[]).includes(application.status)) {
     return { ok: false, reason: 'not_reviewable' };
   }
+  if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
   const assetId = application.quote.asset_id;
 
   await withAudit(

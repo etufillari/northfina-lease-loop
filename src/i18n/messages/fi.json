@@ -300,5 +300,6 @@
   "staff.error.alreadyHandled": "Joku on jo käsitellyt tämän hakemuksen. Päivitä lista nähdäksesi tilanteen.",
   "staff.error.holdExpired": "7 päivän varaus on päättynyt. Asiakkaan pitää hakea uudelleen.",
   "staff.error.quoteExpired": "Tarjottu hinta ei ole enää voimassa. Asiakas tarvitsee uuden tarjouksen.",
-  "staff.error.badStartDate": "Alkupäivän pitää olla tästä päivästä enintään 3 kuukauden päähän."
+  "staff.error.badStartDate": "Alkupäivän pitää olla tästä päivästä enintään 3 kuukauden päähän.",
+  "staff.error.selfDecision": "Kukaan ei voi hyväksyä tai hylätä omaa hakemustaan."
 }

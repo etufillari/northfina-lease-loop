@@ -160,6 +160,14 @@ describe('declining a manual review releases the asset', () => {
     const state = await haapala();
     expect(state.application.status).toBe('manual_review');
 
+    // Four-eyes rule: the customer cannot decide on their own application.
+    const own = { applicationId: state.application.id, actor: 'cust-haapala' };
+    expect(await approveApplication(db, { ...own, asOf: AS_OF })).toEqual({
+      ok: false,
+      reason: 'self_decision',
+    });
+    expect(await declineApplication(db, own)).toEqual({ ok: false, reason: 'self_decision' });
+
     const result = await declineApplication(db, {
       applicationId: state.application.id,
       actor: STAFF,

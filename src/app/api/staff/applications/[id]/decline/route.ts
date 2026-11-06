@@ -12,6 +12,7 @@ const bodySchema = z.strictObject({
 
 const failures: Record<string, [number, string, string]> = {
   not_found: [404, 'APPLICATION_NOT_FOUND', 'No such application'],
+  self_decision: [403, 'SELF_DECISION', 'Nobody can decide on their own application'],
   not_reviewable: [409, 'NOT_REVIEWABLE', 'This application is not waiting for staff'],
 };
 

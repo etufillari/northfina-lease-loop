@@ -300,5 +300,6 @@
   "staff.error.alreadyHandled": "Keegi on selle taotluse juba läbi vaadanud. Värskenda nimekirja.",
   "staff.error.holdExpired": "7-päevane broneering on lõppenud. Klient peab uuesti taotlema.",
   "staff.error.quoteExpired": "Pakutud hind ei kehti enam. Klient vajab uut pakkumist.",
-  "staff.error.badStartDate": "Alguskuupäev peab olema tänasest kuni 3 kuu kaugusele."
+  "staff.error.badStartDate": "Alguskuupäev peab olema tänasest kuni 3 kuu kaugusele.",
+  "staff.error.selfDecision": "Keegi ei saa oma taotlust kinnitada ega tagasi lükata."
 }

@@ -22,6 +22,7 @@ async function post<T>(url: string, body: unknown): Promise<Envelope<T>> {
 /** Envelope error codes we can explain better than the generic message. */
 const ERROR_KEYS: Record<string, MessageKey> = {
   NOT_REVIEWABLE: 'staff.error.alreadyHandled',
+  SELF_DECISION: 'staff.error.selfDecision',
   NOT_SIGNABLE: 'staff.error.alreadyHandled',
   HOLD_EXPIRED: 'staff.error.holdExpired',
   QUOTE_EXPIRED: 'staff.error.quoteExpired',

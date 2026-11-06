@@ -9,6 +9,7 @@ next-env.d.ts
 
 # tests
 coverage/
+.hegel/
 
 # Prisma: generated client and local SQLite databases
 src/generated/

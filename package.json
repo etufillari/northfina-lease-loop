@@ -42,6 +42,7 @@
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.1",
+    "@hegeldev/hegel": "^0.5.1",
     "@next/eslint-plugin-next": "^16.4.5",
     "@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
     "@tailwindcss/postcss": "^4.3.3",
@@ -76,6 +77,7 @@
     "prisma": true,
     "@prisma/engines": true,
     "esbuild": true,
-    "fsevents": false
+    "fsevents": false,
+    "koffi": true
   }
 }

@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { EndOfTermOptions } from '@/components/end-of-term-options';
 import { loadAssets } from '@/data/load';
 import { LeaseEnginePanel } from '@/components/lease-engine-panel';
 import type { Customer } from '@/data/schemas';
-import { getEndOfTermChoices, getRemainingMonths } from '@/domain/end-of-term-options';
+import { getRemainingMonths } from '@/domain/end-of-term-options';
 import { formatEuro } from '@/domain/money';
 import { anniversary } from '@/domain/lease-engine/calendar';
 import type { LeaseStatus } from '@/domain/lease-engine/types';
@@ -46,6 +45,9 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
         {t('account.title')}
       </h1>
 
+      <Link href={`/${locale}/circular`} className="mt-4 inline-block font-semibold underline">
+        {t('circular.title')}
+      </Link>
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-8">
           <h2 className="text-xl font-semibold">{t('account.profile')}</h2>
@@ -89,10 +91,6 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
                     lease.terms.startDate,
                     lease.terms.termMonths
                   );
-                  const endOptions =
-                    endDate.ok && lease.status === 'ACTIVE'
-                      ? getEndOfTermChoices(today, endDate.value, lease.latestInvoicePaid)
-                      : null;
 
                   return (
                     <details
@@ -176,41 +174,6 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
                           status={lease.status}
                           locale={locale}
                         />
-                        {endOptions?.ok && endOptions.choices.length > 0 ? (
-                          <EndOfTermOptions
-                            leaseId={lease.terms.contractId}
-                            choices={endOptions.choices}
-                            labels={{
-                              title: t('account.endOfTerm.title'),
-                              prompt: t('account.endOfTerm.prompt'),
-                              demoNote: t('account.endOfTerm.demoNote'),
-                              selected: t('account.endOfTerm.selected'),
-                              choices: {
-                                return: {
-                                  title: t('account.endOfTerm.return.title'),
-                                  description: t('account.endOfTerm.return.description'),
-                                },
-                                buy: {
-                                  title: t('account.endOfTerm.buy.title'),
-                                  description: t('account.endOfTerm.buy.description'),
-                                },
-                                extend: {
-                                  title: t('account.endOfTerm.extend.title'),
-                                  description: t('account.endOfTerm.extend.description'),
-                                },
-                                endEarly: {
-                                  title: t('account.endOfTerm.earlyTermination.title'),
-                                  description: t('account.endOfTerm.earlyTermination.description'),
-                                },
-                              },
-                            }}
-                          />
-                        ) : null}
-                        {lease.status === 'ACTIVE' && endDate.ok && endOptions?.ok === false ? (
-                          <p className="mt-5 text-sm text-red-700 dark:text-red-300">
-                            {t('account.endOfTerm.dateError')}
-                          </p>
-                        ) : null}
                       </div>
                     </details>
                   );

@@ -28,7 +28,7 @@ export async function issueInvoice(
     const row = await tx.engineLease.findUnique({ where: { id: payload.leaseId } });
     if (!row) throw new EngineServiceError('NOT_FOUND');
     const lease = toLeaseDTO(row);
-    if (lease.status === 'TERMINATED') throw new EngineServiceError('INVALID_TRANSITION');
+
     if (
       await tx.engineInvoice.findUnique({
         where: {
@@ -40,6 +40,11 @@ export async function issueInvoice(
     const calculated = calculateInvoice(lease, payload.periodIndex, rates);
     if (!calculated.ok) throw new EngineServiceError('INVALID_CALCULATION', calculated.reason);
     const invoice = calculated.value;
+    if (
+      lease.status === 'TERMINATED' &&
+      (!row.terminatedOn || invoice.period.startDate >= row.terminatedOn)
+    )
+      throw new EngineServiceError('INVALID_TRANSITION');
     if (invoice.grossCents > 2_147_483_647)
       throw new EngineServiceError('INVALID_CALCULATION', 'amount_overflow');
     const year = Number(invoice.period.issueDate.slice(0, 4));

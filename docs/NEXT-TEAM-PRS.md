@@ -1,4 +1,6 @@
-# Dev2 and Dev3 — delivery plan for tomorrow morning
+# Dev2 and Dev3 — original delivery plan
+
+**Status update6 November:** the lead took over remaining circular work; the full local return/re-lease loop is implemented. Use [PROGRESS.md](PROGRESS.md) and [SCENARIO-CARD-RESULTS.md](SCENARIO-CARD-RESULTS.md) for current evidence. The allocation below is historical planning, not a list of still-missing work.
 
 **Target: a complete return-and-re-lease demo by Friday 6 November 2026, 09:00 Helsinki time.** This is our planning target; flag a blocker immediately rather than waiting for the deadline. The official submission deadline remains16:00, per README.
 

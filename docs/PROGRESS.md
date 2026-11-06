@@ -1,63 +1,55 @@
-# Lease Loop — integration progress
+# Lease Loop — current progress
 
-Updated6 November2026 after pulling team main at `b04cd0e` (Dev2 PR12 merged). Local integration branch: `feat/engine-persistence`. **Local working code is not automatically pushed or merged.**
+Updated6 November2026. User/project lead explicitly took over Dev3's remaining work. Branch: **`feat/circular-lease-loop`**, based on pushed engine commit `67d7e71`. Circular implementation is ready for team review; merging remains a separate step.
 
-## Where we are
+## Working now
 
-**Working locally, including rendered account UI:** catalogue → approved application → signed contract → active engine lease → three saved invoices → completed lease awaiting physical return.
+**Catalogue → price → application/decision → signed contract → active lease → recurring saved invoices → completion → physical return → inspection → confirmed mandatory refurbishment → used-asset offer → second customer → second lease/invoice on the SAME asset.**
 
-**Not connected yet:** physical return → inspection → refurbishment → ready offer → second customer/contract/lease. No Dev3 return/refurbishment implementation was found in fetched team main.
+Real temporary SQLite and HTTP/rendered UI smoke verified that loop. The new account/workshop UI uses persisted data, not fake lease/payment results.
 
-## Team status
+## Completed in this increment
 
-| Owner                           | Verified output                                                                                                                                                                                      | Next required output                                                                                                                                                                   |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dev1 — engine/integration**   | Signed contract and engine lease/allocation now commit atomically; invoice numbering, tax snapshots, duplicate protection, completion; live development-only engine endpoints and account invoice UI | Review/publish local integration; agree return/allocation release adapter with Dev3; complete final loop and production auth/build validation                                          |
-| **Dev2 — application/contract** | PR12 merged: approved/rejected/review decisions, saved signed terms, `LeaseTerms` mapper, checkout/account UI                                                                                        | Review integration hook and permanent reservation change; correct remaining eligibility/question-flow edge cases; coordinate second-life offer and new contract; buyout/pass-on remain |
-| **Dev3 — circular/UI**          | Existing end-option selector is UI-only; no verified persisted return/work flow in current main                                                                                                      | Deliver receipt/inspection/mandatory work/readiness and valuation; real passport/history; connect second-life handoff, preserving asset identity                                       |
+- [x] Lead assumed circular/domain/UI ownership; existing engine and Dev2 integration preserved.
+- [x] Persisted return/inspection/work plan/readiness; idempotency and audit rollback.
+- [x] Usage/condition validation; required safety/battery/wipe/service tasks; no allocation release before completion.
+- [x] Dated used-price publication integrated into catalogue/application quotes, with unchanged original signed terms.
+- [x] New contract and lease for the next customer; physical asset ID/serial retained.
+- [x] Passport with actual leases, audit history, work/costs, labeled imported history and fictional impact estimate.
+- [x] Deterministic advisory matching by feasibility, deadline and stable ID.
+- [x] Guarded return/pass-on/buyout actions and agreed early-return policy; obligation records never pretend payment received.
+- [x] Submitted applicable question answers persisted/evaluated; irrelevant answers pruned; signer/PEP flags cannot be upgraded away.
+- [x] Gross30% consumer affordability, supported residency and sole-trader age checks.
+- [x] Exact rational price arithmetic;259 tests, including2880 generated schedule cases.
+- [x] Four-language UI keys for new features, meaningful rejection/review text.
+- [x] Generated/applied additive Prisma migrations; dev.db preserved.
+- [x] Production build uses supported Next Webpack mode to avoid the runner's Turbopack worker-port restriction. All original checks remain enabled.
 
-See [NEXT-TEAM-PRS.md](NEXT-TEAM-PRS.md) for teammate deliverables. First issues exist; record their actual PR/issue links when available.
+## Validation
 
-## Completed local integration
+**`npm run check:all` PASSES:** formatting, lint, typecheck, file-size, no-AI, coverage and production build.259 tests across39 files. Coverage: lines95.17%, branches86.75%, functions96.07%, statements91.58%.
 
-- [x] Safely pulled Dev2 changes; schema conflict resolved by retaining both contract and engine models. Stash backup retained.
-- [x] Added an optional transaction callback to Dev2 signing; new `signAndActivateContract()` creates lease and unique asset allocation inside that same audited transaction.
-- [x] Signing clears reservation expiry so a signed asset cannot be reclaimed as an expired shopping reservation.
-- [x] Existing signed contracts can be activated idempotently from the account page after ownership checks.
-- [x] Account reflects real SIGNED/ACTIVE/COMPLETED state, without mock fallback or claiming invoices are paid.
-- [x] Account shows saved invoice numbers, dates, net/VAT/gross and total scheduled net; generate-first3 and demo completion controls work.
-- [x] Development API controls reject production mode, cross-origin writes and other customers' leases. This is a local demo adapter, not production authentication.
-- [x] Completion retains physical allocation/unavailability for the return workflow.
-- [x] Generated/applied migrations using Prisma CLI; existing development DB preserved, no reset.
+Real HTTP/render smoke on a fresh isolated database included two customers, unchanged physical asset ID, new contract/lease IDs, old invoice preservation, imported cards9/10, replay, buyout and pass-on. It checked rendered HTML and API actions; a visual browser/keyboard audit has not been performed.
 
-## Verification
+See [SCENARIO-CARD-RESULTS.md](SCENARIO-CARD-RESULTS.md) for card-by-card evidence, policy assumptions and the short demo script.
 
-- Real service integration tests use Dev2 application/signing plus actual temporary SQLite, not the mock contract provider.
-- Historical Aino scenario: Nov5 v1 net10730 cents; first gross13466,13466,13520. Audit failure rolls back contract, signing state, lease and allocation.
-- Actual HTTP/rendered-page smoke test on isolated SQLite: approved application → sign/activate → first3 saved invoices → exact replays → account HTML contains invoice numbers → completed state awaiting return. No development database business data was used for this smoke test.
-- Current-date Nov6 smoke used price-list v2: net11265 cents, gross14138/14138/14194; this differs correctly from the historical Nov5 scenario.
-- Final `npm run check:all`: formatting/lint/types/file-size/no-AI/coverage pass; **225 tests pass across29 files**, coverage lines95.23%, branches86.7%, functions95.86%, statements92.62%. Default Turbopack build remains blocked by the runner's port restriction, including an escalated run. **Supplemental `npm run build -- --webpack` passes the complete production build.** Default CI command unchanged; default full gate is not claimed green.
-- UI smoke verified rendered HTML and HTTP actions, not a visual browser/keyboard audit.
+## Next team PR
 
-## How to try locally
+Separate customer/admin views and add company approval before publishing the next lease offer. This gate is not implemented yet: eligible workshop completion currently publishes immediately. Follow [ADMIN-CUSTOMER-HANDOFF.md](ADMIN-CUSTOMER-HANDOFF.md).
 
-1. Run `npm run dev` (use `npm run dev -- --webpack` if this runner blocks Turbopack workers).
-2. Select Aino in the development customer switcher.
-3. Choose an available asset, finish the application and sign. The account page opens with a real active lease.
-4. Expand the lease and click **Generate first3 invoices**. Reload: invoices remain saved.
-5. Click **Complete at contract end (demo)**. It uses the contractual end date; it does not mark invoices paid or release the asset.
-6. Previously signed contracts without a lease show **Activate signed contract**.
+## Next actions
 
-Your real development database has received additive migrations only. The isolated smoke database is separate.
+1. Review this circular branch, repeat the demo manually, and open a PR into the TEAM fork.
+2. Focus pitch/depth on VAT/price lock and money/calendar correctness; add only fixes justified by card failures.
+3. Complete four-language visual/keyboard QA and two4-minute rehearsals; keep CI green and follow README submission deadline.
 
-## Remaining requirements for the full loop
+## Explicit prototype limits
 
-- [ ] Dev3: persisted physical return, condition/usage inspection, mandatory work/costs and readiness; audited/idempotent changes.
-- [ ] Shared: release `EngineAllocation` only through the agreed ready-for-reuse/ownership-transfer transaction, never at lease completion alone.
-- [ ] Dev3 → Dev2: valuation/readiness → publish second-life offer → approved new contract, keeping assetId/serial.
-- [ ] Activate second lease with new contract/lease IDs and issue its first invoice; rehearse the complete loop twice.
-- [ ] Replace decorative end-option selection with guarded buyout/pass-on behavior; payment/credit/early-exit settlement are not implemented.
-- [ ] Production authentication/authorization and existing application/read-route access hardening; dev customer IDs are not a public security boundary.
-- [ ] Full default build/CI green in supported environment; four-language visual/keyboard QA and final challenge scenarios.
+- Account/workshop write controls use development-only selected-customer/operator mode and same-origin checks. Production authentication is not implemented.
+- Payment collection/reconciliation and credit-note processing are not implemented; charges are recorded obligations. Early exit refuses to change already-issued future rent without credits.
+- New contracts snapshot buyout/exit terms. Legacy contracts without those snapshots reject unknown fees; ordinary return still works.
+- Card6 signer guard is tested; a true4-asset fleet contract is not implemented.
+- Matching is an advisory ranked list, not queue fulfillment or a profit optimizer. Imported history is summarized, not fabricated.
+- Manufacture-age/service-history assumptions and fictional CO₂ methodology are documented in the scenario report.
 
-Update status only with code/PR/test evidence. Keep local-review work distinct from merged team main.
+These limits do not remove the demonstrated single-asset return-and-re-lease spine. Do not describe this local prototype as production lending/payment readiness.

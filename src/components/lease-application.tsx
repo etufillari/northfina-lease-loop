@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { applicableQuestions, pruneQuestionAnswers } from '@/domain/question-flow';
 import type { Customer, Question } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { Locale } from '@/i18n/locales';
@@ -30,6 +31,10 @@ export type LeaseApplicationLabels = {
   finishing: string;
   signingError: string;
   checkoutTitle: string;
+  exitPolicy: string;
+  underage: string;
+  manualReview: string;
+  rejected: string;
   checkoutMonthlyRent: string;
   checkoutTerm: string;
   checkoutPaymentDue: string;
@@ -72,7 +77,7 @@ const LeaseApplicationContext = createContext<LeaseApplicationContextValue | nul
 export function LeaseApplication({
   assetId,
   category,
-  financedAmountCents,
+  listPriceCents,
   questions,
   labels,
   customer,
@@ -82,7 +87,7 @@ export function LeaseApplication({
 }: {
   assetId: string;
   category: string;
-  financedAmountCents: number;
+  listPriceCents: number;
   questions: readonly Question[];
   labels: LeaseApplicationLabels;
   customer: Customer | null;
@@ -108,9 +113,10 @@ export function LeaseApplication({
       answers.q_monthly_income = String(customer.monthly_net_income_cents / 100);
     }
     if ('business_id' in customer) answers.q_business_id = customer.business_id;
-    if ('vat_registered' in customer) answers.q_vat_registered = String(customer.vat_registered);
+    if ('vat_registered' in customer)
+      answers.q_vat_registered = customer.vat_registered ? 'yes' : 'no';
     if ('applicant_can_sign' in customer) {
-      answers.q_can_sign = String(customer.applicant_can_sign);
+      answers.q_can_sign = customer.applicant_can_sign ? 'yes' : 'no';
     }
     if ('annual_revenue_cents' in customer) {
       answers.q_annual_revenue = String(customer.annual_revenue_cents / 100);
@@ -175,24 +181,35 @@ export function LeaseApplication({
     };
   }, [completed, labels.leaveWarning, release, reserved]);
 
-  const visibleQuestions = useMemo(
-    () =>
-      questions.filter((question) =>
-        question.ask_when.every((condition) => {
-          const value = condition.field.startsWith('answers.')
-            ? answers[condition.field.slice('answers.'.length)]
-            : condition.field === 'category'
-              ? category
-              : condition.field === 'financed_amount_cents'
-                ? financedAmountCents
-                : answers.q_customer_type;
-          if (condition.op === 'in') return condition.value.includes(String(value));
-          if (condition.op === 'gte') return typeof value === 'number' && value >= condition.value;
-          return typeof value === 'number' && value <= condition.value;
-        })
-      ),
-    [answers, category, financedAmountCents, questions]
+  const facts = useMemo(
+    () => ({
+      customerType: answers.q_customer_type ?? customer?.type ?? '',
+      category,
+      financedCents: Math.max(0, listPriceCents - offer.downPaymentCents),
+      termMonths: offer.termMonths,
+    }),
+    [
+      answers.q_customer_type,
+      customer?.type,
+      category,
+      listPriceCents,
+      offer.downPaymentCents,
+      offer.termMonths,
+    ]
   );
+  const visibleQuestions = useMemo(
+    () => applicableQuestions(questions, facts, answers),
+    [questions, facts, answers]
+  );
+  function updateAnswers(next: Record<string, string>) {
+    setAnswers(
+      pruneQuestionAnswers(
+        questions,
+        { ...facts, customerType: next.q_customer_type ?? facts.customerType },
+        next
+      )
+    );
+  }
 
   async function reserve() {
     setReserving(true);
@@ -226,7 +243,7 @@ export function LeaseApplication({
         labels,
         questions: visibleQuestions,
         answers,
-        setAnswers,
+        setAnswers: updateAnswers,
         validationError,
         setValidationError,
         completed,
@@ -348,6 +365,7 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
             </div>
           </dl>
         </section>
+        <p className="mt-3 text-sm">{labels.exitPolicy}</p>
         <button
           type="button"
           className="mt-4 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
@@ -372,6 +390,7 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          answers,
           customerId: customer.id,
           assetId,
           startDate: today,
@@ -383,14 +402,16 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
       });
       const applicationResult = (await applicationResponse.json()) as {
         success: boolean;
-        data?: { id: string; status: string };
+        data?: { id: string; status: string; decisionReason?: string };
       };
       if (!applicationResponse.ok || !applicationResult.success || !applicationResult.data) {
         setValidationError(labels.signingError);
         return;
       }
       if (applicationResult.data.status !== 'APPROVED') {
-        setValidationError(labels.signingError);
+        setValidationError(
+          `${applicationResult.data.status === 'MANUAL_REVIEW' ? labels.manualReview : labels.rejected} ${applicationResult.data.decisionReason ?? ''}`
+        );
         return;
       }
       const signResponse = await fetch(`/api/applications/${applicationResult.data.id}/sign`, {
@@ -470,12 +491,13 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
         type="button"
         disabled={!reserved || !answer.trim()}
         onClick={() => {
-          if (
-            question.blocks_application_when?.some((rule) =>
-              isBlocking(rule, answer, answers, today)
-            )
-          ) {
-            setValidationError(labels.validationError);
+          const blocked = question.blocks_application_when?.find((rule) =>
+            isBlocking(rule, answer, answers, today)
+          );
+          if (blocked) {
+            setValidationError(
+              blocked.rule === 'age_under' ? labels.underage : labels.validationError
+            );
             return;
           }
           setValidationError(null);

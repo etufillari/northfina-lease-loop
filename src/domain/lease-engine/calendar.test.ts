@@ -99,3 +99,31 @@ describe('billing schedule', () => {
     expect(calculateBillingSchedule({ ...terms, monthlyNetCents: 0 }).ok).toBe(true);
   });
 });
+
+it('conserves exact totals and continuous periods across 2880 deterministic contracts', () => {
+  let checked = 0;
+  for (let year = 2020; year < 2040; year++)
+    for (let month = 1; month <= 12; month++)
+      for (const day of [1, 15, 28])
+        for (const termMonths of [12, 24, 36, 48] as const) {
+          const startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const net = year * month * day + 1;
+          const result = calculateBillingSchedule({
+            ...terms,
+            startDate,
+            termMonths,
+            monthlyNetCents: net,
+          });
+          if (!result.ok) throw new Error('valid generated contract rejected');
+          expect(result.value.reduce((total, period) => total + period.netCents, 0)).toBe(
+            net * termMonths
+          );
+          expect(
+            result.value
+              .slice(1)
+              .every((period, index) => period.startDate === result.value[index]?.endDateExclusive)
+          ).toBe(true);
+          checked++;
+        }
+  expect(checked).toBe(2880);
+});

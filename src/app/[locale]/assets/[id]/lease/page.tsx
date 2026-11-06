@@ -1,7 +1,8 @@
+import { assetBusinessDate } from '@/server/circular/queries';
+import { loadCataloguePriceLists } from '@/server/circular/prices';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { loadPriceLists } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
 import { getT } from '@/i18n/get-t';
@@ -18,8 +19,8 @@ export default async function StartLeasingPage({
 
   await connection();
   const t = getT(locale);
-  const today = todayIso();
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const today = await assetBusinessDate(db, id, todayIso());
+  const [assets, priceLists] = await Promise.all([listAssets(db), loadCataloguePriceLists(db)]);
   const asset = assets.find((item) => item.id === id);
   if (!asset) notFound();
 

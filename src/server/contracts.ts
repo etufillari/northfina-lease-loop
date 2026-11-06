@@ -161,7 +161,12 @@ export async function createContract(
         const created = await tx.contract.create({ data: { id: contractId, ...rowData } });
         const reserved = await tx.asset.updateMany({
           where: { id: application.asset_id, status: 'available' },
-          data: { status: 'reserved' },
+          data: {
+            status: 'reserved',
+            first_leased_on: application.asset.first_leased_on ?? dates.startsOn,
+            original_list_price_cents:
+              application.asset.original_list_price_cents ?? pricing.netListPriceCents,
+          },
         });
         if (reserved.count !== 1) {
           const current = await tx.asset.findUnique({ where: { id: application.asset_id } });

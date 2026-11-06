@@ -53,6 +53,7 @@ export const assetHistoryEventSchema = z.enum([
   'condition_assessed',
   'refurbished',
   'made_available',
+  'matched',
   'bought_out',
 ]);
 export type AssetHistoryEvent = z.infer<typeof assetHistoryEventSchema>;
@@ -79,6 +80,10 @@ export const assetSchema = z.strictObject({
   /** How many lease contracts this item has already been through. */
   previous_lives: z.number().int().nonnegative(),
   status: assetStatusSchema,
+  /** Set when the first lease is signed; absent on legacy/demo assets until matched. */
+  first_leased_on: isoDateSchema.optional(),
+  /** The original net list price used by the residual-value curve. */
+  original_list_price_cents: centsSchema.optional(),
 });
 export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);

@@ -6,7 +6,6 @@
   "nav.skipToContent": "Skip to content",
   "nav.language": "Language",
   "nav.timeTravel": "Time travel",
-  "nav.today": "Back to today",
   "catalogue.title": "Catalogue",
   "catalogue.intro": "Every item can be leased, returned, refurbished and leased again.",
   "catalogue.itemCount": "{count} items",
@@ -451,5 +450,15 @@
   "staff.expired.release": "Release {count} expired holds",
   "staff.done.released": "Released {applications} applications. {items} items are available again.",
   "staff.audit.action.application.hold_expired": "Released an expired hold",
-  "common.staffOnly": "This desk is for Northfina staff. Choose Staff in the top bar to open it."
+  "common.staffOnly": "This desk is for Northfina staff. Choose Staff in the top bar to open it.",
+  "demo.label": "Demo controls",
+  "demo.badge": "Demo",
+  "demo.forward": "Move time forward",
+  "demo.plusDay": "+1 day",
+  "demo.plusWeek": "+1 week",
+  "demo.plusMonth": "+1 month",
+  "demo.jumpTo": "Jump to",
+  "demo.go": "Go",
+  "demo.reset": "Reset demo",
+  "demo.confirmReset": "Reset the demo? Every application, contract, invoice and waiting-list change is deleted, the data pack is loaded again and the date goes back to 1 January 2026."
 }

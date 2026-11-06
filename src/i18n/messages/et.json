@@ -6,7 +6,6 @@
   "nav.skipToContent": "Liigu sisu juurde",
   "nav.language": "Keel",
   "nav.timeTravel": "Ajarännak",
-  "nav.today": "Tagasi tänasesse",
   "catalogue.title": "Kataloog",
   "catalogue.intro": "Iga toodet saab liisida, tagastada, korda teha ja uuesti liisida.",
   "catalogue.itemCount": "{count} tk",
@@ -451,5 +450,15 @@
   "staff.expired.release": "Vabasta {count} lõppenud broneeringut",
   "staff.done.released": "Vabastati {applications} taotlust. {items} toodet on taas saadaval.",
   "staff.audit.action.application.hold_expired": "Vabastas lõppenud broneeringu",
-  "common.staffOnly": "See töölaud on Northfina töötajatele. Vali ülaribalt Töötajad."
+  "common.staffOnly": "See töölaud on Northfina töötajatele. Vali ülaribalt Töötajad.",
+  "demo.label": "Demo juhtnupud",
+  "demo.badge": "Demo",
+  "demo.forward": "Liiguta aega edasi",
+  "demo.plusDay": "+1 päev",
+  "demo.plusWeek": "+1 nädal",
+  "demo.plusMonth": "+1 kuu",
+  "demo.jumpTo": "Hüppa kuupäevale",
+  "demo.go": "Mine",
+  "demo.reset": "Lähtesta demo",
+  "demo.confirmReset": "Kas lähtestada demo? Kõik taotlused, lepingud, arved ja järjekorra muudatused kustutatakse, andmepakett laaditakse uuesti ja kuupäev läheb tagasi 1. jaanuarile 2026."
 }

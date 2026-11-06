@@ -129,7 +129,11 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 ## Cross-cutting
 
 - Every domain function takes an ISO date; `src/server/today.ts` supplies "today", and an
-  as-of override doubles as the demo's time-travel mode.
+  as-of override doubles as the demo's time-travel mode. Time travel only moves forward
+  (contracts, invoices and offers are written on their day, so going back would contradict
+  the records); "Reset demo" rebuilds the database from the data pack in one audited
+  transaction and restarts on 1 Jan 2026, the first day of price list v1, so every scenario
+  card can be replayed going forward. The demo controls sit in their own bar above the nav.
 - App-side asset states add `leased`; every `reserved` is backed by a Reservation row
   (who, why, until when).
 - All the repo rules in RULES.md apply: pure tested domain code, integer cents, API

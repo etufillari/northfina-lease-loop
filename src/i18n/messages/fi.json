@@ -6,7 +6,6 @@
   "nav.skipToContent": "Siirry sisältöön",
   "nav.language": "Kieli",
   "nav.timeTravel": "Aikamatka",
-  "nav.today": "Takaisin tähän päivään",
   "catalogue.title": "Valikoima",
   "catalogue.intro": "Jokaisen laitteen voi vuokrata, palauttaa, kunnostaa ja vuokrata uudelleen.",
   "catalogue.itemCount": "{count} kpl",
@@ -451,5 +450,15 @@
   "staff.expired.release": "Vapauta {count} päättynyttä varausta",
   "staff.done.released": "Vapautettiin {applications} hakemusta. {items} tuotetta on taas saatavilla.",
   "staff.audit.action.application.hold_expired": "Vapautti päättyneen varauksen",
-  "common.staffOnly": "Tämä työpöytä on Northfinan henkilökunnalle. Valitse yläpalkista Henkilökunta."
+  "common.staffOnly": "Tämä työpöytä on Northfinan henkilökunnalle. Valitse yläpalkista Henkilökunta.",
+  "demo.label": "Demon ohjaimet",
+  "demo.badge": "Demo",
+  "demo.forward": "Siirrä aikaa eteenpäin",
+  "demo.plusDay": "+1 päivä",
+  "demo.plusWeek": "+1 viikko",
+  "demo.plusMonth": "+1 kuukausi",
+  "demo.jumpTo": "Siirry päivään",
+  "demo.go": "Siirry",
+  "demo.reset": "Nollaa demo",
+  "demo.confirmReset": "Nollataanko demo? Kaikki hakemukset, sopimukset, laskut ja jonomuutokset poistetaan, aineisto ladataan uudelleen ja päivä palaa 1.1.2026."
 }

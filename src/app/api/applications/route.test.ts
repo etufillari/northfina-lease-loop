@@ -22,7 +22,14 @@ vi.mock('@/server/applications/applications', async () => {
       termMonths: z.number().int().positive(),
       answers: z
         .record(z.string(), z.union([z.string(), z.number(), z.array(z.string())]))
-        .default({}),
+        .default({})
+        .superRefine((answers, ctx) => {
+          for (const id of ['q_email', 'q_signatory_email']) {
+            if (answers[id] !== undefined && !z.email().safeParse(answers[id]).success) {
+              ctx.addIssue({ code: 'custom', path: [id], message: 'Invalid email address' });
+            }
+          }
+        }),
       actor: z.string().trim().min(1).max(100),
     }),
   };
@@ -91,6 +98,12 @@ describe('POST /api/applications', () => {
       success: false,
       error: { code: 'VALIDATION_ERROR' },
     });
+    expect(createApplicationMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed email answers before calling the application service', async () => {
+    const response = await POST(request({ ...validBody, answers: { q_email: 'bad' } }), undefined);
+    expect(response.status).toBe(400);
     expect(createApplicationMock).not.toHaveBeenCalled();
   });
 

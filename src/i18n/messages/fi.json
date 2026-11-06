@@ -45,6 +45,7 @@
   "application.flow.previewFailed": "Kyselyn päivitys epäonnistui. Yritä uudelleen.",
   "application.flow.submitFailed": "Sopimuksen luonti epäonnistui. Yritä uudelleen.",
   "application.flow.answerRequired": "Vastaa tähän kysymykseen ennen jatkamista.",
+  "application.flow.emailInvalid": "Anna kelvollinen sähköpostiosoite.",
   "application.flow.moneyHint": "Anna euroissa oleva summa kokonaisena tai kahdella desimaalilla.",
   "application.flow.listHint": "Anna yksi tieto riville.",
   "application.flow.ready": "Hakemuksesi on hyväksytty",

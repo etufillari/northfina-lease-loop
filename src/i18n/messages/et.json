@@ -45,6 +45,7 @@
   "application.flow.previewFailed": "Küsimustiku uuendamine ebaõnnestus. Proovi uuesti.",
   "application.flow.submitFailed": "Lepingu loomine ebaõnnestus. Proovi uuesti.",
   "application.flow.answerRequired": "Enne jätkamist vasta küsimusele.",
+  "application.flow.emailInvalid": "Sisesta kehtiv e-posti aadress.",
   "application.flow.moneyHint": "Sisesta täiseurodes summa või kasuta kahte komakohta.",
   "application.flow.listHint": "Sisesta iga üksus eraldi reale.",
   "application.flow.ready": "Sinu taotlus on heaks kiidetud",

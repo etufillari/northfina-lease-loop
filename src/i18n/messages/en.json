@@ -45,6 +45,7 @@
   "application.flow.previewFailed": "We couldn't update the questionnaire. Please try again.",
   "application.flow.submitFailed": "We couldn't create the agreement. Please try again.",
   "application.flow.answerRequired": "Please answer this question before continuing.",
+  "application.flow.emailInvalid": "Enter a valid email address.",
   "application.flow.moneyHint": "Enter a whole euro amount or use two decimal places.",
   "application.flow.listHint": "Enter one item per line.",
   "application.flow.ready": "Your application is approved",

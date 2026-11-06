@@ -109,6 +109,7 @@ export default async function AssetLeasePage({
               previewFailed: t('application.flow.previewFailed'),
               submitFailed: t('application.flow.submitFailed'),
               answerRequired: t('application.flow.answerRequired'),
+              emailInvalid: t('application.flow.emailInvalid'),
               moneyHint: t('application.flow.moneyHint'),
               listHint: t('application.flow.listHint'),
               ready: t('application.flow.ready'),

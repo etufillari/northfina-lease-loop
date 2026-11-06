@@ -5,6 +5,8 @@ import { createTestDb } from '../../../tests/helpers/test-db';
 import { seedAssets } from '../assets/assets';
 import { seedCustomers } from '../assets/customers';
 import {
+  applicationPreviewRequestSchema,
+  applicationSubmissionRequestSchema,
   createApplication,
   createApplicationPreview,
   type ApplicationPreviewRequest,
@@ -63,6 +65,29 @@ const completeSubmission: ApplicationSubmissionRequest = {
 };
 
 describe('createApplicationPreview', () => {
+  it('validates email answers in the request schema', () => {
+    expect(
+      applicationPreviewRequestSchema.safeParse({ ...request, answers: { q_email: 'bad' } }).success
+    ).toBe(false);
+    expect(
+      applicationPreviewRequestSchema.safeParse({
+        ...request,
+        answers: { q_signatory_email: 'bad' },
+      }).success
+    ).toBe(false);
+    expect(
+      applicationPreviewRequestSchema.safeParse({
+        ...request,
+        answers: { q_email: 'good@example.com' },
+      }).success
+    ).toBe(true);
+    expect(
+      applicationSubmissionRequestSchema.safeParse({
+        ...completeSubmission,
+        answers: { q_email: 'bad' },
+      }).success
+    ).toBe(false);
+  });
   it('returns the quote and initial questions with explanations', async () => {
     const result = await createApplicationPreview(db, request);
 

@@ -8,6 +8,9 @@ import { db } from '@/server/db';
 const bodySchema = z.strictObject({
   customerId: z.string().trim().min(1),
   minimumCondition: assetConditionSchema,
+  maxMonthlyNetRentCents: z.number().int().nonnegative(),
+  preferredTermMonths: z.union([z.literal(12), z.literal(24), z.literal(36), z.literal(48)]),
+  neededBy: z.iso.date(),
 });
 
 export const POST = handleRoute(
@@ -19,6 +22,9 @@ export const POST = handleRoute(
         assetId: id,
         customerId: body.customerId,
         minimumCondition: body.minimumCondition,
+        maxMonthlyNetRentCents: body.maxMonthlyNetRentCents,
+        preferredTermMonths: body.preferredTermMonths,
+        neededBy: body.neededBy,
         actor: body.customerId,
       }),
       { status: 201 }

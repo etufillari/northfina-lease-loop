@@ -35,6 +35,9 @@ export default async function WishlistPage({ params }: PageProps<'/[locale]/deal
                 <th className="px-4 py-3 font-semibold">{t('dealer.wishlistAsset')}</th>
                 <th className="px-4 py-3 font-semibold">{t('dealer.wishlistCustomer')}</th>
                 <th className="px-4 py-3 font-semibold">{t('dealer.wishlistCondition')}</th>
+                <th className="px-4 py-3 font-semibold">{t('dealer.wishlistBudget')}</th>
+                <th className="px-4 py-3 font-semibold">{t('dealer.wishlistTerm')}</th>
+                <th className="px-4 py-3 font-semibold">{t('dealer.wishlistNeededBy')}</th>
                 <th className="px-4 py-3 font-semibold">{t('dealer.wishlistRequested')}</th>
               </tr>
             </thead>
@@ -51,6 +54,11 @@ export default async function WishlistPage({ params }: PageProps<'/[locale]/deal
                   <td className="px-4 py-3">
                     {t(`condition.${assetConditionSchema.parse(request.minimum_condition)}`)}
                   </td>
+                  <td className="px-4 py-3">
+                    {(request.max_monthly_net_rent_cents / 100).toFixed(0)} €
+                  </td>
+                  <td className="px-4 py-3">{request.preferred_term_months}</td>
+                  <td className="px-4 py-3">{formatIsoDate(request.needed_by, locale)}</td>
                   <td className="px-4 py-3">
                     {' '}
                     {formatIsoDate(request.created_at.toISOString().slice(0, 10), locale)}

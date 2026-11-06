@@ -37,6 +37,9 @@ describe('wishlist requests', () => {
       assetId: 'ebike-009',
       customerId: 'cust-pekka',
       minimumCondition: 'good',
+      maxMonthlyNetRentCents: 20_000,
+      preferredTermMonths: 24,
+      neededBy: '2027-01-01',
       actor: 'cust-pekka',
     });
 
@@ -57,6 +60,9 @@ describe('wishlist requests', () => {
       assetId: 'ebike-009',
       customerId: 'cust-pekka',
       minimumCondition: 'fair' as const,
+      maxMonthlyNetRentCents: 20_000,
+      preferredTermMonths: 24 as const,
+      neededBy: '2027-01-01',
       actor: 'cust-pekka',
     };
     await createWishlistRequest(db, input);
@@ -73,6 +79,9 @@ describe('wishlist requests', () => {
       assetId: 'ebike-009',
       customerId: 'cust-pekka',
       minimumCondition: 'like_new',
+      maxMonthlyNetRentCents: 20_000,
+      preferredTermMonths: 36,
+      neededBy: '2027-01-01',
       actor: 'cust-pekka',
     });
 

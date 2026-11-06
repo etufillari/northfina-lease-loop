@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { assetConditionSchema } from '@/data/schemas';
+import { assetConditionSchema, centsSchema, isoDateSchema } from '@/data/schemas';
 import { ApiError } from './api-response';
 import { withAudit } from './audit';
 import type { PrismaClient } from './prisma-client';
@@ -9,6 +9,9 @@ const createWishlistRequestSchema = z.strictObject({
   assetId: z.string().min(1),
   customerId: z.string().trim().min(1),
   minimumCondition: assetConditionSchema,
+  maxMonthlyNetRentCents: centsSchema,
+  preferredTermMonths: z.union([z.literal(12), z.literal(24), z.literal(36), z.literal(48)]),
+  neededBy: isoDateSchema,
   actor: z.string().trim().min(1),
 });
 
@@ -38,6 +41,9 @@ export async function createWishlistRequest(db: PrismaClient, input: CreateWishl
         assetId: asset.id,
         customerId: request.customerId,
         minimumCondition: request.minimumCondition,
+        maxMonthlyNetRentCents: request.maxMonthlyNetRentCents,
+        preferredTermMonths: request.preferredTermMonths,
+        neededBy: request.neededBy,
       },
     },
     async (tx) => {
@@ -61,6 +67,9 @@ export async function createWishlistRequest(db: PrismaClient, input: CreateWishl
           asset_id: asset.id,
           customer_id: request.customerId,
           minimum_condition: request.minimumCondition,
+          max_monthly_net_rent_cents: request.maxMonthlyNetRentCents,
+          preferred_term_months: request.preferredTermMonths,
+          needed_by: request.neededBy,
           status: 'requested',
         },
       });

@@ -109,7 +109,7 @@ export default async function AssetPricePage({
             t={t}
           />
           {asset.status === 'reserved' ? (
-            <WishlistRequest assetId={asset.id} locale={locale} />
+            <WishlistRequest assetId={asset.id} locale={locale} today={today} />
           ) : null}
         </>
       )}

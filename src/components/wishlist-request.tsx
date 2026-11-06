@@ -7,13 +7,16 @@ import type { Locale } from '@/i18n/locales';
 
 const conditions: AssetCondition[] = ['new', 'like_new', 'good', 'fair', 'poor'];
 
-type Props = { assetId: string; locale: Locale };
+type Props = { assetId: string; locale: Locale; today: string };
 type ResponseBody = { success: true } | { success: false; error: { code: string } };
 
-export function WishlistRequest({ assetId, locale }: Props) {
+export function WishlistRequest({ assetId, locale, today }: Props) {
   const t = getT(locale);
   const [customerId, setCustomerId] = useState('');
   const [minimumCondition, setMinimumCondition] = useState<AssetCondition>('good');
+  const [maxMonthlyRent, setMaxMonthlyRent] = useState('');
+  const [preferredTermMonths, setPreferredTermMonths] = useState(24);
+  const [neededBy, setNeededBy] = useState(today);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +28,13 @@ export function WishlistRequest({ assetId, locale }: Props) {
       const response = await fetch(`/api/assets/${encodeURIComponent(assetId)}/wishlist`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ customerId, minimumCondition }),
+        body: JSON.stringify({
+          customerId,
+          minimumCondition,
+          maxMonthlyNetRentCents: Number(maxMonthlyRent) * 100,
+          preferredTermMonths,
+          neededBy,
+        }),
       });
       const body = (await response.json()) as ResponseBody;
       if (!response.ok || !body.success) {
@@ -83,11 +92,51 @@ export function WishlistRequest({ assetId, locale }: Props) {
           </option>
         ))}
       </select>
+      <label className="mt-4 block text-sm font-medium" htmlFor="wishlist-budget">
+        {t('wishlist.maxMonthlyRent')}
+      </label>
+      <input
+        id="wishlist-budget"
+        type="number"
+        min="1"
+        step="1"
+        value={maxMonthlyRent}
+        onChange={(event) => setMaxMonthlyRent(event.target.value)}
+        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900"
+      />
+      <label className="mt-4 block text-sm font-medium" htmlFor="wishlist-term">
+        {t('wishlist.term')}
+      </label>
+      <select
+        id="wishlist-term"
+        value={preferredTermMonths}
+        onChange={(event) => setPreferredTermMonths(Number(event.target.value))}
+        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900"
+      >
+        {[12, 24, 36, 48].map((months) => (
+          <option key={months} value={months}>
+            {t('price.term.value', { months })}
+          </option>
+        ))}
+      </select>
+      <label className="mt-4 block text-sm font-medium" htmlFor="wishlist-needed-by">
+        {t('wishlist.neededBy')}
+      </label>
+      <input
+        id="wishlist-needed-by"
+        type="date"
+        min={today}
+        value={neededBy}
+        onChange={(event) => setNeededBy(event.target.value)}
+        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900"
+      />
       {error ? <p className="mt-3 text-red-700 dark:text-red-300">{error}</p> : null}
       <button
         type="button"
         onClick={submit}
-        disabled={isSubmitting || !customerId.trim()}
+        disabled={
+          isSubmitting || !customerId.trim() || !maxMonthlyRent || Number(maxMonthlyRent) <= 0
+        }
         className="mt-5 rounded-xl bg-amber-700 px-5 py-3 font-medium text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? t('wishlist.submitting') : t('wishlist.submit')}

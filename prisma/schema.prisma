@@ -215,6 +215,9 @@ model WishlistRequest {
   asset                 Asset    @relation(fields: [asset_id], references: [id])
   customer_id           String
   minimum_condition     String
+  max_monthly_net_rent_cents Int
+  preferred_term_months Int
+  needed_by             String
   status                String // requested | matched | cancelled
 
   @@index([asset_id, status])

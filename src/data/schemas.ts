@@ -28,7 +28,9 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned']);
+// `leased` and `sold` are app-side only: the data pack ships no asset mid-lease or bought
+// out (docs/DECISIONS.md). Every `reserved` is backed by a Reservation row saying why.
+export const assetStatusSchema = z.enum(['available', 'reserved', 'leased', 'returned', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */
@@ -49,7 +51,13 @@ export const assetSchema = z.strictObject({
   model_year: z.number().int(),
   serial_number: z.string().min(1),
   condition: assetConditionSchema,
-  usage: z.strictObject({ unit: usageUnitSchema, value: z.number().int().nonnegative() }),
+  usage: z.strictObject({
+    unit: usageUnitSchema,
+    /** Since the last reset (a new battery; a farm machine's major service). */
+    value: z.number().int().nonnegative(),
+    /** App-side lifetime counter (never resets); the data pack does not have it. */
+    total: z.number().int().nonnegative().optional(),
+  }),
   /** How many lease contracts this item has already been through. */
   previous_lives: z.number().int().nonnegative(),
   status: assetStatusSchema,
@@ -336,10 +344,18 @@ export const secondLifeRequestSchema = z.strictObject({
   id: z.string().min(1),
   category: assetCategorySchema,
   max_monthly_net_rent_cents: centsSchema,
+  /** The low end of the budget range: an offer must cost at least this much. Default: 0. */
+  min_monthly_net_rent_cents: centsSchema.default(0),
   /** Worst condition this person accepts. */
   min_condition: assetConditionSchema,
   preferred_term_months: z.number().int().positive(),
   needed_by: isoDateSchema,
+  /** When this person joined the waiting list. Matching is first come, first served. */
+  joined_on: isoDateSchema,
+  /** How many items this entry wants (wait-08's three office laptops). Default: one. */
+  quantity: z.number().int().positive().default(1),
+  /** The customer behind the entry, when they have an account (wait-02 is Pekka, the courier). */
+  customer_id: z.string().min(1).optional(),
   who: z.string(),
 });
 export type SecondLifeRequest = z.infer<typeof secondLifeRequestSchema>;

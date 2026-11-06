@@ -1,0 +1,377 @@
+'use client';
+// During-contract actions. The early exit ALWAYS shows the full calculation first (card 8);
+// confirming is a separate click. End-of-term buy/return unlock when the term is over.
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import type { BuyoutInvoicePreview } from '@/domain/buyout';
+import { formatEuro } from '@/domain/money';
+import { grossCents } from '@/domain/vat';
+import { formatIsoDate } from '@/i18n/format';
+import { getT, type MessageKey } from '@/i18n/get-t';
+import { intlLocale, type Locale } from '@/i18n/locales';
+import { BuyoutPurchase } from './buyout-purchase';
+import { parsedReadings, UsageReadingFields, type ReturnItem } from './usage-reading-fields';
+
+type ExitBreakdown = {
+  usedMonths: number;
+  /** The months paid for: the months used, but never fewer than the 6-month minimum. */
+  chargedMonths: number;
+  coveringTermMonths: number;
+  fairMonthlyNetCents: number;
+  fairTotalNetCents: number;
+  paidNetCents: number;
+  handlingFeeNetCents: number;
+  exitNetCents: number;
+  vatRatePercent: number;
+  exitVatCents: number;
+  exitTotalCents: number;
+};
+
+export function ContractActions({
+  locale,
+  contractId,
+  asOf,
+  endsOn,
+  today,
+  buyoutInvoice,
+  pricesInclVat,
+  purchaseAtEnd,
+  termMonthsTotal,
+  returnItems,
+  nomination,
+  handoverReset,
+}: {
+  locale: Locale;
+  contractId: string;
+  asOf: string | null;
+  endsOn: string;
+  today: string;
+  /** The buyout invoice as it would be issued; null when no VAT rate is known for it. */
+  buyoutInvoice: BuyoutInvoicePreview | null;
+  /** Consumers see prices with VAT, businesses net. */
+  pricesInclVat: boolean;
+  purchaseAtEnd: boolean;
+  termMonthsTotal: number;
+  /** The items a return hands back, each needing its meter reading. */
+  returnItems: ReturnItem[];
+  /** The current successor invitation (not yet answered) or accepted nomination. */
+  nomination: { name: string; accepted: boolean } | null;
+  /** Mandatory work before the next user (a laptop's data wipe): paid on site at the store. */
+  handoverReset: { netCents: number; rateBasisPoints: number; ratePercent: number } | null;
+}) {
+  const t = getT(locale);
+  const router = useRouter();
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const suffix = asOf ? `?asOf=${asOf}` : '';
+  const [preview, setPreview] = useState<ExitBreakdown | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [transferToken, setTransferToken] = useState<string | null>(null);
+  const [nomineeEmail, setNomineeEmail] = useState('');
+  const [nominated, setNominated] = useState(false);
+  const termOver = today >= endsOn;
+  /** An accepted successor: the item is promised, so no buyout and no early exit. */
+  const promised = nomination?.accepted === true;
+  const [typedReadings, setTypedReadings] = useState<Record<string, string>>({});
+  const usageReadings = parsedReadings(returnItems, typedReadings);
+  const readingFields = (
+    <UsageReadingFields
+      locale={locale}
+      items={returnItems}
+      typed={typedReadings}
+      onChange={(assetId, value) => setTypedReadings((all) => ({ ...all, [assetId]: value }))}
+    />
+  );
+
+  async function createLink() {
+    setBusy(true);
+    const response = await fetch(`/api/contracts/${contractId}/transfer${suffix}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const body = await response.json();
+    setBusy(false);
+    if (body.success) setTransferToken(body.data.token);
+    else window.alert(body.error?.message ?? t('common.error'));
+  }
+
+  async function nominate() {
+    if (!nomineeEmail) return;
+    setBusy(true);
+    const response = await fetch(`/api/contracts/${contractId}/nominate${suffix}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: nomineeEmail }),
+    });
+    const body = await response.json();
+    setBusy(false);
+    if (body.success) {
+      setNominated(true);
+      return;
+    }
+    const known: Record<string, MessageKey> = {
+      UNKNOWN_NOMINEE: 'passOn.error.unknownNominee',
+      SELF_NOMINATION: 'passOn.error.self',
+      BUYING: 'passOn.buyingNote',
+    };
+    const key = known[body.error?.code as string];
+    window.alert(key ? t(key) : (body.error?.message ?? t('common.error')));
+  }
+
+  async function loadPreview() {
+    setBusy(true);
+    const response = await fetch(`/api/contracts/${contractId}/early-exit${suffix}`);
+    const body = await response.json();
+    setBusy(false);
+    if (body.success) setPreview(body.data.breakdown);
+  }
+
+  async function post(path: string, payload: Record<string, unknown>) {
+    setBusy(true);
+    const response = await fetch(`/api/contracts/${contractId}/${path}${suffix}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    setBusy(false);
+    if (body.success) {
+      setPreview(null);
+      router.refresh();
+    } else {
+      window.alert(body.error?.message ?? t('common.error'));
+    }
+  }
+
+  return (
+    <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+      <h2 className="text-sm font-semibold">{t('contract.actions')}</h2>
+
+      <div className="mt-3">
+        <h3 className="text-sm font-medium">
+          {termOver ? t('endOfTerm.title') : t('buyout.title')}
+        </h3>
+        {!termOver ? (
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            {t('endOfTerm.notYet', { date: formatIsoDate(endsOn, locale) })}
+          </p>
+        ) : null}
+        {/* An ACCEPTED successor is a promise: the item can only run to the end of the
+            term and be returned — no buyout, no early exit (the server refuses too). */}
+        {promised ? (
+          <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
+            {t('passOn.lockedNote', { name: nomination!.name })}
+          </p>
+        ) : (
+          <div className="mt-2">
+            <BuyoutPurchase
+              locale={locale}
+              contractId={contractId}
+              suffix={suffix}
+              invoice={buyoutInvoice}
+              pricesInclVat={pricesInclVat}
+              purchaseAtEnd={purchaseAtEnd}
+              termOver={termOver}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
+        {!termOver ? (
+          promised ? null : (
+            <button
+              type="button"
+              onClick={loadPreview}
+              disabled={busy}
+              className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+            >
+              {t('exit.button')}
+            </button>
+          )
+        ) : (
+          <div className="w-full">
+            {readingFields}
+            <button
+              type="button"
+              disabled={busy || usageReadings === null}
+              onClick={() => {
+                if (window.confirm(t('endOfTerm.confirmReturn'))) {
+                  void post('end-of-term', { action: 'return', usageReadings });
+                }
+              }}
+              className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+            >
+              {t('endOfTerm.return')}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
+        <h3 className="text-sm font-semibold">{t('passOn.title')}</h3>
+        {/* Two distinct routes: hand the lease over NOW (a take-over mid-term), or name who
+            gets the item when the lease ENDS — unless the customer is buying the item. */}
+        {purchaseAtEnd ? (
+          <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+            {t('passOn.buyingNote')}
+          </p>
+        ) : null}
+        {!termOver ? (
+          <div className="mt-3">
+            <h4 className="text-sm font-medium">{t('passOn.transferTitle')}</h4>
+            <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+              {t('passOn.transferIntro')}
+            </p>
+            {handoverReset ? (
+              <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+                {t('passOn.storeNote', {
+                  amount: `${euro(
+                    pricesInclVat
+                      ? grossCents(handoverReset.netCents, handoverReset.rateBasisPoints)
+                      : handoverReset.netCents
+                  )} ${
+                    pricesInclVat
+                      ? t('price.inclVat', { rate: handoverReset.ratePercent })
+                      : t('price.exclVat')
+                  }`,
+                })}
+              </p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {transferToken ? (
+                <p className="text-sm">
+                  {t('passOn.linkHint')}{' '}
+                  <a
+                    href={`/${locale}/transfer/${transferToken}`}
+                    className="font-medium break-all text-emerald-800 underline dark:text-emerald-300"
+                  >
+                    {`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/transfer/${transferToken}`}
+                  </a>
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={createLink}
+                  className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+                >
+                  {t('passOn.createLink')}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+        {!purchaseAtEnd ? (
+          <div
+            className={
+              termOver ? 'mt-4' : 'mt-4 border-t border-stone-100 pt-4 dark:border-stone-800'
+            }
+          >
+            <h4 className="text-sm font-medium">{t('passOn.nominateTitle')}</h4>
+            <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+              {t('passOn.nominateIntro')}
+            </p>
+          </div>
+        ) : null}
+        <div className={`mt-2 flex-wrap items-center gap-2 ${!purchaseAtEnd ? 'flex' : 'hidden'}`}>
+          <input
+            type="email"
+            value={nomineeEmail}
+            onChange={(event) => setNomineeEmail(event.target.value)}
+            placeholder={t('passOn.nominate')}
+            aria-label={t('passOn.nominate')}
+            className="w-64 rounded-lg border border-stone-300 px-3 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-900"
+          />
+          <button
+            type="button"
+            disabled={busy || !nomineeEmail}
+            onClick={nominate}
+            className="rounded-xl px-4 py-1.5 text-sm font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+          >
+            {t('passOn.nominateButton')}
+          </button>
+          {nominated ? (
+            <span className="text-sm text-emerald-800 dark:text-emerald-300">
+              {t('passOn.nominated')}
+            </span>
+          ) : null}
+        </div>
+        {nomination && !nominated ? (
+          <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
+            {nomination.accepted
+              ? t('passOn.accepted', { name: nomination.name })
+              : t('passOn.invited', { name: nomination.name })}
+          </p>
+        ) : null}
+      </div>
+
+      {preview ? (
+        <div className="mt-5 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:ring-stone-700">
+          <h3 className="font-semibold">{t('exit.title')}</h3>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+            {t('exit.intro', {
+              used: preview.usedMonths,
+              term: termMonthsTotal,
+              covering: preview.coveringTermMonths,
+            })}
+          </p>
+          {preview.chargedMonths > preview.usedMonths ? (
+            <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+              {t('exit.minimum', { months: preview.chargedMonths })}
+            </p>
+          ) : null}
+          <dl className="mt-3 space-y-1.5 text-sm tabular-nums">
+            <Row
+              label={t('exit.fairRent', {
+                used: preview.chargedMonths,
+                covering: preview.coveringTermMonths,
+                rate: euro(preview.fairMonthlyNetCents),
+              })}
+              value={euro(preview.fairTotalNetCents)}
+            />
+            <Row label={t('exit.paid')} value={`− ${euro(preview.paidNetCents)}`} />
+            <Row label={t('exit.fee')} value={`+ ${euro(preview.handlingFeeNetCents)}`} />
+            <Row label={t('exit.net')} value={euro(preview.exitNetCents)} bold />
+            <Row
+              label={`${t('price.vat')} ${preview.vatRatePercent} %`}
+              value={`+ ${euro(preview.exitVatCents)}`}
+            />
+            <Row
+              label={t('exit.total', { rate: preview.vatRatePercent })}
+              value={euro(preview.exitTotalCents)}
+              bold
+            />
+          </dl>
+          {readingFields}
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              disabled={busy || usageReadings === null}
+              onClick={() => post('early-exit', { usageReadings })}
+              className="rounded-xl bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800 disabled:opacity-50"
+            >
+              {t('exit.confirm')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreview(null)}
+              className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-white dark:ring-stone-600"
+            >
+              {t('exit.cancel')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className={`flex items-baseline justify-between gap-4 ${bold ? 'font-semibold' : ''}`}>
+      <dt className="text-stone-600 dark:text-stone-300">{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}

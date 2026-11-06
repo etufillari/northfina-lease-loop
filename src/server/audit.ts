@@ -1,7 +1,7 @@
 // Audit trail: every change to business data writes an AuditLog row in the SAME database
 // transaction as the change. If either write fails, both are rolled back, so the database
 // can never hold a change that nobody can explain.
-import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import type { AuditLog, Prisma, PrismaClient } from '@/generated/prisma/client';
 
 export type AuditEntry = {
   /** Who did it (a user id or name; there is no login in the starter). */
@@ -60,7 +60,46 @@ export async function listAuditLog(db: PrismaClient, limit = 50): Promise<AuditL
     orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     take: limit,
   });
-  return rows.map((row) => ({
+  return rows.map(toEntry);
+}
+
+export type AuditPage = {
+  entries: AuditLogEntry[];
+  /** Every row matching the filter, across all pages. */
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
+};
+
+/**
+ * One page of the WHOLE audit log, newest first, optionally only one record type or one
+ * record. The filter runs in the database, so it covers every row, not just recent ones.
+ * A page past the end is clamped to the last page.
+ */
+export async function pageAuditLog(
+  db: PrismaClient,
+  input: { page: number; pageSize: number; entityType?: string | null; entityId?: string | null }
+): Promise<AuditPage> {
+  const where = {
+    ...(input.entityType ? { entity_type: input.entityType } : {}),
+    ...(input.entityId ? { entity_id: input.entityId } : {}),
+  };
+  const pageSize = Math.max(1, Math.floor(input.pageSize));
+  const total = await db.auditLog.count({ where });
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(pages, Math.max(1, Math.floor(input.page)));
+  const rows = await db.auditLog.findMany({
+    where,
+    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+  return { entries: rows.map(toEntry), total, page, pageSize, pages };
+}
+
+function toEntry(row: AuditLog): AuditLogEntry {
+  return {
     id: row.id,
     created_at: row.created_at.toISOString(),
     actor: row.actor,
@@ -68,5 +107,5 @@ export async function listAuditLog(db: PrismaClient, limit = 50): Promise<AuditL
     entity_type: row.entity_type,
     entity_id: row.entity_id,
     details: row.details_json === null ? null : JSON.parse(row.details_json),
-  }));
+  };
 }

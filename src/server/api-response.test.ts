@@ -110,13 +110,21 @@ describe('handleRoute', () => {
 });
 
 describe('readJsonBody', () => {
-  const schema = z.object({ actor: z.string() });
+  const schema = z.strictObject({ note: z.string() });
   const post = (text: string) => new Request('http://localhost', { method: 'POST', body: text });
 
   it('returns the parsed, validated body', async () => {
-    await expect(readJsonBody(post('{"actor":"aino"}'), schema)).resolves.toEqual({
-      actor: 'aino',
+    await expect(readJsonBody(post('{"note":"aino"}'), schema)).resolves.toEqual({
+      note: 'aino',
     });
+  });
+
+  it('drops the legacy identity fields old browser tabs still send', async () => {
+    // Identity moved to the signed-in user; a tab loaded before that change still posts
+    // actor/customerId, and a strict schema must not refuse the request for it.
+    await expect(
+      readJsonBody(post('{"note":"aino","actor":"cust-aino","customerId":"cust-aino"}'), schema)
+    ).resolves.toEqual({ note: 'aino' });
   });
 
   it('throws INVALID_JSON for a body that is not JSON', async () => {
@@ -127,6 +135,6 @@ describe('readJsonBody', () => {
   });
 
   it('throws a ZodError for JSON of the wrong shape', async () => {
-    await expect(readJsonBody(post('{"actor":1}'), schema)).rejects.toBeInstanceOf(z.ZodError);
+    await expect(readJsonBody(post('{"note":1}'), schema)).rejects.toBeInstanceOf(z.ZodError);
   });
 });

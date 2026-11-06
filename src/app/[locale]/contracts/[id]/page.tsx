@@ -1,0 +1,267 @@
+// Spine steps 4–6: the locked contract, every invoice (with the VAT-change banner), and
+// the during-contract actions (early exit, buy-at-end opt-in, end-of-term buy or return).
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
+import { ContractActions } from '@/components/contract-actions';
+import { InvoiceTable } from '@/components/invoice-table';
+import { loadRefurbishmentCosts, loadVatRates } from '@/data/load';
+import type { AssetCategory } from '@/data/schemas';
+import { buyoutInvoicePreview } from '@/domain/buyout';
+import { addMonthsClamped } from '@/domain/calendar';
+import { formatEuro } from '@/domain/money';
+import { mandatoryHandoverCents } from '@/domain/second-life';
+import { pricesIncludeVat, vatRateOn } from '@/domain/vat';
+import { formatIsoDate } from '@/i18n/format';
+import { getT, type MessageKey } from '@/i18n/get-t';
+import { intlLocale, isLocale } from '@/i18n/locales';
+import { asOfFromPage } from '@/server/as-of';
+import { getContract, invoicesFor } from '@/server/contracts';
+import { db } from '@/server/db';
+import { termEndsOn } from '@/server/lifecycle';
+import { currentUser } from '@/server/current-user';
+
+export default async function ContractPage({
+  params,
+  searchParams,
+}: PageProps<'/[locale]/contracts/[id]'>) {
+  const { locale, id } = await params;
+  if (!isLocale(locale)) notFound();
+  await connection();
+
+  const t = getT(locale);
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const contract = await getContract(db, id);
+  if (!contract) notFound();
+
+  const { asOf, asOfParam } = await asOfFromPage(await searchParams);
+  const user = await currentUser();
+  const persona = user?.customerId ?? null;
+  const endsOn = termEndsOn(contract);
+  // Who is looking: the holder acts on it; a previous lessee sees the invoices for the
+  // months they used; staff see everything read-only; anyone else sees nothing.
+  const isHolder = persona === contract.customer_id;
+  const isStaff = user?.isStaff ?? false;
+  const myInvoices = persona ? invoicesFor(contract, persona) : [];
+  const isPreviousLessee = !isHolder && myInvoices.length > 0;
+  if (!isHolder && !isStaff && !isPreviousLessee) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight">{t('contract.title')}</h1>
+        <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+          {t('contract.notYours')}
+        </p>
+      </div>
+    );
+  }
+  const visibleInvoices = isStaff ? contract.invoices : myInvoices;
+  const someoneElsesInvoice = contract.invoices.find(
+    (i) => (i.customer_id ?? contract.customer_id) !== (persona ?? contract.customer_id)
+  );
+  // The holder's current successor invitation or nomination, to show where it stands.
+  const nominationRow = isHolder
+    ? await db.reservation.findFirst({
+        where: {
+          asset_id: { in: contract.assets.map((a) => a.asset_id) },
+          kind: { in: ['nomination', 'nomination_invite'] },
+          active: true,
+        },
+        orderBy: { id: 'desc' },
+      })
+    : null;
+  const nominee = nominationRow?.customer_id
+    ? await db.customer.findUnique({ where: { id: nominationRow.customer_id } })
+    : null;
+  // Consumers see prices with VAT, businesses net (docs/DECISIONS.md, VAT).
+  const holder = await db.customer.findUnique({
+    where: { id: contract.customer_id },
+    select: { type: true },
+  });
+  const pricesInclVat = pricesIncludeVat(holder?.type);
+  // The person each invoice is billed to (after a take-over not every row is the holder's).
+  const billedIds = [
+    ...new Set(visibleInvoices.map((invoice) => invoice.customer_id ?? contract.customer_id)),
+  ];
+  const billedCustomers = await db.customer.findMany({
+    where: { id: { in: billedIds } },
+    select: { id: true, name: true, email: true },
+  });
+  const billedTo = (customerId: string | null) => {
+    const row = billedCustomers.find((c) => c.id === (customerId ?? contract.customer_id));
+    return { name: row?.name ?? '', email: row?.email ?? '' };
+  };
+  const leasedAssets = await db.asset.findMany({
+    where: { id: { in: contract.assets.map((a) => a.asset_id) } },
+    select: {
+      id: true,
+      make: true,
+      model: true,
+      category: true,
+      usage_unit: true,
+      usage_total: true,
+    },
+    orderBy: { id: 'asc' },
+  });
+  const vatRates = await loadVatRates();
+  const vatNow = vatRateOn(vatRates, asOf);
+  // Hand-over work nobody may skip (a laptop's data wipe): the hand-over goes through the
+  // store and the successor pays this on site, so the giver is told up front.
+  const refurbishmentCosts = await loadRefurbishmentCosts();
+  const handoverResetNetCents = leasedAssets.reduce(
+    (sum, asset) =>
+      sum + mandatoryHandoverCents(asset.category as AssetCategory, refurbishmentCosts),
+    0
+  );
+  const buyout = buyoutInvoicePreview(
+    { buyoutNetCents: contract.buyout_net_cents, termEndsOn: endsOn, asOf },
+    vatRates
+  );
+
+  // The first invoice whose VAT rate differs from the previous one gets the banner. The
+  // banner names the STATUTORY change date from the rate table, not the invoice's due date.
+  const leaseInvoices = visibleInvoices.filter((invoice) => invoice.type === 'lease');
+  const changeIndex = leaseInvoices.findIndex(
+    (invoice, index) => index > 0 && invoice.vat_rate_bp !== leaseInvoices[index - 1]!.vat_rate_bp
+  );
+  const change = changeIndex > 0 ? leaseInvoices[changeIndex]! : null;
+  const before = changeIndex > 0 ? leaseInvoices[changeIndex - 1]! : null;
+  const changeLawDate =
+    change &&
+    (vatRates.rates.find((rate) => Math.round(rate.rate_percent * 100) === change.vat_rate_bp)
+      ?.valid_from ??
+      change.due_date);
+
+  // An invoice is open from its due date until the next one is due (a month later), then
+  // counts as paid — including the last one, which otherwise would stay open forever.
+  const invoiceState = (dueDate: string): 'paid' | 'open' | 'scheduled' => {
+    if (dueDate > asOf) return 'scheduled';
+    const latestDue = [...visibleInvoices].filter((i) => i.due_date <= asOf).at(-1);
+    const stillOpen = latestDue?.due_date === dueDate && asOf < addMonthsClamped(dueDate, 1);
+    return stillOpen ? 'open' : 'paid';
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <Link
+        href={`/${locale}/me${asOfParam ? `?asOf=${asOfParam}` : ''}`}
+        className="text-sm text-emerald-800 hover:underline dark:text-emerald-300"
+      >
+        ← {t('me.title')}
+      </Link>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight">{t('contract.title')}</h1>
+        <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-medium ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:ring-stone-700">
+          {t(`contract.status.${contract.status}` as MessageKey)}
+        </span>
+      </div>
+
+      <dl className="mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+        <Fact label={t('price.netRent')} value={euro(contract.monthly_net_rent_cents)} />
+        <Fact
+          label={t('contract.term')}
+          value={t('price.months', { months: contract.term_months })}
+        />
+        <Fact label={t('contract.startDate')} value={formatIsoDate(contract.start_date, locale)} />
+        <Fact label={t('contract.endsOn')} value={formatIsoDate(endsOn, locale)} />
+        <Fact label={t('price.financed')} value={euro(contract.financed_cents)} />
+        <Fact label={t('price.totalCost')} value={euro(contract.net_total_cents)} />
+        <Fact label={t('price.buyout')} value={euro(contract.buyout_net_cents)} />
+        <Fact
+          label={t('contract.product')}
+          value={leasedAssets.map((a) => `${a.make} ${a.model} (${a.id})`).join(', ')}
+        />
+      </dl>
+
+      {isPreviousLessee ? (
+        <p className="mt-6 rounded-xl bg-stone-100 p-4 text-sm text-stone-700 ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700">
+          {t('contract.passedOnNote')}
+        </p>
+      ) : null}
+      {isHolder && someoneElsesInvoice ? (
+        <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-base text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+          {t('contract.takenOverNote')}
+        </p>
+      ) : null}
+
+      {contract.status === 'active' && isHolder && persona ? (
+        <ContractActions
+          locale={locale}
+          contractId={contract.id}
+          asOf={asOf}
+          endsOn={endsOn}
+          today={asOf}
+          buyoutInvoice={buyout.ok ? buyout.preview : null}
+          pricesInclVat={pricesInclVat}
+          purchaseAtEnd={contract.purchase_at_end}
+          handoverReset={
+            handoverResetNetCents > 0 && vatNow.ok
+              ? {
+                  netCents: handoverResetNetCents,
+                  rateBasisPoints: vatNow.rateBasisPoints,
+                  ratePercent: vatNow.ratePercent,
+                }
+              : null
+          }
+          nomination={
+            nominationRow
+              ? {
+                  name: nominee?.name ?? '',
+                  accepted: nominationRow.kind === 'nomination',
+                }
+              : null
+          }
+          termMonthsTotal={contract.term_months}
+          returnItems={leasedAssets.map((a) => ({
+            id: a.id,
+            name: `${a.make} ${a.model}`,
+            unit: a.usage_unit,
+            total: a.usage_total,
+          }))}
+        />
+      ) : null}
+
+      <section className="mt-8">
+        <h2 className="text-xl font-semibold">{t('contract.invoices')}</h2>
+        {change && before ? (
+          <p className="mt-3 rounded-xl bg-sky-50 p-4 text-sm text-sky-900 ring-1 ring-sky-200 ring-inset dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800">
+            {t('contract.vatBanner', {
+              net: euro(contract.monthly_net_rent_cents),
+              from: before.vat_rate_bp / 100,
+              to: change.vat_rate_bp / 100,
+              date: formatIsoDate(changeLawDate || change.due_date, locale),
+              diff: euro(change.total_cents - before.total_cents),
+            })}
+          </p>
+        ) : null}
+        <InvoiceTable
+          locale={locale}
+          changedId={change?.id ?? null}
+          invoices={visibleInvoices.map((invoice) => ({
+            id: invoice.id,
+            number: invoice.number,
+            type: invoice.type,
+            due_date: invoice.due_date,
+            period_start: invoice.period_start,
+            period_end: invoice.period_end,
+            net_cents: invoice.net_cents,
+            vat_rate_bp: invoice.vat_rate_bp,
+            vat_cents: invoice.vat_cents,
+            total_cents: invoice.total_cents,
+            state: invoiceState(invoice.due_date),
+            billedTo: billedTo(invoice.customer_id),
+          }))}
+        />
+      </section>
+    </div>
+  );
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+      <dd className="font-medium">{value}</dd>
+    </div>
+  );
+}

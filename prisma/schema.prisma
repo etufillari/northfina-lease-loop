@@ -15,21 +15,239 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  // Usage since the last reset: a new battery (e-bikes, laptops) or a major service (farm
+  // machines). Refurbishment thresholds read it (src/domain/usage.ts).
+  usage_value             Int
+  // Lifetime usage, never reset; grows by the meter reading taken at each return.
+  usage_total             Int      @default(0)
+  // The wear baseline for the return inspection (src/domain/inspection.ts): the condition
+  // last SET (by the data pack or an upgrade at the desk, not by wear) and the lifetime usage
+  // at that moment. Wear is counted from here across leases. Null on rows from before.
+  wear_from_condition     String?
+  wear_from_total         Int?
+  previous_lives          Int
+  status                  String // available | reserved | returned
+  // Set by the second-life desk: refurbished value + refurbishment, quoted instead of the
+  // catalogue list price from then on (docs/DECISIONS.md "Re-price").
+  second_life_price_cents Int?
+  // A photo uploaded by staff (e.g. after refurbishment), served from public/images/assets/.
+  // Null means the conventional <id>.jpg in that folder, when such a file exists.
+  image_path              String?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   @@index([category])
+}
+
+// A person or business from data/customers.json, or one created in the app. Optional
+// columns belong to the other customer types; dates are ISO strings like the domain uses.
+model Customer {
+  id                       String   @id @default(cuid())
+  type                     String // consumer | sole_trader | company
+  name                     String
+  country                  String
+  city                     String   @default("")
+  email                    String
+  is_pep                   Boolean  @default(false)
+  story                    String?
+  birth_date               String? // ISO date, consumers and sole traders
+  employment               String?
+  monthly_net_income_cents Int?
+  business_id              String?
+  vat_registered           Boolean?
+  annual_revenue_cents     Int?
+  applicant_can_sign       Boolean?
+  beneficial_owners_json   String?
+  // Answers the customer chose to save as defaults, JSON { questionId: answer }.
+  saved_defaults_json      String?
+  // The catalogue category this customer last browsed; the catalogue opens on it next time.
+  preferred_category       String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+}
+
+// A priced offer, frozen at its quote date (the price lock of scenario card 2 hangs on it).
+model Quote {
+  id                        String        @id @default(cuid())
+  asset_id                  String
+  // Every asset in the quote (JSON array of ids). Assets are unique physical items, so a
+  // fleet is a group of DISTINCT assets priced as one banded total; asset_id is the first.
+  asset_ids_json            String?
+  customer_id               String?
+  quantity                  Int           @default(1)
+  quote_date                String // ISO; its price list version is what gets locked
+  price_list_version        Int
+  unit_list_price_cents     Int
+  list_price_cents          Int // unit × quantity: the banded total
+  down_payment_cents        Int
+  term_months               Int
+  financed_cents            Int
+  band                      String
+  factor_ppm                Int
+  monthly_net_rent_cents    Int
+  net_total_cents           Int
+  last_month_net_rent_cents Int
+  buyout_net_cents          Int
+  created_at                DateTime      @default(now())
+  applications              Application[]
+}
+
+// One customer's run through the question flow for one quote.
+model Application {
+  id                    String    @id @default(cuid())
+  quote                 Quote     @relation(fields: [quote_id], references: [id])
+  quote_id              String
+  customer_id           String
+  // draft | approved | awaiting_signature | manual_review | declined | signed | expired | cancelled
+  status                String    @default("draft")
+  answers_json          String    @default("{}")
+  decision_reasons_json String?
+  signatory_email       String?
+  hold_until            String? // ISO date: the 7-day hold after approval
+  // The lease start date the customer chose when submitting; signing uses it as given.
+  start_date            String?
+  // Set when this application takes over an existing contract via a transfer link:
+  // approval + signature transfer that contract instead of creating a new one.
+  transfer_contract_id  String?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+  contract              Contract?
+
+  @@index([customer_id])
+  @@index([status])
+}
+
+// A signed lease. Every money column is locked at signing; VAT is not here on purpose.
+model Contract {
+  id                        String          @id @default(cuid())
+  application               Application     @relation(fields: [application_id], references: [id])
+  application_id            String          @unique
+  customer_id               String
+  // active | ended_returned | ended_bought | ended_early_exit | transferred
+  status                    String          @default("active")
+  quote_date                String
+  price_list_version        Int
+  signed_date               String
+  start_date                String
+  term_months               Int
+  financed_cents            Int
+  monthly_net_rent_cents    Int
+  net_total_cents           Int
+  last_month_net_rent_cents Int
+  buyout_net_cents          Int
+  usage_purpose             String?
+  purchase_at_end           Boolean         @default(false)
+  transfer_token            String?         @unique
+  previous_contract_id      String?
+  ended_on                  String?
+  end_reason                String?
+  created_at                DateTime        @default(now())
+  updated_at                DateTime        @updatedAt
+  assets                    ContractAsset[]
+  invoices                  Invoice[]
+
+  @@index([customer_id])
+  @@index([status])
+}
+
+// Which physical items a contract covers (a fleet contract covers several).
+model ContractAsset {
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  contract_id String
+  asset_id    String
+
+  @@id([contract_id, asset_id])
+  @@index([asset_id])
+}
+
+// One row per invoice, created as a whole schedule at signing. The VAT rate is the one
+// valid on the due date; vat_rate_bp holds basis points (2550 = 25.5 %).
+model Invoice {
+  id           String   @id @default(cuid())
+  contract     Contract @relation(fields: [contract_id], references: [id])
+  contract_id  String
+  // Who pays it. A take-over moves the invoices not yet due to the new lessee; the earlier
+  // ones stay with the customer who used those months. Null on rows from before this field:
+  // read as the contract's current customer.
+  customer_id  String?
+  number       Int
+  type         String   @default("lease") // lease | buyout | early_exit
+  due_date     String
+  period_start String?
+  period_end   String?
+  net_cents    Int
+  vat_rate_bp  Int
+  vat_cents    Int
+  total_cents  Int
+  created_at   DateTime @default(now())
+
+  @@unique([contract_id, number])
+  @@index([contract_id])
+}
+
+// Why an asset is reserved, for whom and until when. Every `reserved` status has one.
+model Reservation {
+  id                String   @id @default(cuid())
+  asset_id          String
+  customer_id       String?
+  kind              String // approval_hold | awaiting_signatory | waitlist_offer | waitlist_pool | nomination
+  until             String // ISO date, 7 days by default
+  // The waiting-list entry a waitlist_offer or waitlist_pool hold is for.
+  waitlist_entry_id String?
+  active            Boolean  @default(true)
+  created_at        DateTime @default(now())
+
+  @@index([asset_id, active])
+  @@index([waitlist_entry_id])
+}
+
+// The second-life waiting list, seeded from data/second-life-demand.json.
+model WaitlistEntry {
+  id                         String   @id
+  category                   String
+  max_monthly_net_rent_cents Int
+  // The low end of the budget range: an offer must cost at least this much per month.
+  min_monthly_net_rent_cents Int      @default(0)
+  min_condition              String
+  preferred_term_months      Int
+  needed_by                  String
+  joined_on                  String
+  // How many items this entry wants; an offer fills it one asset at a time.
+  quantity                   Int      @default(1)
+  who                        String
+  // waiting | offered | accepted (application started) | leased | removed
+  status                     String   @default("waiting")
+  // The customer behind the entry; null for data-pack waiters with no account.
+  customer_id                String?
+  // Why an entry left the list: left | declined | offer_expired.
+  left_reason                String?
+  offered_asset_id           String?
+  created_at                 DateTime @default(now())
+  updated_at                 DateTime @updatedAt
+
+  @@index([customer_id])
+}
+
+// The item passport: every lifecycle event of an asset, across all its lives.
+model AssetEvent {
+  id           Int      @id @default(autoincrement())
+  asset_id     String
+  contract_id  String?
+  // e.g. leased | returned | refurbished | upgraded | bought | transferred | parts_bin
+  type         String
+  on_date      String // ISO as-of date of the event
+  details_json String?
+  created_at   DateTime @default(now())
+
+  @@index([asset_id])
 }
 
 // Who changed what, and when. Written in the same transaction as the change
@@ -45,4 +263,11 @@ model AuditLog {
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// The demo's shared clock: one row. Every browser (and persona) sees the same "today", so a
+// hand-over signed in another window happens on the same demo day the giver sees.
+model DemoClock {
+  id    Int    @id @default(1)
+  as_of String
 }

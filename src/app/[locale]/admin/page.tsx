@@ -216,7 +216,10 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
                 key={entry.id}
                 className="flex flex-wrap gap-x-3 border-b border-stone-100 pb-2 dark:border-stone-800"
               >
-                <time dateTime={entry.createdAt} className="text-stone-500 tabular-nums">
+                <time
+                  dateTime={entry.createdAt}
+                  className="text-stone-600 dark:text-stone-400 tabular-nums"
+                >
                   {new Intl.DateTimeFormat(intlLocale[locale], {
                     dateStyle: 'short',
                     timeStyle: 'short',
@@ -225,7 +228,9 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
                 </time>
                 <span className="font-mono font-medium">{entry.action}</span>
                 <span className="text-stone-700 dark:text-stone-300">{entry.actor}</span>
-                <span className="font-mono text-xs text-stone-500">{entry.entity}</span>
+                <span className="font-mono text-xs text-stone-600 dark:text-stone-400">
+                  {entry.entity}
+                </span>
               </li>
             ))}
           </ol>

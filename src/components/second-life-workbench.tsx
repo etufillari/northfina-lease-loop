@@ -223,7 +223,9 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
               />
             </label>
           </div>
-          <p className="mt-2 text-xs text-stone-500">{t('secondLife.modifiersNote')}</p>
+          <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
+            {t('secondLife.modifiersNote')}
+          </p>
 
           <h3 className="mt-6 text-base font-semibold">{t('secondLife.refurbish')}</h3>
           <label className="mt-3 block text-sm font-medium">
@@ -256,7 +258,7 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
                 <li key={step.id} className="flex justify-between gap-3">
                   <span>
                     🔒 {jobLabel(step.id, t)}{' '}
-                    <span className="text-xs text-stone-500">
+                    <span className="text-xs text-stone-600 dark:text-stone-400">
                       ({t(`secondLife.reason.${step.reason}`)})
                     </span>
                   </span>
@@ -264,7 +266,7 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
                 </li>
               ))
             ) : (
-              <li className="text-stone-500">{t('secondLife.noJobs')}</li>
+              <li className="text-stone-600 dark:text-stone-400">{t('secondLife.noJobs')}</li>
             )}
           </ul>
 
@@ -387,7 +389,10 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
           <h3 className="mt-5 text-sm font-semibold">{t('secondLife.waiting')}</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {ranked.map((fit) => (
-              <li key={fit.request.id} className={fit.fits ? 'font-medium' : 'text-stone-500'}>
+              <li
+                key={fit.request.id}
+                className={fit.fits ? 'font-medium' : 'text-stone-600 dark:text-stone-400'}
+              >
                 {fit.fits ? '✓' : '✗'} {fit.request.id} · {fit.request.who} ·{' '}
                 {t('secondLife.wants', {
                   months: fit.request.preferred_term_months,
@@ -402,7 +407,9 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-stone-500">{t('secondLife.rankingRule')}</p>
+          <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
+            {t('secondLife.rankingRule')}
+          </p>
         </section>
       </div>
 

@@ -98,7 +98,10 @@ export function PriceCalculator(props: PriceCalculatorProps) {
               aria-valuetext={t('price.months', { months: termMonths })}
               className="mt-3 w-full accent-emerald-700"
             />
-            <span aria-hidden="true" className="mt-1 flex justify-between text-xs text-stone-500">
+            <span
+              aria-hidden="true"
+              className="mt-1 flex justify-between text-xs text-stone-600 dark:text-stone-400"
+            >
               {terms.map((months) => (
                 <span key={months}>{months}</span>
               ))}
@@ -121,7 +124,10 @@ export function PriceCalculator(props: PriceCalculatorProps) {
               aria-valuetext={euro(downPaymentCents)}
               className="mt-3 w-full accent-emerald-700 disabled:opacity-50"
             />
-            <span aria-hidden="true" className="mt-1 flex justify-between text-xs text-stone-500">
+            <span
+              aria-hidden="true"
+              className="mt-1 flex justify-between text-xs text-stone-600 dark:text-stone-400"
+            >
               <span>{euro(range.minCents)}</span>
               <span>{euro(range.maxCents)}</span>
             </span>

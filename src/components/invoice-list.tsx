@@ -109,7 +109,7 @@ export function InvoiceList({ invoices, contractId, today, locale, t }: InvoiceL
                     className={
                       'border-b border-stone-100 dark:border-stone-800 ' +
                       (invoice === vatChange ? 'bg-amber-50 dark:bg-amber-950/50 ' : '') +
-                      (isIssued ? '' : 'text-stone-500 dark:text-stone-500')
+                      (isIssued ? '' : 'text-stone-600 dark:text-stone-400')
                     }
                   >
                     <td className="py-1.5 pr-3">
@@ -128,7 +128,7 @@ export function InvoiceList({ invoices, contractId, today, locale, t }: InvoiceL
                     <td className="py-1.5 pr-3 text-right">{euro(invoice.netCents)}</td>
                     <td className="py-1.5 pr-3 text-right">
                       {euro(invoice.vatCents)}{' '}
-                      <span className="text-xs text-stone-500">
+                      <span className="text-xs text-stone-600 dark:text-stone-400">
                         ({formatNumber(invoice.vatPercent, locale)} %)
                       </span>
                     </td>

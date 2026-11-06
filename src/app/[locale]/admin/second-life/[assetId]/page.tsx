@@ -86,7 +86,7 @@ export default async function WorkbenchPage({
         <div>
           <p className="text-stone-600 dark:text-stone-400">{asset.make}</p>
           <h1 className="text-3xl font-semibold tracking-tight">{asset.model}</h1>
-          <p className="mt-1 font-mono text-sm text-stone-500">
+          <p className="mt-1 font-mono text-sm text-stone-600 dark:text-stone-400">
             {asset.id} · {asset.serial_number}
           </p>
         </div>

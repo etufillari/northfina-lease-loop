@@ -71,7 +71,7 @@ export function EndOfTermChoices(props: EndOfTermChoicesProps) {
           >
             {buyout ? t('end.buy.button', { total: buyout.total }) : t('end.buy.title')}
           </button>
-          <p className="mt-2 text-xs text-stone-500">{t('end.buy.demo')}</p>
+          <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">{t('end.buy.demo')}</p>
         </section>
 
         <section className={cardClass}>

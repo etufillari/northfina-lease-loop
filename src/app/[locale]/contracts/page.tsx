@@ -53,7 +53,9 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
             return (
               <li key={contract.id}>
                 <article className="relative h-full rounded-2xl border border-stone-200 bg-white p-5 shadow-sm hover:border-emerald-300 dark:border-stone-800 dark:bg-stone-900">
-                  <p className="font-mono text-xs text-stone-500">{contractNumber(contract.id)}</p>
+                  <p className="font-mono text-xs text-stone-600 dark:text-stone-400">
+                    {contractNumber(contract.id)}
+                  </p>
                   <h2 className="mt-1 font-semibold">
                     <Link
                       href={`/${locale}/contracts/${contract.id}`}

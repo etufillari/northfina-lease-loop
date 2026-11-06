@@ -65,7 +65,7 @@ export function QuestionField({ question, value, error, onChange, locale, t }: Q
       case 'money':
         return (
           <div className="relative max-w-xs">
-            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-stone-500">
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-stone-600 dark:text-stone-400">
               €
             </span>
             <input
@@ -131,7 +131,7 @@ export function QuestionField({ question, value, error, onChange, locale, t }: Q
         {why}
       </p>
       <div className="mt-3">{field}</div>
-      {hint ? <p className="mt-1 text-xs text-stone-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">{hint}</p> : null}
       {error ? (
         <p id={errorId} className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">
           {t(`apply.error.${error}`)}

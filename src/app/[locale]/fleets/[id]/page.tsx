@@ -104,7 +104,7 @@ export default async function FleetOverviewPage({ params }: PageProps<'/[locale]
                         {name.get(application.assetId) ?? application.assetId}
                       </span>
                     )}
-                    <span className="block text-xs text-stone-500">
+                    <span className="block text-xs text-stone-600 dark:text-stone-400">
                       {application.assetId}
                       {contract
                         ? ` · ${t('fleet.contractNo', { number: contractNumber(contract.id) })}`

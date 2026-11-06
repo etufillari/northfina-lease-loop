@@ -32,6 +32,7 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
+  "price.metaTitle": "Lease Loop – hinta",
   "price.back": "← Takaisin valikoimaan",
   "price.date.label": "Hinnat päivänä",
   "price.date.today": "Takaisin tähän päivään",

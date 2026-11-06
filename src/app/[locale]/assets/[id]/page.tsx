@@ -1,4 +1,5 @@
 // One catalogue item: what it is, what it costs today, and the sliders to price a lease.
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -16,6 +17,13 @@ import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/assets/[id]'>): Promise<Metadata> {
+  const { locale } = await params;
+  return isLocale(locale) ? { title: getT(locale)('price.metaTitle') } : {};
+}
 
 export default async function AssetPricePage({
   params,

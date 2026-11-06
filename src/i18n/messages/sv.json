@@ -32,6 +32,7 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
+  "price.metaTitle": "Lease Loop – pris",
   "price.back": "← Tillbaka till katalogen",
   "price.date.label": "Priser den",
   "price.date.today": "Tillbaka till i dag",

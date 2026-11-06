@@ -32,6 +32,7 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
+  "price.metaTitle": "Lease Loop – price",
   "price.back": "← Back to catalogue",
   "price.date.label": "Prices on",
   "price.date.today": "Back to today",

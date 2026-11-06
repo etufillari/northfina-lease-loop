@@ -4,9 +4,14 @@
 // inspected condition and usage, priced by the second-life valuation (D-035). Pure; the browser
 // previews it and the server decides again with the same function (D-018).
 
-import type { SecondLifeRequest } from '@/data/schemas';
+import type { AssetCondition, SecondLifeRequest } from '@/data/schemas';
 import type { Inspection } from './end-of-term';
-import { secondLifeRentFor, type SecondLifeData, type SecondLifeItem } from './second-life';
+import {
+  secondLifeRentFor,
+  type SecondLifeData,
+  type SecondLifeItem,
+  type SecondLifeOption,
+} from './second-life';
 import { inSignupOrder, matchWaitingList, type RankedMatch } from './waiting-list';
 
 const WAITING_LIST_ID = /^wait-\d+$/;
@@ -59,4 +64,55 @@ export function waitingListChoiceProblem(
 ): WaitingListChoiceProblem | null {
   if (!demand.some((r) => r.id === requestId)) return 'unknown_waiting_list_entry';
   return ranked.some((m) => m.requestId === requestId) ? null : 'waiting_list_not_a_match';
+}
+
+export type HandOverPlan =
+  | { ok: true; target: AssetCondition; termMonths: number; monthlyNetRentCents: number }
+  | { ok: false; reason: 'too_early'; opensOn: string }
+  | { ok: false; reason: 'waiting_list_not_a_match' | 'no_price' };
+
+export interface HandOverPlanInput {
+  /** The ending's next lessee: a persona id, an email or a waiting-list id. */
+  nextLessee: string;
+  /** The term of the contract being ended: a named next person gets the same. */
+  contractTermMonths: number;
+  today: string;
+  /** The ending's effective date: the item is free from this day. */
+  handoverDate: string;
+  /** The waiting list ranked for the returned item today. */
+  ranked: readonly (Pick<RankedMatch, 'requestId' | 'termMonths'> & {
+    plan: Pick<RankedMatch['plan'], 'conditionAfter'>;
+  })[];
+  /** The conditions it can be re-listed at, cheapest first, with their rents. */
+  options: readonly Pick<SecondLifeOption, 'target' | 'rents'>[];
+}
+
+/**
+ * What "Hand it over now" re-lists the item at and quotes for the next person (#65). Not before
+ * the handover day: contract 1 runs until the day before, and a quote signed earlier would start
+ * contract 2 on top of it. A waiting-list entry gets the condition and term it asked for; anyone
+ * else the cheapest condition and the term they took over. Refuses before anything is written
+ * when that can't be priced.
+ */
+export function handOverPlan(input: HandOverPlanInput): HandOverPlan {
+  if (input.today < input.handoverDate) {
+    return { ok: false, reason: 'too_early', opensOn: input.handoverDate };
+  }
+  let target: AssetCondition | undefined;
+  let termMonths = input.contractTermMonths;
+  if (isWaitingListId(input.nextLessee)) {
+    const match = input.ranked.find((m) => m.requestId === input.nextLessee);
+    if (!match) return { ok: false, reason: 'waiting_list_not_a_match' };
+    target = match.plan.conditionAfter;
+    termMonths = match.termMonths;
+  } else {
+    target = input.options[0]?.target;
+  }
+  const rent = input.options
+    .find((o) => o.target === target)
+    ?.rents.find((r) => r.termMonths === termMonths)?.monthlyNetRentCents;
+  if (target === undefined || rent === undefined || rent === null) {
+    return { ok: false, reason: 'no_price' };
+  }
+  return { ok: true, target, termMonths, monthlyNetRentCents: rent };
 }

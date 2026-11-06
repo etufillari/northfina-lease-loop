@@ -6,7 +6,14 @@ import {
   loadSecondLifeDemand,
 } from '@/data/load';
 import type { SecondLifeRequest } from '@/data/schemas';
-import { isWaitingListId, passOnMatches, passOnReadyOn, waitingListChoiceProblem } from './pass-on';
+import {
+  handOverPlan,
+  type HandOverPlanInput,
+  isWaitingListId,
+  passOnMatches,
+  passOnReadyOn,
+  waitingListChoiceProblem,
+} from './pass-on';
 import type { SecondLifeData, SecondLifeItem } from './second-life';
 
 let data: SecondLifeData;
@@ -103,5 +110,92 @@ describe('waitingListChoiceProblem', () => {
   it('refuses someone on the list the item does not fit', () => {
     // wait-01: budget 45 € a month, below every rent for this bike.
     expect(waitingListChoiceProblem(demand, ranked(), 'wait-01')).toBe('waiting_list_not_a_match');
+  });
+});
+
+describe('handOverPlan (#65)', () => {
+  // Fixtures carry only what the plan reads. Rents are made up; the rule is what's tested.
+  const ranked = [
+    { requestId: 'wait-04', termMonths: 24, plan: { conditionAfter: 'good' as const } },
+    { requestId: 'wait-03', termMonths: 36, plan: { conditionAfter: 'fair' as const } },
+  ];
+  const options = [
+    {
+      target: 'fair' as const,
+      rents: [
+        { termMonths: 12, monthlyNetRentCents: 9_000 },
+        { termMonths: 36, monthlyNetRentCents: 4_000 },
+      ],
+    },
+    {
+      target: 'good' as const,
+      rents: [
+        { termMonths: 12, monthlyNetRentCents: 11_000 },
+        { termMonths: 24, monthlyNetRentCents: 6_000 },
+      ],
+    },
+  ];
+  const plan = (
+    nextLessee: string,
+    today = '2027-01-02',
+    opts: HandOverPlanInput['options'] = options
+  ) =>
+    handOverPlan({
+      nextLessee,
+      contractTermMonths: 12,
+      today,
+      handoverDate: '2027-01-02',
+      ranked,
+      options: opts,
+    });
+
+  it('refuses before the handover day: contract 1 still runs until the day before', () => {
+    expect(plan('wait-04', '2027-01-01')).toEqual({
+      ok: false,
+      reason: 'too_early',
+      opensOn: '2027-01-02',
+    });
+  });
+
+  it('gives a ranked waiting-list entry the condition and term it asked for', () => {
+    // wait-04 needs good for 24 months: the good option's 24-month rent.
+    expect(plan('wait-04')).toEqual({
+      ok: true,
+      target: 'good',
+      termMonths: 24,
+      monthlyNetRentCents: 6_000,
+    });
+  });
+
+  it('is fine after the handover day too (a late hand-over)', () => {
+    expect(plan('wait-03', '2027-01-20')).toMatchObject({
+      ok: true,
+      target: 'fair',
+      termMonths: 36,
+    });
+  });
+
+  it('refuses a waiting-list entry that no longer matches', () => {
+    expect(plan('wait-02')).toEqual({ ok: false, reason: 'waiting_list_not_a_match' });
+  });
+
+  it('gives a persona or an email the first (cheapest) option and the ended contract’s term', () => {
+    // options[0] is fair; the contract ran 12 months.
+    const expected = { ok: true, target: 'fair', termMonths: 12, monthlyNetRentCents: 9_000 };
+    expect(plan('cust-sanna')).toEqual(expected);
+    expect(plan('friend@example.com')).toEqual(expected);
+  });
+
+  it('refuses when the chosen option has no rent for that term', () => {
+    const unpriced = [
+      { target: 'fair' as const, rents: [{ termMonths: 12, monthlyNetRentCents: null }] },
+    ];
+    expect(plan('cust-sanna', '2027-01-02', unpriced)).toEqual({ ok: false, reason: 'no_price' });
+    // wait-04 asks for good, which isn't among the options.
+    expect(plan('wait-04', '2027-01-02', unpriced)).toEqual({ ok: false, reason: 'no_price' });
+  });
+
+  it('refuses when there is nothing to list it at', () => {
+    expect(plan('cust-sanna', '2027-01-02', [])).toEqual({ ok: false, reason: 'no_price' });
   });
 });

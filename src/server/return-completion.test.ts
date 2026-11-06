@@ -271,11 +271,13 @@ describe('the whole workflow', () => {
   it('lets an asset be matched after inspection and leasable after completion', async () => {
     const { contract, request } = await returnAt('inspected');
 
-    // After inspection the asset is `returned`, the state second-life matching accepts.
+    // After inspection the asset is `returned`, the state second-life matching accepts,
+    // and the lease that just ended counts as a previous life.
     expect(await db.asset.findUniqueOrThrow({ where: { id: contract.assetId } })).toMatchObject({
       status: 'returned',
       condition: 'fair',
       usage_value: 18_400,
+      previous_lives: 1,
     });
     expect((await db.contract.findUniqueOrThrow({ where: { id: contract.id } })).status).toBe(
       'ended'
@@ -285,9 +287,11 @@ describe('the whole workflow', () => {
     await approveReturnPlan(db, request.id, { actor });
     await completeReturn(db, request.id, { actor });
 
-    expect((await db.asset.findUniqueOrThrow({ where: { id: contract.assetId } })).status).toBe(
-      'available'
-    );
+    // Completing the refurbishment must not count the same life twice.
+    expect(await db.asset.findUniqueOrThrow({ where: { id: contract.assetId } })).toMatchObject({
+      status: 'available',
+      previous_lives: 1,
+    });
 
     const actions = (await db.auditLog.findMany({ orderBy: { id: 'asc' } })).map((e) => e.action);
 
@@ -299,5 +303,15 @@ describe('the whole workflow', () => {
       'return.approved',
       'return.completed',
     ]);
+  });
+
+  it('counts every finished lease: an asset that already had lives gets one more', async () => {
+    // ebike-008 comes from the data pack with 2 previous lives; it is available to lease again.
+    await db.asset.update({ where: { id: 'ebike-008' }, data: { status: 'available' } });
+    const { contract } = await returnAt('inspected', 'ebike-008');
+
+    expect(await db.asset.findUniqueOrThrow({ where: { id: contract.assetId } })).toMatchObject({
+      previous_lives: 3,
+    });
   });
 });

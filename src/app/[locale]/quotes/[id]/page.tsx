@@ -59,7 +59,7 @@ export default async function QuotePage({ params }: PageProps<'/[locale]/quotes/
       <header className="mt-6 flex items-center gap-5 sm:gap-7">
         {asset ? (
           <CategoryArt
-            category={asset.category}
+            asset={asset}
             className="aspect-square w-24 shrink-0 rounded-lg shadow-lg ring-1 shadow-black/10 ring-line sm:w-32"
           />
         ) : null}

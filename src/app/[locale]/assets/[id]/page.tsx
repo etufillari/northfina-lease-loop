@@ -97,7 +97,7 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
       </Link>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-end">
-        <CategoryArt category={asset.category} className="aspect-[16/10] rounded-lg">
+        <CategoryArt asset={asset} className="aspect-[16/10] rounded-lg">
           <div className="absolute inset-x-3 top-3 flex flex-wrap justify-between gap-2">
             <StatusBadge status={asset.status} t={t} />
             <LivesMeter previousLives={asset.previous_lives} t={t} />

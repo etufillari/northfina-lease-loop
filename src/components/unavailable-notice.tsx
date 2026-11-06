@@ -56,7 +56,7 @@ export function UnavailableNotice({ reason, similar, locale, t }: UnavailableNot
                   className="group flex h-full items-center gap-3 rounded-lg border border-line bg-surface p-2 transition hover:-translate-y-0.5 hover:border-accent sm:flex-col sm:items-stretch"
                 >
                   <CategoryArt
-                    category={asset.category}
+                    asset={asset}
                     className="aspect-square w-16 shrink-0 rounded-md sm:aspect-[4/3] sm:w-full"
                   />
                   <span className="flex min-w-0 flex-col px-1 pb-1">

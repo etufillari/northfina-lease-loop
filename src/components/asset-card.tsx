@@ -29,7 +29,7 @@ export function AssetCard({ asset, price, secondLifePrice, locale, t }: AssetCar
       className="group relative flex h-full flex-col rounded-lg transition-transform duration-300 ease-out hover:-translate-y-1 has-focus-visible:-translate-y-1"
     >
       <CategoryArt
-        category={asset.category}
+        asset={asset}
         className="aspect-[4/5] rounded-md ring-accent ring-offset-4 ring-offset-bg transition-shadow group-hover:ring-2"
       >
         <div className="absolute inset-x-2.5 top-2.5 flex flex-wrap justify-between gap-1.5">

@@ -49,7 +49,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
         <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 print:hidden">
           {/* One line on wide screens in every language: the tagline gives way ("…", full text on
-              hover) instead of pushing the menu onto a second line. Phones still wrap. */}
+              hover) instead of pushing the menu onto a second line. Below lg the menu takes its own
+              full-width line and wraps inside it, so nothing runs off a phone screen. */}
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:flex-nowrap">
             <Link
               href={`/${locale}`}
@@ -66,7 +67,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap">
+            <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:shrink-0 lg:flex-nowrap">
               <CustomerSwitcher
                 customers={customers.map(({ id, name, type }) => ({ id, name, type }))}
                 current={

@@ -1,6 +1,6 @@
 # Lease Loop: next work steps
 
-Use [team AI rules](TEAM-AI-RULES.md) in each teammate's assistant setup. [Architecture](01-SYSTEM-ARCHITECTURE-AND-CONTRACTS.md) describes the small integration contract; [roadmap](02-PRODUCT-OVERVIEW-AND-ROADMAP.md) sets priorities.
+Track current implementation status in [PROGRESS.md](PROGRESS.md). Use [team AI rules](TEAM-AI-RULES.md) in each teammate's assistant setup. [Architecture](01-SYSTEM-ARCHITECTURE-AND-CONTRACTS.md) describes the small integration contract; [roadmap](02-PRODUCT-OVERVIEW-AND-ROADMAP.md) sets priorities.
 
 ## Who does what
 
@@ -16,12 +16,12 @@ Teammates choose Developer 2/3 according to their existing work; do not overwrit
 
 **Your scope:** `src/domain/lease-engine/`, future engine services/routes, and their tests.
 
-- [x] Initial pure functions: lease transitions, monthly calendar, VAT and rent invoice calculation. 26 focused tests pass; full checks remain blocked by Prisma test setup.
-- [ ] Agree signed `LeaseTerms` with Developer 2; inspect their actual contract schema before writing adapters.
-- [ ] Add lease persistence and activation. Developer 2 owns contract/allocation orchestration; your engine adapter participates in its same audited transaction.
-- [ ] Add invoice persistence/numbering, period uniqueness and idempotency receipts. Repeated requests must return the same stored invoice.
-- [ ] Expose lease/schedule/invoice APIs with existing envelopes and authorization checks.
-- [ ] Test concurrency, audit rollback, price lock, VAT change and month-end dates; show Aino's first three invoices.
+- [x] Initial pure functions: lease transitions, monthly calendar, VAT and rent invoice calculation. 26 focused tests pass; the Prisma test setup blocker is now fixed locally.
+- [x] Consume Dev2's actual signed contract models/mapper and connect atomic signing/activation locally.
+- [x] Add engine-only lease persistence and activation adapter. Connecting Developer 2's contract/allocation orchestrator remains pending.
+- [x] Add internal invoice persistence/numbering, period uniqueness and idempotency receipts; real-database integration tests pass.
+- [x] Register development-only owned lease/schedule/invoice APIs and account controls. Production authentication remains pending.
+- [x] Test real signing/engine integration, rollback, replays and account-render smoke. See PROGRESS.md for final evidence.
 
 **Next action:** connect the signed-contract handoff with Developer 2. Until ready, use a fixed `LeaseTerms` fixture to build your persistence adapter. Coordinate Prisma changes before editing the shared schema.
 

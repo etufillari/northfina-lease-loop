@@ -85,3 +85,11 @@ contract creation and audit logging use one transaction.
   signer identity.
 - Lease activation/invoice persistence remains Developer 1's boundary. The
   returned `LeaseTerms` is ready for the existing engine.
+
+## Local engine integration (6 November)
+
+`signContract()` now accepts an optional transaction callback. The signing route uses `signAndActivateContract()` to create the engine lease and exclusive `EngineAllocation` in the SAME `withAudit()` transaction as signing and asset reservation. Any callback/audit failure rolls everything back. Reservation expiry is cleared for signed contracts.
+
+The signing endpoint now requires the development selected customer to match signerId, a same-origin browser request, and development mode. For manual local curl demos, add `Cookie: lease-loop-active-user=cust-aino` and `Origin: http://localhost:3000` (matching the actual host/port). This development adapter is not production authentication.
+
+Account leases use actual engine state; no invoice-paid status is fabricated. Existing signed contracts have a guarded activation action. The account shows persisted invoices and development-only controls for first3 periods and contractual end-date completion. Completion retains allocation pending physical return.

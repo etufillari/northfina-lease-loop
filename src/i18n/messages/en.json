@@ -142,5 +142,22 @@
   "lease.checkoutTerm": "Lease term",
   "lease.checkoutPaymentDue": "Payment due",
   "lease.checkoutPriceList": "Price-list version",
-  "lease.days": "{count} days"
+  "lease.days": "{count} days",
+  "engine.invoices": "Saved invoices",
+  "engine.activate": "Activate signed contract",
+  "engine.generate": "Generate first 3 invoices",
+  "engine.complete": "Complete at contract end (demo)",
+  "engine.busy": "Working…",
+  "engine.error": "Action failed. Reload and retry.",
+  "engine.demoNote": "Demo controls use contract dates. Invoices are not marked paid. Net rent is locked; VAT follows the invoice date.",
+  "engine.totalNet": "Total scheduled net rent",
+  "engine.noInvoices": "No invoices issued yet.",
+  "engine.number": "Invoice",
+  "engine.issue": "Issued",
+  "engine.due": "Due",
+  "engine.net": "Net",
+  "engine.vat": "VAT",
+  "engine.gross": "Total",
+  "engine.awaitingReturn": "Lease completed. Asset remains reserved pending physical return and refurbishment.",
+  "engine.signed": "Signed — awaiting activation"
 }

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { signContract, contractResponse } from '@/server/applications';
+import { contractResponse } from '@/server/applications';
+import { signAndActivateContract } from '@/server/lease-engine/real-contract';
+import { demoCustomer } from '@/server/lease-engine/demo-access';
 import { db } from '@/server/db';
-import { getActiveUser } from '@/server/active-user';
 
 const bodySchema = z.strictObject({
   contractId: z.string().trim().min(1).max(100).optional(),
@@ -14,9 +15,11 @@ export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/applications/[id]/sign'>) => {
     const { id } = await params;
     const body = await readJsonBody(request, bodySchema);
-    const activeUser = await getActiveUser();
-    const actor = activeUser?.id ?? body.actor ?? body.signerId;
-    const result = await signContract(db, {
+    const activeUser = await demoCustomer(request);
+    if (body.signerId !== activeUser.id)
+      return fail(403, 'FORBIDDEN', 'Signer must match selected customer');
+    const actor = activeUser.id;
+    const result = await signAndActivateContract(db, {
       applicationId: id,
       contractId: body.contractId,
       signerId: body.signerId,

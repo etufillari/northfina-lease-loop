@@ -142,5 +142,22 @@
   "lease.checkoutTerm": "Liisinguperiood",
   "lease.checkoutPaymentDue": "Makse tähtaeg",
   "lease.checkoutPriceList": "Hinnakirja versioon",
-  "lease.days": "{count} päeva"
+  "lease.days": "{count} päeva",
+  "engine.invoices": "Salvestatud arved",
+  "engine.activate": "Aktiveeri allkirjastatud leping",
+  "engine.generate": "Loo 3 esimest arvet",
+  "engine.complete": "Lõpeta lepingu lõpus (demo)",
+  "engine.busy": "Töötleb…",
+  "engine.error": "Toiming ebaõnnestus. Värskenda ja proovi uuesti.",
+  "engine.demoNote": "Demo kasutab lepingukuupäevi. Arveid ei märgita makstuks. Netorent on lukustatud; käibemaks sõltub arve kuupäevast.",
+  "engine.totalNet": "Planeeritud netorent kokku",
+  "engine.noInvoices": "Arveid pole veel väljastatud.",
+  "engine.number": "Arve",
+  "engine.issue": "Väljastatud",
+  "engine.due": "Tähtaeg",
+  "engine.net": "Neto",
+  "engine.vat": "KM",
+  "engine.gross": "Kokku",
+  "engine.awaitingReturn": "Liising lõppenud. Vara jääb broneerituks kuni tagastamise ja taastamiseni.",
+  "engine.signed": "Allkirjastatud — ootab aktiveerimist"
 }

@@ -50,8 +50,8 @@ Contract owner constructs terms from persisted signed values. Never recompute si
 
 These policies are the first engine behavior, not evidence of team approval. Coordinate semantic changes with consumers before merging.
 
-## Persistence next
+## Persistence increment
 
-The first engine increment does not issue stored invoices, reserve assets or expose new routes. Issuance must later use `withAudit()` and its `tx` for invoice, lines, receipt and audit together. Add unique `(leaseId, periodIndex, kind)` and scoped idempotency keys; replay returns the stored result. Guard asset allocation atomically. Issued invoice amounts never change.
+Internal persistence services now live in `src/server/lease-engine/`; see their [handoff README](../src/server/lease-engine/README.md). Engine-only activation/completion and rent invoice issuance use audited transactions, scoped request receipts and a unique `(leaseId, periodIndex)` key. The current model issues rent only; add invoice kind when supplemental charges are designed. Issued amounts never change. Contract signing, atomic asset allocation and HTTP authorization remain integration work owned at their respective boundaries.
 
 Use existing `ok()/fail()/handleRoute()` for HTTP. The development user switcher is not authentication. Protect mutations before public deployment. Coordinate Prisma schema edits with one migration author; generate migrations via `npm run db:migrate`.

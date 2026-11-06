@@ -88,3 +88,65 @@ model Contract {
   @@index([customer_id])
   @@index([asset_id])
 }
+
+// Engine-owned signed terms. Contract/asset allocation is owned by the contract module.
+model EngineLease {
+  id                String @id
+  contractId        String @unique
+  assetId           String
+  customerId        String
+  startDate         String
+  termMonths        Int
+  monthlyNetCents   Int
+  paymentDueDays    Int
+  status            String
+  version           Int @default(1)
+  invoices          EngineInvoice[]
+  allocation        EngineAllocation?
+
+  @@index([assetId])
+}
+
+// Issued rent amounts and tax snapshot are immutable; corrections need a separate credit.
+model EngineInvoice {
+  id              String @id
+  number          String @unique
+  leaseId         String
+  lease           EngineLease @relation(fields: [leaseId], references: [id])
+  periodIndex     Int
+  issueDate       String
+  dueDate         String
+  endDateExclusive String
+  netCents        Int
+  vatCents        Int
+  grossCents      Int
+  taxJson         String
+  status          String @default("ISSUED")
+  issuedAt        DateTime @default(now())
+
+  @@unique([leaseId, periodIndex])
+}
+
+model EngineInvoiceCounter {
+  year Int @id
+  last Int
+}
+
+// Serialized result supports an exact replay even if the aggregate later changes.
+model EngineCommandReceipt {
+  id            String @id
+  actor         String
+  operation     String
+  key           String
+  payloadHash   String
+  resultJson    String
+
+  @@unique([actor, operation, key])
+}
+
+// Exclusive live physical allocation. Completion retains it until circular release.
+model EngineAllocation {
+  assetId String @id
+  leaseId String @unique
+  lease EngineLease @relation(fields: [leaseId], references: [id])
+}

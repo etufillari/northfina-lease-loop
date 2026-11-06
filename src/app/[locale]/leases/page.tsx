@@ -33,7 +33,8 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
             .filter((lease) => lease.terms.customerId === customer.id)
             .map((lease) => ({ ...lease, isMock: true }))
         : [];
-  const leaseStatusLabels: Record<LeaseStatus, string> = {
+  const leaseStatusLabels: Record<LeaseStatus | 'SIGNED', string> = {
+    SIGNED: t('engine.signed'),
     ACTIVE: t('account.leaseStatus.active'),
     COMPLETED: t('account.leaseStatus.completed'),
     TERMINATED: t('account.leaseStatus.terminated'),

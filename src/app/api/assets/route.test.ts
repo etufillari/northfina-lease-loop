@@ -47,9 +47,9 @@ describe('GET /api/assets', () => {
     expect((await heldAsset()).status).toBe('reserved');
   });
 
-  it('shows it as available to the person it is held for', async () => {
+  it('marks it as theirs for the person it is held for', async () => {
     await actAs({ sub: 'cust-wait-02', role: 'client' });
-    expect((await heldAsset()).status).toBe('available');
+    expect(await heldAsset()).toMatchObject({ status: 'available', held_for_you: true });
   });
 
   it('never reveals who it is held for', async () => {

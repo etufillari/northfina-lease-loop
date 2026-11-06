@@ -69,8 +69,16 @@ describe('assetForViewer', () => {
     expect(assetForViewer(held, undefined).status).toBe('reserved');
   });
 
-  it('shows it as available to the person it is held for', () => {
-    expect(assetForViewer(held, 'cust-wait-02').status).toBe('available');
+  it('marks it as theirs for the person it is held for', () => {
+    expect(assetForViewer(held, 'cust-wait-02')).toMatchObject({
+      status: 'available',
+      held_for_you: true,
+    });
+  });
+
+  it('does not mark it for anyone else', () => {
+    expect(assetForViewer(held, 'cust-aino')).not.toHaveProperty('held_for_you');
+    expect(assetForViewer(asset, 'cust-wait-02')).not.toHaveProperty('held_for_you');
   });
 
   it('never reveals who it is held for', () => {

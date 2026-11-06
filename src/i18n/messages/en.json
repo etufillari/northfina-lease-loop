@@ -33,6 +33,7 @@
   "status.label": "Status",
   "status.available": "Available",
   "status.reserved": "Reserved",
+  "status.reservedForYou": "Reserved for you",
   "status.leased": "Leased",
   "status.returned": "Returned",
   "status.sold": "Sold",

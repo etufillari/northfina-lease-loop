@@ -19,11 +19,12 @@ export function isHeldForSomeoneElse(
 
 /**
  * An asset as one viewer may see it. A held item reads as reserved for everyone else, and the
- * person it is held for sees it as available. Who it is held for stays private either way.
+ * person it is held for sees it as theirs. Who it is held for stays private either way.
  */
 export function assetForViewer(asset: Asset, customerId: string | undefined): Asset {
   const { reserved_for: reservedFor, ...visible } = asset;
-  return isHeldForSomeoneElse(reservedFor, customerId) && asset.status === 'available'
-    ? { ...visible, status: 'reserved' }
-    : visible;
+  if (reservedFor === undefined || asset.status !== 'available') return visible;
+  return reservedFor === customerId
+    ? { ...visible, held_for_you: true }
+    : { ...visible, status: 'reserved' };
 }

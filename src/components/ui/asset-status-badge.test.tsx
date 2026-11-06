@@ -10,6 +10,7 @@ const translations: Record<string, string> = {
   'status.label': 'Status',
   'status.available': 'Available',
   'status.reserved': 'Reserved',
+  'status.reservedForYou': 'Reserved for you',
   'status.leased': 'Leased',
   'status.returned': 'Returned',
   'status.sold': 'Sold',
@@ -59,6 +60,15 @@ describe('AssetStatusBadge', () => {
       expect(screen.getByText(label).className).toContain(variantClass);
     }
   );
+
+  it('tells the person an item is held for that it is theirs', () => {
+    render(
+      <AssetStatusBadge status="available" heldForYou t={mockTranslate as unknown as Translate} />
+    );
+
+    expect(screen.getByText('Reserved for you')).toBeTruthy();
+    expect(screen.queryByText('Available')).toBeNull();
+  });
 
   it('renders the accessible status label', () => {
     render(<AssetStatusBadge status="available" t={mockTranslate as unknown as Translate} />);

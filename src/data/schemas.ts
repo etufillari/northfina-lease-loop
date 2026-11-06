@@ -62,6 +62,8 @@ export const assetSchema = z.strictObject({
   relist_price_cents: centsSchema.optional(),
   /** The customer this item is held for after being passed on. Set by the app. */
   reserved_for: z.string().min(1).optional(),
+  /** Set by `assetForViewer` for the person a held item is waiting for. */
+  held_for_you: z.literal(true).optional(),
 });
 export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);

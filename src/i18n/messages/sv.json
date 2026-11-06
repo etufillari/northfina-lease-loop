@@ -33,6 +33,7 @@
   "status.label": "Status",
   "status.available": "Tillgänglig",
   "status.reserved": "Reserverad",
+  "status.reservedForYou": "Reserverad för dig",
   "status.leased": "Leasad",
   "status.returned": "Returnerad",
   "status.sold": "Såld",

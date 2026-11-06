@@ -47,7 +47,7 @@ export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
               {asset.model}
             </h3>
           </div>
-          <AssetStatusBadge status={asset.status} t={t} />
+          <AssetStatusBadge status={asset.status} heldForYou={asset.held_for_you} t={t} />
         </div>
 
         <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">

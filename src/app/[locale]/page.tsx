@@ -37,7 +37,12 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   const assets = storedAssets.map((asset) => assetForViewer(asset, viewerId));
   const vatRate = vatRateOn(vatRates, today);
   const groups = assetCategorySchema.options
-    .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
+    .map((category) => ({
+      category,
+      assets: assets
+        .filter((asset) => asset.category === category)
+        .sort((a, b) => Number(b.held_for_you ?? false) - Number(a.held_for_you ?? false)),
+    }))
     .filter((group) => group.assets.length > 0);
 
   return (

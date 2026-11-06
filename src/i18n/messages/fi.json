@@ -33,6 +33,7 @@
   "status.label": "Tila",
   "status.available": "Saatavilla",
   "status.reserved": "Varattu",
+  "status.reservedForYou": "Varattu sinulle",
   "status.leased": "Vuokrattu",
   "status.returned": "Palautettu",
   "status.sold": "Myyty",

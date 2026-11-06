@@ -33,6 +33,7 @@
   "status.label": "Olek",
   "status.available": "Saadaval",
   "status.reserved": "Broneeritud",
+  "status.reservedForYou": "Sulle broneeritud",
   "status.leased": "Liisitud",
   "status.returned": "Tagastatud",
   "status.sold": "Müüdud",

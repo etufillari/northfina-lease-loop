@@ -35,7 +35,7 @@ export function AssetDetails({ asset, locale, t, priceCents }: AssetDetailsProps
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
 
-          <AssetStatusBadge status={asset.status} t={t} />
+          <AssetStatusBadge status={asset.status} heldForYou={asset.held_for_you} t={t} />
         </div>
 
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">{asset.model}</h1>

@@ -344,7 +344,7 @@ export default function ContractsList({ locale }: ContractsListProps) {
                       id={`pass-on-${contract.id}`}
                       value={selectedCandidateId}
                       onChange={(event) => setSelectedCandidateId(event.target.value)}
-                      className="w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none focus:border-emerald-500"
+                      className="w-full appearance-none rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none focus:border-emerald-500"
                     >
                       <option value="">{t('account.contracts.selectCustomerPlaceholder')}</option>
                       {candidates.map((candidate) => (

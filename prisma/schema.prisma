@@ -48,3 +48,43 @@ model AuditLog {
   @@index([entity_type, entity_id])
   @@index([created_at])
 }
+
+model Application {
+  id                 String   @id
+  customer_id        String
+  asset_id           String
+  start_date         String
+  term_months        Int
+  monthly_net_cents  Int
+  payment_due_days   Int
+  price_list_version Int
+  offer_expires_on   String
+  status             String
+  decision_reason    String
+  signing_authority  Boolean
+  submitted_at       DateTime @default(now())
+  signed_at          DateTime?
+  contract           Contract?
+
+  @@index([customer_id])
+  @@index([asset_id])
+  @@index([status])
+}
+
+model Contract {
+  id                 String      @id
+  application_id     String      @unique
+  customer_id        String
+  asset_id           String
+  start_date         String
+  term_months        Int
+  monthly_net_cents  Int
+  payment_due_days   Int
+  price_list_version Int
+  signer_id          String
+  signed_at          DateTime
+  application        Application @relation(fields: [application_id], references: [id])
+
+  @@index([customer_id])
+  @@index([asset_id])
+}

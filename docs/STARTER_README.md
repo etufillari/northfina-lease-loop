@@ -1,10 +1,12 @@
 # Lease Loop · Northfina × Hive Helsinki hackathon
 
+> The organisers' original README for the starter repo, kept for reference. The project README is [../README.md](../README.md).
+
 Starter repo for the **Lease Loop** challenge, 5–6 November 2026 at Hive Helsinki. Teams of 3 build a circular-economy leasing app: one e-bike, laptop or tractor, three lives.
 
-- 📋 **The challenge:** [CHALLENGE.md](CHALLENGE.md)
-- 📐 **Engineering rules (35 % of your score):** [RULES.md](RULES.md)
-- 🗂️ **The data pack:** [data/DATA.md](data/DATA.md)
+- 📋 **The challenge:** [CHALLENGE.md](../CHALLENGE.md)
+- 📐 **Engineering rules (35 % of your score):** [RULES.md](../RULES.md)
+- 🗂️ **The data pack:** [data/DATA.md](../data/DATA.md)
 
 **Northfina** is a Helsinki-based leasing platform. It started as Etufillari, a bike-leasing service, and now leases any kind of asset. Dealers, banks and customers use it to get from a price quote to a signed contract, then through monthly invoices to the end of the lease. This repo is a small, independent playground, not our product code.
 
@@ -41,7 +43,7 @@ You should see the asset catalogue in English. Switch to Finnish, Swedish or Est
 
 New to TypeScript, Next.js or Prisma? Read these files in this order:
 
-1. **`data/`**: the synthetic data pack. Open `assets.json` and `coefficient-table.json`, then the worked example in [DATA.md](data/DATA.md).
+1. **`data/`**: the synthetic data pack. Open `assets.json` and `coefficient-table.json`, then the worked example in [DATA.md](../data/DATA.md).
 2. **`src/data/`**: Zod schemas that load and type-check every data file. If you want to know a field's type, look here.
 3. **`src/domain/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
 4. **`src/domain/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
@@ -76,7 +78,7 @@ We won't merge pull requests. They're only how you hand in your work.
 
 ## Your code is yours
 
-The starter code in this repo is MIT-licensed (see [LICENSE](LICENSE)); use it however you like.
+The starter code in this repo is MIT-licensed (see [LICENSE](../LICENSE)); use it however you like.
 
 **Your team owns the code you write.** Opening a pull request gives Northfina permission to read and run your code for judging and for interviews with your team. Nothing more: we won't merge it, reuse it or publish it elsewhere without asking you first.
 
@@ -84,4 +86,4 @@ The starter code in this repo is MIT-licensed (see [LICENSE](LICENSE)); use it h
 
 - During the hackathon: **#ask-a-mentor** on the hackathon Discord.
 - A bug in this starter repo: open a GitHub issue here.
-- Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+- Please follow the [Code of Conduct](../CODE_OF_CONDUCT.md).

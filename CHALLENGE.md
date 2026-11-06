@@ -128,13 +128,13 @@ Pitches: **4 minutes demo + 2 minutes Q&A** per team. Anyone in the team may be 
 
 ## 6. Timeline
 
-| When            | What                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------- |
-| Thu 5 Nov 16:00 | Kick-off and challenge presentation at Hive Helsinki                                   |
-| Thu 5 Nov 16:30 | Hacking starts                                                                         |
-| Fri 6 Nov 16:00 | **Submission deadline**: your pull request is open, see [README](README.md#submitting) |
-| Fri 6 Nov 16:30 | Pitches (4 + 2 minutes per team)                                                       |
-| Fri 6 Nov 18:00 | Winners announced                                                                      |
+| When            | What                                                                                                            |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| Thu 5 Nov 16:00 | Kick-off and challenge presentation at Hive Helsinki                                                            |
+| Thu 5 Nov 16:30 | Hacking starts                                                                                                  |
+| Fri 6 Nov 16:00 | **Submission deadline**: your pull request is open, see [the starter README](docs/STARTER_README.md#submitting) |
+| Fri 6 Nov 16:30 | Pitches (4 + 2 minutes per team)                                                                                |
+| Fri 6 Nov 18:00 | Winners announced                                                                                               |
 
 **Help:** the Northfina team is on site for the kick-off and the pitches. In between, ask in **#ask-a-mentor** on the hackathon Discord; we answer there throughout the hackathon. Repo or setup bugs can also go in a GitHub issue.
 

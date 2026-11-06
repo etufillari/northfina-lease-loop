@@ -29,6 +29,7 @@
   "account.leases": "Leases",
   "account.noLeases": "No leases for this customer.",
   "account.mockLease": "Demo lease — mock data",
+  "account.savedLease": "Saved signed lease",
   "account.monthsRemaining": "{count} months remaining",
   "account.viewAsset": "View asset details",
   "account.contractId": "Contract reference",
@@ -114,5 +115,16 @@
   "lease.why": "Why we ask",
   "lease.continue": "Continue",
   "lease.complete": "Your answers are complete. We can now review your leasing application.",
-  "lease.validationError": "This answer does not meet the leasing requirements. The application cannot continue."
+  "lease.validationError": "This answer does not meet the leasing requirements. The application cannot continue.",
+  "lease.leaveWarning": "Leaving will cancel this leasing process and release the item immediately. Do you want to leave?",
+  "lease.finish": "Finish",
+  "lease.bindingWarning": "This is a binding leasing contract. By selecting Finish, you confirm that you want to submit and sign it.",
+  "lease.finishing": "Signing...",
+  "lease.signingError": "The application could not be approved and signed. Please review the details and try again.",
+  "lease.checkoutTitle": "Review your leasing contract",
+  "lease.checkoutMonthlyRent": "Monthly net rent",
+  "lease.checkoutTerm": "Lease term",
+  "lease.checkoutPaymentDue": "Payment due",
+  "lease.checkoutPriceList": "Price-list version",
+  "lease.days": "{count} days"
 }

@@ -29,6 +29,7 @@
   "account.leases": "Leasing-sopimukset",
   "account.noLeases": "Tällä asiakkaalla ei ole leasing-sopimuksia.",
   "account.mockLease": "Esimerkkisopimus — testitietoa",
+  "account.savedLease": "Tallennettu allekirjoitettu leasing",
   "account.monthsRemaining": "{count} kuukautta jäljellä",
   "account.viewAsset": "Näytä tuotteen tiedot",
   "account.contractId": "Sopimusviite",
@@ -114,5 +115,16 @@
   "lease.why": "Miksi kysymme",
   "lease.continue": "Jatka",
   "lease.complete": "Vastauksesi ovat valmiit. Voimme nyt käsitellä leasing-hakemuksesi.",
-  "lease.validationError": "Tämä vastaus ei täytä leasing-vaatimuksia. Hakemusta ei voi jatkaa."
+  "lease.validationError": "Tämä vastaus ei täytä leasing-vaatimuksia. Hakemusta ei voi jatkaa.",
+  "lease.leaveWarning": "Poistuminen peruuttaa leasing-prosessin ja vapauttaa tuotteen heti. Haluatko poistua?",
+  "lease.finish": "Valmis",
+  "lease.bindingWarning": "Tämä on sitova leasing-sopimus. Valitsemalla Valmis vahvistat, että haluat lähettää ja allekirjoittaa sopimuksen.",
+  "lease.finishing": "Allekirjoitetaan...",
+  "lease.signingError": "Hakemusta ei voitu hyväksyä ja allekirjoittaa. Tarkista tiedot ja yritä uudelleen.",
+  "lease.checkoutTitle": "Tarkista leasing-sopimus",
+  "lease.checkoutMonthlyRent": "Kuukausittainen nettovuokra",
+  "lease.checkoutTerm": "Leasing-aika",
+  "lease.checkoutPaymentDue": "Maksu erääntyy",
+  "lease.checkoutPriceList": "Hinnaston versio",
+  "lease.days": "{count} päivää"
 }

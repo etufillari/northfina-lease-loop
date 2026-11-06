@@ -29,6 +29,7 @@
   "account.leases": "Leasingavtal",
   "account.noLeases": "Kunden har inga leasingavtal.",
   "account.mockLease": "Demoavtal — testdata",
+  "account.savedLease": "Sparat undertecknat leasingavtal",
   "account.monthsRemaining": "{count} månader kvar",
   "account.viewAsset": "Visa produktdetaljer",
   "account.contractId": "Avtalsreferens",
@@ -114,5 +115,16 @@
   "lease.why": "Varför vi frågar",
   "lease.continue": "Fortsätt",
   "lease.complete": "Dina svar är klara. Vi kan nu granska din leasingansökan.",
-  "lease.validationError": "Detta svar uppfyller inte leasingkraven. Ansökan kan inte fortsätta."
+  "lease.validationError": "Detta svar uppfyller inte leasingkraven. Ansökan kan inte fortsätta.",
+  "lease.leaveWarning": "Om du lämnar sidan avbryts leasingprocessen och objektet frigörs omedelbart. Vill du lämna?",
+  "lease.finish": "Slutför",
+  "lease.bindingWarning": "Detta är ett bindande leasingavtal. Genom att välja Slutför bekräftar du att du vill skicka in och underteckna det.",
+  "lease.finishing": "Undertecknar...",
+  "lease.signingError": "Ansökan kunde inte godkännas och undertecknas. Kontrollera uppgifterna och försök igen.",
+  "lease.checkoutTitle": "Granska ditt leasingavtal",
+  "lease.checkoutMonthlyRent": "Månadshyra exkl. moms",
+  "lease.checkoutTerm": "Leasingperiod",
+  "lease.checkoutPaymentDue": "Betalning förfaller",
+  "lease.checkoutPriceList": "Prislistans version",
+  "lease.days": "{count} dagar"
 }

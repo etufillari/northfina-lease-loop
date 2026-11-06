@@ -12,6 +12,7 @@ import { endContract } from './end-of-term/contract-end';
 import { listInvoices } from './invoicing/invoices';
 import type { PrismaClient } from './prisma-client';
 import { quoteAsset } from './pricing/quotes';
+import { relistAsset } from './second-life/relist';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -109,5 +110,52 @@ describe('the lease loop', () => {
     });
     const returned = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     expect(returned.status).toBe('returned');
+
+    // 6. Second life: a dealer inspects and re-lists it, and the next customer leases it.
+    const relisted = await relistAsset(db, {
+      assetId: 'ebike-003',
+      condition: 'good',
+      usageValue: 8_000,
+      actor: 'staff-dealer',
+    });
+    expect(relisted).toMatchObject({
+      ok: true,
+      asset: { status: 'available', previous_lives: 1, relist_price_cents: 113_876 },
+    });
+
+    const lena = customers.find((customer) => customer.id === 'cust-lena');
+    if (!lena) throw new Error('expected cust-lena in the data pack');
+
+    const reapplied = await submitApplication(db, {
+      customer: lena,
+      assetId: 'ebike-003',
+      quantity: 1,
+      termMonths: 24,
+      downPaymentCents: 0,
+      answers: { ...ainoEbikeAnswers, q_country: 'EE', q_monthly_income: 210_000 },
+    });
+    expect(reapplied).toMatchObject({
+      ok: true,
+      application: { decision: 'approved', base_price_cents: 113_876, price_list_version: null },
+    });
+    if (!reapplied.ok) throw new Error(reapplied.reason);
+
+    const resigned = await signContract(db, {
+      applicationId: reapplied.application.id,
+      customer: lena,
+    });
+    expect(resigned).toMatchObject({
+      ok: true,
+      contract: { customer_id: 'cust-lena', base_price_cents: 113_876, status: 'active' },
+    });
+
+    const lives = await db.assetLife.findMany({
+      where: { asset_id: 'ebike-003' },
+      orderBy: { life_number: 'asc' },
+    });
+    expect(lives).toMatchObject([
+      { life_number: 1, outcome: 'returned', end_condition: 'good', end_usage_value: 8_000 },
+      { life_number: 2, outcome: null, start_condition: 'good', first_lease_price_cents: 389_000 },
+    ]);
   });
 });

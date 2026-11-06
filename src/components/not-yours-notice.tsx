@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { DemoTag } from './demo-note';
 
 type NotYoursNoticeProps = { ownerName: string | null; locale: Locale; t: Translate };
 
@@ -12,6 +13,7 @@ export function NotYoursNotice({ ownerName, locale, t }: NotYoursNoticeProps) {
       <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
         <h1 className="text-xl font-semibold">{t('viewer.notYoursTitle')}</h1>
         <p className="mt-2 text-stone-700 dark:text-stone-300">
+          <DemoTag t={t} />
           {ownerName ? t('viewer.notYoursOwner', { name: ownerName }) : t('viewer.notYoursGuest')}
         </p>
         <Link

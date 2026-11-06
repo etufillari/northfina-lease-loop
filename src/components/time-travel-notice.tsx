@@ -3,6 +3,7 @@
 // back at its present). `inline` renders a banner inside a page instead of a whole page.
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { DemoTag } from './demo-note';
 
 type TimeTravelNoticeProps = { text: string; locale: Locale; t: Translate; inline?: boolean };
 
@@ -12,6 +13,7 @@ export function TimeTravelNotice({ text, t, inline }: TimeTravelNoticeProps) {
       role="note"
       className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100 print:hidden"
     >
+      <DemoTag t={t} />
       <span className="font-semibold">{t('timeTravel.on')}</span> {text}
     </p>
   );

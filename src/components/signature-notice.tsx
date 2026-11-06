@@ -6,6 +6,7 @@ import type { SignatureRequest } from '@/server/signatures';
 import { formatIsoDate } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { DemoTag } from './demo-note';
 import { SignatureStatusBadge } from './signature-status-badge';
 
 type SignatureNoticeProps = { request: SignatureRequest; locale: Locale; t: Translate };
@@ -44,7 +45,7 @@ export function SignatureNotice({ request, locale, t }: SignatureNoticeProps) {
       ) : null}
       {request.status === 'waiting' ? (
         <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
-          {t('signatures.applicantNoInvoices')}{' '}
+          {t('signatures.applicantNoInvoices')} <DemoTag t={t} />
           <Link
             href={`/${locale}/admin/signatures/${request.id}`}
             className="font-medium text-emerald-800 underline underline-offset-4 dark:text-emerald-300"

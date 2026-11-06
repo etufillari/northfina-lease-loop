@@ -11,6 +11,7 @@
 import { loadCoefficientTable } from '@/data/load';
 import type { AssetCategory, AssetCondition, CoefficientTable } from '@/data/schemas';
 import { addDays } from '@/domain/calendar';
+import { HOLD_DAYS } from '@/domain/holds';
 import { quoteFor } from '@/domain/pricing';
 import {
   allocateRefurbished,
@@ -22,7 +23,7 @@ import type { TransactionClient } from './audit';
 import { toSecondLifeRequest } from './waitlist';
 
 /** Second-life offers hold the item for the waiter this many days (docs/DECISIONS.md). */
-export const OFFER_HOLD_DAYS = 3;
+export const OFFER_HOLD_DAYS = HOLD_DAYS.waitlistOffer;
 export const OFFER_RESERVATION = 'waitlist_offer';
 
 type Reader = PrismaClient | TransactionClient;

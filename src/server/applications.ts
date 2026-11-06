@@ -3,7 +3,8 @@
 import { loadQuestions, loadVatRates } from '@/data/load';
 import type { Question } from '@/data/schemas';
 import { validateFinnishBusinessId } from '@/domain/business-id';
-import { addDays, addMonthsClamped } from '@/domain/calendar';
+import { addMonthsClamped } from '@/domain/calendar';
+import { holdUntil as holdUntilFor } from '@/domain/holds';
 import { MAX_START_MONTHS_AHEAD } from '@/domain/contract';
 import { evaluateEligibility, type CustomerType } from '@/domain/eligibility';
 import {
@@ -385,7 +386,10 @@ export async function submitApplication(
         : cannotSign
           ? 'awaiting_signature'
           : 'approved';
-  const holdUntil = status === 'declined' ? null : addDays(input.asOf, 7);
+  const holdUntil =
+    status === 'declined'
+      ? null
+      : holdUntilFor(status === 'awaiting_signature' ? 'signatory' : 'approval', input.asOf);
 
   await withAudit(
     db,

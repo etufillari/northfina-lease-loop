@@ -280,7 +280,7 @@ export async function declineOffer(
 export type ExpiredOffer = { entry: WaitlistEntry; assetIds: string[]; until: string };
 
 /**
- * Offers whose 7-day hold ended before the as-of date without a lease in progress. An item
+ * Offers whose 3-day hold ended before the as-of date without a lease in progress. An item
  * with an approved application (an approval or signatory hold) is not expired: the customer
  * is on their way to signing.
  */

@@ -1,13 +1,14 @@
 'use client';
-// The demo's time machine, in the demo bar. It only moves forward (a day, a week, a month, or
-// to a later date): contracts, invoices and offers are written on the day they happen, so
-// going back would show a world that contradicts its own records. To replay a demo, "Reset"
+// The demo's time machine, in the demo bar. It only moves forward: +1 day, +1 week, +1 month,
+// or a jump to a LATER date (the picker's minimum is tomorrow and travel() refuses anything
+// earlier). Contracts, invoices and offers are written on the day they happen, so going back
+// would show a world that contradicts its own records. To replay a demo, "Reset"
 // rebuilds the database from the data pack and starts again on the demo start date. The date
 // lives in a cookie that every page and API route treats as "today" (?asOf= still wins).
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { addDays, addMonthsClamped } from '@/domain/calendar';
-import { formatIsoDate } from '@/i18n/format';
+import { formatShortDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { AS_OF_COOKIE } from './as-of-cookie';
@@ -40,10 +41,29 @@ export function TimeTravel({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
-  function travel(iso: string) {
-    if (iso <= current) return;
-    setCookie(AS_OF_COOKIE, iso);
-    router.refresh();
+  // Moving the clock runs the overnight job for the days passed (holds that lapse end, offers
+  // pass on), then the whole app re-renders on the new date.
+  async function travel(iso: string) {
+    if (iso <= current || busy) return;
+    setBusy(true);
+    try {
+      const response = await fetch('/api/demo/advance', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ from: current, to: iso, actor: actor ?? 'demo' }),
+      });
+      const body = await response.json();
+      if (!body.success) {
+        window.alert(body.error?.message ?? t('common.error'));
+        return;
+      }
+      setCookie(AS_OF_COOKIE, iso);
+      router.refresh();
+    } catch {
+      window.alert(t('common.error'));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function reset() {
@@ -78,8 +98,8 @@ export function TimeTravel({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-amber-900 dark:text-amber-200">{t('nav.timeTravel')}</span>
-      <time dateTime={current} className="text-sm font-semibold tabular-nums">
-        {formatIsoDate(current, locale)}
+      <time dateTime={current} className="font-mono text-sm font-semibold">
+        {formatShortDate(current, locale)}
       </time>
       <div role="group" aria-label={t('demo.forward')} className="flex gap-1">
         <button

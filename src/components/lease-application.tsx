@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -10,7 +11,9 @@ import {
   type ReactNode,
 } from 'react';
 import type { Customer, Question } from '@/data/schemas';
+import { formatEuro } from '@/domain/money';
 import type { Locale } from '@/i18n/locales';
+import { intlLocale } from '@/i18n/locales';
 
 export type LeaseApplicationLabels = {
   reserve: string;
@@ -19,8 +22,28 @@ export type LeaseApplicationLabels = {
   questionStep: string;
   why: string;
   continue: string;
+  finish: string;
   complete: string;
   validationError: string;
+  leaveWarning: string;
+  bindingWarning: string;
+  finishing: string;
+  signingError: string;
+  checkoutTitle: string;
+  checkoutMonthlyRent: string;
+  checkoutTerm: string;
+  checkoutPaymentDue: string;
+  checkoutPriceList: string;
+  months: string;
+  days: string;
+};
+
+type LeaseOffer = {
+  downPaymentCents: number;
+  termMonths: number;
+  monthlyNetCents: number;
+  priceListVersion: number;
+  paymentDueDays: number;
 };
 
 type LeaseApplicationContextValue = {
@@ -34,7 +57,14 @@ type LeaseApplicationContextValue = {
   setAnswers: (answers: Record<string, string>) => void;
   validationError: string | null;
   setValidationError: (message: string | null) => void;
+  completed: boolean;
+  complete: () => void;
+  release: () => Promise<void>;
   today: string;
+  offer: LeaseOffer;
+  setOffer: (offer: LeaseOffer) => void;
+  customer: Customer | null;
+  assetId: string;
 };
 
 const LeaseApplicationContext = createContext<LeaseApplicationContextValue | null>(null);
@@ -47,6 +77,7 @@ export function LeaseApplication({
   labels,
   customer,
   today,
+  initialOffer,
   children,
 }: {
   assetId: string;
@@ -56,6 +87,7 @@ export function LeaseApplication({
   labels: LeaseApplicationLabels;
   customer: Customer | null;
   today: string;
+  initialOffer: LeaseOffer;
   children: ReactNode;
 }) {
   const [reserved, setReserved] = useState(false);
@@ -86,6 +118,62 @@ export function LeaseApplication({
     return answers;
   });
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const [offer, setOffer] = useState(initialOffer);
+  const navigatingAwayRef = useRef(false);
+
+  const release = useCallback(async () => {
+    await fetch(`/api/assets/${assetId}/release`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+      keepalive: true,
+    }).catch((error: unknown) => {
+      console.error('Unable to release the leasing reservation:', error);
+    });
+    setReserved(false);
+  }, [assetId]);
+
+  useEffect(() => {
+    if (!reserved || completed) return;
+
+    function warnBeforeLeaving(event: BeforeUnloadEvent) {
+      if (navigatingAwayRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    function confirmLinkNavigation(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest('a');
+      if (!link || link.target === '_blank' || !link.href.startsWith(window.location.origin)) {
+        return;
+      }
+      if (!window.confirm(labels.leaveWarning)) {
+        event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      navigatingAwayRef.current = true;
+      void release().finally(() => {
+        window.location.assign(link.href);
+      });
+    }
+
+    function releaseOnPageHide() {
+      void release();
+    }
+
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    window.addEventListener('pagehide', releaseOnPageHide);
+    document.addEventListener('click', confirmLinkNavigation, true);
+    return () => {
+      window.removeEventListener('beforeunload', warnBeforeLeaving);
+      window.removeEventListener('pagehide', releaseOnPageHide);
+      document.removeEventListener('click', confirmLinkNavigation, true);
+    };
+  }, [completed, labels.leaveWarning, release, reserved]);
 
   const visibleQuestions = useMemo(
     () =>
@@ -141,7 +229,14 @@ export function LeaseApplication({
         setAnswers,
         validationError,
         setValidationError,
+        completed,
+        complete: () => setCompleted(true),
+        release,
         today,
+        offer,
+        setOffer,
+        customer,
+        assetId,
       }}
     >
       {children}
@@ -149,14 +244,20 @@ export function LeaseApplication({
   );
 }
 
-export function LeaseStartButton({ available }: { available: boolean }) {
+export function LeaseStartButton({
+  available,
+  canStart,
+}: {
+  available: boolean;
+  canStart: boolean;
+}) {
   const { reserving, error, reserve, labels } = useLeaseApplicationContext();
   return (
     <div className="mt-8 border-t border-stone-200 pt-6 dark:border-stone-800">
       <button
         type="button"
         onClick={reserve}
-        disabled={reserving || !available}
+        disabled={reserving || !available || !canStart}
         className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
       >
         {labels.reserve}
@@ -182,9 +283,16 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
     setAnswers,
     validationError,
     setValidationError,
+    complete,
     today,
+    offer,
+    customer,
+    assetId,
   } = useLeaseApplicationContext();
   const [step, setStep] = useState(0);
+  const [finishing, setFinishing] = useState(false);
+  const [signed, setSigned] = useState(false);
+  const finishStartedRef = useRef(false);
   const applicationRef = useRef<HTMLDivElement>(null);
   const question = questions[step];
 
@@ -196,15 +304,118 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
   }, [reserved]);
 
   if (!question) {
+    if (signed) {
+      return (
+        <p
+          ref={applicationRef}
+          tabIndex={-1}
+          className="mt-8 border-t border-stone-200 pt-6 text-sm text-emerald-800 outline-none dark:border-stone-800 dark:text-emerald-300"
+        >
+          {labels.complete}
+        </p>
+      );
+    }
     return (
-      <p
+      <div
         ref={applicationRef}
         tabIndex={-1}
         className="mt-8 border-t border-stone-200 pt-6 text-sm text-emerald-800 outline-none dark:border-stone-800 dark:text-emerald-300"
       >
-        {labels.complete}
-      </p>
+        <section className="rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800">
+          <h2 className="text-base font-semibold">{labels.checkoutTitle}</h2>
+          <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-stone-600 dark:text-stone-400">{labels.checkoutMonthlyRent}</dt>
+              <dd className="font-semibold">
+                {formatEuro(offer.monthlyNetCents, intlLocale[locale])}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-stone-600 dark:text-stone-400">{labels.checkoutTerm}</dt>
+              <dd className="font-semibold">
+                {labels.months.replace('{count}', String(offer.termMonths))}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-stone-600 dark:text-stone-400">{labels.checkoutPaymentDue}</dt>
+              <dd className="font-semibold">
+                {labels.days.replace('{count}', String(offer.paymentDueDays))}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-stone-600 dark:text-stone-400">{labels.checkoutPriceList}</dt>
+              <dd className="font-semibold">{offer.priceListVersion}</dd>
+            </div>
+          </dl>
+        </section>
+        <button
+          type="button"
+          className="mt-4 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
+          onClick={() => void finishApplication()}
+          disabled={finishing}
+        >
+          {finishing ? labels.finishing : labels.finish}
+        </button>
+      </div>
     );
+  }
+
+  async function finishApplication() {
+    if (finishStartedRef.current || finishing || signed || !customer) return;
+    if (!window.confirm(labels.bindingWarning)) return;
+    finishStartedRef.current = true;
+    setFinishing(true);
+    setValidationError(null);
+    let completedSuccessfully = false;
+    try {
+      const applicationResponse = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          customerId: customer.id,
+          assetId,
+          startDate: today,
+          termMonths: offer.termMonths,
+          downPaymentCents: offer.downPaymentCents,
+          priceListVersion: offer.priceListVersion,
+          offerExpiresOn: today,
+        }),
+      });
+      const applicationResult = (await applicationResponse.json()) as {
+        success: boolean;
+        data?: { id: string; status: string };
+      };
+      if (!applicationResponse.ok || !applicationResult.success || !applicationResult.data) {
+        setValidationError(labels.signingError);
+        return;
+      }
+      if (applicationResult.data.status !== 'APPROVED') {
+        setValidationError(labels.signingError);
+        return;
+      }
+      const signResponse = await fetch(`/api/applications/${applicationResult.data.id}/sign`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ signerId: customer.id }),
+      });
+      const signResult = (await signResponse.json()) as { success: boolean };
+      if (!signResponse.ok || !signResult.success) {
+        setValidationError(labels.signingError);
+        return;
+      }
+      complete();
+      setSigned(true);
+      completedSuccessfully = true;
+      window.location.assign(`/${locale}/account`);
+    } catch (error: unknown) {
+      console.error('Unable to complete leasing contract:', error);
+      setValidationError(labels.signingError);
+    } finally {
+      if (!completedSuccessfully) {
+        finishStartedRef.current = false;
+        setFinishing(false);
+      }
+    }
   }
 
   const answer = answers[question.id] ?? '';
@@ -268,11 +479,12 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
             return;
           }
           setValidationError(null);
+          if (step + 1 >= questions.length) complete();
           setStep(step + 1);
         }}
         className="mt-5 w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
       >
-        {labels.continue}
+        {step + 1 >= questions.length ? labels.continue : labels.continue}
       </button>
       <p className="mt-2 min-h-5 text-sm text-red-700 dark:text-red-300" aria-live="polite">
         {validationError}
@@ -305,7 +517,7 @@ function isBlocking(
   return false;
 }
 
-function useLeaseApplicationContext() {
+export function useLeaseApplicationContext() {
   const context = useContext(LeaseApplicationContext);
   if (!context) throw new Error('Lease application components must be rendered together');
   return context;

@@ -34,7 +34,7 @@ export interface EndLeaseInput {
 /** Every reason `endLease` refuses; `POST /api/contracts/:id/end` answers each in upper case. */
 export type EndLeaseRefusal =
   | 'contract_not_found'
-  /** Still waiting for the person who must sign (D-050). */
+  /** Still waiting for the person who must sign (D-053). */
   | 'contract_not_active'
   | 'already_ended'
   | 'unknown_customer'

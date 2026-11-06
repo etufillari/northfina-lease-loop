@@ -1,4 +1,4 @@
-// A contract waiting for the person who must sign it (D-050): who, since when, and what happens
+// A contract waiting for the person who must sign it (D-053): who, since when, and what happens
 // next, with the demo action that signs as them.
 import { CountersignButton } from '@/components/countersign-button';
 import type { AwaitingSignature } from '@/server/contracts';

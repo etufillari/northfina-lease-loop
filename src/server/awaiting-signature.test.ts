@@ -1,4 +1,4 @@
-// Card 6 as the judges clarified it (D-048, D-050): an applicant who may not sign sends the lease
+// Card 6 as the judges clarified it (D-048, D-053): an applicant who may not sign sends the lease
 // to their signatory. It is stored, not signed and not active, until that person signs.
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';

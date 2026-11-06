@@ -38,7 +38,7 @@ const fromRoutes = [
   'APPLICATION_INVALID',
   'APPLICATION_DECLINED',
   'APPLICATION_NEEDS_REVIEW',
-  // POST /api/contracts/:id/sign (D-050)
+  // POST /api/contracts/:id/sign (D-053)
   'NOT_AWAITING_SIGNATURE',
   'SIGNED_BEFORE_SENT',
   // POST /api/contracts/:id/end and /end-early

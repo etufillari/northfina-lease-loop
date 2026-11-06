@@ -376,7 +376,7 @@ function DecisionPanel(props: {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const busy = props.signing === 'busy';
   const canSign = decision.status === 'decided' && decision.outcome === 'approved';
-  // An applicant who may not sign sends the lease to their signatory instead (D-050).
+  // An applicant who may not sign sends the lease to their signatory instead (D-053).
   const signatory =
     decision.status === 'decided' && decision.signer.kind === 'signatory'
       ? decision.signer.email

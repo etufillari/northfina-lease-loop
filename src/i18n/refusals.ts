@@ -60,7 +60,7 @@ const messageKeys = {
   application_invalid: 'refusal.application_invalid',
   application_declined: 'refusal.application_declined',
   application_needs_review: 'refusal.application_needs_review',
-  // a contract waiting for its signatory (D-050)
+  // a contract waiting for its signatory (D-053)
   contract_not_active: 'refusal.contract_not_active',
   not_awaiting_signature: 'refusal.not_awaiting_signature',
   signed_before_sent: 'refusal.signed_before_sent',

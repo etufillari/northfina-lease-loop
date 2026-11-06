@@ -1,7 +1,7 @@
 // Signing a lease and reading contracts back. Signing locks a stored quote (D-014, D-034): the
 // price the customer was shown, never numbers sent by the browser. Signing and its audit row
 // commit together. An applicant who may not sign sends the lease to the person who must: it is
-// stored waiting for them, not active, with the price locked (D-050).
+// stored waiting for them, not active, with the price locked (D-053).
 import { z } from 'zod';
 import type { AssetCategory, VatRates } from '@/data/schemas';
 import { signContract, type Contract, type SignResult } from '@/domain/contract';
@@ -56,7 +56,7 @@ export type SignLeaseRefusal =
   | Extract<SignResult, { ok: false }>['reason']
   | ApplicationRefusal;
 
-/** Who must still sign a stored contract, and the day it was sent to them (D-050). */
+/** Who must still sign a stored contract, and the day it was sent to them (D-053). */
 export interface AwaitingSignature {
   email: string;
   sentOn: string;
@@ -131,7 +131,7 @@ export async function signLease(
   }
   const decided = decidedSigner(data, input, asset.category, quote);
   if (!decided.ok) return decided;
-  // Not active until the signatory signs; the dates are set again then (D-050).
+  // Not active until the signatory signs; the dates are set again then (D-053).
   const awaitingSignature: AwaitingSignature | null =
     decided.signer.kind === 'signatory'
       ? { email: decided.signer.email, sentOn: input.today }
@@ -231,7 +231,7 @@ export async function signLease(
  * Decides the application on the server with the deal being signed, so a stale or tampered
  * answer from the browser can't sign. Affordability uses the highest monthly total over the
  * term (D-023). Returns why it can't be signed, or who signs it: the applicant, or the
- * signatory they named (D-050).
+ * signatory they named (D-053).
  */
 function decidedSigner(
   data: LeaseDataPack,
@@ -327,7 +327,7 @@ function awaitingFromRow(row: {
 }
 
 /**
- * The invoices issued for a contract: none while it waits for a signature (D-050), and after an
+ * The invoices issued for a contract: none while it waits for a signature (D-053), and after an
  * ending only those issued before it took effect (D-033).
  */
 export function issuedInvoices(

@@ -50,7 +50,7 @@ model AuditLog {
 // A lease. `terms_json` is the frozen contract from src/domain/contract.ts: the locked price,
 // where it came from and the billing rule. A later price list can't change it (D-014). The other
 // columns are copies for lookups.
-// A contract can wait for the person who must sign (D-050): `status` is `awaiting_signatory`,
+// A contract can wait for the person who must sign (D-053): `status` is `awaiting_signatory`,
 // `signatory_email` says who, and `sent_on` when. It is not active: no invoices, the asset is
 // reserved for it. When they sign, only the sign and start dates change, once, and it is active.
 model Contract {

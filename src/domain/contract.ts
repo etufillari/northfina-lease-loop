@@ -40,7 +40,7 @@ export function signContract(quote: Quote, details: SignatureDetails): SignResul
 }
 
 /**
- * The person who must sign signs a contract that was waiting for them (D-050). The price stays as
+ * The person who must sign signs a contract that was waiting for them (D-053). The price stays as
  * it was locked when the contract was sent, even if the quote has since expired: the applicant
  * accepted it in time. The lease starts the day they sign, so invoices run from that day.
  */

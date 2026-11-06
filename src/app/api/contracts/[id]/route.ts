@@ -1,6 +1,6 @@
 // GET /api/contracts/:id   The locked contract, its invoices and how it ended (or null). After an
 // ending, `schedule` holds only the invoices issued before it took effect (D-033). While the
-// contract waits for a signature, `awaitingSignature` says who and `schedule` is null (D-050).
+// contract waits for a signature, `awaitingSignature` says who and `schedule` is null (D-053).
 import { fail, handleRoute, ok } from '@/server/api-response';
 import { getContractEnding } from '@/server/contract-endings';
 import { getContract, issuedInvoices } from '@/server/contracts';

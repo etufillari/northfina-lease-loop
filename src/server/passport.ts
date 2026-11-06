@@ -21,7 +21,7 @@ export interface PassportView {
 
 async function contractsFor(db: PrismaClient, assetId: string): Promise<PassportContract[]> {
   const rows = await db.contract.findMany({
-    // A lease still waiting for its signature isn't one of the item's lives yet (D-050).
+    // A lease still waiting for its signature isn't one of the item's lives yet (D-053).
     where: { asset_id: assetId, status: 'active' },
     orderBy: { id: 'asc' },
     select: { id: true, created_at: true },

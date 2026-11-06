@@ -3,7 +3,7 @@
 // Signs a stored quote (D-034): checks today's price first (D-014), decides the application again,
 // locks the contract and reserves the asset, with an audit row in the same transaction. When
 // today's rent is lower, answers 409 PRICE_CHOICE_REQUIRED with the offer and signs nothing. When
-// the applicant may not sign, the contract is stored waiting for their signatory (D-050), and
+// the applicant may not sign, the contract is stored waiting for their signatory (D-053), and
 // `awaitingSignature` says who and since when.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';

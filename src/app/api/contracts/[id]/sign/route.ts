@@ -1,5 +1,5 @@
 // POST /api/contracts/:id/sign   no body
-// The person a contract is waiting for signs it (D-050): it becomes active from the effective
+// The person a contract is waiting for signs it (D-053): it becomes active from the effective
 // today (D-030), with the price locked when it was sent. A demo action: there is no e-signature
 // service, so the page signs as that person. Audited in the same transaction.
 import { fail, handleRoute, ok } from '@/server/api-response';

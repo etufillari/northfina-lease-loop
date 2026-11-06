@@ -12,7 +12,7 @@ export async function ageClockFor(db: PrismaClient, assetId: string): Promise<Ag
     db.asset.findUnique({ where: { id: assetId } }),
     loadAssets(),
     db.contract.findFirst({
-      // A contract still waiting for a signature hasn't started (D-050).
+      // A contract still waiting for a signature hasn't started (D-053).
       where: { asset_id: assetId, status: 'active' },
       orderBy: { id: 'asc' },
       select: { start_date: true },

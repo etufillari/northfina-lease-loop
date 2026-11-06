@@ -1,4 +1,4 @@
-// A contract waiting for the person who must sign it (D-050), e.g. a company's authorised
+// A contract waiting for the person who must sign it (D-053), e.g. a company's authorised
 // signatory when the applicant may not sign (card 6). When they sign, the contract becomes active
 // from that day: only the sign and start dates change, the price stays as locked when it was sent.
 // There is no e-signature service in the demo; the contract page signs as that person.

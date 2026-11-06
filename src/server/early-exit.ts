@@ -75,7 +75,7 @@ export function earlyExitContext(
 /** Every reason `endLeaseEarly` refuses; `POST /api/contracts/:id/end-early` answers each. */
 export type EndEarlyRefusal =
   | 'contract_not_found'
-  /** Still waiting for the person who must sign (D-050). */
+  /** Still waiting for the person who must sign (D-053). */
   | 'contract_not_active'
   | 'already_ended'
   | 'asset_not_leased'

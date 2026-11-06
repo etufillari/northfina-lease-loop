@@ -165,7 +165,7 @@ describe('signContract properties (random quotes, signed any day they are valid)
   });
 });
 
-describe('countersign (D-050: a contract waiting for the person who must sign)', () => {
+describe('countersign (D-053: a contract waiting for the person who must sign)', () => {
   // Card 6: Norvi's applicant sent ebike-004 to their signatory on 5 Nov.
   function sent() {
     const signed = signContract(quoteFor('ebike-004', '2026-11-05'), {

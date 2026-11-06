@@ -1,6 +1,6 @@
 'use client';
 
-// The demo stand-in for the e-signature a waiting contract needs (D-050): signs as the person it
+// The demo stand-in for the e-signature a waiting contract needs (D-053): signs as the person it
 // is waiting for, on the effective today (D-030). The server checks it again.
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

@@ -5,6 +5,34 @@
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+/*
+ * Dark mode: the header button sets <html data-theme="light|dark"> (src/components/theme-toggle.tsx).
+ * Without a choice, the device's prefers-color-scheme decides, as before.
+ */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+
+/* Native controls (scrollbars, date pickers, selects) follow the theme too. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+  }
+}
+
 /* A visible keyboard focus everywhere, in both color schemes. */
 :focus-visible {
   outline: 2px solid var(--color-emerald-600);

@@ -1,13 +1,16 @@
 // The root layout. Every page lives under /[locale] (/en, /fi, /sv, /et), so the
 // <html lang> attribute is always right for the page.
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomerSwitcher } from '@/components/customer-switcher';
 import { InvoiceBell } from '@/components/invoice-bell';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { TimeTravelBar } from '@/components/time-travel-bar';
 import { loadCustomers } from '@/data/load';
+import { parseTheme, THEME_COOKIE } from '@/domain/theme';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
@@ -36,9 +39,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   // The bell: ended leases waiting for a choice, items passed on to this viewer, and unpaid
   // invoices, on the app's date.
   const { count: notificationCount } = await notificationsFor(db, viewer, date.today);
+  // Light or dark from the header button; without a choice the device decides (globals.css).
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    <html lang={locale}>
+    <html lang={locale} data-theme={theme ?? undefined}>
       <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100 print:bg-white print:text-black">
         <a
           href="#main"
@@ -91,6 +96,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 label={t('nav.notifications', { count: notificationCount })}
               />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
+              <ThemeToggle chosen={theme} label={t('nav.darkMode')} />
             </div>
           </div>
         </header>

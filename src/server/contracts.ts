@@ -7,6 +7,7 @@ import { monthlyFactorFor } from '@/domain/coefficient';
 import type { Answers } from '@/domain/question-flow';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
+import { quoteAssetIds } from '@/server/quotes';
 import { executeTransfer } from '@/server/transfers';
 
 type Db = PrismaClient;
@@ -110,7 +111,7 @@ export async function signApplication(
       entityId: contractId,
       details: {
         applicationId: application.id,
-        assetId: quote.asset_id,
+        assetIds: quoteAssetIds(quote),
         priceListVersion: quote.price_list_version,
         startDate: input.startDate,
       },
@@ -134,9 +135,9 @@ export async function signApplication(
           usage_purpose: locked.contract.usagePurpose,
         },
       });
-      await tx.contractAsset.create({
-        data: { contract_id: contractId, asset_id: quote.asset_id },
-      });
+      for (const assetId of quoteAssetIds(quote)) {
+        await tx.contractAsset.create({ data: { contract_id: contractId, asset_id: assetId } });
+      }
       for (const invoice of schedule.invoices) {
         await tx.invoice.create({
           data: {
@@ -156,24 +157,26 @@ export async function signApplication(
         where: { id: application.id },
         data: { status: 'signed' },
       });
-      await tx.reservation.updateMany({
-        where: { asset_id: quote.asset_id, active: true },
-        data: { active: false },
-      });
-      await tx.asset.update({ where: { id: quote.asset_id }, data: { status: 'leased' } });
-      await tx.assetEvent.create({
-        data: {
-          asset_id: quote.asset_id,
-          contract_id: contractId,
-          type: 'leased',
-          on_date: input.startDate,
-          details_json: JSON.stringify({
-            customerId: application.customer_id,
-            termMonths: quote.term_months,
-            monthlyNetRentCents: quote.monthly_net_rent_cents,
-          }),
-        },
-      });
+      for (const assetId of quoteAssetIds(quote)) {
+        await tx.reservation.updateMany({
+          where: { asset_id: assetId, active: true },
+          data: { active: false },
+        });
+        await tx.asset.update({ where: { id: assetId }, data: { status: 'leased' } });
+        await tx.assetEvent.create({
+          data: {
+            asset_id: assetId,
+            contract_id: contractId,
+            type: 'leased',
+            on_date: input.startDate,
+            details_json: JSON.stringify({
+              customerId: application.customer_id,
+              termMonths: quote.term_months,
+              monthlyNetRentCents: quote.monthly_net_rent_cents,
+            }),
+          },
+        });
+      }
     }
   );
   return { ok: true, contractId };

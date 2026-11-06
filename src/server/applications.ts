@@ -18,7 +18,7 @@ import { grossCents, vatRateOn } from '@/domain/vat';
 import { loadCoefficientTable } from '@/data/load';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
-import { buildLiveQuote, quoteRowData } from '@/server/quotes';
+import { buildLiveQuote, quoteAssetIds, quoteRowData } from '@/server/quotes';
 
 export type ApplicationState = {
   application: {
@@ -33,8 +33,7 @@ export type ApplicationState = {
   };
   quote: {
     id: string;
-    assetId: string;
-    quantity: number;
+    assetIds: string[];
     quoteDate: string;
     priceListVersion: number;
     listPriceCents: number;
@@ -147,8 +146,7 @@ async function buildState(
     },
     quote: {
       id: rows.quote.id,
-      assetId: rows.quote.asset_id,
-      quantity: rows.quote.quantity,
+      assetIds: quoteAssetIds(rows.quote),
       quoteDate: rows.quote.quote_date,
       priceListVersion: rows.quote.price_list_version,
       listPriceCents: rows.quote.list_price_cents,
@@ -181,12 +179,15 @@ export async function getApplicationState(db: Db, applicationId: string, asOf: s
 
 export type StartResult = { ok: true; state: ApplicationState } | { ok: false; reason: string };
 
-/** Creates the Quote row and a draft Application in one audited transaction. */
+/**
+ * Creates the Quote row and a draft Application in one audited transaction. A fleet is a
+ * group of distinct assets of the SAME category (a mixed group would make the category-
+ * driven questions ambiguous), priced as one banded total.
+ */
 export async function startApplication(
   db: Db,
   input: {
-    assetId: string;
-    quantity: number;
+    assetIds: string[];
     downPaymentCents: number;
     termMonths: number;
     customerId: string;
@@ -194,10 +195,16 @@ export async function startApplication(
     asOf: string;
   }
 ): Promise<StartResult> {
-  const asset = await db.asset.findUnique({ where: { id: input.assetId } });
-  if (!asset) return { ok: false, reason: 'unknown_asset' };
-  if (asset.status === 'leased' || asset.status === 'reserved') {
+  if (new Set(input.assetIds).size !== input.assetIds.length) {
+    return { ok: false, reason: 'duplicate_assets' };
+  }
+  const assets = await db.asset.findMany({ where: { id: { in: input.assetIds } } });
+  if (assets.length !== input.assetIds.length) return { ok: false, reason: 'unknown_asset' };
+  if (assets.some((a) => a.status === 'leased' || a.status === 'reserved' || a.status === 'sold')) {
     return { ok: false, reason: 'asset_unavailable' };
+  }
+  if (new Set(assets.map((a) => a.category)).size > 1) {
+    return { ok: false, reason: 'mixed_categories' };
   }
   const live = await buildLiveQuote(input);
   if (!live.ok) return { ok: false, reason: live.reason };
@@ -210,7 +217,7 @@ export async function startApplication(
       action: 'application.started',
       entityType: 'application',
       entityId: applicationId,
-      details: { assetId: input.assetId, termMonths: input.termMonths },
+      details: { assetIds: input.assetIds, termMonths: input.termMonths },
     },
     async (tx) => {
       const quote = await tx.quote.create({ data: quoteRowData(live.live, input.customerId) });
@@ -353,18 +360,17 @@ export async function submitApplication(
         },
       });
       if (status !== 'declined') {
-        await tx.asset.update({
-          where: { id: rows.quote.asset_id },
-          data: { status: 'reserved' },
-        });
-        await tx.reservation.create({
-          data: {
-            asset_id: rows.quote.asset_id,
-            customer_id: rows.application.customer_id,
-            kind: status === 'awaiting_signature' ? 'awaiting_signatory' : 'approval_hold',
-            until: holdUntil!,
-          },
-        });
+        for (const assetId of quoteAssetIds(rows.quote)) {
+          await tx.asset.update({ where: { id: assetId }, data: { status: 'reserved' } });
+          await tx.reservation.create({
+            data: {
+              asset_id: assetId,
+              customer_id: rows.application.customer_id,
+              kind: status === 'awaiting_signature' ? 'awaiting_signatory' : 'approval_hold',
+              until: holdUntil!,
+            },
+          });
+        }
       }
     }
   );

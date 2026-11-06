@@ -41,6 +41,14 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
             {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
           </time>
         </p>
+        <p className="mt-3">
+          <Link
+            href={`/${locale}/fleet${asOfParam ? `?asOf=${asOfParam}` : ''}`}
+            className="text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+          >
+            {t('catalogue.fleetLink')}
+          </Link>
+        </p>
       </div>
 
       {groups.length === 0 ? (

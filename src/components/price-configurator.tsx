@@ -33,12 +33,13 @@ type LiveQuote = {
 
 export function PriceConfigurator({
   locale,
-  assetId,
+  assetIds,
   personaId,
   asOf,
 }: {
   locale: Locale;
-  assetId: string;
+  /** One asset, or a fleet of distinct assets priced as one banded total. */
+  assetIds: string[];
   personaId: string | null;
   asOf: string | null;
 }) {
@@ -47,22 +48,20 @@ export function PriceConfigurator({
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const [termMonths, setTermMonths] = useState(36);
   const [downCents, setDownCents] = useState(0);
-  const [quantity, setQuantity] = useState(1);
   const [live, setLive] = useState<LiveQuote | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({
-      assetId,
+      assetIds: assetIds.join(','),
       downPaymentCents: String(downCents),
       termMonths: String(termMonths),
-      quantity: String(quantity),
     });
     if (personaId) params.set('customerId', personaId);
     if (asOf) params.set('asOf', asOf);
     return params.toString();
-  }, [assetId, downCents, termMonths, quantity, personaId, asOf]);
+  }, [assetIds, downCents, termMonths, personaId, asOf]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -89,10 +88,9 @@ export function PriceConfigurator({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        assetId,
+        assetIds,
         downPaymentCents: downCents,
         termMonths,
-        quantity,
         customerId: personaId,
         actor: personaId,
       }),
@@ -119,28 +117,6 @@ export function PriceConfigurator({
     <div className="mt-8 grid gap-6 lg:grid-cols-5">
       <section className="rounded-2xl border border-stone-200 bg-white p-5 lg:col-span-3 dark:border-stone-800 dark:bg-stone-900">
         <h2 className="text-lg font-semibold">{t('asset.configure')}</h2>
-
-        <div className="mt-4">
-          <label htmlFor="quantity" className="flex items-center gap-2 text-sm font-medium">
-            {t('price.quantity')}
-            <input
-              id="quantity"
-              type="number"
-              min={1}
-              max={20}
-              value={quantity}
-              onChange={(event) =>
-                setQuantity(Math.max(1, Math.min(20, Math.round(Number(event.target.value) || 1))))
-              }
-              className="w-16 rounded-lg border border-stone-300 px-2 py-1 text-right dark:border-stone-700 dark:bg-stone-900"
-            />
-            {quantity > 1 ? (
-              <span className="font-normal text-stone-600 dark:text-stone-400">
-                {t('price.quantityNote')}
-              </span>
-            ) : null}
-          </label>
-        </div>
 
         <div className="mt-4">
           <label htmlFor="term" className="text-sm font-medium">

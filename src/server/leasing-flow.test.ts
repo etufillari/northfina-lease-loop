@@ -56,8 +56,7 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
 
   it('prices a live quote with the card-1 numbers', async () => {
     const live = await buildLiveQuote({
-      assetId: 'ebike-003',
-      quantity: 1,
+      assetIds: ['ebike-003'],
       downPaymentCents: 0,
       termMonths: 36,
       asOf: AS_OF,
@@ -74,8 +73,7 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
 
   it('starts an application and walks the question flow', async () => {
     const started = await startApplication(db, {
-      assetId: 'ebike-003',
-      quantity: 1,
+      assetIds: ['ebike-003'],
       downPaymentCents: 0,
       termMonths: 36,
       customerId: AINO,
@@ -229,8 +227,7 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
 describe('end of term: buying the item takes it out of the loop', () => {
   it('runs a 12-month lease to its end and buys the item', async () => {
     const started = await startApplication(db, {
-      assetId: 'laptop-003',
-      quantity: 1,
+      assetIds: ['laptop-003'],
       downPaymentCents: 0,
       termMonths: 12,
       customerId: AINO,
@@ -276,6 +273,65 @@ describe('end of term: buying the item takes it out of the loop', () => {
   });
 });
 
+describe('fleets are groups of distinct assets', () => {
+  it('two laptops become one contract banded on the total, each asset leased', async () => {
+    const started = await startApplication(db, {
+      assetIds: ['laptop-004', 'laptop-005'],
+      downPaymentCents: 0,
+      termMonths: 24,
+      customerId: 'cust-aino',
+      actor: 'cust-aino',
+      asOf: AS_OF,
+    });
+    if (!started.ok) throw new Error(started.reason);
+    expect(started.state.quote.assetIds).toEqual(['laptop-004', 'laptop-005']);
+    await answer(started.state.application.id, 'q_customer_type', 'consumer');
+    await answer(started.state.application.id, 'q_full_name', 'Aino Virtanen');
+    await answer(started.state.application.id, 'q_birth_date', '1997-04-12');
+    await answer(started.state.application.id, 'q_email', 'aino.virtanen@example.com');
+    await answer(started.state.application.id, 'q_country', 'FI');
+    await answer(started.state.application.id, 'q_employment', 'employed');
+    await answer(started.state.application.id, 'q_monthly_income', 320_000);
+    const submitted = await submitApplication(db, {
+      applicationId: started.state.application.id,
+      startDate: AS_OF,
+      actor: 'cust-aino',
+      asOf: AS_OF,
+    });
+    if (!submitted.ok) throw new Error(submitted.reason);
+    const signed = await signApplication(db, {
+      applicationId: started.state.application.id,
+      startDate: AS_OF,
+      actor: 'cust-aino',
+      asOf: AS_OF,
+    });
+    if (!signed.ok) throw new Error(signed.reason);
+    const contract = await getContract(db, signed.contractId);
+    expect(contract!.assets.map((a) => a.asset_id).sort()).toEqual(['laptop-004', 'laptop-005']);
+    for (const id of ['laptop-004', 'laptop-005']) {
+      expect((await db.asset.findUnique({ where: { id } }))?.status).toBe('leased');
+    }
+  });
+
+  it('refuses duplicates and mixed categories', async () => {
+    const base = {
+      downPaymentCents: 0,
+      termMonths: 24,
+      customerId: 'cust-aino',
+      actor: 'cust-aino',
+      asOf: AS_OF,
+    };
+    expect(await startApplication(db, { ...base, assetIds: ['ebike-001', 'ebike-001'] })).toEqual({
+      ok: false,
+      reason: 'duplicate_assets',
+    });
+    expect(await startApplication(db, { ...base, assetIds: ['ebike-001', 'laptop-008'] })).toEqual({
+      ok: false,
+      reason: 'mixed_categories',
+    });
+  });
+});
+
 describe('customers and the waiting list', () => {
   it('creates an empty user and saves prefill defaults on opt-in', async () => {
     const created = await createCustomer(db, {
@@ -298,8 +354,7 @@ describe('customers and the waiting list', () => {
     const customers = await loadCustomers();
     expect(customers.length).toBeGreaterThan(0); // the data pack is seeded
     const started = await startApplication(db, {
-      assetId: 'ebike-001',
-      quantity: 1,
+      assetIds: ['ebike-001'],
       downPaymentCents: 0,
       termMonths: 24,
       customerId: AINO,

@@ -54,6 +54,21 @@ describe('data pack', () => {
     }
   });
 
+  it('has application explanations and eligibility text in all four languages', async () => {
+    const questionsFile = await loadQuestions();
+    const locales = ['en', 'et', 'fi', 'sv'];
+
+    for (const rule of questionsFile.eligibility_rules) {
+      expect(Object.keys(rule.text).sort(), rule.id).toEqual(locales);
+    }
+    for (const question of questionsFile.questions) {
+      expect(Object.keys(question.why_we_ask).sort(), question.id).toEqual(locales);
+      if (question.validation) {
+        expect(Object.keys(question.validation.hint).sort(), question.id).toEqual(locales);
+      }
+    }
+  });
+
   it('reports which file and field is wrong when data does not match', async () => {
     const strict = z.array(z.strictObject({ id: z.number() }));
     await expect(loadDataFile('assets.json', strict)).rejects.toThrow(

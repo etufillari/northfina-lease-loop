@@ -28,8 +28,30 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned']);
+export const assetStatusSchema = z.enum(['available', 'reserved', 'returned', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
+
+export const applicationStatusSchema = z.enum(['pending', 'approved', 'rejected', 'manual_review']);
+export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
+
+export const contractStatusSchema = z.enum(['draft', 'active', 'completed', 'terminated']);
+export type ContractStatus = z.infer<typeof contractStatusSchema>;
+
+export const invoiceStatusSchema = z.enum(['issued', 'paid', 'overdue', 'cancelled']);
+export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
+
+export const endOfTermActionSchema = z.enum(['bought', 'returned', 'passed_on']);
+export type EndOfTermAction = z.infer<typeof endOfTermActionSchema>;
+
+export const assetHistoryEventSchema = z.enum([
+  'lease_started',
+  'returned',
+  'condition_assessed',
+  'refurbished',
+  'made_available',
+  'bought_out',
+]);
+export type AssetHistoryEvent = z.infer<typeof assetHistoryEventSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */
 export const usageUnitSchema = z.enum(['km', 'battery_cycles', 'engine_hours']);
@@ -200,14 +222,6 @@ export const translatedTextSchema = z.strictObject({
   et: z.string(),
 });
 
-/** Text that is always in English and may have translations. */
-export const localizedTextSchema = z.strictObject({
-  en: z.string(),
-  fi: z.string().optional(),
-  sv: z.string().optional(),
-  et: z.string().optional(),
-});
-
 /**
  * Which value a condition looks at: a deal field, or an earlier answer (`answers.<question id>`).
  */
@@ -243,14 +257,14 @@ export const questionSchema = z
     id: z.string().regex(/^q_[a-z0-9_]+$/),
     type: questionTypeSchema,
     text: translatedTextSchema,
-    why_we_ask: localizedTextSchema,
+    why_we_ask: translatedTextSchema,
     /** Empty list = always ask. */
     ask_when: z.array(askWhenConditionSchema),
     /** Allowed answers; only for `choice` questions. */
     options: z.array(z.string()).min(1).optional(),
     blocks_application_when: z.array(blockRuleSchema).optional(),
     validation: z
-      .strictObject({ format: z.literal('finnish_business_id'), hint: z.string() })
+      .strictObject({ format: z.literal('finnish_business_id'), hint: translatedTextSchema })
       .optional(),
   })
   .refine((q) => (q.type === 'choice') === (q.options !== undefined), {
@@ -258,7 +272,10 @@ export const questionSchema = z
   });
 export type Question = z.infer<typeof questionSchema>;
 
-export const eligibilityRuleSchema = z.strictObject({ id: z.string(), text: z.string() });
+export const eligibilityRuleSchema = z.strictObject({
+  id: z.string(),
+  text: translatedTextSchema,
+});
 export type EligibilityRule = z.infer<typeof eligibilityRuleSchema>;
 
 export const questionsFileSchema = z.strictObject({

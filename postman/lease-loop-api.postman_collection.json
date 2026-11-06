@@ -14,6 +14,10 @@
       "value": "ebike-003"
     },
     {
+      "key": "customerId",
+      "value": "cust-aino"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -85,6 +89,77 @@
               }
             },
             "url": "{{baseUrl}}/api/quotes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "Preview application - initial questions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36,\n  \"answers\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/applications/preview"
+          }
+        },
+        {
+          "name": "Preview application - complete consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36,\n  \"answers\": {\n    \"q_customer_type\": \"consumer\",\n    \"q_full_name\": \"Aino Virtanen\",\n    \"q_birth_date\": \"1997-04-12\",\n    \"q_email\": \"aino@example.com\",\n    \"q_country\": \"FI\",\n    \"q_employment\": \"employed\",\n    \"q_monthly_income\": 320000,\n    \"q_usage_purpose\": \"commuting\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/applications/preview"
+          }
+        },
+        {
+          "name": "Submit application - approved consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36,\n  \"answers\": {\n    \"q_customer_type\": \"consumer\",\n    \"q_full_name\": \"Aino Virtanen\",\n    \"q_birth_date\": \"1997-04-12\",\n    \"q_email\": \"aino.virtanen@example.com\",\n    \"q_country\": \"FI\",\n    \"q_employment\": \"employed\",\n    \"q_monthly_income\": 320000,\n    \"q_usage_purpose\": \"commuting\"\n  },\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/applications"
           }
         }
       ]

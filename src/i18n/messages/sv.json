@@ -152,5 +152,6 @@
   "account.applications.financedAmount": "Finansierat belopp",
   "account.applications.contractAvailable": "Avtal tillgängligt",
   "account.applications.manualReviewDescription": "Din ansökan väntar på manuell granskning.",
-  "account.applications.continueToContract": "Fortsätt till avtalet"
+  "account.applications.continueToContract": "Fortsätt till avtalet",
+  "staff.applications.title": "Ansökningar"
 }

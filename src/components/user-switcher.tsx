@@ -3,8 +3,10 @@
 // Demo "acting as" control: pick a customer or staff id, POST /api/session, cookie is set.
 // No password. The list comes from GET /api/session/users.
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useState } from 'react';
+
 import type { IdentitySummary } from '@/domain/identity';
 import { getT, type Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
@@ -52,7 +54,6 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
 
-  // Fetch data without updating React state.
   const load = useCallback(async (): Promise<SessionData> => {
     const [usersResponse, sessionResponse] = await Promise.all([
       fetch('/api/session/users'),
@@ -68,7 +69,6 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
     };
   }, []);
 
-  // Initial data loading.
   useEffect(() => {
     let cancelled = false;
 
@@ -134,65 +134,82 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   const customers = users.filter((user) => user.kind === 'customer');
   const staff = users.filter((user) => user.kind !== 'customer');
 
+  const currentUser = users.find((user) => user.id === currentId);
+
+  const applicationsHref =
+    currentUser?.kind === 'customer'
+      ? `/${locale}/account/applications`
+      : currentUser?.kind === 'staff'
+        ? `/${locale}/admin/applications`
+        : null;
+
+  const applicationsLabel =
+    currentUser?.kind === 'customer'
+      ? t('account.applications.title')
+      : t('staff.applications.title');
+
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-stone-800 dark:bg-stone-900">
-      <label htmlFor={selectId} className="sr-only">
-        {t('nav.session')}
-      </label>
-
-      <select
-        id={selectId}
-        value={currentId}
-        disabled={loading || busy || users.length === 0}
-        onChange={(event) => void onChange(event.target.value)}
-        aria-busy={loading || busy}
-        aria-invalid={error || undefined}
-        className="min-w-0 flex-1 appearance-none rounded-none border-0 bg-transparent px-2 py-2 text-sm text-stone-800 shadow-none outline-none ring-0 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 dark:text-stone-100"
-      >
-        <option
-          value=""
-          disabled
-          className="bg-stone-50 text-stone-800 dark:bg-stone-900 dark:text-stone-100"
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {applicationsHref && (
+        <Link
+          href={applicationsHref}
+          className="shrink-0 rounded-lg border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-300 transition hover:bg-emerald-900/60 hover:text-emerald-200"
         >
-          {loading ? t('session.loading') : t('session.guest')}
-        </option>
+          {applicationsLabel}
+        </Link>
+      )}
 
-        {customers.length > 0 && (
-          <optgroup label={t('session.customers')}>
-            {customers.map((user) => (
-              <option
-                key={user.id}
-                value={user.id}
-                className="bg-stone-50 text-stone-800 dark:bg-stone-900 dark:text-stone-100"
-              >
-                {optionLabel(user, t)}
-              </option>
-            ))}
-          </optgroup>
-        )}
+      <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-800 bg-stone-900 p-2">
+        <label htmlFor={selectId} className="sr-only">
+          {t('nav.session')}
+        </label>
 
-        {staff.length > 0 && (
-          <optgroup label={t('session.staff')}>
-            {staff.map((user) => (
-              <option key={user.id} value={user.id}>
-                {optionLabel(user, t)}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
+        <select
+          id={selectId}
+          value={currentId}
+          disabled={loading || busy || users.length === 0}
+          onChange={(event) => void onChange(event.target.value)}
+          aria-busy={loading || busy}
+          aria-invalid={error || undefined}
+          className="min-w-0 flex-1 appearance-none border-0 bg-transparent px-2 py-2 text-sm text-stone-100 shadow-none outline-none ring-0 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0"
+        >
+          <option value="" disabled className="bg-stone-900 text-stone-100">
+            {loading ? t('session.loading') : t('session.guest')}
+          </option>
 
-      <button
-        type="button"
-        onClick={() => void onChange('')}
-        disabled={loading || busy || !currentId}
-        className="shrink-0 rounded-lg border border-stone-200 px-3 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
-      >
-        {t('session.logout')}
-      </button>
+          {customers.length > 0 && (
+            <optgroup label={t('session.customers')}>
+              {customers.map((user) => (
+                <option key={user.id} value={user.id} className="bg-stone-900 text-stone-100">
+                  {optionLabel(user, t)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+
+          {staff.length > 0 && (
+            <optgroup label={t('session.staff')}>
+              {staff.map((user) => (
+                <option key={user.id} value={user.id} className="bg-stone-900 text-stone-100">
+                  {optionLabel(user, t)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+
+        <button
+          type="button"
+          onClick={() => void onChange('')}
+          disabled={loading || busy || !currentId}
+          className="shrink-0 rounded-lg border border-stone-700 px-3 py-2 text-sm font-medium text-stone-300 transition-colors hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {t('session.logout')}
+        </button>
+      </div>
 
       {error && (
-        <p className="px-1 text-xs text-red-700 dark:text-red-400" role="alert">
+        <p className="px-1 text-xs text-red-400" role="alert">
           {t('session.error')}
         </p>
       )}

@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { allocate, fractionToPpm, mulDivRound, percentToBp } from './rounding';
+import { allocate, fractionToPpm, mulDivRound, percentToBp, roundRatio } from './rounding';
 
 describe('mulDivRound', () => {
   it('matches the worked example in DATA.md', () => {
@@ -121,5 +121,37 @@ describe('rate conversion', () => {
   it('throws when the value has more precision than the unit holds', () => {
     expect(() => percentToBp(25.555)).toThrow();
     expect(() => fractionToPpm(0.0275845)).toThrow();
+  });
+});
+
+describe('roundRatio', () => {
+  it('rounds num / den half up', () => {
+    expect(roundRatio(10n, 4n)).toBe(3); // 2.5
+    expect(roundRatio(9n, 4n)).toBe(2); // 2.25
+    expect(roundRatio(0n, 7n)).toBe(0);
+  });
+
+  it('is exact for products far beyond 2^53', () => {
+    // 25 000 000 × 18 000 000 × 8 800 = 3.96e18, past 2^53; ÷ 1e13 → 396 000 exactly.
+    const num = 25_000_000n * 18_000_000n * 8_800n;
+    expect(roundRatio(num, 10_000n * 1_000_000_000n)).toBe(396_000);
+  });
+
+  it('throws on a negative numerator, a non-positive denominator or an unsafe result', () => {
+    expect(() => roundRatio(-1n, 2n)).toThrow(RangeError);
+    expect(() => roundRatio(1n, 0n)).toThrow(RangeError);
+    expect(() => roundRatio(2n ** 60n, 1n)).toThrow(RangeError);
+  });
+
+  it('agrees with mulDivRound (property)', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 25_000_000 }),
+        fc.integer({ min: 0, max: 1_000_000 }),
+        fc.integer({ min: 1, max: 1_000_000 }),
+        (a, num, den) =>
+          roundRatio(BigInt(a) * BigInt(num), BigInt(den)) === mulDivRound(a, num, den)
+      )
+    );
   });
 });

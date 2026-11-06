@@ -38,6 +38,22 @@ export function mulDivRound(a: number, num: number, den: number): number {
 }
 
 /**
+ * Rounds the exact ratio `num / den` half up, for chains of factors whose product would
+ * pass 2^53 (market value: price × curve × condition × usage). Same rule as
+ * `mulDivRound`, in BigInt. Throws if the result is not a safe integer.
+ */
+export function roundRatio(num: bigint, den: bigint): number {
+  if (num < 0n) throw new RangeError(`num must be non-negative, got ${num}`);
+  if (den <= 0n) throw new RangeError(`den must be positive, got ${den}`);
+  const quotient = num / den;
+  const rounded = (num % den) * 2n >= den ? quotient + 1n : quotient;
+  if (rounded > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new RangeError(`${num} / ${den} is too large for a safe integer`);
+  }
+  return Number(rounded);
+}
+
+/**
  * Splits `total` cents into `parts` integer amounts that differ by at most 1 cent and
  * always sum to `total`. Leftover cents go to the earliest parts.
  *

@@ -7,11 +7,13 @@ import {
   loadVatRates,
 } from '@/data/load';
 import {
+  avoidedCo2Grams,
   calculateAvoidedCo2,
   calculateBuyoutSettlement,
   calculateResidualMarketValue,
   interpolateResidualCurve,
   matchSecondLifeWaitingList,
+  rankWaitingList,
 } from './end-of-term';
 
 describe('calculateBuyoutSettlement', () => {
@@ -113,6 +115,34 @@ describe('calculateResidualMarketValue', () => {
     expect(relistPriceCents).toBe(92781);
   });
 
+  it('rounds an exact half up, where float math rounds it down', async () => {
+    const residualCurves = await loadResidualCurves();
+    // 34 375 × 100 % × 1.0 (new) × 0.94 (3 000 km = −6 %) = 32 312.5 exactly → 32 313.
+    // In floating point the product is 32 312.4999…, so Math.round would give 32 312.
+    const value = calculateResidualMarketValue({
+      firstListPriceCents: 34_375,
+      ageMonths: 0,
+      category: 'e_bike',
+      condition: 'new',
+      usage: { unit: 'km', value: 3_000 },
+      residualCurves,
+    });
+    expect(value).toBe(32_313);
+  });
+
+  it('matches card 8: ebike-003 at 7 months, good, 0 km → 264 520', async () => {
+    const residualCurves = await loadResidualCurves();
+    const value = calculateResidualMarketValue({
+      firstListPriceCents: 389_000,
+      ageMonths: 7,
+      category: 'e_bike',
+      condition: 'good',
+      usage: { unit: 'km', value: 0 },
+      residualCurves,
+    });
+    expect(value).toBe(264_520);
+  });
+
   it('rejects invalid inputs', async () => {
     const residualCurves = await loadResidualCurves();
     expect(() =>
@@ -175,6 +205,123 @@ describe('matchSecondLifeWaitingList', () => {
       coefficientTable,
     });
     expect(futureMatches).toHaveLength(0);
+  });
+});
+
+describe('rankWaitingList', () => {
+  const card9 = async (patch: object = {}) => ({
+    category: 'e_bike' as const,
+    condition: 'fair' as const,
+    relistPriceCents: 92_781,
+    demand: await loadSecondLifeDemand(),
+    asOf: '2026-11-05',
+    coefficientTable: await loadCoefficientTable(),
+    ...patch,
+  });
+  const reasons = (excluded: { request: { id: string }; reason: string }[]) =>
+    Object.fromEntries(excluded.map((e) => [e.request.id, e.reason]));
+
+  it('card 9: wait-02 wins and every other e-bike entry says why it lost', async () => {
+    const { candidates, excluded } = rankWaitingList(await card9());
+    expect(candidates.map((c) => [c.request.id, c.monthlyNetRentCents, c.rank])).toEqual([
+      ['wait-02', 5_198, 1],
+    ]);
+    expect(reasons(excluded)).toEqual({
+      'wait-01': 'condition_too_low',
+      'wait-03': 'condition_too_low',
+      'wait-04': 'condition_too_low',
+      'wait-05': 'condition_too_low',
+      'wait-13': 'condition_too_low',
+    });
+  });
+
+  it('a good item: over_budget when the rent at their term is above their budget', async () => {
+    const { candidates, excluded } = rankWaitingList(await card9({ condition: 'good' }));
+    // wait-05: 12 months → 5 198 > 3 500.
+    expect(reasons(excluded)['wait-05']).toBe('over_budget');
+    expect(candidates.map((c) => c.request.id)).toContain('wait-13');
+  });
+
+  it('deadline_passed once needed_by is before asOf', async () => {
+    const { excluded } = rankWaitingList(await card9({ condition: 'good', asOf: '2026-11-15' }));
+    expect(reasons(excluded)).toMatchObject({
+      'wait-02': 'deadline_passed',
+      'wait-05': 'deadline_passed',
+      'wait-13': 'deadline_passed',
+    });
+  });
+
+  it('ranks by earliest needed_by, then file order', async () => {
+    const { candidates } = rankWaitingList(await card9({ condition: 'like_new' }));
+    const ids = candidates.map((c) => c.request.id);
+    // wait-02 and wait-13 share needed_by 2026-11-10: wait-02 signed up first.
+    expect(ids.indexOf('wait-02')).toBeLessThan(ids.indexOf('wait-13'));
+    expect(candidates.map((c) => c.rank)).toEqual(candidates.map((_, i) => i + 1));
+  });
+
+  it('excludes everyone with the band reason when the relist price cannot be leased', async () => {
+    const { candidates, excluded } = rankWaitingList(
+      await card9({ condition: 'like_new', relistPriceCents: 27_577 })
+    );
+    expect(candidates).toHaveLength(0);
+    expect(new Set(excluded.map((e) => e.reason))).toEqual(new Set(['below_minimum']));
+  });
+
+  it('matchSecondLifeWaitingList returns the same candidates', async () => {
+    const input = await card9();
+    expect(matchSecondLifeWaitingList(input)).toEqual(rankWaitingList(input).candidates);
+  });
+});
+
+describe('avoidedCo2Grams', () => {
+  it('card 9: 165 kg × 0.88 × 92 781 / 549 000 = 24 538.8 g → 24 539 g', async () => {
+    const co2Factors = await loadCo2Factors();
+    expect(
+      avoidedCo2Grams({
+        category: 'e_bike',
+        co2Factors,
+        relistPriceCents: 92_781,
+        firstListPriceCents: 549_000,
+      })
+    ).toBe(24_539);
+  });
+
+  it('is exact for a farm machine, where the product passes 2^53', async () => {
+    const co2Factors = await loadCo2Factors();
+    // 18 000 kg × 0.88 × 12 500 000 / 25 000 000 = 7 920 kg.
+    expect(
+      avoidedCo2Grams({
+        category: 'farm_machine',
+        co2Factors,
+        relistPriceCents: 12_500_000,
+        firstListPriceCents: 25_000_000,
+      })
+    ).toBe(7_920_000);
+  });
+
+  it('caps the value ratio at 1 and floors it at 5 %', async () => {
+    const co2Factors = await loadCo2Factors();
+    const grams = (relistPriceCents: number) =>
+      avoidedCo2Grams({
+        category: 'e_bike',
+        co2Factors,
+        relistPriceCents,
+        firstListPriceCents: 100_000,
+      });
+    expect(grams(150_000)).toBe(145_200); // 165 kg × 0.88
+    expect(grams(1_000)).toBe(7_260); // 5 % of 145.2 kg
+  });
+
+  it('is 0 without a first list price', async () => {
+    const co2Factors = await loadCo2Factors();
+    expect(
+      avoidedCo2Grams({
+        category: 'laptop',
+        co2Factors,
+        relistPriceCents: 1,
+        firstListPriceCents: 0,
+      })
+    ).toBe(0);
   });
 });
 

@@ -4,10 +4,11 @@
 // 3. Second-life waiting-list matchmaking (Spine step 7 & Smart Problem #3)
 // 4. Circular CO2 impact calculation (Smart Problem #7)
 //
-// Rounding rules (RULES.md):
-// All monetary amounts are integer euro cents. Intermediate float math (curves, factors)
-// rounds once to the nearest integer cent with Math.round(cents).
-// Avoided CO2 is rounded once to one decimal place (e.g. 145.2 kg).
+// Rounding rules (RULES.md, ARCHITECTURE.md §6.1):
+// All monetary amounts are integer euro cents and every rate is an integer (basis points,
+// parts per million). Each derived amount is computed as one exact ratio and rounded once,
+// half up (./rounding). No floating-point money.
+// Avoided CO2 is counted in whole grams, rounded once; kg is only for display.
 import type {
   AssetCategory,
   AssetCondition,
@@ -18,8 +19,10 @@ import type {
   UsageUnit,
   VatRates,
 } from '@/data/schemas';
-import { monthlyFactorFor } from './coefficient';
-import { vatRateOn } from './contract-pricing';
+import { monthlyFactorFor, monthlyNetRentFor } from './coefficient';
+import { fractionToBp, percentToBp, roundRatio, toWholeNumber } from './rounding';
+import { priceLine } from './schedule';
+import { vatRateOn } from './vat';
 
 const CONDITION_RANKS: Record<AssetCondition, number> = {
   poor: 1,
@@ -56,15 +59,13 @@ export function calculateBuyoutSettlement(input: {
   if (!vat.ok) {
     throw new Error(`No VAT rate found for date ${input.asOf}`);
   }
-
-  const vatCents = Math.round(input.buyoutNetCents * (vat.ratePercent / 100));
-  const grossCents = input.buyoutNetCents + vatCents;
+  const line = priceLine(input.buyoutNetCents, input.asOf, input.vatRates);
 
   return {
     buyoutNetCents: input.buyoutNetCents,
     vatRatePercent: vat.ratePercent,
-    vatCents,
-    grossCents,
+    vatCents: line.vatCents,
+    grossCents: line.grossCents,
     fictionalVat: vat.fictional,
   };
 }
@@ -131,23 +132,52 @@ export function calculateResidualMarketValue(input: {
     throw new Error(`No residual curve found for category "${input.category}"`);
   }
 
-  const curvePercent = interpolateResidualCurve(curvePoints, input.ageMonths);
-  const conditionMultiplier = input.residualCurves.condition_multiplier[input.condition] ?? 1.0;
+  const curve = curvePercentRatio(curvePoints, input.ageMonths);
+  const conditionBp = fractionToBp(input.residualCurves.condition_multiplier[input.condition] ?? 1);
 
   const usageConfig = input.residualCurves.usage_adjustment[input.category];
-  let usageMultiplier = 1.0;
+  let usageBp = 10_000;
   if (usageConfig && input.usage.value > 0) {
     const steps = Math.floor(input.usage.value / usageConfig.step);
-    const nominalPercent = steps * usageConfig.percent_per_step;
-    // max_total_percent is negative (e.g. -20%), so Math.max(-20, -36) = -20
-    const clampedPercent = Math.max(usageConfig.max_total_percent, nominalPercent);
-    usageMultiplier = 1 + clampedPercent / 100;
+    const nominalBp = steps * percentToBp(usageConfig.percent_per_step);
+    // max_total_percent is negative (e.g. −20 %), so the larger number is the cap.
+    usageBp = 10_000 + Math.max(percentToBp(usageConfig.max_total_percent), nominalBp);
   }
 
-  const rawValue =
-    input.firstListPriceCents * (curvePercent / 100) * conditionMultiplier * usageMultiplier;
+  // price × (curve % / 100) × (condition bp / 10 000) × (usage bp / 10 000), one rounding.
+  return roundRatio(
+    BigInt(input.firstListPriceCents) *
+      curve.num *
+      BigInt(conditionBp) *
+      BigInt(Math.max(0, usageBp)),
+    curve.den * 100n * 10_000n * 10_000n
+  );
+}
 
-  return Math.round(rawValue);
+/**
+ * The residual curve at a whole-month age as an exact ratio `num / den` in percent:
+ * linear between points, the first value before the curve, the last value after it.
+ */
+function curvePercentRatio(
+  points: readonly (readonly [number, number])[],
+  ageMonths: number
+): { num: bigint; den: bigint } {
+  if (!Number.isInteger(ageMonths) || ageMonths < 0) {
+    throw new RangeError(`ageMonths must be a non-negative integer, got ${ageMonths}`);
+  }
+  if (points.length === 0) throw new RangeError('Residual curve must have at least one point');
+  const first = points[0]!;
+  const last = points[points.length - 1]!;
+  if (ageMonths <= first[0]) return { num: BigInt(toWholeNumber(first[1])), den: 1n };
+  if (ageMonths >= last[0]) return { num: BigInt(toWholeNumber(last[1])), den: 1n };
+  const i = points.findIndex((p, k) => k < points.length - 1 && ageMonths <= points[k + 1]![0]);
+  const [x0, y0] = points[i]!;
+  const [x1, y1] = points[i + 1]!;
+  const dx = toWholeNumber(x1 - x0);
+  return {
+    num: BigInt(toWholeNumber(y0) * dx + (ageMonths - x0) * toWholeNumber(y1 - y0)),
+    den: BigInt(dx),
+  };
 }
 
 export type WaitingListMatch = {
@@ -156,97 +186,131 @@ export type WaitingListMatch = {
   rank: number;
 };
 
-/**
- * Matches a returned asset to candidates waiting in data/second-life-demand.json.
- *
- * Requirements:
- * - Category must match.
- * - Asset condition >= candidate's min_condition.
- * - needed_by >= asOf.
- * - Monthly net rent at candidate's preferred_term_months <= max_monthly_net_rent_cents.
- *
- * Tie-breaking:
- * 1. Earliest needed_by date first.
- * 2. Earlier signup (original file order in demand array).
- */
-export function matchSecondLifeWaitingList(input: {
+export type WaitingListExclusionReason =
+  | 'condition_too_low'
+  | 'deadline_passed'
+  | 'over_budget'
+  | 'below_minimum'
+  | 'above_maximum'
+  | 'unknown_term';
+
+export type WaitingListExclusion = {
+  request: SecondLifeRequest;
+  reason: WaitingListExclusionReason;
+  /** Rent at their preferred term, when it could be priced (set for `over_budget`). */
+  monthlyNetRentCents?: number;
+};
+
+export type WaitingListRanking = {
+  candidates: WaitingListMatch[];
+  excluded: WaitingListExclusion[];
+};
+
+export type WaitingListInput = {
   category: AssetCategory;
   condition: AssetCondition;
   relistPriceCents: number;
   demand: readonly SecondLifeRequest[];
   asOf: string;
   coefficientTable: CoefficientTable;
-}): WaitingListMatch[] {
+};
+
+/**
+ * Ranks every waiting-list entry in the item's category (data/second-life-demand.json).
+ * Each entry is a candidate or excluded with a reason, checked in this order:
+ * - item condition >= entry's min_condition, else `condition_too_low`
+ * - needed_by >= asOf, else `deadline_passed`
+ * - the relist price fits a band at their term, else the band reason (`below_minimum`, …)
+ * - monthly net rent at their preferred term <= their budget, else `over_budget`
+ *
+ * Tie-breaking: earliest needed_by first, then earlier signup. There is no signup date,
+ * so file order is signup order.
+ */
+export function rankWaitingList(input: WaitingListInput): WaitingListRanking {
   const assetRank = CONDITION_RANKS[input.condition] ?? 0;
+  const eligible: { request: SecondLifeRequest; monthlyNetRentCents: number; fileIndex: number }[] =
+    [];
+  const excluded: WaitingListExclusion[] = [];
 
-  const eligible: {
-    request: SecondLifeRequest;
-    monthlyNetRentCents: number;
-    fileIndex: number;
-  }[] = [];
+  input.demand.forEach((request, fileIndex) => {
+    if (request.category !== input.category) return;
 
-  for (let idx = 0; idx < input.demand.length; idx += 1) {
-    const req = input.demand[idx]!;
-
-    if (req.category !== input.category) continue;
-
-    const minRank = CONDITION_RANKS[req.min_condition] ?? 0;
-    if (assetRank < minRank) continue;
-
-    if (req.needed_by < input.asOf) continue;
-
-    const factorResult = monthlyFactorFor(
+    if (assetRank < (CONDITION_RANKS[request.min_condition] ?? 0)) {
+      excluded.push({ request, reason: 'condition_too_low' });
+      return;
+    }
+    if (request.needed_by < input.asOf) {
+      excluded.push({ request, reason: 'deadline_passed' });
+      return;
+    }
+    const factor = monthlyFactorFor(
       input.coefficientTable,
       input.relistPriceCents,
-      req.preferred_term_months
+      request.preferred_term_months
     );
-    if (!factorResult.ok) continue;
-
-    const monthlyNetRentCents = Math.round(input.relistPriceCents * factorResult.factor);
-    if (monthlyNetRentCents > req.max_monthly_net_rent_cents) continue;
-
-    eligible.push({
-      request: req,
-      monthlyNetRentCents,
-      fileIndex: idx,
-    });
-  }
+    if (!factor.ok) {
+      excluded.push({ request, reason: factor.reason });
+      return;
+    }
+    const monthlyNetRentCents = monthlyNetRentFor(input.relistPriceCents, factor.factor);
+    if (monthlyNetRentCents > request.max_monthly_net_rent_cents) {
+      excluded.push({ request, reason: 'over_budget', monthlyNetRentCents });
+      return;
+    }
+    eligible.push({ request, monthlyNetRentCents, fileIndex });
+  });
 
   eligible.sort((a, b) => {
     const dateCmp = a.request.needed_by.localeCompare(b.request.needed_by);
-    if (dateCmp !== 0) return dateCmp;
-    return a.fileIndex - b.fileIndex;
+    return dateCmp !== 0 ? dateCmp : a.fileIndex - b.fileIndex;
   });
 
-  return eligible.map((item, index) => ({
-    request: item.request,
-    monthlyNetRentCents: item.monthlyNetRentCents,
-    rank: index + 1,
-  }));
+  return {
+    candidates: eligible.map((item, index) => ({
+      request: item.request,
+      monthlyNetRentCents: item.monthlyNetRentCents,
+      rank: index + 1,
+    })),
+    excluded,
+  };
 }
 
-/**
- * Calculates avoided CO2 in kg from passing an item to a second life.
- *
- * Formula from data/co2-factors.json and ARCHITECTURE.md §9:
- * manufacturing_new_kg x (1 - refurbishment_share_of_new) x (relistPrice / firstListPrice)
- * Rounded to 1 decimal place.
- */
-export function calculateAvoidedCo2(input: {
+/** The ranked candidates only. See `rankWaitingList` for the excluded entries and why. */
+export function matchSecondLifeWaitingList(input: WaitingListInput): WaitingListMatch[] {
+  return rankWaitingList(input).candidates;
+}
+
+export type AvoidedCo2Input = {
   category: AssetCategory;
   co2Factors: Co2Factors;
   relistPriceCents: number;
   firstListPriceCents: number;
-}): number {
+};
+
+/**
+ * CO2 avoided by giving an item a second life, in whole grams, rounded once (half up):
+ *   manufacturing_new_kg × 1000 × (1 − refurbishment_share_of_new) × valueRatio
+ * where valueRatio = relistPrice / firstListPrice, capped at 1 (a second life never
+ * avoids more than one new item) and floored at 5 % (a working item still avoids some).
+ * A nearly worn-out item is worth less, so it saves less.
+ */
+export function avoidedCo2Grams(input: AvoidedCo2Input): number {
   if (input.firstListPriceCents <= 0) return 0;
-
-  const newMfgKg = input.co2Factors.manufacturing_new_kg[input.category] ?? 0;
-  const reuseFactor = 1 - input.co2Factors.refurbishment_share_of_new;
-  const valueRatio = Math.min(
-    1.0,
-    Math.max(0.05, input.relistPriceCents / input.firstListPriceCents)
+  const grams = BigInt(
+    toWholeNumber((input.co2Factors.manufacturing_new_kg[input.category] ?? 0) * 1000)
   );
+  const reuseBp = BigInt(10_000 - fractionToBp(input.co2Factors.refurbishment_share_of_new));
+  const first = BigInt(input.firstListPriceCents);
+  // Ratio floor 5 % = 1/20, cap 1: clamp the numerator between first/20 and first.
+  let relist = BigInt(input.relistPriceCents) * 20n;
+  const floor = first;
+  const cap = first * 20n;
+  if (relist < floor) relist = floor;
+  if (relist > cap) relist = cap;
+  return roundRatio(grams * reuseBp * relist, 10_000n * first * 20n);
+}
 
-  const avoidedKg = newMfgKg * reuseFactor * valueRatio;
-  return Math.round(avoidedKg * 10) / 10;
+/** Avoided CO2 in kg with one decimal, for display (24 539 g → 24.5). */
+export function calculateAvoidedCo2(input: AvoidedCo2Input): number {
+  return roundRatio(BigInt(avoidedCo2Grams(input)), 100n) / 10;
 }

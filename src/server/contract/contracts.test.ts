@@ -308,7 +308,7 @@ describe('signContract: asset lives', () => {
     const application = await apply(AINO, 'ebike-005', ainoEbikeAnswers);
     await signOk(application.id);
     expect(await db.assetLife.findMany()).toMatchObject([
-      { asset_id: 'ebike-005', life_number: 2, first_lease_price_cents: null },
+      { asset_id: 'ebike-005', life_number: 2, first_lease_price_cents: 159_000 },
     ]);
   });
 });

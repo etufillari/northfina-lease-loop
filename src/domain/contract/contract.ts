@@ -64,8 +64,8 @@ export function buildContract(
 /**
  * The life a new contract opens, without its id. Lives number on from the latest recorded
  * one, or from `previous_lives` when the app has no record of them. The price at first lease
- * is what the residual curve needs: it carries over from earlier lives, and it is unknown
- * for an item whose first lease was before the app.
+ * is what the residual curve needs: it carries over from earlier lives, or from the asset
+ * for an item first leased before the app.
  */
 export function openLife(
   contract: Contract,
@@ -81,7 +81,7 @@ export function openLife(
     contract_id: contract.id,
     first_lease_price_cents: isFirstLife
       ? contract.base_price_cents / contract.quantity
-      : (latest?.first_lease_price_cents ?? null),
+      : (latest?.first_lease_price_cents ?? asset.first_lease_price_cents ?? null),
     started_on: contract.start_on,
     ended_on: null,
     outcome: null,

@@ -7,15 +7,22 @@ import type { Locale } from '@/i18n/locales';
 type Props = {
   token: string;
   locale: Locale;
+  onSubmitted: () => void;
+  initialSubmitted?: boolean;
 };
 
 type ResponseBody =
   | { success: true; data: { status: string; expected_return_date: string | null } }
   | { success: false; error: { code: string } };
 
-export function CustomerReturnRequest({ token, locale }: Props) {
+export function CustomerReturnRequest({
+  token,
+  locale,
+  onSubmitted,
+  initialSubmitted = false,
+}: Props) {
   const t = getT(locale);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(initialSubmitted);
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,6 +47,7 @@ export function CustomerReturnRequest({ token, locale }: Props) {
         return;
       }
       setSubmitted(true);
+      onSubmitted();
     } catch {
       setError(t('portal.returnError'));
     } finally {

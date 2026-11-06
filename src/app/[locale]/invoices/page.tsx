@@ -54,6 +54,7 @@ const querySchema = z.object({
   condition: assetConditionSchema.optional(),
   usage: z.coerce.number().optional(),
   inspectedBy: z.string().trim().max(100).optional(),
+  token: z.string().optional(),
 });
 
 export default async function InvoicesPage({
@@ -69,9 +70,18 @@ export default async function InvoicesPage({
   const query = querySchema.safeParse(await searchParams);
   if (!query.success) return <Message locale={locale} text={t('apply.invalidDeal')} />;
 
-  const { asset: assetId, term, down } = query.data;
+  const { asset: assetId, term, down, token } = query.data;
   const signedOn = query.data.signedOn ?? todayIso();
 
+  const offerReservation = token
+    ? await db.assetReservation.findFirst({
+        where: {
+          token,
+          asset_id: assetId,
+          reservation_type: 'offer',
+        },
+      })
+    : null;
   const [
     assets,
     priceLists,
@@ -95,9 +105,31 @@ export default async function InvoicesPage({
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message locale={locale} text={t('apply.notFound')} />;
 
-  const price = listPriceOn(priceLists, asset.id, signedOn);
+  const effectiveOfferedOn = offerReservation?.offered_on ?? null;
+  const offerPrice =
+    offerReservation &&
+    offerReservation.list_price_cents !== null &&
+    offerReservation.price_list_version !== null
+      ? {
+          ok: true as const,
+          priceCents: offerReservation.list_price_cents,
+          priceListVersion: offerReservation.price_list_version,
+        }
+      : null;
+  const cataloguePriceOnSigned = listPriceOn(priceLists, asset.id, signedOn);
+
+  const price = offerPrice ?? cataloguePriceOnSigned;
   if (!price.ok) return <Message locale={locale} text={t('asset.noPrice')} />;
 
+  const hasOfferPriceProtection = Boolean(
+    effectiveOfferedOn &&
+    offerPrice &&
+    cataloguePriceOnSigned.ok === true &&
+    offerPrice.priceCents !== cataloguePriceOnSigned.priceCents
+  );
+  const validOfferPrice = hasOfferPriceProtection && offerPrice ? offerPrice : null;
+  const validCataloguePrice =
+    hasOfferPriceProtection && cataloguePriceOnSigned.ok ? cataloguePriceOnSigned : null;
   const result = calculateContractQuote({
     listPriceCents: price.priceCents,
     priceListVersion: price.priceListVersion,
@@ -186,6 +218,14 @@ export default async function InvoicesPage({
       t('contract.listPrice', { version: quote.priceListVersion }),
       formatEuro(quote.listPriceCents, intlTag),
     ],
+    ...(validOfferPrice && validCataloguePrice
+      ? ([
+          [
+            t('apply.offer.priceProtectedTitle'),
+            `${formatEuro(validOfferPrice.priceCents, intlTag)} (v${validOfferPrice.priceListVersion})`,
+          ],
+        ] as [string, string][])
+      : []),
     [t('apply.deal.downPayment'), formatEuro(quote.downPaymentCents, intlTag)],
     [t('apply.deal.financed'), formatEuro(quote.financedCents, intlTag)],
     [t('apply.deal.monthlyNetRent'), formatEuro(quote.monthlyNetRentCents, intlTag)],
@@ -260,6 +300,27 @@ export default async function InvoicesPage({
               })}
             </p>
           </div>
+
+          {validOfferPrice && validCataloguePrice ? (
+            <div
+              role="status"
+              className="mt-[16px] rounded-[8px] border border-[#2ed167] bg-[#f7f8f7] p-[16px] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+            >
+              <p className="text-[0.875rem] font-semibold">
+                {t('invoices.offerLockedBannerTitle')}
+              </p>
+              <p className="mt-[4px] text-[0.875rem]">
+                {t('invoices.offerLockedBannerDesc', {
+                  offeredOn: formatIsoDate(effectiveOfferedOn!, locale),
+                  offeredVersion: validOfferPrice.priceListVersion,
+                  signedOn: formatIsoDate(signedOn, locale),
+                  currentPrice: formatEuro(validCataloguePrice.priceCents, intlTag),
+                  currentVersion: validCataloguePrice.priceListVersion,
+                  netRent: formatEuro(quote.monthlyNetRentCents, intlTag),
+                })}
+              </p>
+            </div>
+          ) : null}
 
           <dl className="mt-[16px] grid grid-cols-1 gap-x-[24px] gap-y-[8px] text-[0.875rem] sm:grid-cols-2">
             {summaryRows.map(([label, value]) => (

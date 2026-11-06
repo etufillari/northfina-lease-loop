@@ -12,6 +12,7 @@ import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { DecisionPanel } from './decision-panel';
 import { QuestionField } from './question-field';
+import { formatRemainingDuration, useApplicationReservation } from './use-application-reservation';
 
 type Answers = Record<string, AnswerValue>;
 
@@ -77,6 +78,7 @@ export function getSigningActor(answers: Answers): string {
         : 'customer';
   return rawActor.slice(0, 100);
 }
+
 export type ApplicationDeal = {
   category: string;
   financed_amount_cents: number;
@@ -90,6 +92,7 @@ export type SignTarget = {
   termMonths: number;
   downPaymentCents: number;
   signedOn: string;
+  offeredOn?: string;
 };
 
 /** Wait for typing to pause before asking the server. */
@@ -99,12 +102,18 @@ export function ApplicationForm({
   locale,
   deal,
   signTarget,
+  initialToken,
+  initialReservationType = 'standard',
   children,
 }: {
   locale: Locale;
   deal: ApplicationDeal;
   /** Provided when the deal has a valid contract quote that can be signed upon approval. */
   signTarget?: SignTarget;
+  /** Initial reservation token if passed from page or previous navigation. */
+  initialToken?: string;
+  /** Initial reservation type ('standard' | 'offer'). */
+  initialReservationType?: 'standard' | 'offer';
   /** Rendered above the decision in the side column: the lease summary. */
   children?: ReactNode;
 }) {
@@ -115,16 +124,35 @@ export function ApplicationForm({
   const [isEvaluating, setIsEvaluating] = useState(true);
   const [removed, setRemoved] = useState<string[]>([]);
   const [isSigning, setIsSigning] = useState(false);
+  const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
   // Question texts seen so far, so a removed answer can be named after its question is gone.
   const seen = useRef(new Map<string, Question>());
-
   // Race condition guards
   const latestSequenceRef = useRef(0);
   const evaluatedSequenceRef = useRef(0);
   const isSigningRef = useRef(false);
   const isEvaluatingRef = useRef(true);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
+
+  const {
+    token,
+    displayResState,
+    reservationType,
+    expiresAt,
+    remainingSec,
+    isReleasing,
+    handleCancelApplication,
+    handleReReserve,
+    updateOfferCreated,
+  } = useApplicationReservation({
+    signTarget,
+    initialToken,
+    initialReservationType,
+    state,
+    locale,
+    onNavigateHome: () => router.push(`/${locale}`),
+  });
 
   const { category, financed_amount_cents, term_months, monthly_rent_incl_vat_cents } = deal;
   useEffect(() => {
@@ -224,6 +252,43 @@ export function ApplicationForm({
     });
   }
 
+  async function handleCreateOffer() {
+    if (!signTarget || isCreatingOffer || isSigningRef.current || isEvaluatingRef.current) return;
+    setIsCreatingOffer(true);
+    setSignError(null);
+    const actor = getSigningActor(answers);
+
+    try {
+      const response = await fetch(
+        `/api/assets/${encodeURIComponent(signTarget.assetId)}/reserve`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actor,
+            token: token ?? undefined,
+            reservationType: 'offer',
+            validityDays: 14,
+            termMonths: signTarget.termMonths,
+            downPaymentCents: signTarget.downPaymentCents,
+          }),
+        }
+      );
+      const json = (await response.json()) as {
+        success?: boolean;
+        data?: { reservation: { token: string; expiresAt: string } };
+      };
+      if (!response.ok || !json.success || !json.data) {
+        throw new Error('offer creation failed');
+      }
+      updateOfferCreated(json.data.reservation.token, json.data.reservation.expiresAt);
+    } catch {
+      setSignError(t('apply.signError'));
+    } finally {
+      setIsCreatingOffer(false);
+    }
+  }
+
   async function handleSign() {
     if (
       !canSignApplication({
@@ -238,6 +303,7 @@ export function ApplicationForm({
     ) {
       return;
     }
+    if (!signTarget) return;
 
     // Synchronously acquire signing lock to prevent double-clicks
     isSigningRef.current = true;
@@ -252,24 +318,24 @@ export function ApplicationForm({
     const actor = getSigningActor(answers);
 
     try {
-      const response = await fetch(
-        `/api/assets/${encodeURIComponent(signTarget!.assetId)}/status`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'reserved', actor }),
-        }
-      );
+      const response = await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'reserved', actor, token: token ?? undefined }),
+      });
       const json = (await response.json()) as { success?: boolean };
       if (!response.ok || !json.success) {
         throw new Error('sign failed');
       }
 
+      sessionStorage.removeItem(`lease_loop_res_${signTarget.assetId}`);
+
       const params = new URLSearchParams({
-        asset: signTarget!.assetId,
-        term: String(signTarget!.termMonths),
-        down: String(signTarget!.downPaymentCents),
-        signedOn: signTarget!.signedOn,
+        asset: signTarget.assetId,
+        term: String(signTarget.termMonths),
+        down: String(signTarget.downPaymentCents),
+        signedOn: signTarget.signedOn,
+        ...(token ? { token } : {}),
       });
       router.push(`/${locale}/invoices?${params.toString()}`);
     } catch {
@@ -279,7 +345,18 @@ export function ApplicationForm({
       setSignError(t('apply.signError'));
     }
   }
+
   const data = state.status === 'ready' ? state.data : null;
+  const offerDetails =
+    reservationType === 'offer' && token && expiresAt && signTarget
+      ? {
+          token,
+          expiresAt,
+          assetId: signTarget.assetId,
+          termMonths: signTarget.termMonths,
+          downPaymentCents: signTarget.downPaymentCents,
+        }
+      : null;
 
   return (
     <div className="grid gap-[32px] lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -292,6 +369,95 @@ export function ApplicationForm({
         <h2 id="questions-heading" className="text-[1.375rem] leading-tight font-bold">
           {t('apply.questions.heading')}
         </h2>
+        {displayResState === 'active' ? (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-[12px] rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] text-[#123054] dark:border-sky-950 dark:bg-stone-800/80 dark:text-sky-200"
+          >
+            <div className="flex items-center gap-[8px]">
+              <span className="inline-block size-2 rounded-full bg-[#16A34A] animate-pulse" />
+              <span className="font-semibold">{t('apply.reservation.held')}</span>
+              <span className="text-[0.875rem] text-[#615b57] dark:text-stone-300">
+                •{' '}
+                {t('apply.reservation.expiresIn', { time: formatRemainingDuration(remainingSec) })}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancelApplication}
+              disabled={isReleasing}
+              className="rounded-[8px] border border-[#dad9d8] bg-transparent px-[12px] py-[6px] text-[0.75rem] font-semibold text-[#615b57] transition-colors hover:bg-[#FFFFFF] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+            >
+              {t('apply.reservation.cancel')}
+            </button>
+          </div>
+        ) : null}
+
+        {displayResState === 'conflict' ? (
+          <div
+            role="alert"
+            className="rounded-[8px] border border-[#fecaca] bg-[#fef2f2] p-[16px] text-[#991b1b] dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+          >
+            <p className="font-semibold">{t('apply.reservation.conflict')}</p>
+            <button
+              type="button"
+              onClick={() => router.push(`/${locale}`)}
+              className="mt-[12px] rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] hover:bg-[#1354a5]"
+            >
+              {t('invoices.backToCatalogue')}
+            </button>
+          </div>
+        ) : null}
+
+        {displayResState === 'error' ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-[12px] rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[#5c360a] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <p className="font-semibold">{t('apply.error')}</p>
+            <button
+              type="button"
+              onClick={handleReReserve}
+              className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] hover:bg-[#1354a5]"
+            >
+              {t('apply.reservation.renew')}
+            </button>
+          </div>
+        ) : null}
+
+        {displayResState === 'expired' ? (
+          <div
+            role="alert"
+            className="rounded-[8px] border border-[#e9dac8] bg-[#f8f7f6] p-[16px] text-[#5c360a] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <p className="font-semibold">{t('apply.reservation.expired')}</p>
+            <div className="mt-[12px] flex items-center gap-[12px]">
+              <button
+                type="button"
+                onClick={handleReReserve}
+                className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] hover:bg-[#1354a5]"
+              >
+                {t('apply.reservation.renew')}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push(`/${locale}`)}
+                className="rounded-[8px] border border-[#dad9d8] bg-transparent px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#615b57] hover:bg-[#FFFFFF] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+              >
+                {t('invoices.backToCatalogue')}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {displayResState === 'released' ? (
+          <div
+            role="status"
+            className="rounded-[8px] border border-[#ccd7e6] bg-[#f6f7f8] p-[16px] text-[#123054] dark:border-sky-950 dark:bg-stone-800/80 dark:text-sky-200"
+          >
+            <p className="font-semibold">{t('apply.reservation.rejectedNotice')}</p>
+          </div>
+        ) : null}
 
         {removed.length > 0 ? (
           <div
@@ -336,10 +502,17 @@ export function ApplicationForm({
               decision={data.decision}
               locale={locale}
               t={t}
-              onSign={signTarget ? handleSign : undefined}
+              onSign={signTarget && displayResState === 'active' ? handleSign : undefined}
               isSigning={isSigning}
               isEvaluating={isEvaluating}
               signError={signError}
+              onCreateOffer={
+                signTarget && displayResState === 'active' && reservationType === 'standard'
+                  ? handleCreateOffer
+                  : undefined
+              }
+              isCreatingOffer={isCreatingOffer}
+              offerDetails={offerDetails}
             />
           ) : null}
         </div>

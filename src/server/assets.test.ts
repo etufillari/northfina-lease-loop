@@ -146,6 +146,25 @@ describe('resolveAssetEndOfTerm', () => {
     });
   });
 
+  it('keeps the real transition in the audit details when the caller sends colliding keys', async () => {
+    await seedAssets(db, dataPack);
+
+    await resolveAssetEndOfTerm(db, {
+      id: 'laptop-002',
+      action: 'return',
+      actor: 'customer-aino',
+      details: { from: 'forged', to: 'forged', action: 'forged', note: 'kept' },
+    });
+
+    const audit = await db.auditLog.findFirstOrThrow();
+    expect(JSON.parse(audit.details_json ?? '')).toEqual({
+      from: 'available',
+      to: 'returned',
+      action: 'return',
+      note: 'kept',
+    });
+  });
+
   it('answers not_found for an unknown id', async () => {
     const result = await resolveAssetEndOfTerm(db, {
       id: 'nope',

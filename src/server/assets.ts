@@ -106,11 +106,12 @@ export async function resolveAssetEndOfTerm(
       action: auditAction,
       entityType: 'asset',
       entityId: input.id,
+      // Caller details go first so they can never overwrite the server-owned transition fields.
       details: {
+        ...input.details,
         from: existing.status,
         to: nextStatus,
         action: input.action,
-        ...input.details,
       },
     },
     (tx) => tx.asset.update({ where: { id: input.id }, data: { status: nextStatus } })

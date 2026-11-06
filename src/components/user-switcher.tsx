@@ -151,6 +151,9 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   if (currentUser && can(currentUser.role, 'second_life.refurbish')) {
     links.push({ href: `/${locale}/dealer`, label: t('dealer.title') });
   }
+  if (currentUser && can(currentUser.role, 'audit_log.view')) {
+    links.push({ href: `/${locale}/admin/audit-log`, label: t('audit.title') });
+  }
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">

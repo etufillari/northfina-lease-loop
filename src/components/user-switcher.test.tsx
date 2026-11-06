@@ -72,6 +72,15 @@ describe('UserSwitcher', () => {
     expect(screen.getByRole('link', { name: reviewLink })).toBeTruthy();
   });
 
+  it.each([1, 2])('links staff to the audit log', async (index) => {
+    await renderAs(users[index] ?? null);
+
+    expect(await screen.findByRole('link', { name: messages.en['audit.title'] })).toHaveAttribute(
+      'href',
+      '/en/admin/audit-log'
+    );
+  });
+
   it('gives a customer no staff links', async () => {
     await renderAs(users[0] ?? null);
 

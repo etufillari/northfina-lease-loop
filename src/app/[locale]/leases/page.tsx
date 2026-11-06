@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { EndOfTermOptions } from '@/components/end-of-term-options';
+import { LeaseEnginePanel } from '@/components/lease-engine-panel';
 import { loadAssets } from '@/data/load';
-import { getEndOfTermChoices, getRemainingMonths } from '@/domain/end-of-term-options';
+import { getRemainingMonths } from '@/domain/end-of-term-options';
 import { formatEuro } from '@/domain/money';
 import { anniversary } from '@/domain/lease-engine/calendar';
 import type { LeaseStatus } from '@/domain/lease-engine/types';
@@ -35,7 +35,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-7">
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t('account.title')}</h1>
 
-      <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-8">
+      <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 text-stone-900 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100 sm:p-8">
         <h2 className="text-xl font-semibold">{t('account.leases')}</h2>
         {leases.length > 0 ? (
           <div className="mt-5 space-y-4">
@@ -47,11 +47,6 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                 lease.terms.startDate,
                 lease.terms.termMonths
               );
-              const endOptions =
-                endDate.ok && lease.status === 'ACTIVE'
-                  ? getEndOfTermChoices(today, endDate.value, lease.latestInvoicePaid)
-                  : null;
-
               return (
                 <details
                   key={lease.terms.contractId}
@@ -75,7 +70,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                       aria-hidden="true"
                       viewBox="0 0 20 20"
                       fill="none"
-                      className="h-5 w-5 shrink-0 text-stone-500 transition-transform group-open:rotate-180"
+                      className="h-5 w-5 shrink-0 text-stone-500 transition-transform group-open:rotate-180 dark:text-stone-400"
                     >
                       <path
                         d="m5 7.5 5 5 5-5"
@@ -128,41 +123,12 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                         value={formatEuro(lease.terms.monthlyNetCents, intlLocale[locale])}
                       />
                     </dl>
-                    {endOptions?.ok && endOptions.choices.length > 0 ? (
-                      <EndOfTermOptions
-                        leaseId={lease.terms.contractId}
-                        choices={endOptions.choices}
-                        labels={{
-                          title: t('account.endOfTerm.title'),
-                          prompt: t('account.endOfTerm.prompt'),
-                          demoNote: t('account.endOfTerm.demoNote'),
-                          selected: t('account.endOfTerm.selected'),
-                          choices: {
-                            return: {
-                              title: t('account.endOfTerm.return.title'),
-                              description: t('account.endOfTerm.return.description'),
-                            },
-                            buy: {
-                              title: t('account.endOfTerm.buy.title'),
-                              description: t('account.endOfTerm.buy.description'),
-                            },
-                            extend: {
-                              title: t('account.endOfTerm.extend.title'),
-                              description: t('account.endOfTerm.extend.description'),
-                            },
-                            endEarly: {
-                              title: t('account.endOfTerm.earlyTermination.title'),
-                              description: t('account.endOfTerm.earlyTermination.description'),
-                            },
-                          },
-                        }}
-                      />
-                    ) : null}
-                    {lease.status === 'ACTIVE' && endDate.ok && endOptions?.ok === false ? (
-                      <p className="mt-5 text-sm text-red-700 dark:text-red-300">
-                        {t('account.endOfTerm.dateError')}
-                      </p>
-                    ) : null}
+                    <LeaseEnginePanel
+                      contractId={lease.terms.contractId}
+                      leaseId={lease.leaseId}
+                      status={lease.status}
+                      locale={locale}
+                    />
                   </div>
                 </details>
               );

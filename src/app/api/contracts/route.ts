@@ -2,6 +2,7 @@
 // Signs the contract for an approved application and locks its price; see
 // src/server/contracts.ts.
 import { z } from 'zod';
+import { checkPersonName } from '@/domain/names';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { getApplication } from '@/server/applications';
 import { signContract } from '@/server/contracts';
@@ -13,7 +14,10 @@ import { appDate } from '@/server/app-date';
 const signSchema = z.strictObject({
   applicationId: z.string().trim().min(1).max(64),
   /** Typing your full name is the signature. */
-  signerName: z.string().trim().min(2).max(100),
+  signerName: z
+    .string()
+    .trim()
+    .refine((name) => checkPersonName(name) === null, 'Type your full name to sign'),
 });
 
 const failures = {

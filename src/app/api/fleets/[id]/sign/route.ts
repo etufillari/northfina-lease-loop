@@ -1,6 +1,7 @@
 // POST /api/fleets/:id/sign   body: { "signerName": "…" }
 // Signs every contract of an approved fleet at once; see src/server/fleets.ts.
 import { z } from 'zod';
+import { checkPersonName } from '@/domain/names';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { appDate } from '@/server/app-date';
 import { currentViewer } from '@/server/current-viewer';
@@ -10,7 +11,10 @@ import { canSee } from '@/server/viewer';
 
 const bodySchema = z.strictObject({
   /** Typing your full name is the signature. */
-  signerName: z.string().trim().min(2).max(100),
+  signerName: z
+    .string()
+    .trim()
+    .refine((name) => checkPersonName(name) === null, 'Type your full name to sign'),
 });
 
 const failures = {

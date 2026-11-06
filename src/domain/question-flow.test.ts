@@ -206,6 +206,19 @@ describe('validateQuestionAnswer', () => {
     );
     expect(validateQuestionAnswer(find('q_country'), 'FI', getContext())).toEqual({ valid: true });
   });
+
+  it('checks the full name and the company name (see names.ts)', () => {
+    const find = (id: string) => questionsFile.questions.find((q) => q.id === id)!;
+    const check = (id: string, value: string) =>
+      validateQuestionAnswer(find(id), value, getContext());
+    expect(check('q_full_name', 'A').code).toBe('invalid_name');
+    expect(check('q_full_name', 'Aino 2').code).toBe('invalid_name');
+    expect(check('q_full_name', '王五').valid).toBe(true);
+    expect(check('q_company_name', 'X').code).toBe('invalid_company_name');
+    expect(check('q_company_name', '3M Oy').valid).toBe(true);
+    // An empty answer isn't wrong, only missing: completeness handles that.
+    expect(check('q_full_name', '').valid).toBe(true);
+  });
 });
 
 describe('evaluateEligibility with real scenarios', () => {

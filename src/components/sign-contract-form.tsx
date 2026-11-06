@@ -5,6 +5,7 @@
 // `fleetId` it signs every contract of that fleet at once and goes back to the fleet.
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, type FormEvent } from 'react';
+import { checkPersonName, MAX_PERSON_NAME_LENGTH } from '@/domain/names';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { useSessionState } from './use-session-state';
@@ -70,7 +71,10 @@ export function SignContractForm({ target, defaultName, locale }: SignContractFo
     }
   }
 
-  const canSign = agreed && name.trim().length >= 2 && !sending;
+  // The same rule as the server: at least two letters, no digits (see names.ts).
+  const nameValid = checkPersonName(name) === null;
+  const showNameHint = name.trim() !== '' && !nameValid;
+  const canSign = agreed && nameValid && !sending;
 
   return (
     <form
@@ -94,10 +98,21 @@ export function SignContractForm({ target, defaultName, locale }: SignContractFo
           value={name}
           onChange={(event) => setName(event.target.value)}
           autoComplete="name"
-          maxLength={100}
+          maxLength={MAX_PERSON_NAME_LENGTH}
+          aria-invalid={showNameHint || undefined}
+          aria-describedby={showNameHint ? 'signer-name-hint' : undefined}
           className="mt-1 block w-full max-w-sm rounded-lg border border-stone-300 bg-white px-3 py-2 text-stone-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/30 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
         />
       </label>
+      {showNameHint ? (
+        <p
+          id="signer-name-hint"
+          role="status"
+          className="text-sm text-amber-900 dark:text-amber-200"
+        >
+          {t('contract.error.invalidName')}
+        </p>
+      ) : null}
       <button
         type="submit"
         disabled={!canSign}

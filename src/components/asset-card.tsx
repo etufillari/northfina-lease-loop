@@ -37,11 +37,13 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
 type AssetCardProps = {
   asset: Asset;
   price: ListPriceResult;
+  /** Priced at the second-life desk's re-price instead of the price list. */
+  secondLife?: boolean;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, secondLife = false, locale, t }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
 
@@ -78,8 +80,8 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
 
       <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
+          <p>{secondLife ? t('asset.secondLifePrice') : t('asset.listPrice')}</p>
+          {price.ok && !secondLife ? (
             <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
           ) : null}
         </div>

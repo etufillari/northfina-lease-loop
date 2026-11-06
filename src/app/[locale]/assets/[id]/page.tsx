@@ -5,9 +5,10 @@ import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { PriceConfigurator } from '@/components/price-configurator';
+import { formatEuro } from '@/domain/money';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
-import { isLocale } from '@/i18n/locales';
+import { intlLocale, isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 
@@ -55,6 +56,22 @@ export default async function AssetPage({
           </Link>
         </p>
       </div>
+
+      <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <Link
+          href={`/${locale}/assets/${asset.id}/passport${asOfParam ? `?asOf=${asOfParam}` : ''}`}
+          className="font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+        >
+          {t('secondLife.passportLink')} →
+        </Link>
+        {asset.second_life_price_cents !== null && (
+          <span className="text-stone-600 dark:text-stone-400">
+            {t('asset.secondLifeNote', {
+              price: formatEuro(asset.second_life_price_cents, intlLocale[locale]),
+            })}
+          </span>
+        )}
+      </p>
 
       {asset.status === 'available' || asset.status === 'returned' ? (
         <PriceConfigurator locale={locale} assetIds={[asset.id]} personaId={persona} asOf={asOf} />

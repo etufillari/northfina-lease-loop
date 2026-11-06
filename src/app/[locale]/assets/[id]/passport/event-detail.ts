@@ -99,6 +99,15 @@ export function eventDetail(locale: Locale, event: PassportEvent): string | null
           })
         : null;
     }
+    case 'offer_accepted':
+      return t('passport.detail.accepted', { who: str(d.who) ?? str(d.waiterId) ?? '' });
+    case 'offer_ended':
+      return t(
+        d.reason === 'declined' ? 'passport.detail.declined' : 'passport.detail.offerExpired',
+        { who: str(d.who) ?? str(d.waiterId) ?? '' }
+      );
+    case 'listed_available':
+      return t('passport.detail.listed');
     case 'pool_released': {
       const filled = num(d.filled);
       const quantity = num(d.quantity);

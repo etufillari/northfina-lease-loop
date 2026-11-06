@@ -56,7 +56,7 @@ export function AssetCard({
     <AssetCardLink href={`/${locale}/assets/${asset.id}`}>
       <article
         aria-labelledby={headingId}
-        className="relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#101d46] hover:shadow-lg"
+        className="relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 text-slate-950 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-600 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       >
         {userId ? (
           <SaveAssetButton
@@ -66,7 +66,7 @@ export function AssetCard({
             label={saved ? removeSavedLabel : saveLabel}
           />
         ) : null}
-        <div className="mb-5 flex h-32 items-center justify-center rounded-xl bg-slate-100">
+        <div className="mb-5 flex h-32 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
           <span className="text-7xl" aria-hidden="true">
             {asset.category === 'e_bike' ? '🚲' : asset.category === 'laptop' ? '💻' : '🚜'}
           </span>
@@ -102,7 +102,7 @@ export function AssetCard({
           />
         </dl>
 
-        <div className="mt-auto border-t border-slate-100 pt-4">
+        <div className="mt-auto border-t border-slate-100 pt-4 dark:border-slate-700">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.monthlyRate')}</p>

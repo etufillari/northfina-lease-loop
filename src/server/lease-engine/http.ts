@@ -47,6 +47,12 @@ export async function respondEngineOperation(work: () => Promise<unknown>): Prom
     ) {
       throw new ApiError(503, 'TAX_CONFIGURATION_ERROR', 'Tax configuration is unavailable');
     }
+    if (error.reason === 'review_before_work_completed')
+      throw new ApiError(
+        409,
+        'REVIEW_DATE_BEFORE_WORK',
+        'Review date cannot precede completed work'
+      );
     const mapped = errors[error.code];
     throw new ApiError(mapped.status, error.code, mapped.message);
   }

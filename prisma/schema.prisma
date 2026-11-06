@@ -177,6 +177,7 @@ model AssetReturn {
   offerNetCents Int?
   reviewedOn String?
   reviewReason String?
+  reviewedBy String?
   @@index([assetId])
 }
 

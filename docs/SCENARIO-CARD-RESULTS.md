@@ -51,3 +51,7 @@ Run `npm run dev -- --webpack`; account/workshop controls are development-only. 
 ## Smart-problem focus now
 
 Primary pitch: **1 Lock price, not tax** and **5 Money that adds up**. They integrate directly with the spine and have strong tests. Early-exit policy, matching, passport and fictional impact are additional demonstrated rules; disclose their simplifications instead of claiming a complete production optimizer.
+
+## Latest local verification
+
+Company approval is now required between refurbishment and used-offer publication. Customer mutation denials, operator sign-in, approval replay and the full two-customer loop passed an isolated HTTP/render smoke. The customer invoice forecast exposes VAT transitions and all issue/due dates; it is read-only and not a payment record. See the updated UI walkthrough and PROGRESS for the current baseline.

@@ -1,3 +1,4 @@
+import { pendingReturnNotifications } from './notifications';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadAssets, loadVatRates } from '@/data/load';
 import { toAssetRowData } from '@/server/assets';
@@ -123,6 +124,14 @@ describe('complete persisted circular lease lifecycle', () => {
     });
 
     expect(finished.receipt.status).toBe('PENDING_APPROVAL');
+    await expect(
+      reviewRefurbishment(db, ctx('future-demo-wrong-date'), {
+        returnId: received.id,
+        decision: 'APPROVE',
+        reviewedOn: '2026-11-06',
+      })
+    ).rejects.toMatchObject({ reason: 'review_before_work_completed' });
+    expect(await db.circularOffer.count()).toBe(0);
     const approved = await reviewRefurbishment(db, ctx('future-demo-approve'), {
       returnId: received.id,
       decision: 'APPROVE',
@@ -146,6 +155,7 @@ describe('complete persisted circular lease lifecycle', () => {
     const db = database.db;
     const first = await signed('ebike-003', 'cust-aino', '2026-11-05', 'customer-return');
     await completeLease(db, ctx('complete-customer-return'), first.id, '2029-11-05', 1);
+    expect((await pendingReturnNotifications(db)).count).toBe(0);
     const livesBeforeReturn = (await db.asset.findUniqueOrThrow({ where: { id: first.assetId } }))
       .previous_lives;
 
@@ -164,6 +174,17 @@ describe('complete persisted circular lease lifecycle', () => {
     );
 
     expect(requested.status).toBe('REQUESTED');
+    expect(await pendingReturnNotifications(db)).toEqual({
+      count: 1,
+      returns: [{ id: requested.id, assetId: first.assetId, requestedOn: '2029-11-05' }],
+    });
+    const replay = await requestReturn(
+      db,
+      { actor: 'cust-aino', idempotencyKey: 'request-return' },
+      { leaseId: first.id, customerId: 'cust-aino', usageValue: 18400, requestedOn: '2029-11-05' }
+    );
+    expect(replay.id).toBe(requested.id);
+    expect((await pendingReturnNotifications(db)).count).toBe(1);
     expect(requested.receivedOn).toBeNull();
     expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).usage_value).toBe(
       18400
@@ -198,6 +219,7 @@ describe('complete persisted circular lease lifecycle', () => {
     expect(
       (await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).previous_lives
     ).toBe(livesBeforeReturn + 1);
+    expect((await pendingReturnNotifications(db)).count).toBe(0);
     const inspected = await inspectReturn(db, ctx('customer-inspection'), {
       returnId: received.id,
       condition: 'fair',
@@ -409,7 +431,7 @@ describe('complete persisted circular lease lifecycle', () => {
     expect(await finishRefurbishment(db, ctx('ready'), finish)).toEqual(ready);
     expect(ready.receipt.status).toBe('PENDING_APPROVAL');
     expect(ready.offer).toBeNull();
-    expect(await db.engineAllocation.count()).toBe(0);
+    expect(await db.engineAllocation.count()).toBe(1);
     expect((await db.asset.findUniqueOrThrow({ where: { id: first.assetId } })).status).toBe(
       'returned'
     );

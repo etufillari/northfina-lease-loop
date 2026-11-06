@@ -53,6 +53,7 @@ export async function circularDashboard(db: PrismaClient) {
     })
     .filter(
       (row) =>
+        row.history.length > 0 ||
         row.asset.previous_lives > 0 ||
         row.asset.status === 'returned' ||
         row.receipt ||

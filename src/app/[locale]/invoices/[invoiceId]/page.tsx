@@ -26,7 +26,7 @@ export default async function InvoicePage({ params }: PageProps<'/[locale]/invoi
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{invoice.number}</h1>
-          <p className="mt-2 text-slate-600">{t('invoices.viewerIntro')}</p>
+          <p className="mt-2 text-slate-600 dark:text-slate-300">{t('invoices.viewerIntro')}</p>
         </div>
         <a
           href={pdfUrl}
@@ -43,7 +43,7 @@ export default async function InvoicePage({ params }: PageProps<'/[locale]/invoi
       />
       <Link
         href={`/${locale}/invoices`}
-        className="mt-4 inline-block text-sm font-semibold text-[#101d46]"
+        className="mt-4 inline-block text-sm font-semibold text-[#101d46] dark:text-emerald-300"
       >
         {t('invoices.back')}
       </Link>

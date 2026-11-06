@@ -47,7 +47,7 @@ export function CatalogueFilterControls({
   }
 
   return (
-    <section className="mt-8 rounded-t-2xl border border-b-0 border-slate-200 bg-white p-4 shadow-sm">
+    <section className="mt-8 rounded-t-2xl border border-b-0 border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <h2 className="sr-only">{labels.title}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_9rem]">
         <FilterSelect
@@ -103,7 +103,7 @@ function FilterSelect<T extends string>({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-stone-700">
+      <label htmlFor={id} className="block text-sm font-medium text-stone-700 dark:text-slate-200">
         {label}
       </label>
       <div className="relative">
@@ -111,7 +111,7 @@ function FilterSelect<T extends string>({
           id={id}
           value={value ?? ''}
           onChange={(event) => onChange(event.currentTarget.value)}
-          className="mt-1 block w-full appearance-none rounded-lg border border-stone-300 bg-white py-2 pr-10 pl-3 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+          className="ui-control mt-2 appearance-none pr-10 text-sm"
         >
           <option value="">{allLabel}</option>
           {options.map((option) => (
@@ -123,7 +123,7 @@ function FilterSelect<T extends string>({
         <svg
           aria-hidden="true"
           viewBox="0 0 16 16"
-          className="pointer-events-none absolute top-1/2 right-[18px] size-4 -translate-y-1/2 text-stone-600"
+          className="pointer-events-none absolute top-1/2 right-[18px] size-4 -translate-y-1/2 text-stone-600 dark:text-slate-300"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"

@@ -1,55 +1,63 @@
 # Lease Loop — current progress
 
-Updated6 November2026. User/project lead explicitly took over Dev3's remaining work. Branch: **`feat/circular-lease-loop`**, based on pushed engine commit `67d7e71`. Circular implementation is ready for team review; merging remains a separate step.
+Updated 6 November 2026. Local branch: `feat/lease-lifecycle-team-handoff`, based on team main `f50304f`. Your teammate’s company profile, return-request form and approval workflow are integrated with the local demo, access and smart-point improvements. Combined work is prepared on the team handoff branch.
 
-## Working now
+## Working loop
 
-**Catalogue → price → application/decision → signed contract → active lease → recurring saved invoices → completion → physical return → inspection → confirmed mandatory refurbishment → used-asset offer → second customer → second lease/invoice on the SAME asset.**
+**Catalogue → quote → application → signed contract → active lease → invoices → end choice → physical return → inspection → required refurbishment → company approval → used offer → second customer's lease/invoice on the same asset.**
 
-Real temporary SQLite and HTTP/rendered UI smoke verified that loop. The new account/workshop UI uses persisted data, not fake lease/payment results.
+The original signed terms and invoices survive second-life repricing. Payments are not fabricated.
 
-## Completed in this increment
+## Latest changes
 
-- [x] Lead assumed circular/domain/UI ownership; existing engine and Dev2 integration preserved.
-- [x] Persisted return/inspection/work plan/readiness; idempotency and audit rollback.
-- [x] Usage/condition validation; required safety/battery/wipe/service tasks; no allocation release before completion.
-- [x] Dated used-price publication integrated into catalogue/application quotes, with unchanged original signed terms.
-- [x] New contract and lease for the next customer; physical asset ID/serial retained.
-- [x] Passport with actual leases, audit history, work/costs, labeled imported history and fictional impact estimate.
-- [x] Deterministic advisory matching by feasibility, deadline and stable ID.
-- [x] Guarded return/pass-on/buyout actions and agreed early-return policy; obligation records never pretend payment received.
-- [x] Submitted applicable question answers persisted/evaluated; irrelevant answers pruned; signer/PEP flags cannot be upgraded away.
-- [x] Gross30% consumer affordability, supported residency and sole-trader age checks.
-- [x] Exact rational price arithmetic;259 tests, including2880 generated schedule cases.
-- [x] Four-language UI keys for new features, meaningful rejection/review text.
-- [x] Generated/applied additive Prisma migrations; dev.db preserved.
-- [x] Production build uses supported Next Webpack mode to avoid the runner's Turbopack worker-port restriction. All original checks remain enabled.
+Company operations retains the teammate’s sidebar/admin profile and Returned queue. A live notification bar counts submitted customer requests awaiting physical receipt, polls every 15 seconds, refreshes on browser focus and links to the request queue. Receiving the item clears that notification. Imported examples and replayed requests do not create duplicate alerts.
+
+The customer chooses Return, enters usage and submits the request. Notifications follow the saved REQUESTED record, not a button click or a fabricated delivery.
+
+Customer lease details open automatically. Completion choices and plain-language explanations appear above invoices. The restored demo button requires confirmation. Saved return/buyout choices show the relevant handover or payment next steps; return guidance follows receipt and approval status. Buttons have keyboard focus styles, descriptive labels and busy/error feedback. Visual keyboard/mobile QA is still pending.
+
+- Customer My leases contains owned contracts, invoices, end choices and handover instructions. Invoice generation and company completion controls moved to the company workshop. An explicit customer-owned development simulation button is also available in My leases.
+- The workshop requires separate development operator sign-in. Customer cookies alone cannot authorize workshop, invoice-generation or company completion APIs. The separate `/demo-complete` route permits only a development customer’s own lease simulation. Signed HTTP-only operator sessions expire after four hours.
+- Workshop completion saves a pending proposal, keeps the asset unavailable and retains its allocation. Approval publishes one offer and releases the allocation atomically. Rejection requires a reason and keeps the item unavailable.
+- Reviewer, date and reason are persisted and audited. Retries replay; stale decisions and nonfinanceable proposals cannot publish offers. Rejected proposals cannot be edited/resubmitted in this prototype.
+- Read-only invoice forecasts show the signed net rent, invoice-date VAT, issue/due dates and projected totals. VAT changes are marked; early termination removes future rent from the forecast.
+- Four-language UI keys, additive generated migration and regression tests are included. Existing local records are preserved; no database reset was run. The overlapping local/team migrations were reconciled using the Prisma-generated chain and a verified row-for-row copy, with a backup retained.
+
+## Smart problems to demonstrate
+
+1. **Lock price, not tax:** signed net rent stays fixed; challenge VAT is resolved at invoice date. Forecasts explain the fictional 2027 change and remain separate from issued invoices.
+2. **Money that adds up:** integer cents, explicit rounding, monthly anniversary clamping, leap-year dates and 2,880 deterministic generated schedule cases.
+
+Also implemented: conditional question flow, a documented early-exit cap, required refurbishment, advisory deadline/stable-ID matching and asset passports. Environmental figures use fictional challenge factors.
 
 ## Validation
 
-**`npm run check:all` PASSES:** formatting, lint, typecheck, file-size, no-AI, coverage and production build.259 tests across39 files. Coverage: lines95.17%, branches86.75%, functions96.07%, statements91.58%.
+Latest full gate: `npm run check:all` — 304 tests across 51 files, formatting, lint, typecheck, file-size, no-AI scan, coverage and production build.
 
-Real HTTP/render smoke on a fresh isolated database included two customers, unchanged physical asset ID, new contract/lease IDs, old invoice preservation, imported cards9/10, replay, buyout and pass-on. It checked rendered HTML and API actions; a visual browser/keyboard audit has not been performed.
+An isolated SQLite HTTP/render smoke verified customer mutation denials, company sign-in, pending→approval→offer, the full two-customer loop, replay, cards 9/10, buyout and pass-on. User dev.db was not used for the smoke test. The new migration was applied additively to it.
 
-See [SCENARIO-CARD-RESULTS.md](SCENARIO-CARD-RESULTS.md) for card-by-card evidence, policy assumptions and the short demo script.
+A visual browser/mobile/keyboard review still needs a teammate. Automated rendered HTML is not a visual review.
 
-## Next team PR
+## Next
 
-Separate customer/admin views and add company approval before publishing the next lease offer. This gate is not implemented yet: eligible workshop completion currently publishes immediately. Follow [ADMIN-CUSTOMER-HANDOFF.md](ADMIN-CUSTOMER-HANDOFF.md).
+1. Follow [UI-LIFECYCLE-WALKTHROUGH.md](UI-LIFECYCLE-WALKTHROUGH.md), including separate operator sign-in and approval.
+2. Rehearse the forecast's VAT change and calendar cases.
+3. Use [PITCH-OUTLINE.md](PITCH-OUTLINE.md) for the timed four-minute pitch and Q&A. Review and push the local changes, then follow README submission instructions.
 
-## Next actions
+## Prototype limits
 
-1. Review this circular branch, repeat the demo manually, and open a PR into the TEAM fork.
-2. Focus pitch/depth on VAT/price lock and money/calendar correctness; add only fixes justified by card failures.
-3. Complete four-language visual/keyboard QA and two4-minute rehearsals; keep CI green and follow README submission deadline.
+Development customer switching and shared company password are not production identity or individual staff accounts. The same company session may perform workshop and review actions; no two-person approval policy is claimed. Real payments/credits, rejected-proposal resubmission, multi-asset fleet contracts and persisted waiting-list assignments are not implemented. Historical offers published before the approval gate remain unchanged.
 
-## Explicit prototype limits
+## Approval date fix and clean UI baseline
 
-- Account/workshop write controls use development-only selected-customer/operator mode and same-origin checks. Production authentication is not implemented.
-- Payment collection/reconciliation and credit-note processing are not implemented; charges are recorded obligations. Early exit refuses to change already-issued future rent without credits.
-- New contracts snapshot buyout/exit terms. Legacy contracts without those snapshots reject unknown fees; ordinary return still works.
-- Card6 signer guard is tested; a true4-asset fleet contract is not implemented.
-- Matching is an advisory ranked list, not queue fulfillment or a profit optimizer. Imported history is summarized, not fabricated.
-- Manufacture-age/service-history assumptions and fictional CO₂ methodology are documented in the scenario report.
+The company dashboard now sends the latest saved lifecycle date to repair/approval controls instead of the real current date. This prevents demo returns in 2027–2029 from trying to approve work in 2026. A specific safe error explains an approval date before completed work; server validation is retained. Dashboard and future-date integration tests cover it.
 
-These limits do not remove the demonstrated single-asset return-and-re-lease spine. Do not describe this local prototype as production lending/payment readiness.
+At the user’s request, local dev.db was backed up, reset and reseeded. Verified baseline: 30 original synthetic assets, zero applications/contracts/leases/invoices/returns/offers/settlements/command receipts/audit records. Imported returned assets are fixture examples, not leftover UI test records.
+
+## Dark mode and UI polish
+
+Customer and company views now share paired light/dark surfaces, readable controls, consistent buttons, clearer status panels and more spacious invoice tables. Catalogue, account, workshop, language menu and return notifications include dark styling. Shared body/surface/secondary/button text color pairs were checked numerically at or above 4.5:1 contrast. This is not a full accessibility audit; visual browser review remains pending because browser access is unavailable.
+
+## Latest teammate merge: invoices and PDF
+
+Integrated team main `f50304f` (PR 20): invoice browsing by asset, saved invoice viewer/PDF download and active sidebar navigation. Customer end choices, demo completion, company permissions, return notifications, VAT forecasts and dark-mode improvements are retained. Company invoice generation now creates one next invoice per click. PDF access is customer-scoped and errors use the safe API envelope. Invoice pages share the dark palette and show all saved invoices rather than silently truncating the list.

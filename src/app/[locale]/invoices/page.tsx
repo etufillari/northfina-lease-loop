@@ -35,7 +35,7 @@ export default async function InvoicesPage({ params }: PageProps<'/[locale]/invo
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-7">
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t('invoices.title')}</h1>
-      <p className="mt-2 text-slate-600">{t('invoices.intro')}</p>
+      <p className="mt-2 text-slate-600 dark:text-slate-300">{t('invoices.intro')}</p>
       {invoices.length > 0 ? (
         <InvoiceList
           invoices={invoices}
@@ -50,7 +50,7 @@ export default async function InvoicesPage({ params }: PageProps<'/[locale]/invo
           }}
         />
       ) : (
-        <p className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
+        <p className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-900 text-sm text-slate-600 dark:text-slate-300">
           {t('invoices.empty')}
         </p>
       )}

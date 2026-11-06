@@ -91,16 +91,12 @@ export function ReturnRequest({
             required
             value={value}
             onChange={(event) => setValue(Number(event.target.value))}
-            className="w-40 rounded border border-stone-300 bg-white px-3 py-2 text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className="ui-control max-w-48"
           />
           <span>{labels.unit || usageUnit}</span>
         </span>
       </label>
-      <button
-        type="submit"
-        disabled={busy || value < usageValue}
-        className="rounded bg-emerald-700 px-3 py-2 text-white disabled:opacity-50"
-      >
+      <button type="submit" disabled={busy || value < usageValue} className="ui-primary">
         {busy ? labels.busy : labels.submit}
       </button>
       {error && (

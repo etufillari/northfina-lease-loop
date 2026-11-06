@@ -27,20 +27,23 @@ export function InvoiceList({
 }) {
   const [assetId, setAssetId] = useState('all');
   const assets = [...new Map(invoices.map((invoice) => [invoice.assetId, invoice.assetName]))];
-  const visibleInvoices = invoices
-    .filter((invoice) => assetId === 'all' || invoice.assetId === assetId)
-    .slice(0, 9);
+  const visibleInvoices = invoices.filter(
+    (invoice) => assetId === 'all' || invoice.assetId === assetId
+  );
 
   return (
     <>
-      <label className="mt-6 block text-sm font-medium text-slate-700" htmlFor="invoice-asset">
+      <label
+        className="mt-6 block text-sm font-medium text-slate-700 dark:text-slate-200"
+        htmlFor="invoice-asset"
+      >
         {labels.selectItem}
       </label>
       <select
         id="invoice-asset"
         value={assetId}
         onChange={(event) => setAssetId(event.target.value)}
-        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 sm:max-w-md"
+        className="ui-control mt-2 text-sm sm:max-w-md"
       >
         <option value="all">{labels.allItems}</option>
         {assets.map(([id, name]) => (
@@ -49,18 +52,20 @@ export function InvoiceList({
           </option>
         ))}
       </select>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="divide-y divide-slate-200">
+      <div className="ui-surface mt-5 overflow-hidden">
+        <div className="divide-y divide-slate-200 dark:divide-slate-700">
           {visibleInvoices.map((invoice) => (
             <Link
               key={invoice.id}
               href={`/${locale}/invoices/${invoice.id}`}
-              className="flex flex-wrap items-center justify-between gap-4 p-5 transition hover:bg-slate-50"
+              className="flex flex-wrap items-center justify-between gap-4 p-5 transition hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               <div>
-                <p className="font-semibold text-[#101d46]">{invoice.number}</p>
-                <p className="mt-1 text-sm text-slate-500">{invoice.assetName}</p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="font-semibold text-[#101d46] dark:text-slate-100">{invoice.number}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                  {invoice.assetName}
+                </p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
                   {labels.issued}: {invoice.issueDate} · {labels.due}: {invoice.dueDate}
                 </p>
               </div>
@@ -68,7 +73,7 @@ export function InvoiceList({
                 <p className="font-semibold tabular-nums">
                   {formatEuro(invoice.grossCents, currencyLocale)}
                 </p>
-                <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
                   {labels.status}
                 </span>
               </div>

@@ -20,16 +20,16 @@ export function DashboardSidebar({
   const t = getT(locale);
   const pathname = usePathname() ?? '';
   const links = companyMode
-    ? [{ href: `/${locale}/circular?view=returned`, label: t('nav.returned'), icon: '↩' }]
+    ? [
+        { href: `/${locale}/circular?view=returned`, label: t('nav.returned'), icon: '↩' },
+        { href: `/${locale}/circular?view=all`, label: t('circular.allOperations'), icon: '▣' },
+      ]
     : [
         { href: `/${locale}`, label: t('nav.catalogue'), icon: '▦' },
         { href: `/${locale}/leases`, label: t('nav.leases'), icon: '▣' },
         { href: `/${locale}/saved`, label: t('nav.saved'), icon: '♡' },
         { href: `/${locale}/invoices`, label: t('nav.transactions'), icon: '⇄' },
         { href: `/${locale}/account`, label: t('nav.account'), icon: '♙' },
-        ...(process.env.NODE_ENV === 'development'
-          ? [{ href: `/${locale}/circular`, label: t('circular.title'), icon: '↻' }]
-          : []),
       ];
 
   return (
@@ -46,7 +46,8 @@ export function DashboardSidebar({
             const active =
               link.href === `/${locale}`
                 ? pathname === link.href || pathname.startsWith(`/${locale}/assets`)
-                : pathname === link.href || pathname.startsWith(`${link.href}/`);
+                : pathname === link.href.split('?')[0] ||
+                  pathname.startsWith(`${link.href.split('?')[0]}/`);
             return (
               <li key={link.label}>
                 <Link

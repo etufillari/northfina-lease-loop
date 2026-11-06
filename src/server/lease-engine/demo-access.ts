@@ -1,3 +1,4 @@
+import { demoCompanyOperator } from '@/server/circular/demo-operator';
 import { ApiError } from '@/server/api-response';
 import { getActiveUser } from '@/server/active-user';
 import { db } from '@/server/db';
@@ -25,13 +26,11 @@ export async function demoLeasePrincipal(
   leaseId: string,
   issue = false
 ): Promise<EnginePrincipal> {
+  if (issue) return { ...demoCompanyOperator(request), role: 'operator' };
   const customer = await demoCustomer(request);
   const lease = await db.engineLease.findUnique({ where: { id: leaseId } });
   if (!lease) throw new ApiError(404, 'NOT_FOUND', 'Lease not found');
   if (lease.customerId !== customer.id)
     throw new ApiError(403, 'FORBIDDEN', 'Lease belongs to another customer');
-  // Scoped development controls: owner checked before granting this single operation.
-  return issue
-    ? { actorId: `demo:${customer.id}`, role: 'operator' }
-    : { actorId: customer.id, role: 'customer', customerId: customer.id };
+  return { actorId: customer.id, role: 'customer', customerId: customer.id };
 }

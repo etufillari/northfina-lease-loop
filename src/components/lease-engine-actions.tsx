@@ -3,78 +3,90 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Props = {
+  contractId: string;
   leaseId: string | null;
+  status: string;
   pendingPeriods: number[];
-  locale: string;
-  labels: {
-    buyout: string;
-    passOn: string;
-    releaseEarlier: string;
-    generate: string;
-    busy: string;
-    error: string;
-  };
+  labels: { activate: string; generate: string; complete: string; busy: string; error: string };
 };
-export function LeaseEngineActions({ leaseId, pendingPeriods, locale, labels }: Props) {
+export function LeaseEngineActions({ contractId, leaseId, status, pendingPeriods, labels }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
-  async function generateInvoice() {
+  async function run(action: 'activate' | 'generate' | 'complete') {
     if (busy) return;
     setBusy(true);
     setError(false);
     try {
-      const periodIndex = pendingPeriods[0];
-      if (!leaseId || periodIndex === undefined) throw new Error('invoice_unavailable');
-      const response = await fetch(`/api/leases/${leaseId}/invoices`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': `ui:${leaseId}:${periodIndex}`,
-        },
-        body: JSON.stringify({ periodIndex }),
-      });
-      if (!response.ok) throw new Error('request_failed');
-      router.push(`/${locale}/invoices`);
+      const requests =
+        action === 'generate'
+          ? pendingPeriods.slice(0, 1).map((periodIndex) => ({
+              path: `/api/leases/${leaseId}/invoices`,
+              body: { periodIndex },
+              key: `ui:${leaseId}:${periodIndex}`,
+            }))
+          : [
+              {
+                path:
+                  action === 'activate'
+                    ? `/api/contracts/${contractId}/activate`
+                    : `/api/leases/${leaseId}/complete`,
+                body: {},
+                key: '',
+              },
+            ];
+      for (const item of requests) {
+        const response = await fetch(item.path, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': item.key,
+          },
+          body: JSON.stringify(item.body),
+        });
+        if (!response.ok) throw new Error('request_failed');
+      }
     } catch {
       setError(true);
     } finally {
       setBusy(false);
+      router.refresh();
     }
   }
   return (
-    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <button
-        type="button"
-        disabled
-        className="rounded bg-emerald-700 px-2 py-2 text-sm text-white opacity-50"
-      >
-        {labels.buyout}
-      </button>
-      <button
-        type="button"
-        disabled
-        className="rounded bg-emerald-700 px-2 py-2 text-sm text-white opacity-50"
-      >
-        {labels.passOn}
-      </button>
-      <button
-        type="button"
-        disabled
-        className="rounded bg-emerald-700 px-2 py-2 text-sm text-white opacity-50"
-      >
-        {labels.releaseEarlier}
-      </button>
-      <button
-        type="button"
-        disabled={busy || !leaseId || pendingPeriods.length === 0}
-        onClick={() => void generateInvoice()}
-        className="rounded bg-emerald-700 px-2 py-2 text-sm text-white disabled:opacity-50"
-      >
-        {busy ? labels.busy : labels.generate}
-      </button>
+    <div className="mt-4 flex flex-wrap gap-3">
+      {!leaseId && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void run('activate')}
+          className="ui-primary"
+        >
+          {busy ? labels.busy : labels.activate}
+        </button>
+      )}
+      {leaseId && pendingPeriods.length > 0 && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void run('generate')}
+          className="ui-primary"
+        >
+          {busy ? labels.busy : labels.generate}
+        </button>
+      )}
+      {leaseId && status === 'ACTIVE' && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void run('complete')}
+          className="ui-secondary"
+        >
+          {busy ? labels.busy : labels.complete}
+        </button>
+      )}
       {error && (
-        <p role="alert" className="w-full text-sm text-red-700">
+        <p role="alert" className="w-full text-sm text-red-700 dark:text-red-300">
           {labels.error}
         </p>
       )}

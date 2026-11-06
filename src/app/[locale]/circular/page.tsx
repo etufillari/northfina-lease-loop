@@ -1,3 +1,7 @@
+import { cookies } from 'next/headers';
+import { OPERATOR_COOKIE, validOperatorSession } from '@/server/circular/operator-session';
+import { OperatorAccess } from '@/components/operator-access';
+import { LeaseEnginePanel } from '@/components/lease-engine-panel';
 import { assetConditionSchema } from '@/data/schemas';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -21,24 +25,55 @@ export default async function CircularPage({
     notFound();
   await connection();
   const t = getT(locale);
+  const signedIn = validOperatorSession((await cookies()).get(OPERATOR_COOKIE)?.value);
+  const access = (
+    <OperatorAccess
+      signedIn={signedIn}
+      labels={{
+        password: t('operator.password'),
+        login: t('operator.login'),
+        logout: t('operator.logout'),
+        error: t('operator.loginError'),
+      }}
+    />
+  );
+  if (!signedIn)
+    return (
+      <div className="ui-surface mx-auto my-10 max-w-xl space-y-6 p-6 sm:p-8">
+        <h1>{t('circular.title')}</h1>
+        <p>{t('operator.access')}</p>
+        {access}
+      </div>
+    );
   const query = await searchParams;
   const examples = query.examples === '1';
   const returnedQueue = query.view === 'returned';
+  const requestQueue = query.view === 'requests';
   const rows = (await circularDashboard(db)).filter((row) =>
-    returnedQueue
-      ? Boolean(row.receipt && row.asset.status === 'returned')
-      : query.asset
-        ? row.asset.id === query.asset
-        : examples || row.history.length > 0
+    requestQueue
+      ? row.receipt?.status === 'REQUESTED'
+      : returnedQueue
+        ? Boolean(row.receipt && row.asset.status === 'returned')
+        : query.asset
+          ? row.asset.id === query.asset
+          : examples || row.history.length > 0
   );
   const today = todayIso();
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-10">
-      <h1 className="text-3xl font-semibold">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-10">
+      <h1 className="text-3xl font-semibold tracking-tight">
         {t(returnedQueue ? 'nav.returned' : 'circular.title')}
       </h1>
-      <p>{t('circular.demo')}</p>
-      <p>{t('circular.steps')}</p>
+      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        {t('circular.demo')}
+      </p>
+      {access}
+      <Link href={`/${locale}/circular?view=all`} className="inline-block min-h-11 py-2 underline">
+        {t('circular.allOperations')}
+      </Link>
+      <p className="rounded-xl bg-slate-100 p-4 text-sm leading-relaxed text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        {t('circular.steps')}
+      </p>
       {returnedQueue ? (
         <Link className="underline" href={`/${locale}/circular?view=all`}>
           {t('circular.allOperations')}
@@ -63,10 +98,7 @@ export default async function CircularPage({
           row.receipt?.completedOn
         );
         return (
-          <section
-            key={row.asset.id}
-            className="rounded-xl border border-stone-300 p-5 dark:border-stone-700"
-          >
+          <section key={row.asset.id} className="ui-surface space-y-3 p-5 sm:p-7">
             <h2 className="text-xl font-semibold">
               {row.asset.make} {row.asset.model} — {row.asset.id}
             </h2>
@@ -91,11 +123,20 @@ export default async function CircularPage({
               <p className="text-sm">{t('circular.imported')}</p>
             )}
             {row.history.map((lease) => (
-              <p key={lease.id} className="text-sm">
-                {lease.contractId} → {lease.id} · {lease.startDate} · {lease.status}
-              </p>
+              <details key={lease.id} open={row.asset.id === query.asset}>
+                <summary className="cursor-pointer rounded-lg border border-slate-200 px-3 py-3 text-sm break-words hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  {lease.contractId} · {lease.status}
+                </summary>
+                <LeaseEnginePanel
+                  contractId={lease.contractId}
+                  leaseId={lease.id}
+                  status={lease.status}
+                  locale={locale}
+                  operator
+                />
+              </details>
             ))}
-            <details className="mt-3 text-sm">
+            <details className="mt-3 text-sm text-slate-600 dark:text-slate-300">
               <summary>{t('circular.audit')}</summary>
               <ul>
                 {row.audit.map((event) => (
@@ -111,17 +152,34 @@ export default async function CircularPage({
               </p>
             )}
             {row.receipt?.status === 'REVIEW_REQUIRED' && (
-              <p role="status">
+              <p
+                role="status"
+                className="rounded-xl bg-slate-100 p-4 text-sm font-medium text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+              >
                 {t('circular.review')}{' '}
                 {formatEuro(row.receipt.offerNetCents ?? 0, intlLocale[locale])}
               </p>
             )}
             {row.receipt?.status === 'PENDING_APPROVAL' && (
-              <p role="status">{t('circular.pendingApproval')}</p>
+              <p
+                role="status"
+                className="rounded-xl bg-slate-100 p-4 text-sm font-medium text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+              >
+                {t('circular.pendingApproval')}{' '}
+                {formatEuro(row.receipt.offerNetCents ?? 0, intlLocale[locale])}
+              </p>
             )}
             {row.receipt?.status === 'REJECTED' && (
-              <p role="status">
+              <p
+                role="status"
+                className="rounded-xl bg-slate-100 p-4 text-sm font-medium text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+              >
                 {t('circular.rejected')} {row.receipt.reviewReason}
+              </p>
+            )}
+            {row.receipt?.reviewedBy && (
+              <p>
+                {row.receipt.reviewedBy} · {row.receipt.reviewedOn}
               </p>
             )}
             {row.offer && (
@@ -173,7 +231,7 @@ export default async function CircularPage({
                   condition={row.asset.condition}
                   usage={row.asset.usage.value}
                   usageUnit={t(`usage.unit.${row.asset.usage.unit}`)}
-                  currentDate={today}
+                  currentDate={date}
                   labels={{
                     receive: t('circular.receive'),
                     confirmReceipt: t('circular.confirmReceipt'),
@@ -190,12 +248,13 @@ export default async function CircularPage({
                     busy: t('engine.busy'),
                     error: t('engine.error'),
                     conflict: t('circular.conflict'),
+                    dateError: t('circular.dateError'),
                   }}
                 />
               )}
           </section>
         );
       })}
-    </main>
+    </div>
   );
 }

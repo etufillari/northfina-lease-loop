@@ -1,0 +1,33 @@
+// POST /api/staff/applications/:id/decline  body: { actor, note? }
+// A person declines a waiting application; the asset is released. Audit-logged.
+import { z } from 'zod';
+import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { db } from '@/server/db';
+import { declineApplication } from '@/server/staff';
+
+const bodySchema = z.strictObject({
+  actor: z.string().trim().min(1).max(100),
+  note: z.string().trim().max(500).optional(),
+});
+
+const failures: Record<string, [number, string, string]> = {
+  not_found: [404, 'APPLICATION_NOT_FOUND', 'No such application'],
+  not_reviewable: [409, 'NOT_REVIEWABLE', 'This application is not waiting for staff'],
+};
+
+export const POST = handleRoute(
+  async (request, { params }: RouteContext<'/api/staff/applications/[id]/decline'>) => {
+    const { id } = await params;
+    const body = await readJsonBody(request, bodySchema);
+    const result = await declineApplication(db, {
+      applicationId: id,
+      actor: body.actor,
+      note: body.note,
+    });
+    if (!result.ok) {
+      const [status, code, message] = failures[result.reason]!;
+      return fail(status, code, message);
+    }
+    return ok({ status: result.status });
+  }
+);

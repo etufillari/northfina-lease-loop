@@ -8,7 +8,7 @@ parent: goal-and-requirements
 
 # Lease Loop: architecture and spec
 
-**Status:** draft for team review (5 Nov 2026). Built from [CHALLENGE.md](../CHALLENGE.md), [RULES.md](../RULES.md), [data/DATA.md](../data/DATA.md) and the starter code. It also absorbs the earlier root `architecture.md` from the spec graph. This is the single `architecture` node: its parent is [goal-and-requirements.md](../goal-and-requirements.md), and the module specs in `src/*/SPEC.md` point here as their `parent`.
+**Status:** draft for team review (5 Nov 2026). Built from [CHALLENGE.md](CHALLENGE.md), [RULES.md](RULES.md), [data/DATA.md](data/DATA.md) and the starter code. It also absorbs the earlier `architecture.md` from the spec graph. This is the single `architecture` node: its parent is [goal-and-requirements.md](goal-and-requirements.md), and the module specs in `src/*/SPEC.md` point here as their `parent`.
 
 Items marked **[Decision]** were not settled in the notes and are proposed here. Agree or change them in review before the plan is written.
 

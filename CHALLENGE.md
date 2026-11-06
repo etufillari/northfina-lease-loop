@@ -104,7 +104,7 @@ On Friday the judges run these against your app. Make sure the ones related to y
 3. **Tax is not price.** `ebike-001`, 24 months, started 15 Sep 2026. Show the December 2026 and January 2027 invoices.
 4. **Calendar traps.** `laptop-001`, 36 months, starting 31 Jan 2026. When are the February 2026 and February 2028 invoices due?
 5. **Too young.** Mikko (`cust-mikko`, 17) applies for `laptop-008`. What does he see? Be kind and clear.
-6. **Who can sign?** Norvi Logistics (`cust-norvi`) applies for 4 × `ebike-004`. The applicant is not allowed to sign for the company.
+6. **Who can sign?** Norvi Logistics (`cust-norvi`) applies for 1 × `ebike-004`. The applicant is not allowed to sign for the company.
 7. **Big ticket.** Haapalan Tila (`cust-haapala`) leases `farm-002` (€145,000) for 48 months with €20,000 down. Which questions appear, and why does it end in manual review?
 8. **Early exit.** Aino ends the lease from card 1 in month 7. What does it cost, and why?
 9. **Second life.** `ebike-007` came back in fair condition with 18,400 km. Refurbish? Who on the waiting list gets it (`wait-02` or `wait-13`?) and at what rent?

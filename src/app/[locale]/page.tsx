@@ -9,7 +9,7 @@ import { CatalogueFilterControls } from '@/components/catalogue-filter-controls'
 import { CataloguePricing } from '@/components/catalogue-pricing';
 import { loadCoefficientTable } from '@/data/load';
 import { assetCategorySchema, assetConditionSchema, assetStatusSchema } from '@/data/schemas';
-import { filterAssets } from '@/domain/asset-filter';
+import { filterCustomerCatalogueAssets } from '@/domain/asset-filter';
 import { formatEuro } from '@/domain/money';
 import { LEASE_TERM_MONTHS, MAX_DOWN_PAYMENT_CENTS } from '@/domain/monthly-rent';
 import { listPriceOn } from '@/domain/price-list';
@@ -47,7 +47,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
     getActiveUser(),
   ]);
   const savedIds = new Set(await getSavedAssetIds(customer?.id ?? null));
-  const filteredAssets = filterAssets(assets, filters);
+  const filteredAssets = filterCustomerCatalogueAssets(assets, filters);
   const termOptions = LEASE_TERM_MONTHS.map((value) => ({
     value,
     label: t('pricing.months', { count: value }),

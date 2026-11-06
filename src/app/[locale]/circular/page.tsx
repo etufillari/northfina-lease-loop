@@ -10,32 +10,45 @@ import { circularDashboard } from '@/server/circular/queries';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 import { CircularActions } from '@/components/circular-actions';
+import { companyModeActive } from '@/server/company-mode';
+import { latestLifecycleDate } from '@/domain/circular/workflow-date';
 export default async function CircularPage({
   params,
   searchParams,
 }: PageProps<'/[locale]/circular'>) {
   const { locale } = await params;
-  if (!isLocale(locale) || process.env.NODE_ENV !== 'development') notFound();
+  if (!isLocale(locale) || process.env.NODE_ENV !== 'development' || !(await companyModeActive()))
+    notFound();
   await connection();
   const t = getT(locale);
   const query = await searchParams;
   const examples = query.examples === '1';
+  const returnedQueue = query.view === 'returned';
   const rows = (await circularDashboard(db)).filter((row) =>
-    query.asset ? row.asset.id === query.asset : examples || row.history.length > 0
+    returnedQueue
+      ? Boolean(row.receipt && row.asset.status === 'returned')
+      : query.asset
+        ? row.asset.id === query.asset
+        : examples || row.history.length > 0
   );
   const today = todayIso();
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-10">
-      <Link href={`/${locale}/account`} className="underline">
-        {t('account.title')}
-      </Link>
-      <h1 className="text-3xl font-semibold">{t('circular.title')}</h1>
+      <h1 className="text-3xl font-semibold">
+        {t(returnedQueue ? 'nav.returned' : 'circular.title')}
+      </h1>
       <p>{t('circular.demo')}</p>
       <p>{t('circular.steps')}</p>
-      <Link className="underline" href={`/${locale}/circular${examples ? '' : '?examples=1'}`}>
-        {t(examples ? 'circular.hideExamples' : 'circular.showExamples')}
-      </Link>
-      {rows.length === 0 && <p>{t('circular.empty')}</p>}
+      {returnedQueue ? (
+        <Link className="underline" href={`/${locale}/circular?view=all`}>
+          {t('circular.allOperations')}
+        </Link>
+      ) : (
+        <Link className="underline" href={`/${locale}/circular${examples ? '' : '?examples=1'}`}>
+          {t(examples ? 'circular.hideExamples' : 'circular.showExamples')}
+        </Link>
+      )}
+      {rows.length === 0 && <p>{t(returnedQueue ? 'circular.emptyReturned' : 'circular.empty')}</p>}
       {rows.map((row) => {
         const lastLease = row.history.find((l) => l.id === row.completedLeaseId);
         const end = lastLease?.terminatedOn
@@ -43,7 +56,12 @@ export default async function CircularPage({
           : lastLease
             ? anniversary(lastLease.startDate, lastLease.termMonths)
             : null;
-        const date = end?.ok && end.value > today ? end.value : today;
+        const date = latestLifecycleDate(
+          today,
+          end?.ok ? end.value : null,
+          row.receipt?.receivedOn,
+          row.receipt?.completedOn
+        );
         return (
           <section
             key={row.asset.id}
@@ -56,6 +74,14 @@ export default async function CircularPage({
               {t('circular.identity')}: {row.asset.serial_number} · {t('circular.lives')}:{' '}
               {row.asset.previous_lives} · {t(`status.${row.asset.status}`)}
             </p>
+            {row.receipt?.requestedOn && (
+              <p>
+                {t('circular.requestedOn')}: {row.receipt.requestedOn} · {t('asset.usage')}:{' '}
+                {row.receipt.usageValue !== null
+                  ? t(`usage.${row.asset.usage.unit}`, { value: row.receipt.usageValue })
+                  : t(`usage.${row.asset.usage.unit}`, { value: row.asset.usage.value })}
+              </p>
+            )}
             <p>
               {t('circular.impact')}: {(row.impactGrams / 1000).toLocaleString(intlLocale[locale])}{' '}
               kg CO₂e
@@ -90,6 +116,14 @@ export default async function CircularPage({
                 {formatEuro(row.receipt.offerNetCents ?? 0, intlLocale[locale])}
               </p>
             )}
+            {row.receipt?.status === 'PENDING_APPROVAL' && (
+              <p role="status">{t('circular.pendingApproval')}</p>
+            )}
+            {row.receipt?.status === 'REJECTED' && (
+              <p role="status">
+                {t('circular.rejected')} {row.receipt.reviewReason}
+              </p>
+            )}
             {row.offer && (
               <p>
                 {t('circular.price')}: {formatEuro(row.offer.netListCents, intlLocale[locale])} ·{' '}
@@ -117,7 +151,7 @@ export default async function CircularPage({
             )}
             {!row.activeLeaseId &&
               row.asset.status !== 'retired' &&
-              !['READY', 'REVIEW_REQUIRED'].includes(row.receipt?.status ?? '') && (
+              !['READY', 'REVIEW_REQUIRED', 'REJECTED'].includes(row.receipt?.status ?? '') && (
                 <CircularActions
                   moneyLocale={intlLocale[locale]}
                   grades={Object.fromEntries(
@@ -138,10 +172,18 @@ export default async function CircularPage({
                   receipt={row.receipt}
                   condition={row.asset.condition}
                   usage={row.asset.usage.value}
+                  usageUnit={t(`usage.unit.${row.asset.usage.unit}`)}
+                  currentDate={today}
                   labels={{
                     receive: t('circular.receive'),
+                    confirmReceipt: t('circular.confirmReceipt'),
                     inspect: t('circular.inspect'),
                     finish: t('circular.finish'),
+                    approve: t('circular.approve'),
+                    reject: t('circular.reject'),
+                    rejectReason: t('circular.rejectReason'),
+                    pendingApproval: t('circular.pendingApproval'),
+                    rejected: t('circular.rejected'),
                     condition: t('circular.condition'),
                     usage: t('circular.usage'),
                     confirm: t('circular.confirm'),

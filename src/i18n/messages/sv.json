@@ -409,5 +409,15 @@
   "secondLife.workNote": "Northfina betalar själv arbetet för {work}: kunden betalar för vad artikeln är värd, inte för verkstadsräkningen.",
   "secondLife.upgrade.serve_waiter": "Uppgradering {from} → {to} för {cost}: utan den kan ingen i kön ta artikeln, och efteråt är den värd {value}, mer än de {work} som lagts på den.",
   "secondLife.upgrade.reach_listing": "Uppgradering {from} → {to} för {cost}: den kan inte listas som den är; efteråt är den värd {value}, mer än de {work} som lagts på den, så det slår reservdelar.",
-  "secondLife.upgrade.pays_for_itself": "Uppgradering {from} → {to} för {cost}: den tillför {gain} i värde, mer än den kostar."
+  "secondLife.upgrade.pays_for_itself": "Uppgradering {from} → {to} för {cost}: den tillför {gain} i värde, mer än den kostar.",
+  "me.applications": "Mina ansökningar",
+  "me.step.continue": "Frågor kvar",
+  "me.step.sign": "Godkänd — redo att signera",
+  "me.step.wait_for_review": "En person granskar",
+  "me.step.wait_for_signatory": "Väntar på firmatecknaren",
+  "me.step.expired": "Reservationen gick ut",
+  "me.holdUntil": "Reserverad åt dig till {date}.",
+  "me.action.continue": "Fortsätt ansökan",
+  "me.action.sign": "Signera nu",
+  "me.action.view": "Visa ansökan"
 }

@@ -409,5 +409,15 @@
   "secondLife.workNote": "Northfina maksaa {work} työt itse: asiakas maksaa tuotteen arvosta, ei korjaamon laskusta.",
   "secondLife.upgrade.serve_waiter": "Nosto {from} → {to} hintaan {cost}: ilman sitä kukaan jonossa ei voi ottaa tuotetta, ja noston jälkeen se on {value} arvoinen, enemmän kuin siihen käytetyt {work}.",
   "secondLife.upgrade.reach_listing": "Nosto {from} → {to} hintaan {cost}: sellaisenaan sitä ei voi listata; noston jälkeen se on {value} arvoinen, enemmän kuin siihen käytetyt {work}, joten se on parempi kuin varaosiksi.",
-  "secondLife.upgrade.pays_for_itself": "Nosto {from} → {to} hintaan {cost}: se lisää arvoa {gain}, enemmän kuin maksaa."
+  "secondLife.upgrade.pays_for_itself": "Nosto {from} → {to} hintaan {cost}: se lisää arvoa {gain}, enemmän kuin maksaa.",
+  "me.applications": "Hakemukseni",
+  "me.step.continue": "Kysymyksiä jäljellä",
+  "me.step.sign": "Hyväksytty — valmis allekirjoitettavaksi",
+  "me.step.wait_for_review": "Ihminen tarkistaa",
+  "me.step.wait_for_signatory": "Odottaa allekirjoittajaa",
+  "me.step.expired": "Varaus vanhentui",
+  "me.holdUntil": "Varattuna sinulle {date} asti.",
+  "me.action.continue": "Jatka hakemusta",
+  "me.action.sign": "Allekirjoita nyt",
+  "me.action.view": "Näytä hakemus"
 }

@@ -93,9 +93,18 @@ export async function payInvoice(
         entityId: `${contract.id}#${invoice.number}`,
         details: { amountCents: invoice.totalCents, dueDate: invoice.dueDate, demo: true },
       },
+      // A payment recorded on a later date (made while time-travelling ahead) hasn't happened
+      // yet on todayIso, so paying now moves it to today instead of adding a second one.
       (tx) =>
-        tx.invoicePayment.create({
-          data: {
+        tx.invoicePayment.upsert({
+          where: {
+            contract_id_invoice_number: {
+              contract_id: contract.id,
+              invoice_number: invoice.number,
+            },
+          },
+          update: { paid_date: todayIso, amount_cents: invoice.totalCents },
+          create: {
             contract_id: contract.id,
             invoice_number: invoice.number,
             paid_date: todayIso,

@@ -142,3 +142,35 @@ describe('receivedInvoices', () => {
     expect(await receivedInvoices(db, null, '2027-01-10')).toHaveLength(3);
   });
 });
+
+describe('payments and time travel', () => {
+  it('does not count a payment before its date, and moves it when paid earlier', async () => {
+    const contract = await ainosContract();
+    // Travel ahead to 10 Jan 2027 and pay invoice 2 (due 5 Dec 2026)
+    await payInvoice(
+      db,
+      { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' },
+      '2027-01-10'
+    );
+
+    // Back in November the invoice isn't out yet, so it isn't paid either
+    const november = await contractInvoices(db, contract, '2026-11-20');
+    expect(november?.[1]).toMatchObject({ status: 'upcoming', paidDate: null });
+
+    // On 6 Dec it is due again, and paying then moves the one payment to 6 Dec
+    const december = await contractInvoices(db, contract, '2026-12-06');
+    expect(december?.[1]).toMatchObject({ status: 'due' });
+    expect(
+      await payInvoice(
+        db,
+        { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' },
+        '2026-12-06'
+      )
+    ).toMatchObject({ ok: true, paidDate: '2026-12-06' });
+    expect(await db.invoicePayment.count()).toBe(1);
+    expect((await contractInvoices(db, contract, '2027-01-10'))?.[1]).toMatchObject({
+      status: 'paid',
+      paidDate: '2026-12-06',
+    });
+  });
+});

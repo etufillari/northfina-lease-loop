@@ -184,3 +184,31 @@ describe('invoiceLabel', () => {
     expect(invoiceLabel('1A2B3C4D', 48)).toBe('1A2B3C4D-48');
   });
 });
+
+describe('withStatus and time travel', () => {
+  const invoices = () => schedule('2026-11-05', 12, 1_000);
+  const SIGNED = '2026-11-05';
+  // Invoice 3 (5 Jan 2027) was paid on 10 Jan 2027
+  const payments = [{ invoiceNumber: 3, paidDate: '2027-01-10' }];
+
+  it('counts a payment from its own date on', () => {
+    expect(withStatus(invoices(), payments, '2027-01-10', SIGNED)[2]).toMatchObject({
+      status: 'paid',
+      paidDate: '2027-01-10',
+    });
+  });
+
+  it('is due again between its date and the payment date', () => {
+    expect(withStatus(invoices(), payments, '2027-01-09', SIGNED)[2]).toMatchObject({
+      status: 'due',
+      paidDate: null,
+    });
+  });
+
+  it('is upcoming again when travelling back before its date', () => {
+    expect(withStatus(invoices(), payments, '2026-11-20', SIGNED)[2]).toMatchObject({
+      status: 'upcoming',
+      paidDate: null,
+    });
+  });
+});

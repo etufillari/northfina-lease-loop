@@ -115,8 +115,12 @@ export type InvoiceWithStatus = Invoice & {
 };
 
 /**
- * Each invoice's status on `today`: paid if a payment is recorded for it, otherwise due once
- * its date is reached, otherwise upcoming.
+ * Each invoice's status on `today`: paid if a payment was made on or before `today`, otherwise
+ * due once its date is reached, otherwise upcoming.
+ *
+ * A payment only counts from its own date. Pay January's invoice while visiting January, then
+ * travel back to November, and that payment hasn't happened yet, so the invoice is upcoming
+ * again; travel forward and it is paid again.
  *
  * The first month's rent is paid by signing: invoice 1 is paid on `signedDate` without a
  * separate payment, so invoices to pay start from month 2. (Before the signing day, when
@@ -131,7 +135,12 @@ export function withStatus(
   const paidOn = new Map(payments.map((p) => [p.invoiceNumber, p.paidDate]));
   return invoices.map((invoice) => {
     const paidAtSigning = invoice.number === 1 && signedDate <= today;
-    const paidDate = paidAtSigning ? signedDate : (paidOn.get(invoice.number) ?? null);
+    const payment = paidOn.get(invoice.number);
+    const paidDate = paidAtSigning
+      ? signedDate
+      : payment !== undefined && payment <= today
+        ? payment
+        : null;
     const status: InvoiceStatus = paidDate ? 'paid' : invoice.dueDate <= today ? 'due' : 'upcoming';
     return { ...invoice, status, paidDate, paidAtSigning };
   });

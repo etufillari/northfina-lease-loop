@@ -115,8 +115,69 @@ export default async function AssetPage({
     [t('asset.id'), asset.id],
   ];
 
+  const top = (
+    <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
+      <section
+        aria-labelledby="details-heading"
+        className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+      >
+        <h2 id="details-heading" className="text-lg font-semibold">
+          {t('asset.details')}
+        </h2>
+        <dl className="mt-4 divide-y divide-stone-100 text-sm dark:divide-stone-800">
+          {facts.map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4 py-2.5">
+              <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+              <dd className="text-right font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section
+        aria-labelledby="price-heading"
+        className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+      >
+        <h2 id="price-heading" className="text-lg font-semibold">
+          {t('asset.listPrice')}
+        </h2>
+        <p className="mt-3 text-3xl font-semibold tabular-nums">
+          {price.ok ? euro(price.priceCents) : t('asset.noPrice')}
+        </p>
+        <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+          <time dateTime={today}>
+            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+          </time>
+          {price.ok ? (
+            <>
+              {' · '}
+              {item.secondLifePriceCents
+                ? t('asset.secondLifePrice')
+                : t('asset.priceListVersion', { version: price.priceListVersion })}
+            </>
+          ) : null}
+        </p>
+        {change ? (
+          <p className="mt-4 rounded-lg bg-stone-100 p-3 text-sm text-stone-800 dark:bg-stone-800 dark:text-stone-200">
+            {t('asset.nextPrice', {
+              date: formatIsoDate(change.validFrom, locale),
+              price: euro(change.priceCents),
+            })}
+          </p>
+        ) : null}
+      </section>
+    </div>
+  );
+  // The panels set their own top margin; in the layout the gap does that job.
+  const bottom = (
+    <div className="space-y-6 [&>*]:mt-0">
+      <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
+      <Co2Panel impact={impact} isEbike={asset.category === 'e_bike'} locale={locale} t={t} />
+    </div>
+  );
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <Link
         href={backHref}
         className="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
@@ -148,59 +209,8 @@ export default async function AssetPage({
         </p>
       ) : null}
 
-      <div className="mt-8 grid gap-6 md:grid-cols-[3fr_2fr]">
-        <section
-          aria-labelledby="details-heading"
-          className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
-        >
-          <h2 id="details-heading" className="text-lg font-semibold">
-            {t('asset.details')}
-          </h2>
-          <dl className="mt-4 divide-y divide-stone-100 text-sm dark:divide-stone-800">
-            {facts.map(([label, value]) => (
-              <div key={label} className="flex justify-between gap-4 py-2.5">
-                <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
-                <dd className="text-right font-medium">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section
-          aria-labelledby="price-heading"
-          className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
-        >
-          <h2 id="price-heading" className="text-lg font-semibold">
-            {t('asset.listPrice')}
-          </h2>
-          <p className="mt-3 text-3xl font-semibold tabular-nums">
-            {price.ok ? euro(price.priceCents) : t('asset.noPrice')}
-          </p>
-          <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-            <time dateTime={today}>
-              {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
-            </time>
-            {price.ok ? (
-              <>
-                {' · '}
-                {item.secondLifePriceCents
-                  ? t('asset.secondLifePrice')
-                  : t('asset.priceListVersion', { version: price.priceListVersion })}
-              </>
-            ) : null}
-          </p>
-          {change ? (
-            <p className="mt-4 rounded-lg bg-stone-100 p-3 text-sm text-stone-800 dark:bg-stone-800 dark:text-stone-200">
-              {t('asset.nextPrice', {
-                date: formatIsoDate(change.validFrom, locale),
-                price: euro(change.priceCents),
-              })}
-            </p>
-          ) : null}
-        </section>
-      </div>
-
-      {/* Only an available item with a price can be quoted; the status note explains the rest. */}
+      {/* Only an available item with a price can be quoted: the calculator then lays out the
+          page with the price breakdown in a sidebar. Otherwise the status note explains why. */}
       {leasable && price.ok && vatPercent !== null ? (
         <PriceCalculator
           assetId={asset.id}
@@ -209,11 +219,15 @@ export default async function AssetPage({
           table={table}
           initial={parsePriceSelection(search, price.priceCents, table)}
           locale={locale}
+          top={top}
+          bottom={bottom}
         />
-      ) : null}
-
-      <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
-      <Co2Panel impact={impact} isEbike={asset.category === 'e_bike'} locale={locale} t={t} />
+      ) : (
+        <div className="mt-8 max-w-4xl space-y-6">
+          {top}
+          {bottom}
+        </div>
+      )}
     </div>
   );
 }

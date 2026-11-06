@@ -458,5 +458,21 @@
   "catalogue.availableOnly": "Tillgängliga nu",
   "catalogue.clearFilters": "Rensa filter",
   "catalogue.categoryEmpty": "Inget i {category} ännu.",
-  "catalogue.noMatches": "Inga artiklar matchar filtren."
+  "catalogue.noMatches": "Inga artiklar matchar filtren.",
+  "replay.title": "Avtalet månad för månad",
+  "replay.intro": "Stega igenom avtalet månad för månad: vad som har fakturerats, vilken moms som gäller, vad det skulle kosta att avsluta i förtid och när valet vid avtalets slut öppnar. Det visar bara; inget ändras.",
+  "replay.month": "Avtalets månad",
+  "replay.monthValue": "Månad {month} av {term}: {date}",
+  "replay.today": "I dag",
+  "replay.backToToday": "Tillbaka till i dag",
+  "replay.vatStep": "Momsen går från {from} % till {to} % den {date}. Hyran är kvar på {net}; den här fakturan är {gross}.",
+  "replay.thisInvoice": "Månadens faktura",
+  "replay.invoiceLine": "Förfaller {date} · moms {rate} %",
+  "replay.invoicedSoFar": "Fakturerat hittills",
+  "replay.invoiceCount": "Fakturor",
+  "replay.rateBand": "Moms {rate} % från månad {month}",
+  "replay.leaveEarly": "Avsluta i slutet av den här månaden",
+  "replay.effective": "Gäller från {date}.",
+  "replay.endOpen": "Öppet nu: köp, lämna tillbaka eller för vidare.",
+  "replay.ended": "Avtalet upphörde den {date}."
 }

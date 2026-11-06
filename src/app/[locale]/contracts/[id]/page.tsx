@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { EarlyExitPanel } from '@/components/early-exit-panel';
 import { EndOfTermSection } from '@/components/end-of-term-section';
+import { LeaseReplay } from '@/components/lease-replay';
 import { loadResidualCurves, loadVatRates } from '@/data/load';
 import { assetConditionSchema, usageUnitSchema } from '@/data/schemas';
 import { exitMonthOn } from '@/domain/early-exit';
@@ -150,6 +151,26 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           <Fact label={t('lease.totalCost')}>{euro(contract.totalNetCostCents)}</Fact>
         </dl>
       </section>
+
+      {schedule.ok ? (
+        <section aria-labelledby="replay" className="mt-10">
+          <h2 id="replay" className="font-display text-lg font-bold tracking-tight uppercase">
+            {t('replay.title')}
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">{t('replay.intro')}</p>
+          {/* Keyed on the demo date so a new date starts the replay at the new current month. */}
+          <LeaseReplay
+            key={today}
+            locale={locale}
+            contract={contract}
+            schedule={schedule}
+            vatRates={vatRates}
+            exitContext={exitContext}
+            endedOn={ending?.effectiveDate ?? null}
+            today={today}
+          />
+        </section>
+      ) : null}
 
       <section aria-labelledby="invoices" className="mt-10">
         <h2 id="invoices" className="font-display text-lg font-bold tracking-tight uppercase">

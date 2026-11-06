@@ -458,5 +458,21 @@
   "catalogue.availableOnly": "Saatavilla nyt",
   "catalogue.clearFilters": "Poista rajaukset",
   "catalogue.categoryEmpty": "Kategoriassa {category} ei ole vielä mitään.",
-  "catalogue.noMatches": "Rajauksilla ei löytynyt laitteita."
+  "catalogue.noMatches": "Rajauksilla ei löytynyt laitteita.",
+  "replay.title": "Sopimus kuukausi kuukaudelta",
+  "replay.intro": "Käy sopimus läpi kuukausi kerrallaan: mitä on laskutettu, mikä alv on voimassa, mitä aikainen päättäminen maksaisi ja milloin sopimuskauden lopun valinta avautuu. Näkymä vain näyttää, mikään ei muutu.",
+  "replay.month": "Sopimuksen kuukausi",
+  "replay.monthValue": "Kuukausi {month}/{term}: {date}",
+  "replay.today": "Tänään",
+  "replay.backToToday": "Takaisin tähän päivään",
+  "replay.vatStep": "Alv muuttuu {date}: {from} % → {to} %. Vuokra ilman alvia pysyy samana ({net}), tämä lasku on {gross}.",
+  "replay.thisInvoice": "Tämän kuun lasku",
+  "replay.invoiceLine": "Eräpäivä {date} · alv {rate} %",
+  "replay.invoicedSoFar": "Laskutettu tähän mennessä",
+  "replay.invoiceCount": "Laskuja",
+  "replay.rateBand": "Alv {rate} % kuukaudesta {month}",
+  "replay.leaveEarly": "Päättäminen tämän kuun lopussa",
+  "replay.effective": "Voimaan {date}.",
+  "replay.endOpen": "Avoinna nyt: lunasta, palauta tai siirrä eteenpäin.",
+  "replay.ended": "Sopimus päättyi {date}."
 }

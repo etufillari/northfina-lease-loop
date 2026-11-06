@@ -458,5 +458,21 @@
   "catalogue.availableOnly": "Saadaval kohe",
   "catalogue.clearFilters": "Tühjenda filtrid",
   "catalogue.categoryEmpty": "Kategoorias {category} pole veel midagi.",
-  "catalogue.noMatches": "Filtritele ei vasta ükski toode."
+  "catalogue.noMatches": "Filtritele ei vasta ükski toode.",
+  "replay.title": "Leping kuu kaupa",
+  "replay.intro": "Liigu lepingus kuu kaupa: mis on arveldatud, milline käibemaks kehtib, mida varajane lõpetamine maksaks ja millal avaneb lepingu lõpu valik. See ainult näitab; midagi ei muutu.",
+  "replay.month": "Lepingu kuu",
+  "replay.monthValue": "Kuu {month}/{term}: {date}",
+  "replay.today": "Täna",
+  "replay.backToToday": "Tagasi tänasesse",
+  "replay.vatStep": "Käibemaks muutub {date}: {from} % → {to} %. Rent ilma käibemaksuta jääb samaks ({net}), see arve on {gross}.",
+  "replay.thisInvoice": "Selle kuu arve",
+  "replay.invoiceLine": "Tähtaeg {date} · KM {rate} %",
+  "replay.invoicedSoFar": "Seni arveldatud",
+  "replay.invoiceCount": "Arveid",
+  "replay.rateBand": "KM {rate} % alates kuust {month}",
+  "replay.leaveEarly": "Lõpetamine selle kuu lõpus",
+  "replay.effective": "Jõustub {date}.",
+  "replay.endOpen": "Avatud nüüd: osta, tagasta või anna edasi.",
+  "replay.ended": "Leping lõppes {date}."
 }

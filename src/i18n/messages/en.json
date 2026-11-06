@@ -458,5 +458,21 @@
   "catalogue.availableOnly": "Available now",
   "catalogue.clearFilters": "Clear filters",
   "catalogue.categoryEmpty": "Nothing in {category} yet.",
-  "catalogue.noMatches": "No items match these filters."
+  "catalogue.noMatches": "No items match these filters.",
+  "replay.title": "Replay the lease",
+  "replay.intro": "Step through the lease month by month: what has been invoiced, the VAT in force, what leaving early would cost and when the end-of-term choice opens. It only shows; nothing changes.",
+  "replay.month": "Month of the lease",
+  "replay.monthValue": "Month {month} of {term}: {date}",
+  "replay.today": "Today",
+  "replay.backToToday": "Back to today",
+  "replay.vatStep": "VAT goes from {from} % to {to} % on {date}. The rent stays {net}; this invoice is {gross}.",
+  "replay.thisInvoice": "This month's invoice",
+  "replay.invoiceLine": "Due {date} · VAT {rate} %",
+  "replay.invoicedSoFar": "Invoiced so far",
+  "replay.invoiceCount": "Invoices issued",
+  "replay.rateBand": "VAT {rate} % from month {month}",
+  "replay.leaveEarly": "Leaving at the end of this month",
+  "replay.effective": "Takes effect on {date}.",
+  "replay.endOpen": "Open now: buy it, return it or pass it on.",
+  "replay.ended": "The lease ended on {date}."
 }

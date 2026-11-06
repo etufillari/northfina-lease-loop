@@ -20,6 +20,7 @@ type AssetCardProps = {
 };
 
 export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
+  const monthlyPrice = lease && formatEuro(lease.monthlyTotalCents, intlLocale[locale]);
   const isRelisted = price.ok && price.priceListVersion === null;
   const headingId = `asset-${asset.id}`;
   const fallbackImage = categoryFallbackImages[asset.category];
@@ -79,8 +80,8 @@ export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
             </p>
           </div>
 
-          {/* Estimated lease price */}
-          {lease && (
+          {/* Estimated lease price, with VAT like the headline on the item page */}
+          {lease && monthlyPrice && (
             <div className="mt-4 rounded-xl bg-stone-50 px-3 py-3 dark:bg-stone-800/60">
               <div className="flex items-end justify-between gap-3">
                 <div className="text-xs text-stone-600 dark:text-stone-400">
@@ -91,7 +92,9 @@ export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
 
                 <div className="text-right">
                   <p className="text-xl font-semibold tabular-nums">
-                    {formatEuro(lease.monthlyNetRentCents, intlLocale[locale])}
+                    {lease.requiresDownPayment
+                      ? t('asset.fromPrice', { price: monthlyPrice })
+                      : monthlyPrice}
                   </p>
                   <p className="text-sm text-stone-500 dark:text-stone-400">/ {t('asset.month')}</p>
                 </div>

@@ -2,10 +2,11 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
 import { assetPriceOn } from '@/domain/pricing/price-list';
 import { leaseEstimate } from '@/domain/pricing/pricing';
+import { vatRateOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -21,12 +22,14 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   await connection();
 
   const t = getT(locale);
-  const [today, assets, priceLists, table] = await Promise.all([
+  const [today, assets, priceLists, table, vatRates] = await Promise.all([
     currentDate(db), // the page decides what "today" is; domain code never reads the clock
     listAssets(db),
     loadPriceLists(),
     loadCoefficientTable(),
+    loadVatRates(),
   ]);
+  const vatRate = vatRateOn(vatRates, today);
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
     .filter((group) => group.assets.length > 0);
@@ -68,13 +71,17 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {group.assets.map((asset) => {
               const price = assetPriceOn(priceLists, asset, today);
-              const canLease = asset.status === 'available' && price.ok;
+              const canLease = asset.status === 'available' && price.ok && vatRate.ok;
               return (
                 <li key={asset.id}>
                   <AssetCard
                     asset={asset}
                     price={price}
-                    lease={canLease ? leaseEstimate(table, price.priceCents) : null}
+                    lease={
+                      canLease
+                        ? leaseEstimate(table, price.priceCents, vatRate.rateBasisPoints)
+                        : null
+                    }
                     locale={locale}
                     t={t}
                   />

@@ -9,6 +9,7 @@ import {
   quote,
   type QuoteInput,
 } from './pricing';
+import { vatCents } from '../vat';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -190,25 +191,35 @@ describe('downPaymentLimits', () => {
 });
 
 describe('leaseEstimate', () => {
-  it('gives the rent at the default term with nothing down (card 1)', () => {
-    expect(leaseEstimate(table, 389_000)).toEqual({
-      monthlyNetRentCents: 10_730,
+  const VAT = 2_550;
+
+  it('gives the rent with VAT at the default term (card 1)', () => {
+    expect(leaseEstimate(table, 389_000, VAT)).toEqual({
+      monthlyTotalCents: 13_466,
       termMonths: DEFAULT_TERM_MONTHS,
+      requiresDownPayment: false,
     });
   });
 
-  it('uses the smallest allowed down payment for an item above the maximum (farm-006)', () => {
+  it('uses the VAT rate it is given', () => {
+    expect(leaseEstimate(table, 389_000, 2_600)?.monthlyTotalCents).toBe(13_520);
+  });
+
+  it('assumes the smallest down payment for an item above the maximum (farm-006)', () => {
     const atMinimum = quote(
       table,
       deal({ basePriceCents: 26_000_000, downPaymentCents: 1_000_000 })
     );
     if (!atMinimum.ok) throw new Error(atMinimum.reason);
-    expect(leaseEstimate(table, 26_000_000)?.monthlyNetRentCents).toBe(
-      atMinimum.quote.monthly_net_rent_cents
-    );
+    const rent = atMinimum.quote.monthly_net_rent_cents;
+
+    expect(leaseEstimate(table, 26_000_000, VAT)).toMatchObject({
+      monthlyTotalCents: rent + vatCents(rent, VAT),
+      requiresDownPayment: true,
+    });
   });
 
   it('gives nothing for a price that cannot be financed (ebike-010 on price list 1)', () => {
-    expect(leaseEstimate(table, 28_900)).toBeNull();
+    expect(leaseEstimate(table, 28_900, VAT)).toBeNull();
   });
 });

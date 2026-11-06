@@ -3,6 +3,7 @@ import type { QuoteResult } from '@/data/lease-schemas';
 import type { CoefficientTable } from '@/data/schemas';
 import { monthlyFactorFor } from './coefficient';
 import { BASIS_POINTS_PER_WHOLE, roundedDivide } from '../money';
+import { vatCents } from '../vat';
 
 const MICROS_PER_WHOLE = 1_000_000;
 
@@ -83,15 +84,22 @@ export function quote(table: CoefficientTable, input: QuoteInput): QuoteResult {
   };
 }
 
-export type LeaseEstimate = { monthlyNetRentCents: number; termMonths: number };
+export type LeaseEstimate = {
+  monthlyTotalCents: number;
+  termMonths: number;
+  /** The item cannot be leased with nothing down, so the rent assumes the minimum. */
+  requiresDownPayment: boolean;
+};
 
 /**
- * A catalogue estimate: the monthly net rent at the default term, with the smallest down
- * payment the item allows. `null` when the price cannot be financed at all.
+ * A catalogue estimate: the monthly rent with VAT at the default term, with the smallest down
+ * payment the item allows. `null` when the price cannot be financed at all. The VAT rate is
+ * the one given, so a lease running past a rate change will cost a little more or less.
  */
 export function leaseEstimate(
   table: CoefficientTable,
-  basePriceCents: number
+  basePriceCents: number,
+  vatRateBasisPoints: number
 ): LeaseEstimate | null {
   const limits = downPaymentLimits(table, basePriceCents);
   if (!limits.ok) return null;
@@ -102,10 +110,12 @@ export function leaseEstimate(
     downPaymentCents: limits.minCents,
     termMonths: DEFAULT_TERM_MONTHS,
   });
-  return result.ok
-    ? {
-        monthlyNetRentCents: result.quote.monthly_net_rent_cents,
-        termMonths: DEFAULT_TERM_MONTHS,
-      }
-    : null;
+  if (!result.ok) return null;
+
+  const rent = result.quote.monthly_net_rent_cents;
+  return {
+    monthlyTotalCents: rent + vatCents(rent, vatRateBasisPoints),
+    termMonths: DEFAULT_TERM_MONTHS,
+    requiresDownPayment: limits.minCents > 0,
+  };
 }

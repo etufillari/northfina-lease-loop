@@ -32,7 +32,7 @@ const asset = {
   status: 'available',
 } satisfies Asset;
 
-const lease = { monthlyNetRentCents: 21500, termMonths: 12 };
+const lease = { monthlyTotalCents: 21500, termMonths: 12, requiresDownPayment: false };
 
 const price = {
   ok: true,
@@ -49,7 +49,8 @@ const t = ((key: string, params?: Record<string, unknown>) => {
     'asset.previousLives': 'Previous lives',
     'asset.listPrice': 'List price excl. VAT',
     'asset.price': 'Price excl. VAT',
-    'asset.estimatedLeasePrice': 'Estimated lease price excl. VAT',
+    'asset.estimatedLeasePrice': 'Estimated lease price incl. VAT',
+    'asset.fromPrice': `From ${params?.price}`,
     'asset.month': 'month',
     'asset.noPrice': 'No price available',
     'asset.priceListVersion': `Price list ${params?.version}`,
@@ -96,16 +97,30 @@ describe('AssetCard', () => {
   it('renders the estimated lease price and duration', () => {
     render(<AssetCard asset={asset} price={price} lease={lease} locale={'en' as Locale} t={t} />);
 
-    expect(screen.getByText('Estimated lease price excl. VAT')).toBeInTheDocument();
+    expect(screen.getByText('Estimated lease price incl. VAT')).toBeInTheDocument();
     expect(screen.getByText('€215.00')).toBeInTheDocument();
     expect(screen.getByText('for 12 months')).toBeInTheDocument();
     expect(screen.getByText('/ month')).toBeInTheDocument();
   });
 
+  it('says "from" when the rent assumes a down payment', () => {
+    render(
+      <AssetCard
+        asset={asset}
+        price={price}
+        lease={{ ...lease, requiresDownPayment: true }}
+        locale={'en' as Locale}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('From €215.00')).toBeInTheDocument();
+  });
+
   it('hides the lease estimate on an item that cannot be leased', () => {
     render(<AssetCard asset={asset} price={price} lease={null} locale={'en' as Locale} t={t} />);
 
-    expect(screen.queryByText('Estimated lease price excl. VAT')).not.toBeInTheDocument();
+    expect(screen.queryByText('Estimated lease price incl. VAT')).not.toBeInTheDocument();
     expect(screen.getByText('List price excl. VAT')).toBeInTheDocument();
   });
 
@@ -120,6 +135,6 @@ describe('AssetCard', () => {
     );
 
     expect(screen.getByText('No price available')).toBeInTheDocument();
-    expect(screen.queryByText('Estimated lease price excl. VAT')).not.toBeInTheDocument();
+    expect(screen.queryByText('Estimated lease price incl. VAT')).not.toBeInTheDocument();
   });
 });

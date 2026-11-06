@@ -96,10 +96,3 @@ once. Named tests cover each trap, including card 1 to the cent.
 `DEMO_MODE=off` (see `.env.example`) switches the demo stand-ins off: "today" is then always
 the real date and nobody is signed in until a real login replaces the body of
 `currentUser()` (`src/server/current-user.ts`).
-
-## Known limits
-
-- **No wear charge:** wear lowers the next customer's price; a charge for abnormal use is
-  designed in DECISIONS.md but not built.
-- **No real login or payments:** the persona picker stands in for sign-in, and invoices are
-  issued but not collected.

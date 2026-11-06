@@ -33,6 +33,7 @@ model Asset {
   quotes          Quote[]
   contracts       Contract[]
   return_requests ReturnRequest[]
+  second_life_reservations SecondLifeReservation[]
 
   @@index([category])
 }
@@ -202,6 +203,31 @@ model BuyoutRequest {
 
   @@index([contract_id, status])
   @@index([customer_id])
+}
+
+// A returned asset held for one waiting-list request (data/second-life-demand.json), with the
+// terms the decision produced. The terms and the full decision are copied here, so the reason
+// for the choice can be shown later even if the waiting list or the rules change.
+model SecondLifeReservation {
+  id                       String   @id
+  created_at               DateTime @default(now())
+  asset_id                 String
+  asset                    Asset    @relation(fields: [asset_id], references: [id])
+  waiting_request_id       String // e.g. wait-13
+  who                      String
+  status                   String // reserved
+  reserved_by              String
+  available_date           String
+  needed_by                String
+  target_condition         String
+  term_months              Int
+  monthly_net_rent_cents   Int
+  refurbishment_cost_cents Int
+  payback_months           Int
+  decision_json            String // ranked candidates and the rule that decided each comparison
+
+  @@index([asset_id, status])
+  @@index([waiting_request_id, status])
 }
 
 // An issued invoice. The VAT rate and amounts are stored, so history never changes even if

@@ -2,7 +2,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import type { CoefficientTable, PriceList } from '@/data/schemas';
 import { listPriceOn } from './price-list';
-import { downPaymentRange, leaseTerms, quoteLease, type QuoteInput } from './pricing';
+import {
+  downPaymentRange,
+  leaseTerms,
+  leaseTotalCents,
+  quoteLease,
+  type QuoteInput,
+} from './pricing';
 
 let table: CoefficientTable;
 let priceLists: PriceList[];
@@ -188,5 +194,23 @@ describe('downPaymentRange', () => {
   it('says an item below the smallest band cannot be leased', () => {
     expect(downPaymentRange(28_900, table)).toEqual({ ok: false, reason: 'below_minimum' });
     expect(downPaymentRange(30_000, table)).toMatchObject({ ok: true });
+  });
+});
+
+describe('leaseTotalCents', () => {
+  it('card 1: no down payment, 36 × 134.66 € = 4,847.76 € at 25.5 % VAT', () => {
+    const result = quoteLease(
+      { listPriceCents: 389_000, downPaymentCents: 0, termMonths: 36, vatPercent: 25.5 },
+      table
+    );
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.quote.monthlyGrossCents).toBe(13_466);
+    expect(leaseTotalCents(result.quote)).toBe(484_776);
+  });
+
+  it('adds the down payment to the monthly payments', () => {
+    expect(leaseTotalCents({ downPaymentCents: 50_000, totalGrossRentCents: 400_000 })).toBe(
+      450_000
+    );
   });
 });

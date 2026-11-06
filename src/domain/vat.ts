@@ -66,3 +66,18 @@ export function mergeVatRates(base: VatRates, changes: readonly VatChangeInput[]
     }),
   };
 }
+
+/**
+ * The first VAT change after `afterIso` that starts on or before `untilIso` (e.g. during a
+ * lease), or null when the rate stays the same all that time.
+ */
+export function nextVatChange(
+  vatRates: VatRates,
+  afterIso: string,
+  untilIso: string
+): { validFrom: string; ratePercent: number } | null {
+  const next = vatRates.rates
+    .filter((rate) => rate.valid_from > afterIso && rate.valid_from <= untilIso)
+    .sort((a, b) => a.valid_from.localeCompare(b.valid_from))[0];
+  return next ? { validFrom: next.valid_from, ratePercent: next.rate_percent } : null;
+}

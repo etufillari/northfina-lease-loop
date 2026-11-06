@@ -14,6 +14,7 @@
   "session.role.client": "Customer",
   "session.role.dealer": "Dealer",
   "session.role.admin": "Admin",
+  "session.role.signatory": "Signatory",
   "session.error": "Could not update who you are acting as.",
   "catalogue.title": "Catalogue",
   "catalogue.intro": "Every item can be leased, returned, refurbished and leased again.",

@@ -13,7 +13,14 @@ import { reviewApplication, submitApplication } from '../application/application
 import { seedAssets } from '../assets/assets';
 import { setDemoDate } from '../date/app-date';
 import type { PrismaClient } from '../prisma-client';
-import { contractViews, getContract, listContracts, signContract } from './contracts';
+import {
+  contractViews,
+  getContract,
+  listContracts,
+  previewContract,
+  signContract,
+} from './contracts';
+import { listInvoices } from '../invoicing/invoices';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -78,6 +85,107 @@ async function signOk(applicationId: string, customerId = AINO) {
 async function assetStatus(id: string) {
   return (await db.asset.findUniqueOrThrow({ where: { id } })).status;
 }
+
+describe('previewContract', () => {
+  const preview = (applicationId: string, customerId = AINO) =>
+    previewContract(db, { applicationId, customer: customer(customerId) });
+
+  async function previewOk(applicationId: string, customerId = AINO) {
+    const result = await preview(applicationId, customerId);
+    if (!result.ok) throw new Error(`preview failed: ${result.reason}`);
+    return result.preview;
+  }
+
+  it('shows exactly what signing then creates', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers, {
+      downPaymentCents: 50_000,
+    });
+    const before = await previewOk(application.id);
+    const signed = await signOk(application.id);
+    const invoices = await listInvoices(db, { contractId: signed.id });
+
+    expect(signed).toMatchObject({
+      monthly_net_rent_cents: before.monthly_net_rent_cents,
+      buyout_cents: before.buyout_cents,
+      signed_on: before.signed_on,
+      start_on: before.start_on,
+      planned_end_on: before.planned_end_on,
+      band: before.band,
+      list_price_on_signing_cents: before.list_price_on_signing_cents,
+    });
+    expect(before.invoices).toHaveLength(invoices.length);
+    before.invoices.forEach((invoice, i) => {
+      expect(invoices[i]).toMatchObject(invoice);
+    });
+  });
+
+  it('saves nothing and leaves the asset free', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    await db.auditLog.deleteMany();
+    await previewOk(application.id);
+
+    expect(await db.contract.count()).toBe(0);
+    expect(await db.invoice.count()).toBe(0);
+    expect(await db.assetLife.count()).toBe(0);
+    expect(await db.auditLog.count()).toBe(0);
+    expect(await assetStatus('ebike-003')).toBe('available');
+  });
+
+  it('shows the first invoices of card 1, with the VAT change', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    const { invoices, calculated_on } = await previewOk(application.id);
+
+    expect(calculated_on).toBe('2026-11-05');
+    expect(invoices).toHaveLength(36);
+    expect(invoices.slice(0, 3).map((i) => i.total_cents)).toEqual([13_466, 13_466, 13_520]);
+    expect(invoices[2]).toMatchObject({ vat_rate_percent: 26, kind: 'rent' });
+  });
+
+  it('keeps the quoted price and compares it with the list on the day (card 2)', async () => {
+    const application = await apply(AINO, 'laptop-004', ainoEbikeAnswers);
+    await setDemoDate(db, { date: '2026-11-06', actor: 'test' });
+
+    expect(await previewOk(application.id)).toMatchObject({
+      quote_date: '2026-11-05',
+      calculated_on: '2026-11-06',
+      base_price_cents: 349_000,
+      monthly_net_rent_cents: 9_627,
+      list_price_on_signing_cents: 321_100,
+      can_sign: true,
+    });
+  });
+
+  it('lets a company applicant read the terms, and says they cannot sign (card 6)', async () => {
+    const application = await apply('cust-norvi', 'ebike-004', norviEbikeAnswers, { quantity: 4 });
+    expect(await previewOk(application.id, 'cust-norvi')).toMatchObject({
+      can_sign: false,
+      signatory_email: 'ceo@norvi.example.com',
+    });
+  });
+
+  it("treats someone else's application as not found", async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    expect(await preview(application.id, 'cust-lena')).toEqual({
+      ok: false,
+      reason: 'application_not_found',
+    });
+    expect(await preview('app-nope')).toEqual({ ok: false, reason: 'application_not_found' });
+  });
+
+  it('refuses an application that is not approved', async () => {
+    const application = await apply(AINO, 'farm-006', {});
+    expect(await preview(application.id)).toEqual({ ok: false, reason: 'not_approved' });
+  });
+
+  it('refuses after signing, and when the item has gone', async () => {
+    const first = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    const second = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    await signOk(first.id);
+
+    expect(await preview(first.id)).toEqual({ ok: false, reason: 'already_signed' });
+    expect(await preview(second.id)).toEqual({ ok: false, reason: 'asset_not_available' });
+  });
+});
 
 describe('signContract: card 1', () => {
   it('locks the price and dates from the application', async () => {

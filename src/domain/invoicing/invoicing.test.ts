@@ -14,6 +14,7 @@ const card1 = {
   id: 'con-1',
   start_on: '2026-11-05',
   term_months: 36,
+  down_payment_cents: 0,
   monthly_net_rent_cents: 10_730,
 };
 const card3 = { ...card1, start_on: '2026-09-15', term_months: 24, monthly_net_rent_cents: 6_957 };
@@ -30,6 +31,7 @@ describe('invoiceSchedule: amounts', () => {
     expect(invoice(card1, 1)).toEqual({
       contract_id: 'con-1',
       sequence: 1,
+      kind: 'rent',
       period_start: '2026-11-05',
       period_end: '2026-12-04',
       invoice_date: '2026-11-05',
@@ -84,6 +86,52 @@ describe('invoiceSchedule: amounts', () => {
     for (const i of invoiceSchedule(card1, vatRates)) {
       expect(i.total_cents).toBe(i.net_cents + i.vat_cents);
     }
+  });
+});
+
+describe('invoiceSchedule: down payment', () => {
+  const withDown = { ...card1, down_payment_cents: 50_000, monthly_net_rent_cents: 9_351 };
+
+  it("bills it first, on the start date, with that date's VAT", () => {
+    expect(invoice(withDown, 1)).toEqual({
+      contract_id: 'con-1',
+      sequence: 1,
+      kind: 'down_payment',
+      period_start: '2026-11-05',
+      period_end: '2026-11-05',
+      invoice_date: '2026-11-05',
+      due_date: '2026-11-05',
+      net_cents: 50_000,
+      vat_rate_basis_points: 2_550,
+      vat_cents: 12_750,
+      total_cents: 62_750,
+      status: 'issued',
+    });
+  });
+
+  it('moves the rents along one place, on the same dates', () => {
+    const invoices = invoiceSchedule(withDown, vatRates);
+    expect(invoices).toHaveLength(37);
+    expect(invoice(withDown, 2)).toMatchObject({
+      kind: 'rent',
+      invoice_date: '2026-11-05',
+      net_cents: 9_351,
+    });
+    expect(invoices.at(-1)).toMatchObject({ sequence: 37, kind: 'rent' });
+  });
+
+  it('adds up to exactly the total if returned', () => {
+    const invoices = invoiceSchedule(withDown, vatRates);
+    expect(invoices.reduce((sum, i) => sum + i.net_cents, 0)).toBe(386_636);
+  });
+
+  it('uses the VAT rate on a start date after the change', () => {
+    const later = { ...withDown, start_on: '2027-01-05' };
+    expect(invoice(later, 1)).toMatchObject({ vat_rate_basis_points: 2_600, vat_cents: 13_000 });
+  });
+
+  it('adds no invoice when there is no down payment', () => {
+    expect(invoiceSchedule(card1, vatRates).every((i) => i.kind === 'rent')).toBe(true);
   });
 });
 

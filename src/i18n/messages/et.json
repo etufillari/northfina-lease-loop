@@ -14,6 +14,7 @@
   "session.role.client": "Klient",
   "session.role.dealer": "Edasimüüja",
   "session.role.admin": "Administraator",
+  "session.role.signatory": "Allkirjastaja",
   "session.error": "Kasutaja vahetamine ebaõnnestus.",
   "catalogue.title": "Kataloog",
   "catalogue.intro": "Iga toodet saab liisida, tagastada, korda teha ja uuesti liisida.",

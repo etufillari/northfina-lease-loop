@@ -11,6 +11,7 @@ import {
   loadRefurbishmentCosts,
   loadResidualCurves,
   loadSecondLifeDemand,
+  loadSignatories,
   loadStaff,
   loadVatRates,
 } from './load';
@@ -65,6 +66,15 @@ describe('data pack', () => {
           'number'
         );
       }
+    }
+  });
+
+  it('links every signatory to a company in the data', async () => {
+    const [signatories, customers] = await Promise.all([loadSignatories(), loadCustomers()]);
+    expect(signatories.length).toBeGreaterThan(0);
+    for (const signatory of signatories) {
+      const company = customers.find((customer) => customer.id === signatory.company_id);
+      expect(company?.type, signatory.id).toBe('company');
     }
   });
 

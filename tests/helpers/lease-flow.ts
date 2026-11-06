@@ -46,9 +46,14 @@ export async function applyFor(
   return result.application;
 }
 
-export async function signFor(db: PrismaClient, customerId: string, applicationId: string) {
+export async function signFor(
+  db: PrismaClient,
+  customerId: string,
+  applicationId: string,
+  signatoryId?: string
+) {
   const customer = await findCustomer(customerId);
-  const result = await signContract(db, { applicationId, customer });
+  const result = await signContract(db, { applicationId, customer, signatoryId });
   if (!result.ok) throw new Error(`signing failed: ${result.reason}`);
   return result.contract;
 }

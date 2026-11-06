@@ -354,6 +354,23 @@ export type Staff = z.infer<typeof staffSchema>;
 export const staffFileSchema = z.array(staffSchema);
 
 // ---------------------------------------------------------------------------
+// data/signatories.json: people allowed to sign for a company, who are not the applicant.
+// Not part of the original data pack; added for the company signing flow.
+// ---------------------------------------------------------------------------
+
+export const signatorySchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  email: z.email(),
+  /** The company they sign for: the id of a customer of type `company`. */
+  company_id: z.string().min(1),
+  /** Why this seeded user exists. */
+  story: z.string(),
+});
+export type Signatory = z.infer<typeof signatorySchema>;
+export const signatoriesFileSchema = z.array(signatorySchema);
+
+// ---------------------------------------------------------------------------
 // data/second-life-demand.json: people waiting for a returned item.
 // ---------------------------------------------------------------------------
 

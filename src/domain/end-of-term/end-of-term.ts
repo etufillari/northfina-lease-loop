@@ -50,11 +50,11 @@ export function assetStatusAfter(
 }
 
 /**
- * The invoice for buying the item, without its id. It follows the last rent invoice, and takes
+ * The invoice for buying the item, without its id. It follows the last invoice, and takes
  * the VAT rate on the day of the purchase, like every other invoice.
  */
 export function buyoutInvoice(
-  contract: Pick<Contract, 'id' | 'term_months' | 'buyout_cents'>,
+  contract: Pick<Contract, 'id' | 'term_months' | 'down_payment_cents' | 'buyout_cents'>,
   vatRates: VatRates,
   endDate: string
 ): Omit<Invoice, 'id'> {
@@ -64,7 +64,8 @@ export function buyoutInvoice(
   const vat = vatCents(contract.buyout_cents, rate.rateBasisPoints);
   return {
     contract_id: contract.id,
-    sequence: contract.term_months + 1,
+    sequence: contract.term_months + (contract.down_payment_cents > 0 ? 2 : 1),
+    kind: 'buyout',
     period_start: endDate,
     period_end: endDate,
     invoice_date: endDate,

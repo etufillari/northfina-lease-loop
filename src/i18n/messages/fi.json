@@ -14,6 +14,7 @@
   "session.role.client": "Asiakas",
   "session.role.dealer": "Jälleenmyyjä",
   "session.role.admin": "Ylläpitäjä",
+  "session.role.signatory": "Allekirjoittaja",
   "session.error": "Käyttäjän vaihtaminen epäonnistui.",
   "catalogue.title": "Valikoima",
   "catalogue.intro": "Jokaisen laitteen voi vuokrata, palauttaa, kunnostaa ja vuokrata uudelleen.",

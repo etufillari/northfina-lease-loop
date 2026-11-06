@@ -36,6 +36,9 @@ export type LifeOutcome = z.infer<typeof lifeOutcomeSchema>;
 export const contractStatusSchema = z.enum(['active', ...lifeOutcomeSchema.options]);
 export type ContractStatus = z.infer<typeof contractStatusSchema>;
 
+export const invoiceKindSchema = z.enum(['rent', 'down_payment', 'buyout']);
+export type InvoiceKind = z.infer<typeof invoiceKindSchema>;
+
 export const invoiceStatusSchema = z.enum(['issued', 'paid', 'cancelled']);
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 
@@ -122,6 +125,8 @@ export const contractSchema = z.strictObject({
   quantity: positiveIntSchema,
   quote_date: isoDateSchema,
   signed_on: isoDateSchema,
+  /** Who signed: the customer, or a signatory for a company. Empty on older contracts. */
+  signed_by: z.string().min(1).nullable(),
   start_on: isoDateSchema,
   planned_end_on: isoDateSchema,
   actual_end_on: isoDateSchema.nullable(),
@@ -137,6 +142,7 @@ export const invoiceSchema = z.strictObject({
   id: z.string().min(1),
   contract_id: z.string().min(1),
   sequence: positiveIntSchema,
+  kind: invoiceKindSchema,
   period_start: isoDateSchema,
   period_end: isoDateSchema,
   invoice_date: isoDateSchema,

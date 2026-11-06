@@ -91,6 +91,11 @@ describe('GET /api/applications/:id', () => {
     expect((await get(ainoApplicationId)).body.data.contract_id).toBe(contract.id);
   });
 
+  it("does not show a signatory another company's application", async () => {
+    await actAs({ sub: 'sign-norvi-ceo', role: 'signatory' });
+    expect((await get(ainoApplicationId)).status).toBe(404);
+  });
+
   it('still says when to try again after a refresh', async () => {
     await actAs({ sub: 'cust-mikko', role: 'client' });
     const { body } = await get(mikkoApplicationId);

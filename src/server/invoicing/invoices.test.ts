@@ -65,6 +65,26 @@ describe('invoices created at signing', () => {
   });
 });
 
+describe('a down payment', () => {
+  it('is invoiced at signing, so the invoices match the quote', async () => {
+    const application = await applyFor(db, 'cust-aino', 'ebike-003', ainoEbikeAnswers, {
+      downPaymentCents: 50_000,
+    });
+    const contract = await signFor(db, 'cust-aino', application.id);
+    const invoices = await listInvoices(db, { contractId: contract.id });
+
+    expect(invoices).toHaveLength(37);
+    expect(invoices[0]).toMatchObject({
+      sequence: 1,
+      kind: 'down_payment',
+      net_cents: 50_000,
+      vat_cents: 12_750,
+      total_cents: 62_750,
+    });
+    expect(invoices.reduce((sum, i) => sum + i.net_cents, 0)).toBe(386_636);
+  });
+});
+
 describe('listInvoices', () => {
   it('filters by customer, contract and status', async () => {
     const aino = await signedContract();

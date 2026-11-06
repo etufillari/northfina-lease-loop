@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  loadAssetAttributes,
   loadAssets,
+  loadBundleOffers,
   loadCo2Factors,
   loadCoefficientTable,
   loadCustomers,
@@ -9,11 +11,12 @@ import {
   loadPriceLists,
   loadQuestions,
   loadRefurbishmentCosts,
+  loadRelatedItemRules,
   loadResidualCurves,
   loadSecondLifeDemand,
   loadVatRates,
 } from './load';
-import { coefficientTableSchema, priceListsFileSchema } from './schemas';
+import { assetAttributesFileSchema, coefficientTableSchema, priceListsFileSchema } from './schemas';
 
 describe('data pack', () => {
   it('every file in data/ parses against its schema', async () => {
@@ -54,6 +57,20 @@ describe('data pack', () => {
     }
   });
 
+  it('loads the related-item rules and example bundle offers', async () => {
+    const [rules, offers, assets] = await Promise.all([
+      loadRelatedItemRules(),
+      loadBundleOffers(),
+      loadAssets(),
+    ]);
+    expect(rules.weights).toEqual({ category: 70, price: 25, condition: 5 });
+    expect(rules.limit).toBe(4);
+    const assetIds = new Set(assets.map((asset) => asset.id));
+    for (const offer of offers) {
+      for (const id of offer.asset_ids) expect(assetIds.has(id), id).toBe(true);
+    }
+  });
+
   it('reports which file and field is wrong when data does not match', async () => {
     const strict = z.array(z.strictObject({ id: z.number() }));
     await expect(loadDataFile('assets.json', strict)).rejects.toThrow(
@@ -81,5 +98,18 @@ describe('data pack rules enforced by the schemas', () => {
       bands: [first, { ...second, min_financed_cents: second.min_financed_cents + 1 }, ...rest],
     };
     expect(coefficientTableSchema.safeParse(withGap).success).toBe(false);
+  });
+
+  it('asset attributes cover every asset once, in its own category', async () => {
+    const [assets, attributes] = await Promise.all([loadAssets(), loadAssetAttributes()]);
+    const byId = new Map(attributes.map((row) => [row.asset_id, row]));
+    expect(attributes).toHaveLength(assets.length);
+    for (const asset of assets) expect(byId.get(asset.id)?.category).toBe(asset.category);
+  });
+
+  it('rejects asset attributes listed twice', async () => {
+    const attributes = await loadAssetAttributes();
+    const twice = [...attributes, attributes[0]];
+    expect(assetAttributesFileSchema.safeParse(twice).success).toBe(false);
   });
 });

@@ -12,18 +12,20 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 
 ## Files
 
-| File                       | What it is                                                                                                                                                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `assets.json`              | 30 items (e-bikes, laptops, farm machines) with condition, usage, previous lives and status. **No prices here.**                                                                                                    |
-| `price-lists.json`         | Net list price per asset. Version 1 is valid until Thu 5 Nov 2026; **version 2 starts Fri 6 Nov 2026** (e-bikes +5 %, laptops −8 %).                                                                                |
-| `coefficient-table.json`   | How the monthly rent is calculated: `monthly_net_rent = financed_amount × factor`. Pick the band by financed amount and the factor by term (12/24/36/48 months). Includes the buyout price at the end of each term. |
-| `vat-rates.json`           | Finnish general VAT rate with validity dates, including a **fictional** change to 26 % on 1 Jan 2027.                                                                                                               |
-| `residual-curves.json`     | What a used item is worth on the market: age curve × condition multiplier × usage adjustment.                                                                                                                       |
-| `refurbishment-costs.json` | What it costs to bring a returned item back to leasable condition, including mandatory steps.                                                                                                                       |
-| `second-life-demand.json`  | The waiting list: people who want a used item, their budget, minimum condition, term and deadline.                                                                                                                  |
-| `questions.json`           | The application question bank in 4 languages, the targeting rules (`ask_when`) and the eligibility rules.                                                                                                           |
-| `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                       |
-| `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                            |
+| File                       | What it is                                                                                                                                                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assets.json`              | 30 items (e-bikes, laptops, farm machines) with condition, usage, previous lives and status. **No prices here.**                                                                                                           |
+| `asset-attributes.json`    | **Fictional** technical details per asset for the catalogue's category filters: e-bike motor, power, battery, range and wheel size; laptop graphics; farm machine type, engine power and working width. One row per asset. |
+| `price-lists.json`         | Net list price per asset. Version 1 is valid until Thu 5 Nov 2026; **version 2 starts Fri 6 Nov 2026** (e-bikes +5 %, laptops −8 %).                                                                                       |
+| `coefficient-table.json`   | How the monthly rent is calculated: `monthly_net_rent = financed_amount × factor`. Pick the band by financed amount and the factor by term (12/24/36/48 months). Includes the buyout price at the end of each term.        |
+| `vat-rates.json`           | Finnish general VAT rate with validity dates, including a **fictional** change to 26 % on 1 Jan 2027.                                                                                                                      |
+| `residual-curves.json`     | What a used item is worth on the market: age curve × condition multiplier × usage adjustment.                                                                                                                              |
+| `refurbishment-costs.json` | What it costs to bring a returned item back to leasable condition, including mandatory steps.                                                                                                                              |
+| `second-life-demand.json`  | The waiting list: people who want a used item, their budget, minimum condition, term and deadline.                                                                                                                         |
+| `questions.json`           | The application question bank in 4 languages, the targeting rules (`ask_when`) and the eligibility rules.                                                                                                                  |
+| `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                              |
+| `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                                   |
+| `dealer-locations.json`    | **Fictional** dealer locations (6 towns, linked to the demo providers) and a home-town table for the nearby-dealer map. Town names and coordinates rounded to 0.1° only, never a street address.                           |
 
 ## Worked example: the monthly price
 
@@ -37,6 +39,18 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 6. Buyout at the end of 36 months: 15 % of financed = **58350** cents.
 
 The factor already includes interest and the buyout at the end. You don't need to derive it, but the band's `annual_interest_percent` is there if you want to discount money over time (for example, for a fair early exit).
+
+## Second-life prices
+
+Relisting uses the asset's market value with no markup. Age is counted in full months from the first recorded lease start, or from 1 July of the model year for an imported return. The starting price is the first lease's locked net list price. For an imported return, use the list valid on the age reference date or the earliest recorded list price if there is no price on that date.
+
+The valuation applies the interpolated residual curve, condition after refurbishment, and the capped usage adjustment to the starting price. It rounds half up once, to cents. An amount below the smallest finance band cannot be relisted. Signing records the second-life price as its source and locks the amounts in the contract.
+
+## Waiting-list offers
+
+Eligible offers meet the category, condition, monthly net rent budget, and deadline. Mandatory work on an already acceptable item is viable when the resulting market value covers its cost; it need not increase resale value. Optional upgrades must recover at least as much as that mandatory-work baseline (or the untreated item when no acceptable baseline exists). The matcher offers the least costly viable option that qualifies. It ranks by earliest deadline, then lower refurbishment cost, then `signed_up_on`, then entry ID. The data pack has no work durations, so the planned ready date is today or the current lease's end, whichever is later.
+
+An active offer holds the asset for that entry through `needed_by`. The item stays in the returns workflow so its work can be recorded. Public relisting is blocked during the hold. The provider can prepare a placement for the identified recipient with `waitingListEntryId` on the relist command. That placement may use the recipient’s minimum condition, including fair, but still requires all mandatory work. Imported entries first need a `renterId`; existing customer entries cannot be reassigned. Only that customer can sign, within the offer deadline, term and net budget. Signing consumes the hold atomically with reserving the asset.
 
 ## Rules for `ask_when` in questions.json
 

@@ -58,6 +58,68 @@ export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);
 
 // ---------------------------------------------------------------------------
+// data/asset-attributes.json: fictional technical details per asset, for the catalogue's
+// category filters (#72). Kept apart from assets.json so that file and its rows stay as they are.
+// ---------------------------------------------------------------------------
+
+export const ebikeMotorSchema = z.enum(['hub', 'mid_drive']);
+export type EbikeMotor = z.infer<typeof ebikeMotorSchema>;
+export const laptopGpuSchema = z.enum(['integrated', 'discrete']);
+export type LaptopGpu = z.infer<typeof laptopGpuSchema>;
+export const farmMachineTypeSchema = z.enum([
+  'tractor',
+  'combine',
+  'seed_drill',
+  'mower',
+  'bale_wrapper',
+  'milking_robot',
+]);
+export type FarmMachineType = z.infer<typeof farmMachineTypeSchema>;
+
+const positiveInt = z.number().int().positive();
+
+export const assetAttributesSchema = z.discriminatedUnion('category', [
+  z.strictObject({
+    asset_id: z.string().min(1),
+    category: z.literal('e_bike'),
+    motor: ebikeMotorSchema,
+    motor_watts: positiveInt,
+    battery_wh: positiveInt,
+    /** Typical range on one charge, in km. */
+    range_km: positiveInt,
+    wheel_inches: positiveInt,
+  }),
+  z.strictObject({
+    asset_id: z.string().min(1),
+    category: z.literal('laptop'),
+    gpu: laptopGpuSchema,
+    gpu_model: z.string().min(1),
+  }),
+  z.strictObject({
+    asset_id: z.string().min(1),
+    category: z.literal('farm_machine'),
+    machine_type: farmMachineTypeSchema,
+    /** Engine power; null for machines without their own engine. */
+    power_kw: positiveInt.nullable(),
+    /** Working width in metres; null when the machine has none. */
+    working_width_m: z.number().positive().nullable(),
+  }),
+]);
+export type AssetAttributes = z.infer<typeof assetAttributesSchema>;
+export const assetAttributesFileSchema = z.array(assetAttributesSchema).superRefine((rows, ctx) => {
+  const seen = new Set<string>();
+  for (const [index, row] of rows.entries()) {
+    if (seen.has(row.asset_id))
+      ctx.addIssue({
+        code: 'custom',
+        path: [index, 'asset_id'],
+        message: `duplicate asset_id ${row.asset_id}`,
+      });
+    seen.add(row.asset_id);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // data/price-lists.json: dated versions of the net list price of each asset.
 // ---------------------------------------------------------------------------
 
@@ -340,6 +402,7 @@ export const secondLifeRequestSchema = z.strictObject({
   min_condition: assetConditionSchema,
   preferred_term_months: z.number().int().positive(),
   needed_by: isoDateSchema,
+  signed_up_on: isoDateSchema,
   who: z.string(),
 });
 export type SecondLifeRequest = z.infer<typeof secondLifeRequestSchema>;
@@ -389,3 +452,129 @@ export const co2FactorsSchema = z.strictObject({
   e_bike_avoided_car_km_kg_per_km: z.number().nonnegative(),
 });
 export type Co2Factors = z.infer<typeof co2FactorsSchema>;
+
+// ---------------------------------------------------------------------------
+// data/related-item-rules.json: the adjustable ruleset that ranks related items.
+// Scores and weights are whole numbers so ranking stays exact integer maths.
+// ---------------------------------------------------------------------------
+
+/** A score from 0 (no match) to 100 (best match). */
+const scoreSchema = z.number().int().min(0).max(100);
+
+export const relatedItemRulesSchema = z
+  .strictObject({
+    version: z.number().int().positive(),
+    note: z.string(),
+    /** Share of the total score, in percent. The three must add up to 100. */
+    weights: z.strictObject({ category: scoreSchema, price: scoreSchema, condition: scoreSchema }),
+    /**
+     * Viewed category → candidate category → affinity. A missing pair means 0: such
+     * candidates are left out unless `zero_affinity_fallback` is above 0.
+     */
+    category_affinity: z.partialRecord(
+      assetCategorySchema,
+      z.partialRecord(assetCategorySchema, scoreSchema)
+    ),
+    /** Affinity used for unrelated categories. 0 = never recommend them. */
+    zero_affinity_fallback: scoreSchema,
+    price: z
+      .strictObject({
+        /** Every candidate is compared on this one basis, never list price against rent. */
+        basis: z.literal('monthly_net_rent_same_term_no_down_payment'),
+        /** Price difference (basis points of the viewed item's rent) that still scores 100. */
+        full_score_within_bps: z.number().int().nonnegative(),
+        /** From this difference on, the price score is 0. */
+        zero_score_from_bps: z.number().int().positive(),
+      })
+      .refine((p) => p.full_score_within_bps < p.zero_score_from_bps, {
+        message: 'full_score_within_bps must be below zero_score_from_bps',
+      }),
+    condition_score: z.record(assetConditionSchema, scoreSchema),
+    /** How many related items to show at most. */
+    limit: z.number().int().min(1).max(20),
+  })
+  .refine((r) => r.weights.category + r.weights.price + r.weights.condition === 100, {
+    message: 'weights must add up to 100',
+  });
+export type RelatedItemRules = z.infer<typeof relatedItemRulesSchema>;
+
+// ---------------------------------------------------------------------------
+// data/bundle-offers.json: example provider bundle groupings (which assets belong together
+// in one lease), added to the database by the seed. Bundles carry no prices or discounts.
+// ---------------------------------------------------------------------------
+
+export const bundleOfferSeedSchema = z.strictObject({
+  id: z.string().regex(/^[a-z0-9-]{1,60}$/),
+  name: z.string().min(1).max(80),
+  description: z.string().max(400),
+  asset_ids: z.array(z.string().min(1)).min(2),
+  /** Terms in months the package can be leased for. */
+  terms: z.array(z.number().int().positive()).min(1),
+  published: z.boolean(),
+});
+export type BundleOfferSeed = z.infer<typeof bundleOfferSeedSchema>;
+export const bundleOffersFileSchema = z.array(bundleOfferSeedSchema);
+
+// ---------------------------------------------------------------------------
+// data/dealer-locations.json: fictional dealer locations for the nearby-dealer map, and a
+// small table of home cities. Privacy by shape: only a city or area name and coordinates
+// with at most one decimal (0.1° ≈ 11 km north–south, ≈ 5 km east–west in Finland). There is
+// no address field, and strictObject rejects one if somebody adds it.
+// ---------------------------------------------------------------------------
+
+/** True when `value` has at most one decimal, allowing for binary floating-point noise. */
+function hasAtMostOneDecimal(value: number): boolean {
+  return Math.abs(value * 10 - Math.round(value * 10)) < 1e-9;
+}
+
+const coarseLatSchema = z
+  .number()
+  .min(-90)
+  .max(90)
+  .refine(hasAtMostOneDecimal, { message: 'latitude must be rounded to 0.1°' });
+const coarseLonSchema = z
+  .number()
+  .min(-180)
+  .max(180)
+  .refine(hasAtMostOneDecimal, { message: 'longitude must be rounded to 0.1°' });
+
+export const dealerLocationSchema = z.strictObject({
+  id: z.string().regex(/^[a-z0-9-]{1,60}$/),
+  /** The demo provider (Provider.id) this location belongs to. */
+  provider_id: z.string().min(1),
+  name: z.string().min(1).max(80),
+  /** City or area only: never a street address. */
+  area: z.string().min(1).max(60),
+  lat: coarseLatSchema,
+  lon: coarseLonSchema,
+});
+export type DealerLocation = z.infer<typeof dealerLocationSchema>;
+
+export const homeCitySchema = z.strictObject({
+  name: z.string().min(1).max(60),
+  lat: coarseLatSchema,
+  lon: coarseLonSchema,
+});
+export type HomeCity = z.infer<typeof homeCitySchema>;
+
+export const dealerLocationsFileSchema = z
+  .strictObject({
+    note: z.string(),
+    dealers: z.array(dealerLocationSchema).min(1),
+    cities: z.array(homeCitySchema).min(1),
+  })
+  .superRefine((file, ctx) => {
+    const unique = (values: string[], what: string) => {
+      if (new Set(values).size !== values.length)
+        ctx.addIssue({ code: 'custom', message: `${what} must be unique` });
+    };
+    unique(
+      file.dealers.map((d) => d.id),
+      'dealer ids'
+    );
+    unique(
+      file.cities.map((c) => c.name),
+      'city names'
+    );
+  });
+export type DealerLocationsFile = z.infer<typeof dealerLocationsFileSchema>;

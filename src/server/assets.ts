@@ -2,7 +2,10 @@
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
 import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
-import { withAudit } from './audit';
+import type { PriceOverride } from '@/domain/price-list';
+import { ApiError } from './api-response';
+import { withAudit, type TransactionClient } from './audit';
+import { todayIso } from './today';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
 export function toAsset(row: AssetRow): Asset {
@@ -48,6 +51,35 @@ export async function listAssets(
   return rows.map(toAsset);
 }
 
+/** One asset by id, or null when there is no such asset. */
+export async function getAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
+}
+
+export function assetPriceOverride(
+  row: Pick<AssetRow, 'nextLifePriceCents' | 'nextLifePricedOn'>
+): PriceOverride | undefined {
+  return row.nextLifePriceCents !== null && row.nextLifePricedOn !== null
+    ? { priceCents: row.nextLifePriceCents, pricedOn: row.nextLifePricedOn }
+    : undefined;
+}
+
+export async function hasWaitingListReservation(
+  db: Pick<TransactionClient, 'waitingListEntry'>,
+  assetId: string,
+  today: string
+) {
+  return (
+    (await db.waitingListEntry.count({
+      where: {
+        offeredAssetId: assetId,
+        OR: [{ status: 'matched' }, { status: 'offered', neededBy: { gte: today } }],
+      },
+    })) !== 0
+  );
+}
+
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
 
@@ -68,7 +100,18 @@ export async function changeAssetStatus(
       entityId: input.id,
       details: { from: existing.status, to: input.status },
     },
-    (tx) => tx.asset.update({ where: { id: input.id }, data: { status: input.status } })
+    async (tx) => {
+      if (
+        input.status !== 'returned' &&
+        (await hasWaitingListReservation(tx, input.id, todayIso()))
+      )
+        throw new ApiError(
+          409,
+          'ASSET_ALREADY_OFFERED',
+          'This item is reserved for a waiting-list entry'
+        );
+      return tx.asset.update({ where: { id: input.id }, data: { status: input.status } });
+    }
   );
   return { ok: true, asset: toAsset(updated) };
 }

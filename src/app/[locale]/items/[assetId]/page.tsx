@@ -1,0 +1,287 @@
+// Item and price: one asset, its facts, and the live lease calculator.
+// The page loads data and decides "today"; the calculator does the maths with domain functions.
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
+import { ItemImpactPanel } from '@/components/impact-panel';
+import { ItemPassport } from '@/components/item-passport';
+import { LeaseCalculator } from '@/components/lease-calculator';
+import { JoinWaitingList } from '@/components/join-waiting-list';
+import { NextLifeNote } from '@/components/next-life-note';
+import { RelatedItems } from '@/components/related-items';
+import { ProviderRatingLine, ReviewsCard } from '@/components/reviews';
+import { InfoBox, PhotoPlaceholder, textLink } from '@/components/ui';
+import {
+  loadCoefficientTable,
+  loadPriceLists,
+  loadRelatedItemRules,
+  loadVatRates,
+} from '@/data/load';
+import type { Asset } from '@/data/schemas';
+import { isLeasable, parseCatalogueQuery } from '@/domain/catalogue';
+import { unavailableMessage } from '@/components/unavailable-message';
+import { formatEuro } from '@/domain/money';
+import { listPriceOn } from '@/domain/price-list';
+import { availableTerms, DEFAULT_TERM_MONTHS } from '@/domain/pricing';
+import { nextVatChangeAfter, vatRateOn } from '@/domain/vat';
+import { formatNumber } from '@/i18n/format';
+import { getT, type Translate } from '@/i18n/get-t';
+import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
+import { assetPriceOverride, toAsset } from '@/server/assets';
+import { bookableBundlesWithAsset } from '@/server/bundles';
+import { db } from '@/server/db';
+import { rulesForAsset } from '@/server/discount-rules';
+import { estimateForAsset, loadImpactInputs } from '@/server/impact';
+import { loadPassport } from '@/server/passport';
+import { relatedItemsFor } from '@/server/related-items';
+import { secondLifeNote } from '@/server/waiting-list';
+import { currentPrincipal } from '@/server/current-principal';
+import { placementBlocksViewer } from '@/server/waiting-list-placement';
+import { rememberedSetsFor } from '@/server/catalogue-readiness';
+import { chooseProfileSet } from '@/domain/remembered-answers';
+import { priceBasis } from '@/domain/application-terms';
+import { loadQuestions } from '@/data/load';
+import { contractEndOn } from '@/domain/contract-period';
+import { providerReputationForAsset, type ProviderReputation } from '@/server/reputation';
+import { todayIso } from '@/server/today';
+
+export default async function ItemPage({
+  params,
+  searchParams,
+}: PageProps<'/[locale]/items/[assetId]'>) {
+  const { locale, assetId } = await params;
+  if (!isLocale(locale)) notFound();
+  await connection();
+
+  const [assetRow, priceLists, table, vatRates, relatedRules, impactInputs] = await Promise.all([
+    db.asset.findUnique({ where: { id: assetId } }),
+    loadPriceLists(),
+    loadCoefficientTable(),
+    loadVatRates(),
+    loadRelatedItemRules(),
+    loadImpactInputs(),
+  ]);
+  if (!assetRow) notFound();
+  const asset = toAsset(assetRow);
+  const discountRules = await rulesForAsset(db, assetId);
+
+  const t = getT(locale);
+  const today = todayIso();
+  // Term and start date travel from the catalogue filters; bad values fall back safely.
+  const { termMonths, startDate } = parseCatalogueQuery(await searchParams, {
+    today,
+    terms: availableTerms(table),
+    defaultTerm: DEFAULT_TERM_MONTHS,
+  });
+  const price = listPriceOn(priceLists, asset.id, today, assetPriceOverride(assetRow));
+  const vat = vatRateOn(vatRates.rates, startDate);
+  const nextVat = nextVatChangeAfter(vatRates.rates, startDate);
+  const principal = await currentPrincipal();
+  const signedIn = principal !== null;
+  if (await placementBlocksViewer(db, asset.id, principal?.id ?? null, today))
+    asset.status = 'reserved';
+  const sets = principal
+    ? await rememberedSetsFor(db, principal.id, (await loadQuestions()).questions, today)
+    : null;
+  const basis = priceBasis(chooseProfileSet(sets ?? [], {})?.answers ?? {});
+  const [related, bundles, provider, passport, nextLife] = await Promise.all([
+    relatedItemsFor(
+      db,
+      { assetId: asset.id, termMonths, onDate: today },
+      { lists: priceLists, table, rules: relatedRules }
+    ),
+    bookableBundlesWithAsset(db, asset.id),
+    providerReputationForAsset(db, asset.id),
+    loadPassport(db, asset.id, { asset, impact: impactInputs }),
+    // Card 9: what happens next to a returned item, read-only.
+    isLeasable(asset) ? null : secondLifeNote(db, asset.id, today),
+  ]);
+  // The estimate does not depend on the term (see src/domain/co2-impact.ts), so the panel
+  // is rendered once here rather than following the term slider.
+  // Under the apply button in the left column: the CO2 panel, then related items, so the
+  // suggestions are visible without scrolling to the bottom of the page.
+  const leftExtras = (
+    <div className="space-y-6">
+      {provider ? (
+        <ReviewsCard
+          id="provider-reviews"
+          title={t('reviews.aboutProvider', { name: provider.name })}
+          reputation={provider}
+          emptyText={t('reviews.providerNone')}
+          locale={locale}
+          t={t}
+        />
+      ) : null}
+      <ItemImpactPanel
+        result={impactInputs ? estimateForAsset(asset, termMonths, impactInputs) : null}
+        locale={locale}
+        t={t}
+      />
+      {passport && (passport.totals.lives > 0 || passport.importedWork.length > 0) ? (
+        <ItemPassport passport={passport} locale={locale} />
+      ) : null}
+      <RelatedItems
+        items={related.status === 'ok' ? related.items : []}
+        bundles={bundles}
+        termMonths={termMonths}
+        locale={locale}
+        t={t}
+      />
+    </div>
+  );
+
+  const summary = (
+    <AssetSummary
+      asset={asset}
+      listPriceCents={price.ok ? price.priceCents : null}
+      isSecondLifePrice={price.ok && price.priceSource === 'next_life'}
+      provider={provider}
+      locale={locale}
+      t={t}
+    />
+  );
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <Link href={`/${locale}`} className={textLink}>
+        ← {t('item.back')}
+      </Link>
+      <div className="mt-4">
+        {!isLeasable(asset) ? (
+          <Unavailable
+            summary={summary}
+            extras={leftExtras}
+            message={unavailableMessage(asset, t)}
+            note={
+              <>
+                {nextLife ? <NextLifeNote note={nextLife} locale={locale} t={t} /> : null}
+                <JoinWaitingList
+                  locale={locale}
+                  category={asset.category}
+                  itemCondition={asset.condition}
+                  terms={availableTerms(table)}
+                  today={today}
+                  defaultNeededBy={contractEndOn(today, 1)}
+                  signInHref={
+                    signedIn
+                      ? null
+                      : `/${locale}/sign-in?next=${encodeURIComponent(`/${locale}/items/${asset.id}`)}`
+                  }
+                />
+              </>
+            }
+          />
+        ) : !price.ok || !vat.ok ? (
+          <Unavailable summary={summary} extras={leftExtras} message={t('lease.unavailable')} />
+        ) : (
+          <LeaseCalculator
+            locale={locale}
+            table={table}
+            discountRules={discountRules}
+            listPriceCents={price.priceCents}
+            assetId={asset.id}
+            priceListVersion={price.priceListVersion}
+            priceSource={price.priceSource ?? 'price_list'}
+            vatRatePercent={vat.rate.rate_percent}
+            vatRates={vatRates}
+            nextVatChange={
+              nextVat ? { ratePercent: nextVat.rate_percent, validFrom: nextVat.valid_from } : null
+            }
+            initialTerm={termMonths}
+            startDate={startDate}
+            quotedOn={today}
+            applyPath={`/${locale}/items/${asset.id}/apply`}
+            summary={summary}
+            afterApply={leftExtras}
+            liveReadiness={signedIn}
+            priceBasis={basis}
+            readinessHint={
+              signedIn ? null : (
+                <p className="mt-4 text-sm text-stone-700 dark:text-stone-300">
+                  {t('readiness.hintSignedOut')}{' '}
+                  <Link
+                    href={`/${locale}/sign-in?next=${encodeURIComponent(`/${locale}/items/${asset.id}`)}`}
+                    className={textLink}
+                  >
+                    {t('nav.signIn')}
+                  </Link>
+                </p>
+              )
+            }
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AssetSummary(props: {
+  asset: Asset;
+  listPriceCents: number | null;
+  isSecondLifePrice: boolean;
+  provider: ProviderReputation | null;
+  locale: Locale;
+  t: Translate;
+}) {
+  const { asset, listPriceCents, isSecondLifePrice, provider, locale, t } = props;
+  const facts = [
+    { label: t('condition.label'), value: t(`condition.${asset.condition}`) },
+    { label: t('asset.modelYear'), value: String(asset.model_year) },
+    {
+      label: t('asset.usage'),
+      value: t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) }),
+    },
+    { label: t('asset.previousLives'), value: formatNumber(asset.previous_lives, locale) },
+  ];
+
+  return (
+    <div>
+      <PhotoPlaceholder label={t(`categoryOne.${asset.category}`)} className="h-64" />
+      <p className="mt-5 text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
+      <h1 className="text-3xl font-semibold tracking-tight">{asset.model}</h1>
+      {provider ? <ProviderRatingLine provider={provider} locale={locale} t={t} /> : null}
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        {facts.map((fact) => (
+          <div key={fact.label}>
+            <dt className="text-stone-600 dark:text-stone-400">{fact.label}</dt>
+            <dd className="font-semibold">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-stone-200 pt-4 dark:border-stone-800">
+        <p className="text-stone-700 dark:text-stone-300">
+          {t(isSecondLifePrice ? 'asset.nextLifePrice' : 'item.listPriceToday')}
+        </p>
+        <p className="text-2xl font-semibold tabular-nums">
+          {listPriceCents === null
+            ? t('asset.noPrice')
+            : formatEuro(listPriceCents, intlLocale[locale])}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Unavailable(props: {
+  summary: React.ReactNode;
+  extras: React.ReactNode;
+  message: string;
+  /** Card 9: a returned item's next life, under the message. */
+  note?: React.ReactNode;
+}) {
+  const { summary, extras, message, note } = props;
+  return (
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.4fr]">
+      <div className="min-w-0">
+        {summary}
+        <div className="mt-6">{extras}</div>
+      </div>
+      <div className="min-w-0">
+        <InfoBox>
+          <p role="status">{message}</p>
+        </InfoBox>
+        {note ? <div className="mt-4 space-y-4">{note}</div> : null}
+      </div>
+    </div>
+  );
+}

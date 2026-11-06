@@ -5,13 +5,17 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import {
+  assetAttributesFileSchema,
   assetsFileSchema,
+  bundleOffersFileSchema,
   co2FactorsSchema,
   coefficientTableSchema,
   customersFileSchema,
+  dealerLocationsFileSchema,
   priceListsFileSchema,
   questionsFileSchema,
   refurbishmentCostsSchema,
+  relatedItemRulesSchema,
   residualCurvesSchema,
   secondLifeDemandFileSchema,
   vatRatesSchema,
@@ -36,6 +40,8 @@ export async function loadDataFile<S extends z.ZodType>(
 }
 
 export const loadAssets = () => loadDataFile('assets.json', assetsFileSchema);
+export const loadAssetAttributes = () =>
+  loadDataFile('asset-attributes.json', assetAttributesFileSchema);
 export const loadPriceLists = () => loadDataFile('price-lists.json', priceListsFileSchema);
 export const loadCoefficientTable = () =>
   loadDataFile('coefficient-table.json', coefficientTableSchema);
@@ -48,3 +54,8 @@ export const loadSecondLifeDemand = () =>
 export const loadRefurbishmentCosts = () =>
   loadDataFile('refurbishment-costs.json', refurbishmentCostsSchema);
 export const loadCo2Factors = () => loadDataFile('co2-factors.json', co2FactorsSchema);
+export const loadRelatedItemRules = () =>
+  loadDataFile('related-item-rules.json', relatedItemRulesSchema);
+export const loadBundleOffers = () => loadDataFile('bundle-offers.json', bundleOffersFileSchema);
+export const loadDealerLocations = () =>
+  loadDataFile('dealer-locations.json', dealerLocationsFileSchema);

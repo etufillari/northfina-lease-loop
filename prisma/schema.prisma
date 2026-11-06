@@ -25,7 +25,7 @@ model Asset {
   usage_unit     String // km | battery_cycles | engine_hours
   usage_value    Int
   previous_lives Int
-  status         String // available | reserved | returned
+  status         String // available | reserved | returned | sold
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
@@ -99,8 +99,10 @@ model Contract {
   financed_cents     Int
   monthly_net_cents  Int
   buyout_cents       Int
-  status             String // active | returned
+  status             String // active | returned | bought | passed_on
   returned_date      String? // YYYY-MM-DD the item came back at the end of the term
+  bought_date        String? // YYYY-MM-DD the customer bought the item at the end
+  buyout_paid_cents  Int? // what they paid for it, incl. VAT
 
   @@index([asset_id])
   @@index([customer_id])
@@ -126,4 +128,21 @@ model VatChange {
   created_at        DateTime @default(now())
   valid_from        String   @unique // YYYY-MM-DD
   rate_basis_points Int // 27 % → 2700, an integer like money
+}
+
+// End of term, "pass it on": the lessee names another customer for the item's next life.
+// The item goes back for a check first; the recipient accepts (it is reserved for them, and
+// the second-life step leases it to them) or declines (it joins the normal second-life pool).
+model Handover {
+  id             String   @id @default(uuid())
+  created_at     DateTime @default(now())
+  contract_id    String   @unique
+  asset_id       String
+  from_name      String
+  to_customer_id String
+  status         String // pending | accepted | declined
+  passed_date    String // YYYY-MM-DD
+  decided_date   String?
+
+  @@index([to_customer_id])
 }

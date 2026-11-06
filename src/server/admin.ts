@@ -13,10 +13,12 @@ export type AdminOverview = {
     active: number;
     ended: number;
     returned: number;
+    bought: number;
+    passed_on: number;
   };
   applications: { total: number; approved: number; manual_review: number; rejected: number };
   invoices: { dueCount: number; dueCents: number; paidCount: number; paidCents: number };
-  assets: { available: number; reserved: number; returned: number };
+  assets: { available: number; reserved: number; returned: number; sold: number };
   allContracts: Contract[];
   audit: { id: number; createdAt: string; actor: string; action: string; entity: string }[];
 };
@@ -30,9 +32,10 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
     db.auditLog.findMany({ orderBy: { id: 'desc' }, take: 15 }),
   ]);
 
-  const stages = { not_started: 0, active: 0, ended: 0, returned: 0 };
+  const stages = { not_started: 0, active: 0, ended: 0, returned: 0, bought: 0, passed_on: 0 };
   for (const contract of contracts) {
-    stages[contract.status === 'returned' ? 'returned' : contractStage(contract, todayIso)] += 1;
+    const closed = contract.status as 'returned' | 'bought' | 'passed_on';
+    stages[contract.status === 'active' ? contractStage(contract, todayIso) : closed] += 1;
   }
   const decided = Object.fromEntries(decisions.map((d) => [d.decision, d._count._all]));
   const byStatus = Object.fromEntries(statuses.map((s) => [s.status, s._count._all]));
@@ -58,6 +61,7 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
       available: byStatus.available ?? 0,
       reserved: byStatus.reserved ?? 0,
       returned: byStatus.returned ?? 0,
+      sold: byStatus.sold ?? 0,
     },
     allContracts: contracts,
     audit: audit.map((row) => ({

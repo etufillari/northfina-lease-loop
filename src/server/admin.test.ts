@@ -67,6 +67,8 @@ describe('adminOverview', () => {
       active: 1,
       ended: 0,
       returned: 0,
+      bought: 0,
+      passed_on: 0,
     });
     expect(overview.applications).toEqual({
       total: 2,
@@ -82,7 +84,7 @@ describe('adminOverview', () => {
       paidCents: 8_430,
     });
     // The data pack starts with 1 reserved and 6 returned items; signing reserves laptop-001
-    expect(overview.assets).toEqual({ available: 22, reserved: 2, returned: 6 });
+    expect(overview.assets).toEqual({ available: 22, reserved: 2, returned: 6, sold: 0 });
     expect(overview.audit.map((a) => a.action)).toEqual([
       'contract.signed',
       'application.submitted',

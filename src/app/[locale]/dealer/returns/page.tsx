@@ -1,5 +1,6 @@
 // The dealer's returns overview: every return request, its status and the next action.
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { connection } from 'next/server';
 import { ReturnsList } from '@/components/dealer/returns-list';
 import { getT } from '@/i18n/get-t';
@@ -25,6 +26,12 @@ export default async function ReturnsPage({ params }: PageProps<'/[locale]/deale
         <p className="mt-5 text-sm text-stone-600 dark:text-stone-400">
           {t('dealer.list.count', { count: items.length })}
         </p>
+        <Link
+          href={`/${locale}/dealer/wishlist`}
+          className="mt-4 inline-flex rounded-xl border border-stone-300 px-4 py-2 font-medium hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
+        >
+          {t('dealer.wishlistLink')}
+        </Link>
       </div>
       <ReturnsList items={items} locale={locale} t={t} />
     </div>

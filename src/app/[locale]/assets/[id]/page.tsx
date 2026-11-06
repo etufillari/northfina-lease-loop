@@ -7,6 +7,7 @@ import { AssetFacts } from '@/components/asset-facts';
 import { LeaseUnavailable } from '@/components/lease-unavailable';
 import { PricingDate } from '@/components/pricing-date';
 import { PriceSliders } from '@/components/price-sliders';
+import { WishlistRequest } from '@/components/wishlist-request';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { isoDateSchema } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
@@ -101,11 +102,16 @@ export default async function AssetPricePage({
           locale={locale}
         />
       ) : (
-        <LeaseUnavailable
-          reason={offer.reason}
-          minimum={euro(Math.min(...table.bands.map((band) => band.min_financed_cents)))}
-          t={t}
-        />
+        <>
+          <LeaseUnavailable
+            reason={offer.reason}
+            minimum={euro(Math.min(...table.bands.map((band) => band.min_financed_cents)))}
+            t={t}
+          />
+          {asset.status === 'reserved' ? (
+            <WishlistRequest assetId={asset.id} locale={locale} />
+          ) : null}
+        </>
       )}
     </div>
   );

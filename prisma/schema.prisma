@@ -33,6 +33,7 @@ model Asset {
   quotes          Quote[]
   contracts       Contract[]
   return_requests ReturnRequest[]
+  wishlist_requests WishlistRequest[]
 
   @@index([category])
 }
@@ -202,6 +203,21 @@ model BuyoutRequest {
 
   @@index([contract_id, status])
   @@index([customer_id])
+}
+
+// A customer wants to lease this asset when it becomes available again.
+model WishlistRequest {
+  id                    String   @id
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  asset_id              String
+  asset                 Asset    @relation(fields: [asset_id], references: [id])
+  customer_id           String
+  minimum_condition     String
+  status                String // requested | matched | cancelled
+
+  @@index([asset_id, status])
+  @@index([customer_id, status])
 }
 
 // An issued invoice. The VAT rate and amounts are stored, so history never changes even if

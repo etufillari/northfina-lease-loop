@@ -1,26 +1,22 @@
-// POST /api/transfers/:token/apply  body: { customerId, actor }
+// POST /api/transfers/:token/apply  body: { customerId }
 // The recipient starts the take-over application: the normal question flow, judged against
 // the contract's locked rent (no down payment).
-import { z } from 'zod';
-import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { fail, handleRoute, ok } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { startTransferApplication } from '@/server/transfers';
-
-const bodySchema = z.strictObject({
-  customerId: z.string().min(1),
-  actor: z.string().trim().min(1).max(100),
-});
+import { requireCustomer } from '@/server/current-user';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/transfers/[token]/apply'>) => {
     const { token } = await params;
-    const body = await readJsonBody(request, bodySchema);
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const result = await startTransferApplication(db, {
       token,
-      customerId: body.customerId,
-      actor: body.actor,
+      customerId: user.customerId,
+      actor: user.actorId,
       asOf: asOfFrom(request),
     });
     if (!result.ok) {

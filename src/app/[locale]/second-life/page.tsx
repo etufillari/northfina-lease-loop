@@ -1,9 +1,7 @@
 // The returns desk (scenario card 9): every returned asset with its second-life decision and
 // the reasoning behind it, and a button that carries the decision out (audit-logged).
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -13,6 +11,7 @@ import { listReturnedDecisions } from '@/server/second-life';
 import { listExpiredOffers } from '@/server/waitlist-actions';
 import { DecisionCard } from './decision-card';
 import { HoldsSection } from './holds-section';
+import { currentUser } from '@/server/current-user';
 
 export default async function SecondLifePage({
   params,
@@ -24,10 +23,11 @@ export default async function SecondLifePage({
 
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const user = await currentUser();
+  const persona = user?.actorId ?? null;
 
   // The desk changes other people's items and offers: staff only.
-  if (persona !== STAFF_PERSONA) {
+  if (!user?.isStaff) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-semibold tracking-tight">{t('secondLife.title')}</h1>

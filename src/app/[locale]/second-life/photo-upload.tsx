@@ -28,7 +28,6 @@ export function PhotoUpload({
     try {
       const form = new FormData();
       form.set('file', file);
-      form.set('actor', personaId);
       const response = await fetch(`/api/assets/${assetId}/image`, {
         method: 'POST',
         body: form,

@@ -1,17 +1,19 @@
-// POST /api/applications/:id/sign  body: { startDate, actor }
+// POST /api/applications/:id/sign  body: { startDate }
 // "Verify identity electronically" — the happy-path signature. Locks the contract, creates
 // the full invoice schedule and flips the asset to leased, in one audited transaction.
-// For awaiting_signature applications the actor is the signatory (from the staff panel).
+// The signer is the signed-in applicant. For an application waiting for a company's signatory,
+// staff sign for the signatory at the desk (identity checked there), recorded under the
+// signatory's e-mail as stored on the application — never one sent by the browser.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { signApplication } from '@/server/contracts';
+import { requireUser } from '@/server/current-user';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
   startDate: isoDateSchema,
-  actor: z.string().trim().min(1).max(100),
 });
 
 const failures: Record<string, [number, string, string]> = {
@@ -44,11 +46,21 @@ const failures: Record<string, [number, string, string]> = {
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/applications/[id]/sign'>) => {
     const { id } = await params;
+    const user = await requireUser();
+    if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
+    const application = await db.application.findUnique({
+      where: { id },
+      select: { status: true, signatory_email: true },
+    });
+    const signatory =
+      user.isStaff && application?.status === 'awaiting_signature'
+        ? application.signatory_email
+        : null;
     const result = await signApplication(db, {
       applicationId: id,
       startDate: body.startDate,
-      actor: body.actor,
+      actor: signatory ?? user.actorId,
       asOf: asOfFrom(request),
     });
     if (!result.ok) {

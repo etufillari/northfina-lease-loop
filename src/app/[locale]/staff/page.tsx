@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
-import { PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
@@ -14,6 +12,7 @@ import { db } from '@/server/db';
 import { listStaffQueue, type StaffQueueItem } from '@/server/staff';
 import { isHoldExpired, listExpiredHolds } from '@/server/staff-holds';
 import { ReleaseExpiredHolds, ReviewActions, SignAsSignatory } from './staff-actions';
+import { currentUser } from '@/server/current-user';
 
 type Reason = { rule: string; outcome: string };
 
@@ -26,7 +25,8 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
 
   // The desk decides on other people's applications: staff only.
-  if ((await cookies()).get(PERSONA_COOKIE)?.value !== STAFF_PERSONA) {
+  const user = await currentUser();
+  if (!user?.isStaff) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-semibold tracking-tight">{t('staff.title')}</h1>
@@ -39,7 +39,7 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
 
   // Staff decisions are always logged as staff, never as the customer persona picked in the
   // header (the server also refuses a customer deciding on their own application).
-  const actor = STAFF_PERSONA;
+  const actor = user.actorId;
   const [queue, expired] = await Promise.all([listStaffQueue(db), listExpiredHolds(db, asOf)]);
   const reviews = queue.filter((item) => item.status === 'manual_review');
   // A signatory whose hold ran out can no longer sign: those wait under "Holds that ran out".
@@ -73,7 +73,7 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
       >
         {reviews.map((item) => (
           <QueueCard key={item.applicationId} item={item} locale={locale} t={t}>
-            <ReviewActions locale={locale} applicationId={item.applicationId} actor={actor} />
+            <ReviewActions locale={locale} applicationId={item.applicationId} />
           </QueueCard>
         ))}
       </Section>
@@ -122,7 +122,7 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
         </Section>
       ) : null}
       {expired.length > 0 ? (
-        <ReleaseExpiredHolds locale={locale} actor={actor} count={expired.length} asOf={asOf} />
+        <ReleaseExpiredHolds locale={locale} count={expired.length} asOf={asOf} />
       ) : null}
     </div>
   );

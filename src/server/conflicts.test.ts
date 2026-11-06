@@ -150,7 +150,12 @@ describe('two customers racing for one item', () => {
     await db.application.update({ where: { id: pending }, data: { status: 'manual_review' } });
     await lease('ebike-004', 'cust-sanna');
     expect(
-      await approveApplication(db, { applicationId: pending, actor: 'staff', asOf: AS_OF })
+      await approveApplication(db, {
+        applicationId: pending,
+        actor: 'staff',
+        isStaff: true,
+        asOf: AS_OF,
+      })
     ).toEqual({ ok: false, reason: 'asset_unavailable' });
   });
 });

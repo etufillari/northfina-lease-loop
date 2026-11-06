@@ -1,4 +1,4 @@
-// POST /api/applications/:id/submit  body: { startDate, actor }
+// POST /api/applications/:id/submit  body: { startDate }
 // The decision: yes / no / manual review with reasons; a 7-day hold unless declined.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
@@ -7,20 +7,22 @@ import { submitApplication } from '@/server/applications';
 import { asOfFrom } from '@/server/as-of';
 import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
+import { requireCustomer } from '@/server/current-user';
 
 const bodySchema = z.strictObject({
   startDate: isoDateSchema,
-  actor: z.string().trim().min(1).max(100),
 });
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/applications/[id]/submit'>) => {
     const { id } = await params;
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
     const result = await submitApplication(db, {
       applicationId: id,
       startDate: body.startDate,
-      actor: body.actor,
+      actor: user.actorId,
       asOf: asOfFrom(request),
     });
     if (!result.ok) {

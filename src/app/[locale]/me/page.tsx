@@ -3,8 +3,6 @@ import Link from 'next/link';
 import { BackToCatalogue } from '@/components/back-to-catalogue';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
@@ -17,6 +15,7 @@ import { NominationActions } from './nomination-actions';
 import { listCustomerOpenApplications, type NextStep } from '@/server/customer-applications';
 import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
+import { currentUser } from '@/server/current-user';
 
 // How each next step is shown: the chip's colour and whether the link is a call to action.
 const STEP_STYLE: Record<NextStep, { chip: string; action: 'continue' | 'sign' | 'view' }> = {
@@ -52,7 +51,7 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const suffix = asOfParam ? `?asOf=${asOfParam}` : '';
 
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const persona = (await currentUser())?.customerId ?? null;
   const customer = persona ? await getCustomer(db, persona) : null;
 
   if (!customer) {
@@ -153,7 +152,6 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
                   <NominationActions
                     locale={locale}
                     assetId={nomination.assetId}
-                    actor={customer.id}
                     asOfParam={asOfParam}
                   />
                 ) : nomination.status === 'held' ? (

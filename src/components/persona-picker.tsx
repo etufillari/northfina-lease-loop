@@ -53,7 +53,7 @@ export function PersonaPicker({ locale, initialId }: { locale: Locale; initialId
     const response = await fetch('/api/customers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name, email, actor: name }),
+      body: JSON.stringify({ name, email }),
     });
     const body = await response.json();
     if (body.success) {

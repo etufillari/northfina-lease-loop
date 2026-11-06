@@ -21,4 +21,20 @@ describe('ApplicationResult', () => {
     expect(screen.getByText(messages[locale][`application.reason.${reason}`])).toBeTruthy();
     expect(screen.queryByText(reason)).toBeNull();
   });
+
+  it('shows the date a too-young applicant can try again in words', () => {
+    render(
+      <ApplicationResult
+        locale="en"
+        application={{
+          id: 'app-1',
+          decision: 'rejected',
+          reasons: ['min_age'],
+          eligible_from: '2027-03-10',
+        }}
+      />
+    );
+
+    expect(screen.getByText(/10 March 2027/)).toBeTruthy();
+  });
 });

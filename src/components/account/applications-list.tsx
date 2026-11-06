@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
+import type { EligibilityReason } from '@/data/lease-schemas';
 import { formatEuro } from '@/domain/money';
-import { getT } from '@/i18n/get-t';
+import { formatIsoDate } from '@/i18n/format';
+import { getT, type Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
 import { EmptyState } from '@/components/states/empty-state';
@@ -24,6 +26,8 @@ type ApplicationListItem = {
   down_payment_cents: number;
   financed_cents: number;
   decision: 'approved' | 'rejected' | 'manual_review';
+  reasons: EligibilityReason[];
+  reviewed_by: string | null;
   eligible_from: string | null;
   contract_id: string | null;
 };
@@ -35,6 +39,18 @@ type ApiResponse = {
     message?: string;
   };
 };
+
+/**
+ * What to tell the customer. An approved application needs no reason. A case a person rejected
+ * keeps the reason it was sent to them, which no longer says what happened, so it is replaced.
+ */
+function reasonTexts(application: ApplicationListItem, t: Translate): string[] {
+  if (application.decision === 'approved') return [];
+  if (application.decision === 'rejected' && application.reviewed_by !== null) {
+    return [t('application.reason.reviewedRejected')];
+  }
+  return application.reasons.map((reason) => t(`application.reason.${reason}`));
+}
 
 export default function ApplicationsList({ locale }: ApplicationsListProps) {
   const t = useMemo(() => getT(locale), [locale]);
@@ -159,6 +175,31 @@ export default function ApplicationsList({ locale }: ApplicationsListProps) {
             <p className="mt-4 text-sm text-amber-300">
               {t('account.applications.manualReviewDescription')}
             </p>
+          )}
+
+          {reasonTexts(application, t).length > 0 && (
+            <div className="mt-4 rounded-xl border border-stone-800 bg-stone-950 p-4">
+              <h3 className="text-sm font-medium text-stone-100">
+                {t(
+                  application.decision === 'rejected'
+                    ? 'application.result.reasons'
+                    : 'application.result.additionalInformation'
+                )}
+              </h3>
+
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-stone-400">
+                {reasonTexts(application, t).map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+
+              {application.eligible_from && (
+                <p className="mt-2 text-sm text-stone-400">
+                  {t('application.result.eligibleFrom')}{' '}
+                  {formatIsoDate(application.eligible_from, locale)}
+                </p>
+              )}
+            </div>
           )}
         </article>
       ))}

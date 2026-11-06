@@ -127,6 +127,7 @@
   "application.reason.business_id": "Y-tunnus ei ole kelvollinen. Tarkista se ja hae uudelleen.",
   "application.reason.pep_manual_review": "Koska mukana on poliittisesti vaikutusvaltainen henkilö, tiimimme jäsen tarkistaa hakemuksen.",
   "application.reason.financed_limits": "Rahoitettavan summan on oltava 300–250 000 euroa.",
+  "application.reason.reviewedRejected": "Tiimimme jäsen tarkisti hakemuksen, eikä sitä voitu hyväksyä.",
   "application.review.title": "Tarkista hakemuksesi",
   "application.review.description": "Tarkista tietosi ennen hakemuksen lähettämistä.",
   "application.review.leaseDetails": "Vuokrauksen tiedot",

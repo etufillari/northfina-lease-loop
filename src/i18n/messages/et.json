@@ -127,6 +127,7 @@
   "application.reason.business_id": "Ettevõtte registrikood ei ole kehtiv. Palun kontrolli seda ja esita taotlus uuesti.",
   "application.reason.pep_manual_review": "Kuna asjaga on seotud riikliku taustaga isik, vaatab taotluse üle meie meeskonna liige.",
   "application.reason.financed_limits": "Finantseeritav summa peab olema vahemikus 300 kuni 250 000 eurot.",
+  "application.reason.reviewedRejected": "Meie meeskonna liige vaatas taotluse üle ega saanud seda heaks kiita.",
   "application.review.title": "Vaata oma taotlus üle",
   "application.review.description": "Kontrolli oma andmeid enne taotluse esitamist.",
   "application.review.leaseDetails": "Liisingu andmed",

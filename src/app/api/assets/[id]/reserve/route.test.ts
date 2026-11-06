@@ -164,6 +164,14 @@ describe('DELETE /api/assets/:id/reserve', () => {
     const signA = await patch('ebike-001', { status: 'reserved', actor: 'alice', token: tokenA });
     expect(signA.status).toBe(409);
   });
+
+  it('rejects signing without a token when an active reservation exists', async () => {
+    const res = await post('ebike-001', { actor: 'bob' });
+    expect(res.status).toBe(200);
+
+    const unsigned = await patch('ebike-001', { status: 'reserved', actor: 'alice' });
+    expect(unsigned.status).toBe(409);
+  });
 });
 
 describe('GET /api/assets/:id/reserve', () => {

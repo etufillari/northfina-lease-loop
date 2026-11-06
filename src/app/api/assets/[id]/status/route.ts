@@ -19,6 +19,19 @@ export const PATCH = handleRoute(
     const { id } = await params;
     const body = await readJsonBody(request, bodySchema);
 
+    const activeReservation = await db.assetReservation.findFirst({
+      where: { asset_id: id, status: 'active' },
+    });
+    if (activeReservation) {
+      if (!body.token || activeReservation.token !== body.token) {
+        return fail(
+          409,
+          'RESERVATION_CONFLICT',
+          'This asset is currently reserved by another applicant'
+        );
+      }
+    }
+
     if (body.token) {
       const completed = await completeReservation(db, {
         assetId: id,

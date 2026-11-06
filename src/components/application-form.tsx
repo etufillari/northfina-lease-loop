@@ -249,10 +249,8 @@ export function ApplicationForm({
           setResState('active');
 
           const currentUrl = new URL(window.location.href);
-          if (!currentUrl.searchParams.get('token')) {
-            currentUrl.searchParams.set('token', resToken);
-            window.history.replaceState({}, '', currentUrl.toString());
-          }
+          currentUrl.searchParams.set('token', resToken);
+          window.history.replaceState({}, '', currentUrl.toString());
         } else if (response.status === 409) {
           setResState('conflict');
         } else {

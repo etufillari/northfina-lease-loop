@@ -34,11 +34,25 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   },
 };
 
-export const CATEGORY_ICON: Record<string, string> = {
-  e_bike: '🚲',
-  laptop: '💻',
-  farm_machine: '🚜',
+const CATEGORY_ICON_SRC: Record<string, string> = {
+  e_bike: '/images/categories/e_bike.png',
+  laptop: '/images/categories/laptop.png',
+  farm_machine: '/images/categories/farm_machine.svg',
 };
+
+/** The category symbol, drawn from public/images/categories/. Decorative: empty alt. */
+export function CategoryIcon({
+  category,
+  className = 'size-12',
+}: {
+  category: string;
+  className?: string;
+}) {
+  const src = CATEGORY_ICON_SRC[category];
+  if (!src) return null;
+  // eslint-disable-next-line @next/next/no-img-element -- small local decorative SVG
+  return <img src={src} alt="" aria-hidden="true" className={className} />;
+}
 
 export function AssetImage({
   imageUrl,
@@ -58,9 +72,9 @@ export function AssetImage({
   return (
     <div
       aria-hidden="true"
-      className={`flex items-center justify-center bg-stone-100 text-5xl dark:bg-stone-800 ${className}`}
+      className={`flex items-center justify-center bg-stone-100 dark:bg-stone-800 ${className}`}
     >
-      {CATEGORY_ICON[category] ?? '📦'}
+      <CategoryIcon category={category} className="size-20 opacity-90" />
     </div>
   );
 }

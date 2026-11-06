@@ -4,7 +4,7 @@
 // year. No money is computed here — the server priced every asset at every term.
 import Link from 'next/link';
 import { useState } from 'react';
-import { AssetCard, CATEGORY_ICON } from '@/components/asset-card';
+import { AssetCard, CategoryIcon } from '@/components/asset-card';
 import type { Asset, AssetCategory, AssetCondition } from '@/data/schemas';
 import { euroInputToCents } from '@/domain/euro-input';
 import { meetsMinCondition } from '@/domain/second-life';
@@ -111,9 +111,7 @@ export function CatalogueBrowser({
                   : 'border-stone-200 bg-white hover:border-emerald-300 dark:border-stone-800 dark:bg-stone-900'
               }`}
             >
-              <span aria-hidden="true" className="text-4xl">
-                {CATEGORY_ICON[c]}
-              </span>
+              <CategoryIcon category={c} className="size-14 shrink-0" />
               <span>
                 <span className="block text-lg font-semibold">
                   {t(`category.${c}` as MessageKey)}

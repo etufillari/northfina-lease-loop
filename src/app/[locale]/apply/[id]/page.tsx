@@ -8,6 +8,8 @@ import { ApplicationWizard } from '@/components/application-wizard';
 import { BackLink } from '@/components/back-to-catalogue';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { loadVatRates } from '@/data/load';
+import { pricesIncludeVat, vatRateOn } from '@/domain/vat';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { quoteAssetIds } from '@/server/quotes';
@@ -40,6 +42,11 @@ export default async function ApplyPage({
     );
   }
 
+  const customer = await db.customer.findUnique({
+    where: { id: application.customer_id },
+    select: { type: true },
+  });
+  const vat = vatRateOn(await loadVatRates(), asOf);
   const assetIds = quoteAssetIds(application.quote);
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -59,6 +66,10 @@ export default async function ApplyPage({
           personaId={persona}
           asOf={asOf}
           today={asOf}
+          pricesInclVat={pricesIncludeVat(customer?.type)}
+          vatRate={
+            vat.ok ? { ratePercent: vat.ratePercent, rateBasisPoints: vat.rateBasisPoints } : null
+          }
         />
       </div>
     </div>

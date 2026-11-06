@@ -32,6 +32,13 @@ export const POST = handleRoute(
     if (!result.ok) {
       if (result.reason === 'not_yours') return notYours();
       if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
+      if (result.reason === 'nominated') {
+        return fail(
+          409,
+          'NOMINATED',
+          'A successor accepted this item: the lease runs to its end and the item is returned'
+        );
+      }
       if (result.reason === 'not_active')
         return fail(409, 'NOT_ACTIVE', 'This contract has already ended');
       if (result.reason === 'term_not_ended') {

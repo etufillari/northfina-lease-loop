@@ -65,6 +65,8 @@ export function ContractActions({
   const [nomineeEmail, setNomineeEmail] = useState('');
   const [nominated, setNominated] = useState(false);
   const termOver = today >= endsOn;
+  /** An accepted successor: the item is promised, so no buyout and no early exit. */
+  const promised = nomination?.accepted === true;
   const [typedReadings, setTypedReadings] = useState<Record<string, string>>({});
   const usageReadings = parsedReadings(returnItems, typedReadings);
   const readingFields = (
@@ -150,29 +152,39 @@ export function ContractActions({
             {t('endOfTerm.notYet', { date: formatIsoDate(endsOn, locale) })}
           </p>
         ) : null}
-        <div className="mt-2">
-          <BuyoutPurchase
-            locale={locale}
-            contractId={contractId}
-            suffix={suffix}
-            invoice={buyoutInvoice}
-            pricesInclVat={pricesInclVat}
-            purchaseAtEnd={purchaseAtEnd}
-            termOver={termOver}
-          />
-        </div>
+        {/* An ACCEPTED successor is a promise: the item can only run to the end of the
+            term and be returned — no buyout, no early exit (the server refuses too). */}
+        {promised ? (
+          <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
+            {t('passOn.lockedNote', { name: nomination!.name })}
+          </p>
+        ) : (
+          <div className="mt-2">
+            <BuyoutPurchase
+              locale={locale}
+              contractId={contractId}
+              suffix={suffix}
+              invoice={buyoutInvoice}
+              pricesInclVat={pricesInclVat}
+              purchaseAtEnd={purchaseAtEnd}
+              termOver={termOver}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         {!termOver ? (
-          <button
-            type="button"
-            onClick={loadPreview}
-            disabled={busy}
-            className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
-          >
-            {t('exit.button')}
-          </button>
+          promised ? null : (
+            <button
+              type="button"
+              onClick={loadPreview}
+              disabled={busy}
+              className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+            >
+              {t('exit.button')}
+            </button>
+          )
         ) : (
           <div className="w-full">
             {readingFields}
@@ -194,36 +206,52 @@ export function ContractActions({
 
       <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
         <h3 className="text-sm font-semibold">{t('passOn.title')}</h3>
-        {/* During the term the lease can be taken over; a successor can be nominated for when
-            the item comes back — unless the customer is buying the item. */}
+        {/* Two distinct routes: hand the lease over NOW (a take-over mid-term), or name who
+            gets the item when the lease ENDS — unless the customer is buying the item. */}
         {purchaseAtEnd ? (
           <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
             {t('passOn.buyingNote')}
           </p>
         ) : null}
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          {termOver ? null : transferToken ? (
-            <p className="text-sm">
-              {t('passOn.linkHint')}{' '}
-              <a
-                href={`/${locale}/transfer/${transferToken}`}
-                className="font-medium break-all text-emerald-800 underline dark:text-emerald-300"
-              >
-                {`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/transfer/${transferToken}`}
-              </a>
+        {!termOver ? (
+          <div className="mt-3">
+            <h4 className="text-sm font-medium">{t('passOn.transferTitle')}</h4>
+            <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+              {t('passOn.transferIntro')}
             </p>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={createLink}
-              className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
-            >
-              {t('passOn.createLink')}
-            </button>
-          )}
-        </div>
-        <div className={`mt-3 flex-wrap items-center gap-2 ${!purchaseAtEnd ? 'flex' : 'hidden'}`}>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {transferToken ? (
+                <p className="text-sm">
+                  {t('passOn.linkHint')}{' '}
+                  <a
+                    href={`/${locale}/transfer/${transferToken}`}
+                    className="font-medium break-all text-emerald-800 underline dark:text-emerald-300"
+                  >
+                    {`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/transfer/${transferToken}`}
+                  </a>
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={createLink}
+                  className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
+                >
+                  {t('passOn.createLink')}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+        {!purchaseAtEnd ? (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium">{t('passOn.nominateTitle')}</h4>
+            <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+              {t('passOn.nominateIntro')}
+            </p>
+          </div>
+        ) : null}
+        <div className={`mt-2 flex-wrap items-center gap-2 ${!purchaseAtEnd ? 'flex' : 'hidden'}`}>
           <input
             type="email"
             value={nomineeEmail}

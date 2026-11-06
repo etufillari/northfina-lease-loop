@@ -5,7 +5,12 @@ import { loadCoefficientTable, loadVatRates } from '@/data/load';
 import { BUYOUT_PAYMENT_DAYS } from '@/domain/buyout';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
 import { holdUntil, UNTIL_ITEM_READY } from '@/domain/holds';
-import { endNominations, hasNomination, NOMINATION_INVITE } from './nominations';
+import {
+  endNominations,
+  hasAcceptedNomination,
+  hasNomination,
+  NOMINATION_INVITE,
+} from './nominations';
 import {
   applyReadings,
   checkReadings,
@@ -52,6 +57,7 @@ export type ExitPreviewResult =
         | 'unpriceable_amount'
         | 'bad_used_months'
         | 'not_yours'
+        | 'nominated'
         | ReadingFailure;
     };
 
@@ -105,11 +111,11 @@ export async function executeEarlyExit(
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
   if (input.actor !== loaded.contract.customer_id) return { ok: false, reason: 'not_yours' };
-  const readings = await checkReadings(
-    db,
-    loaded.contract.assets.map((link) => link.asset_id),
-    input.usageReadings
-  );
+  // Someone accepted to take this item over: it is promised to them at the end of the
+  // term, so the lease can no longer be cut short.
+  const exitAssetIds = loaded.contract.assets.map((link) => link.asset_id);
+  if (await hasAcceptedNomination(db, exitAssetIds)) return { ok: false, reason: 'nominated' };
+  const readings = await checkReadings(db, exitAssetIds, input.usageReadings);
   if (!readings.ok) return readings;
 
   await withAudit(
@@ -178,6 +184,7 @@ export type EndOfTermResult =
         | 'not_yours'
         | 'term_not_ended'
         | 'no_vat_rate_on_date'
+        | 'nominated'
         | ReadingFailure;
     };
 
@@ -202,6 +209,11 @@ export async function endOfTerm(
   if (input.actor !== contract.customer_id) return { ok: false, reason: 'not_yours' };
   if (input.asOf < termEndsOn(contract)) return { ok: false, reason: 'term_not_ended' };
   const assetIds = contract.assets.map((link) => link.asset_id);
+  // Returning is exactly what an accepted successor waits for; buying would break the
+  // promise, so it is refused while the acceptance stands.
+  if (input.action === 'buy' && (await hasAcceptedNomination(db, assetIds))) {
+    return { ok: false, reason: 'nominated' };
+  }
   const readings =
     input.action === 'return'
       ? await checkReadings(db, assetIds, input.usageReadings)

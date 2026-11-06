@@ -516,5 +516,11 @@
   "me.co2Title": "Vuokriesi välttämä CO₂",
   "me.co2Note": "{count} uudelleenvuokrauksesta: kunnostetun tuotteen vuokraaminen välttää suurimman osan uuden valmistamisen CO₂:sta.",
   "me.co2None": "Ei vielä mitään — säästö alkaa, kun vuokraat tuotteen sen toisella elinkaarella uuden sijaan.",
-  "staff.signature.waiting": "Vain {email} voi allekirjoittaa tämän sopimuksen. Se odottaa heitä, kunnes varaus umpeutuu."
+  "staff.signature.waiting": "Vain {email} voi allekirjoittaa tämän sopimuksen. Se odottaa heitä, kunnes varaus umpeutuu.",
+  "passOn.transferTitle": "Siirrä vuokrasopimus nyt",
+  "passOn.transferIntro": "Joku ottaa jäljellä olevat kuukaudet sellaisinaan: sama vuokra, sama maksuohjelma. Jo lähetetyt laskut jäävät sinulle.",
+  "passOn.nominateTitle": "Nimeä seuraaja vuokrakauden loppuun",
+  "passOn.nominateIntro": "Pidät sopimuksen loppuun asti. Jos hän hyväksyy, tuote varataan hänelle jonon ohi 3 päiväksi, kun se on palautettu ja kunnostettu.",
+  "passOn.lockedNote": "{name} hyväksyi tuotteen vastaanoton: sopimus jatkuu loppuun asti ja tuote palautetaan heille — sitä ei voi enää ostaa eikä sopimusta päättää kesken.",
+  "apply.summary.noteGross": "Kaikki hinnat tässä sisältävät ALV:n {rate} %."
 }

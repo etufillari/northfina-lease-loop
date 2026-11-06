@@ -11,7 +11,7 @@ import { seedAssets } from './assets';
 import { signApplication } from './contracts';
 import { seedCustomers } from './customers';
 import { expireLapsedHolds } from './hold-expiry';
-import { endOfTerm, nominateSuccessor, setBuyoutOption } from './lifecycle';
+import { endOfTerm, executeEarlyExit, nominateSuccessor, setBuyoutOption } from './lifecycle';
 import { answerNomination } from './nominations';
 import { executeSecondLife, listReturnedDecisions } from './second-life';
 import { seedWaitlist } from './waitlist';
@@ -210,11 +210,38 @@ describe('declining, buying, and inviting after the return', () => {
     await test.cleanup();
   });
 
-  it('a buyout ends an accepted nomination', async () => {
+  it('an accepted nomination is a promise: no buyout, no early exit — only a return', async () => {
     const test = await freshDb();
     const contractId = await ainoLease(test.db);
     await invitePekka(test.db, contractId, '2027-06-01');
     await accept(test.db, '2027-06-02');
+    expect(
+      await executeEarlyExit(test.db, {
+        contractId,
+        actor: 'cust-aino',
+        asOf: '2027-07-01',
+        usageReadings: { 'ebike-003': 2000 },
+      })
+    ).toEqual({ ok: false, reason: 'nominated' });
+    expect(
+      await endOfTerm(test.db, { contractId, action: 'buy', actor: 'cust-aino', asOf: RETURNED })
+    ).toEqual({ ok: false, reason: 'nominated' });
+    const returned = await endOfTerm(test.db, {
+      contractId,
+      action: 'return',
+      actor: 'cust-aino',
+      asOf: RETURNED,
+      usageReadings: { 'ebike-003': 4800 },
+    });
+    expect(returned).toEqual({ ok: true });
+    expect((await nomination(test.db)).active).toBe(true);
+    await test.cleanup();
+  });
+
+  it('a buyout still works while the invitation is unanswered, and ends it', async () => {
+    const test = await freshDb();
+    const contractId = await ainoLease(test.db);
+    await invitePekka(test.db, contractId, '2027-06-01');
     const bought = await endOfTerm(test.db, {
       contractId,
       action: 'buy',

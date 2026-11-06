@@ -516,5 +516,11 @@
   "me.co2Title": "Sinu rendilepingute välditud CO₂",
   "me.co2Note": "{count} teise elutsükli rendist: taastatud toote rentimine väldib suurema osa uue valmistamise CO₂-st.",
   "me.co2None": "Veel mitte midagi — sääst algab, kui rendid toote selle teisel elutsüklil uue asemel.",
-  "staff.signature.waiting": "Ainult {email} saab selle lepingu allkirjastada. See ootab teda, kuni broneering aegub."
+  "staff.signature.waiting": "Ainult {email} saab selle lepingu allkirjastada. See ootab teda, kuni broneering aegub.",
+  "passOn.transferTitle": "Anna rendileping üle kohe",
+  "passOn.transferIntro": "Keegi võtab järelejäänud kuud üle sellistena, nagu need on: sama üür, sama graafik. Juba esitatud arved jäävad sulle.",
+  "passOn.nominateTitle": "Nimeta järeltulija rendiperioodi lõpuks",
+  "passOn.nominateIntro": "Leping jääb lõpuni sinule. Kui ta nõustub, hoitakse toodet talle ootejärjekorrast ees 3 päeva, kui see on tagastatud ja taastatud.",
+  "passOn.lockedNote": "{name} nõustus toote üle võtma: leping kestab lõpuni ja toode tagastatakse talle — seda ei saa enam osta ega lepingut ennetähtaegselt lõpetada.",
+  "apply.summary.noteGross": "Kõik hinnad siin sisaldavad käibemaksu {rate} %."
 }

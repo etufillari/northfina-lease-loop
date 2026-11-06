@@ -516,5 +516,11 @@
   "me.co2Title": "CO₂ avoided by your leases",
   "me.co2Note": "From {count} second-life lease(s): leasing a refurbished item avoids most of the CO₂ of making a new one.",
   "me.co2None": "Nothing yet — the saving starts when you lease an item on its second life instead of a new one.",
-  "staff.signature.waiting": "Only {email} can sign this lease. It waits for them until the hold runs out."
+  "staff.signature.waiting": "Only {email} can sign this lease. It waits for them until the hold runs out.",
+  "passOn.transferTitle": "Hand the lease over now",
+  "passOn.transferIntro": "Someone takes over the remaining months as they are: same rent, same schedule. Invoices already issued stay yours.",
+  "passOn.nominateTitle": "Nominate a successor for when the lease ends",
+  "passOn.nominateIntro": "You keep the lease to the end. If they accept, the item is held for them, ahead of the waiting list, for 3 days once it is returned and refurbished.",
+  "passOn.lockedNote": "{name} accepted to take this item over: the lease runs to its end and the item is returned to them — it can no longer be bought or ended early.",
+  "apply.summary.noteGross": "All prices here include VAT {rate} %."
 }

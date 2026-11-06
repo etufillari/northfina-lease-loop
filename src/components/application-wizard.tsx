@@ -64,12 +64,18 @@ export function ApplicationWizard({
   personaId,
   asOf,
   today,
+  pricesInclVat,
+  vatRate,
 }: {
   locale: Locale;
   applicationId: string;
   personaId: string | null;
   asOf: string | null;
   today: string;
+  /** Consumers and guests see every amount with VAT; businesses net (src/domain/vat.ts). */
+  pricesInclVat: boolean;
+  /** Today's rate, for the gross view; null when none is known. */
+  vatRate: { ratePercent: number; rateBasisPoints: number } | null;
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -287,6 +293,8 @@ export function ApplicationWizard({
               locale={locale}
               quote={state.quote}
               startDate={application.isTransfer ? null : application.startDate}
+              pricesInclVat={pricesInclVat}
+              vatRate={vatRate}
             />
           }
         />
@@ -513,7 +521,13 @@ export function ApplicationWizard({
       </div>
 
       <aside className="h-fit lg:sticky lg:top-6">
-        <ApplicationSummary locale={locale} quote={state.quote} startDate={null} />
+        <ApplicationSummary
+          locale={locale}
+          quote={state.quote}
+          startDate={null}
+          pricesInclVat={pricesInclVat}
+          vatRate={vatRate}
+        />
       </aside>
     </div>
   );

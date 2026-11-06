@@ -11,6 +11,11 @@ import { earlyExitPreview, executeEarlyExit } from '@/server/lifecycle';
 
 const failures: Record<string, [number, string, string]> = {
   not_found: [404, 'CONTRACT_NOT_FOUND', 'No such contract'],
+  nominated: [
+    409,
+    'NOMINATED',
+    'A successor accepted this item: the lease runs to its end and the item is returned',
+  ],
   not_active: [409, 'NOT_ACTIVE', 'This contract has already ended'],
   not_started: [409, 'NOT_STARTED', 'The lease has not started yet'],
   term_already_over: [409, 'TERM_OVER', 'The term is over: use the end-of-term actions'],

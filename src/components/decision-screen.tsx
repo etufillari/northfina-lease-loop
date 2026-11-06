@@ -127,17 +127,9 @@ export function DecisionScreen({
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        {status === 'approved' ? (
-          <button
-            type="button"
-            onClick={onSign}
-            disabled={busy}
-            className="rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
-          >
-            {t('decision.sign')}
-          </button>
-        ) : null}
+      {/* Reading order: the way back on the left, the destructive cancel in the middle,
+          and the primary action — signing — on the far right. */}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <Link
           href={`/${locale}${suffix}`}
           className="rounded-xl px-4 py-3 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 dark:ring-stone-700 dark:hover:bg-stone-800"
@@ -152,6 +144,16 @@ export function DecisionScreen({
             className="rounded-xl px-4 py-3 font-medium text-red-800 ring-1 ring-red-200 ring-inset hover:bg-red-50 disabled:opacity-50 dark:text-red-300 dark:ring-red-900 dark:hover:bg-red-950"
           >
             {t('decision.cancel')}
+          </button>
+        ) : null}
+        {status === 'approved' ? (
+          <button
+            type="button"
+            onClick={onSign}
+            disabled={busy}
+            className="ml-auto rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+          >
+            {t('decision.sign')}
           </button>
         ) : null}
       </div>

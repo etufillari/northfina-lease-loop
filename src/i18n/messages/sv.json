@@ -516,5 +516,11 @@
   "me.co2Title": "CO₂ som dina leasingavtal undvikit",
   "me.co2Note": "Från {count} andra-livet-leasing(ar): att leasa ett renoverat föremål undviker det mesta av CO₂ för att tillverka ett nytt.",
   "me.co2None": "Inget ännu — besparingen börjar när du leasar ett föremål på dess andra liv i stället för ett nytt.",
-  "staff.signature.waiting": "Endast {email} kan underteckna det här avtalet. Det väntar på dem tills reservationen löper ut."
+  "staff.signature.waiting": "Endast {email} kan underteckna det här avtalet. Det väntar på dem tills reservationen löper ut.",
+  "passOn.transferTitle": "Överlåt leasingen nu",
+  "passOn.transferIntro": "Någon tar över de återstående månaderna som de är: samma hyra, samma plan. Redan utställda fakturor förblir dina.",
+  "passOn.nominateTitle": "Utse en efterträdare till när leasingen tar slut",
+  "passOn.nominateIntro": "Du behåller avtalet till slutet. Om hen accepterar hålls föremålet för hen, före väntelistan, i 3 dagar när det är återlämnat och renoverat.",
+  "passOn.lockedNote": "{name} accepterade att ta över föremålet: avtalet löper till sitt slut och föremålet återlämnas till hen — det kan inte längre köpas eller avslutas i förtid.",
+  "apply.summary.noteGross": "Alla priser här inkluderar moms {rate} %."
 }

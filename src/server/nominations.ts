@@ -39,6 +39,17 @@ export async function hasNomination(db: Reader, assetIds: string[]): Promise<boo
 }
 
 /**
+ * True when someone has ACCEPTED a nomination on any of these items: the item is promised
+ * to them, so the lease can only run to its end and be returned — no buyout, no early exit.
+ */
+export async function hasAcceptedNomination(db: Reader, assetIds: string[]): Promise<boolean> {
+  const count = await db.reservation.count({
+    where: { asset_id: { in: assetIds }, kind: NOMINATION_RESERVATION, active: true },
+  });
+  return count > 0;
+}
+
+/**
  * The desk is done and holds the item for its nominee: the nominee's days start today, and
  * an invitation nobody accepted in time ends.
  */

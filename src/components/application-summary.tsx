@@ -2,6 +2,7 @@
 // The running summary of what the customer is applying for: the items, the term and the
 // money. Sits next to the questions, and in the middle of the page once there is a decision.
 import { formatEuro } from '@/domain/money';
+import { grossCents } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -23,14 +24,22 @@ export function ApplicationSummary({
   locale,
   quote,
   startDate,
+  pricesInclVat,
+  vatRate,
 }: {
   locale: Locale;
   quote: SummaryQuote;
   /** Shown once chosen (at submission); null while the questions are still running. */
   startDate: string | null;
+  /** Consumers and guests see every amount with VAT; businesses net (src/domain/vat.ts). */
+  pricesInclVat: boolean;
+  /** Today's rate, for the gross view; null when none is known (then net is shown). */
+  vatRate: { ratePercent: number; rateBasisPoints: number } | null;
 }) {
   const t = getT(locale);
-  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const showGross = pricesInclVat && vatRate !== null;
+  const euro = (cents: number) =>
+    formatEuro(showGross ? grossCents(cents, vatRate.rateBasisPoints) : cents, intlLocale[locale]);
 
   return (
     <section
@@ -79,7 +88,11 @@ export function ApplicationSummary({
           <Row label={t('apply.startDate')} value={formatIsoDate(startDate, locale)} />
         ) : null}
       </dl>
-      <p className="mt-3 text-xs text-stone-600 dark:text-stone-400">{t('apply.summary.note')}</p>
+      <p className="mt-3 text-xs text-stone-600 dark:text-stone-400">
+        {showGross
+          ? t('apply.summary.noteGross', { rate: vatRate.ratePercent })
+          : t('apply.summary.note')}
+      </p>
     </section>
   );
 }

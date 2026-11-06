@@ -147,10 +147,25 @@ model Invoice {
   issued_at             DateTime  @default(now())
   paid_at               DateTime?
 
-  contract Contract @relation(fields: [contract_id], references: [id], onDelete: Restrict)
+  contract Contract  @relation(fields: [contract_id], references: [id], onDelete: Restrict)
+  payments Payment[]
 
   @@unique([contract_id, sequence])
   @@index([due_on, status])
+}
+
+// A payment received against exactly one invoice. Multiple rows support partial payments.
+model Payment {
+  id           String   @id
+  invoice_id   String
+  amount_cents Int
+  paid_on      String
+  reference    String?
+  created_at   DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Restrict)
+
+  @@index([invoice_id, paid_on])
 }
 
 // Append-only customer-facing passport for a physical asset. AuditLog remains

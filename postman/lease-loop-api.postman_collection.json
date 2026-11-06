@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lease Loop API",
-    "description": "Requests for the Lease Loop backend API. Set baseUrl to the running Next.js server before sending requests.",
+    "description": "Run requests in order for the complete happy path. Start the app with a seeded database and set baseUrl if needed. The final asset-status requests return the asset to available for another run.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -24,6 +24,14 @@
     {
       "key": "contractId",
       "value": "contract-id-from-previous-response"
+    },
+    {
+      "key": "invoiceId",
+      "value": "invoice-id-from-previous-response"
+    },
+    {
+      "key": "invoiceTotalCents",
+      "value": "0"
     },
     {
       "key": "actor",
@@ -124,7 +132,21 @@
               }
             },
             "url": "{{baseUrl}}/api/applications/preview"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('application preview succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Preview application - complete consumer",
@@ -168,7 +190,24 @@
               }
             },
             "url": "{{baseUrl}}/api/applications"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('application is approved', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.application.decision).to.eql('approved');",
+                  "});",
+                  "pm.collectionVariables.set('applicationId', body.data.application.id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Sign approved application",
@@ -190,7 +229,24 @@
               }
             },
             "url": "{{baseUrl}}/api/contracts"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('contract is active', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.contract.status).to.eql('active');",
+                  "});",
+                  "pm.collectionVariables.set('contractId', body.data.contract.id);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -218,7 +274,25 @@
               }
             },
             "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('invoice schedule is generated', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.invoices.length).to.eql(36);",
+                  "});",
+                  "pm.collectionVariables.set('invoiceId', body.data.invoices[0].id);",
+                  "pm.collectionVariables.set('invoiceTotalCents', String(body.data.invoices[0].totalCents));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List contract invoices",
@@ -227,6 +301,69 @@
             "header": [],
             "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices"
           }
+        },
+        {
+          "name": "Record invoice payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountCents\": {{invoiceTotalCents}},\n  \"paidOn\": \"2026-11-05\",\n  \"reference\": \"bank-001\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices/{{invoiceId}}/payments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('invoice is fully paid', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.invoice.paymentStatus).to.eql('paid');",
+                  "    pm.expect(body.data.invoice.remainingCents).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List invoice payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices/{{invoiceId}}/payments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('payment history shows a paid invoice', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.invoice.paymentStatus).to.eql('paid');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

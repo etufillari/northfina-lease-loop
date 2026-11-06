@@ -46,6 +46,7 @@ export type EndOfTermAction = z.infer<typeof endOfTermActionSchema>;
 export const assetHistoryEventSchema = z.enum([
   'lease_started',
   'returned',
+  'passed_on',
   'condition_assessed',
   'refurbished',
   'made_available',

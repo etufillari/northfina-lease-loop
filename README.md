@@ -1,7 +1,6 @@
 # Lease Loop
 
 Link to demo: [https://solving-poll-tiles-heating.trycloudflare.com/en]
-password to dashboard: 344c4af88f18d734cd1fba914ded5b61
 
 ### One asset. Several customers. A traceable lease lifecycle.
 

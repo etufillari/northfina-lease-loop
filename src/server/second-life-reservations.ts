@@ -142,6 +142,13 @@ export async function reserveSecondLife(db: PrismaClient, input: ReserveSecondLi
         );
       }
 
+      if (winner.requestId.startsWith('wishlist:')) {
+        await tx.wishlistRequest.update({
+          where: { id: winner.requestId.slice('wishlist:'.length) },
+          data: { status: 'matched' },
+        });
+      }
+
       return tx.secondLifeReservation.create({
         data: {
           id: reservationId,

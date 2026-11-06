@@ -33,6 +33,7 @@ model Asset {
   quotes          Quote[]
   contracts       Contract[]
   return_requests ReturnRequest[]
+  wishlist_requests WishlistRequest[]
   second_life_reservations SecondLifeReservation[]
 
   @@index([category])
@@ -203,6 +204,24 @@ model BuyoutRequest {
 
   @@index([contract_id, status])
   @@index([customer_id])
+}
+
+// A customer wants to lease this asset when it becomes available again.
+model WishlistRequest {
+  id                    String   @id
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  asset_id              String
+  asset                 Asset    @relation(fields: [asset_id], references: [id])
+  customer_id           String
+  minimum_condition     String
+  max_monthly_net_rent_cents Int
+  preferred_term_months Int
+  needed_by             String
+  status                String // requested | matched | cancelled
+
+  @@index([asset_id, status])
+  @@index([customer_id, status])
 }
 
 // A returned asset held for one waiting-list request (data/second-life-demand.json), with the

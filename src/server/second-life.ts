@@ -3,7 +3,12 @@
 // reservation, so a reservation is always based on the same calculation the dealer saw.
 import { z } from 'zod';
 
-import { isoDateSchema, type AssetCondition } from '@/data/schemas';
+import {
+  assetConditionSchema,
+  isoDateSchema,
+  type AssetCondition,
+  type SecondLifeRequest,
+} from '@/data/schemas';
 
 import type { SecondLifeMatch } from '@/domain/second-life-matching';
 
@@ -114,7 +119,21 @@ export async function evaluateSecondLife(
     loadRefurbishmentCosts(),
   ]);
 
-  const demand = allDemand.filter((entry) => !excludeRequestIds.has(entry.id));
+  const wishlistRows = await db.wishlistRequest.findMany({
+    where: { asset_id: body.assetId, status: 'requested' },
+  });
+  const wishlistDemand: SecondLifeRequest[] = wishlistRows.map((request) => ({
+    id: `wishlist:${request.id}`,
+    category: asset.category,
+    max_monthly_net_rent_cents: request.max_monthly_net_rent_cents,
+    min_condition: assetConditionSchema.parse(request.minimum_condition),
+    preferred_term_months: request.preferred_term_months,
+    needed_by: request.needed_by,
+    who: request.customer_id,
+  }));
+  const demand = [...allDemand, ...wishlistDemand].filter(
+    (entry) => !excludeRequestIds.has(entry.id)
+  );
 
   // 3. Find the original net list price from price-list v1.
   const originalPrice = listPriceOn(priceLists, asset.id, ORIGINAL_PRICE_LIST_DATE);

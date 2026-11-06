@@ -40,6 +40,11 @@ type Props = {
 const cardClass =
   'rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900';
 
+function displayRequestLabel(requestId: string, labels: Map<string, string>, t: Translate) {
+  if (!requestId.startsWith('wishlist:')) return requestId;
+  return labels.get(requestId) ?? t('dealer.secondLife.customerRequest');
+}
+
 function Reasons({
   comparisons,
   labels,
@@ -57,8 +62,8 @@ function Reasons({
         {comparisons.map((entry) => (
           <li key={entry.otherRequestId}>
             {t(`dealer.secondLife.why.${entry.decidedBy}`, {
-              winner: labels.get(entry.winnerRequestId) ?? entry.winnerRequestId,
-              other: labels.get(entry.otherRequestId) ?? entry.otherRequestId,
+              winner: displayRequestLabel(entry.winnerRequestId, labels, t),
+              other: displayRequestLabel(entry.otherRequestId, labels, t),
             })}
           </li>
         ))}
@@ -77,14 +82,16 @@ export function SecondLifeCard({
 }: Props) {
   if (section.kind === 'reserved') {
     const { reservation, comparisons } = section;
-    const labels = new Map([[reservation.waitingRequestId, reservation.waitingRequestId]]);
+    const labels = new Map([[reservation.waitingRequestId, reservation.who]]);
     return (
       <section aria-labelledby="second-life" className={cardClass}>
         <h2 id="second-life" className="text-lg font-semibold">
-          {t('dealer.secondLife.reserved.title', { request: reservation.waitingRequestId })}
+          {t('dealer.secondLife.reserved.title', {
+            request: displayRequestLabel(reservation.waitingRequestId, labels, t),
+          })}
         </h2>
         <p className="mt-1 text-sm text-stone-700 dark:text-stone-300">
-          {reservation.who} ·{' '}
+          {displayRequestLabel(reservation.waitingRequestId, labels, t)} ·{' '}
           {t('dealer.secondLife.reserved.by', {
             name: reservation.reservedBy,
             date: formatIsoDate(reservation.reservedAt.slice(0, 10), locale),
@@ -119,9 +126,7 @@ export function SecondLifeCard({
 
   const { preview } = section;
   const { decision, matches, rejected } = preview;
-  const labels = new Map(
-    matches.map((match) => [match.requestId, `${match.requestId} (${match.who})`])
-  );
+  const labels = new Map(matches.map((match) => [match.requestId, match.who]));
   const shownRejections = rejected.filter((entry) => entry.reason !== 'category_mismatch');
   const otherCategory = rejected.length - shownRejections.length;
   const winner = decision.winnerRequestId;
@@ -141,7 +146,9 @@ export function SecondLifeCard({
             : 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800'
         }`}
       >
-        {t(`dealer.secondLife.decision.${decision.reason}`, { request: winner ?? '' })}
+        {t(`dealer.secondLife.decision.${decision.reason}`, {
+          request: winner ? displayRequestLabel(winner, labels, t) : '',
+        })}
       </p>
 
       {matches.length > 0 ? (
@@ -180,10 +187,7 @@ export function SecondLifeCard({
                 >
                   <td className="px-3 py-2 tabular-nums">{match.rank}</td>
                   <th scope="row" className="px-3 py-2 font-medium">
-                    {match.requestId}
-                    <span className="block text-xs font-normal text-stone-600 dark:text-stone-400">
-                      {match.who}
-                    </span>
+                    {match.who}
                     {match.requestId === winner ? (
                       <span className="mt-1 inline-block rounded-full bg-emerald-700 px-2 py-0.5 text-xs font-medium text-white">
                         {t('dealer.secondLife.recommended')}
@@ -227,7 +231,9 @@ export function SecondLifeCard({
             assetId={assetId}
             availableDate={preview.availableDate}
             usageSinceLastService={usageSinceLastService}
-            label={t('dealer.secondLife.reserve.button', { request: winner })}
+            label={t('dealer.secondLife.reserve.button', {
+              request: displayRequestLabel(winner, labels, t),
+            })}
             texts={texts}
           />
         </div>
@@ -241,8 +247,10 @@ export function SecondLifeCard({
           <ul className="mt-2 space-y-1 text-stone-700 dark:text-stone-300">
             {shownRejections.map((entry) => (
               <li key={entry.requestId}>
-                <span className="font-medium">{entry.requestId}</span>:{' '}
-                {t(rejectionKey(entry.reason))}
+                <span className="font-medium">
+                  {displayRequestLabel(entry.requestId, labels, t)}
+                </span>
+                : {t(rejectionKey(entry.reason))}
               </li>
             ))}
           </ul>

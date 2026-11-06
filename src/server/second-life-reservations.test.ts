@@ -23,6 +23,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await db.secondLifeReservation.deleteMany();
+  await db.wishlistRequest.deleteMany();
   await db.auditLog.deleteMany();
   await db.asset.deleteMany();
   await seedAssets(db, await loadAssets());
@@ -36,6 +37,30 @@ function errorCode(promise: Promise<unknown>) {
 }
 
 describe('reserveSecondLife', () => {
+  it('can reserve a returned asset for a matching customer wishlist request', async () => {
+    await db.wishlistRequest.create({
+      data: {
+        id: 'wishlist-1',
+        asset_id: 'ebike-007',
+        customer_id: 'cust-pekka',
+        minimum_condition: 'fair',
+        max_monthly_net_rent_cents: 100_000,
+        preferred_term_months: 24,
+        needed_by: '2026-11-07',
+        status: 'requested',
+      },
+    });
+
+    const reservation = await reserveSecondLife(db, { assetId: 'ebike-007', availableDate, actor });
+
+    expect(reservation.waiting_request_id).toBe('wishlist:wishlist-1');
+    expect(
+      await db.wishlistRequest.findUniqueOrThrow({ where: { id: 'wishlist-1' } })
+    ).toMatchObject({
+      status: 'matched',
+    });
+  });
+
   it('holds ebike-007 for wait-13 with the terms and the reason saved', async () => {
     const reservation = await reserveSecondLife(db, { assetId: 'ebike-007', availableDate, actor });
 

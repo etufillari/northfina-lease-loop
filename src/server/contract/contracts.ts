@@ -124,6 +124,14 @@ export async function signContract(
     ...buildContract(application, locked.quote, await currentDate(db)),
   };
 
+  const assetRow = await db.asset.findUniqueOrThrow({ where: { id: contract.asset_id } });
+  const latestLife = await db.assetLife.findFirst({
+    where: { asset_id: contract.asset_id },
+    orderBy: { life_number: 'desc' },
+    select: { life_number: true, first_lease_price_cents: true },
+  });
+  const life = openLife(contract, toAsset(assetRow), latestLife);
+
   try {
     await withAudit(
       db,
@@ -139,6 +147,8 @@ export async function signContract(
           monthly_net_rent_cents: contract.monthly_net_rent_cents,
           signed_on: contract.signed_on,
           start_on: contract.start_on,
+          asset_status: { from: 'available', to: 'leased' },
+          life_number: life.life_number,
         },
       },
       async (tx) => {
@@ -149,14 +159,7 @@ export async function signContract(
         if (taken.count === 0) throw new AssetNotAvailable();
 
         await tx.contract.create({ data: contract });
-
-        const assetRow = await tx.asset.findUniqueOrThrow({ where: { id: contract.asset_id } });
-        const latestLife = await tx.assetLife.findFirst({
-          where: { asset_id: contract.asset_id },
-          orderBy: { life_number: 'desc' },
-          select: { life_number: true, first_lease_price_cents: true },
-        });
-        await tx.assetLife.create({ data: openLife(contract, toAsset(assetRow), latestLife) });
+        await tx.assetLife.create({ data: life });
       }
     );
   } catch (error) {

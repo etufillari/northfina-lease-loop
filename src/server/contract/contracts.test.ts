@@ -141,7 +141,18 @@ describe('signContract: card 1', () => {
     expect(JSON.parse(rows[0]?.details_json ?? '')).toMatchObject({
       application_id: application.id,
       monthly_net_rent_cents: 10_730,
+      asset_status: { from: 'available', to: 'leased' },
+      life_number: 1,
     });
+  });
+
+  it('records the real life number for a used item', async () => {
+    const application = await apply(AINO, 'ebike-005', ainoEbikeAnswers);
+    await db.auditLog.deleteMany();
+    await signOk(application.id);
+
+    const row = await db.auditLog.findFirstOrThrow();
+    expect(JSON.parse(row.details_json ?? '')).toMatchObject({ life_number: 2 });
   });
 });
 
@@ -296,6 +307,45 @@ describe('signContract: asset lives', () => {
     expect(await db.assetLife.findMany()).toMatchObject([
       { asset_id: 'ebike-005', life_number: 2, first_lease_price_cents: null },
     ]);
+  });
+});
+
+describe('a signed contract never changes with the price list', () => {
+  const locked = {
+    price_list_version: 1,
+    base_price_cents: 389_000,
+    financed_cents: 389_000,
+    monthly_net_rent_cents: 10_730,
+    buyout_cents: 58_350,
+    signed_on: '2026-11-05',
+    start_on: '2026-11-05',
+    planned_end_on: '2029-11-04',
+  };
+
+  it('reads back the same price and dates after a new price list starts', async () => {
+    const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
+    await setDemoDate(db, { date: '2026-11-06', actor: 'test' });
+
+    expect(await getContract(db, signed.id)).toMatchObject(locked);
+    const [listed] = await listContracts(db, { customerId: AINO });
+    expect(listed).toMatchObject(locked);
+  });
+
+  it('stays the same years later, when both the list and VAT have moved on', async () => {
+    const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
+    await setDemoDate(db, { date: '2028-06-01', actor: 'test' });
+
+    expect(await getContract(db, signed.id)).toMatchObject(locked);
+  });
+
+  it('compares with the list on the signing date, not today', async () => {
+    const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
+    await setDemoDate(db, { date: '2026-11-06', actor: 'test' });
+
+    const contract = await getContract(db, signed.id);
+    if (!contract) throw new Error('expected the contract');
+    const [view] = await contractViews([contract]);
+    expect(view?.list_price_on_signing_cents).toBe(389_000);
   });
 });
 

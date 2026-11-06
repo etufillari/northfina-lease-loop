@@ -54,6 +54,12 @@ export const assetSchema = z.strictObject({
   /** How many lease contracts this item has already been through. */
   previous_lives: z.number().int().nonnegative(),
   status: assetStatusSchema,
+  /** When a used item was first leased. Made up by this team: see data/DATA.md. */
+  first_leased_on: isoDateSchema.optional(),
+  /** Its net price at that first lease. Made up by this team: see data/DATA.md. */
+  first_lease_price_cents: centsSchema.optional(),
+  /** The price a re-listed item leases at. Set by the app, never in the data pack. */
+  relist_price_cents: centsSchema.optional(),
 });
 export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);

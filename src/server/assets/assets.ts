@@ -18,6 +18,11 @@ export function toAsset(row: AssetRow): Asset {
     usage: { unit: row.usage_unit, value: row.usage_value },
     previous_lives: row.previous_lives,
     status: row.status,
+    ...(row.first_leased_on === null ? {} : { first_leased_on: row.first_leased_on }),
+    ...(row.first_lease_price_cents === null
+      ? {}
+      : { first_lease_price_cents: row.first_lease_price_cents }),
+    ...(row.relist_price_cents === null ? {} : { relist_price_cents: row.relist_price_cents }),
   });
 }
 
@@ -35,6 +40,8 @@ export function toAssetRowData(asset: Asset) {
     usage_value: asset.usage.value,
     previous_lives: asset.previous_lives,
     status: asset.status,
+    first_leased_on: asset.first_leased_on ?? null,
+    first_lease_price_cents: asset.first_lease_price_cents ?? null,
   };
 }
 
@@ -80,7 +87,10 @@ export async function changeAssetStatus(
   return { ok: true, asset: toAsset(updated) };
 }
 
-/** Inserts assets that are not in the database yet. Never overwrites changes you made. */
+/**
+ * Inserts assets that are not in the database yet, and fills in first-lease data missing from
+ * rows seeded before it existed. Never overwrites changes you made.
+ */
 export async function seedAssets(
   db: PrismaClient,
   assets: readonly Asset[]
@@ -90,6 +100,16 @@ export async function seedAssets(
   const missing = assets.filter((asset) => !existingIds.has(asset.id));
   if (missing.length > 0) {
     await db.asset.createMany({ data: missing.map(toAssetRowData) });
+  }
+  for (const asset of assets) {
+    if (asset.first_leased_on === undefined || !existingIds.has(asset.id)) continue;
+    await db.asset.updateMany({
+      where: { id: asset.id, first_leased_on: null },
+      data: {
+        first_leased_on: asset.first_leased_on,
+        first_lease_price_cents: asset.first_lease_price_cents ?? null,
+      },
+    });
   }
   return { created: missing.length, skipped: assets.length - missing.length };
 }

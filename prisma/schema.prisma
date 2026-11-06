@@ -22,21 +22,24 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id                 String   @id
-  category           String // e_bike | laptop | farm_machine
-  make               String
-  model              String
-  model_year         Int
-  serial_number      String   @unique
-  condition          String // new | like_new | good | fair | poor
-  usage_unit         String // km | battery_cycles | engine_hours
-  usage_value        Int
-  previous_lives     Int
-  status             String // available | reserved | leased | returned | sold
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  usage_value             Int
+  previous_lives          Int
+  status                  String // available | reserved | leased | returned | sold
   // Set when a used item is re-listed. Replaces the price list for its next lease.
-  relist_price_cents Int?
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  relist_price_cents      Int?
+  // For items first leased before the app. Later items keep this on their first AssetLife.
+  first_leased_on         String?
+  first_lease_price_cents Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   applications Application[]
   contracts    Contract[]

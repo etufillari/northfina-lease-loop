@@ -35,3 +35,71 @@ export function listPriceOn(
 
   return { ok: true, priceCents, priceListVersion: priceList.version };
 }
+
+export type PriceChange = { validFrom: string; priceCents: number; priceListVersion: number };
+
+/**
+ * The next scheduled price change for `assetId` after `isoDate`: the earliest price list that
+ * starts later than that day and gives the asset a different price than it has on `isoDate`.
+ * A new list that keeps the price the same is not a change. `null` when none is scheduled.
+ * Lets the UI warn "from Friday this costs X", which matters when a quote and a signature
+ * fall on different price lists.
+ */
+export function nextPriceChange(
+  priceLists: readonly PriceList[],
+  assetId: string,
+  isoDate: string
+): PriceChange | null {
+  if (!ISO_DATE.test(isoDate)) {
+    throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
+  }
+
+  const current = listPriceOn(priceLists, assetId, isoDate);
+  const currentCents = current.ok ? current.priceCents : undefined;
+  const next = priceLists
+    .filter((list) => list.valid_from > isoDate)
+    .sort((a, b) => a.valid_from.localeCompare(b.valid_from))
+    .find((list) => {
+      const cents = list.prices[assetId];
+      return cents !== undefined && cents !== currentCents;
+    });
+  const priceCents = next?.prices[assetId];
+  if (!next || priceCents === undefined) return null;
+
+  return { validFrom: next.valid_from, priceCents, priceListVersion: next.version };
+}
+
+/**
+ * Today's list price for `assetId`, but only when it differs from `lockedPriceCents`: what a
+ * signed contract's price-lock note explains ("today's list would say X; yours stays Y").
+ */
+export function differentPriceOn(
+  priceLists: readonly PriceList[],
+  assetId: string,
+  isoDate: string,
+  lockedPriceCents: number
+): { priceCents: number; priceListVersion: number } | null {
+  const today = listPriceOn(priceLists, assetId, isoDate);
+  if (!today.ok || today.priceCents === lockedPriceCents) return null;
+  return { priceCents: today.priceCents, priceListVersion: today.priceListVersion };
+}
+
+/**
+ * The price lists with refurbished items' second-life prices in place of their list prices.
+ * A refurbished item is used now, so the price it had when new no longer applies on any date;
+ * every list gets the second-life price instead. Other items are unchanged.
+ */
+export function applySecondLifePrices(
+  priceLists: readonly PriceList[],
+  secondLifePrices: Readonly<Record<string, number>>
+): PriceList[] {
+  const ids = Object.keys(secondLifePrices);
+  if (ids.length === 0) return [...priceLists];
+  return priceLists.map((list) => {
+    const prices = { ...list.prices };
+    for (const id of ids) {
+      if (id in prices) prices[id] = secondLifePrices[id] as number;
+    }
+    return { ...list, prices };
+  });
+}

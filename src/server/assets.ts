@@ -48,6 +48,12 @@ export async function listAssets(
   return rows.map(toAsset);
 }
 
+/** One asset by id, or `null` when there is no such asset. */
+export async function getAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
+}
+
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
 
@@ -85,4 +91,17 @@ export async function seedAssets(
     await db.asset.createMany({ data: missing.map(toAssetRowData) });
   }
   return { created: missing.length, skipped: assets.length - missing.length };
+}
+
+/** The parts of an asset row that the data-pack shape doesn't have. */
+export type AssetExtras = { reservedFor: string | null; secondLifePriceCents: number | null };
+
+export async function getAssetExtras(db: PrismaClient, id: string): Promise<AssetExtras | null> {
+  const row = await db.asset.findUnique({
+    where: { id },
+    select: { reserved_for: true, second_life_price_cents: true },
+  });
+  return row
+    ? { reservedFor: row.reserved_for, secondLifePriceCents: row.second_life_price_cents }
+    : null;
 }

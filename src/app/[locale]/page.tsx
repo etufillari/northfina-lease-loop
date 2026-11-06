@@ -1,79 +1,122 @@
-// The catalogue: every asset, grouped by category, with today's net list price.
-import { notFound } from 'next/navigation';
+// The home page: a welcome, and the two ways in, one item from the catalogue or several at
+// once for a company (a fleet). Old catalogue links (/en?category=…) still work: they are sent
+// on to /en/catalogue with their filters.
+import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
 import { connection } from 'next/server';
-import { AssetCard } from '@/components/asset-card';
-import { loadPriceLists } from '@/data/load';
-import { assetCategorySchema } from '@/data/schemas';
-import { listPriceOn } from '@/domain/price-list';
+import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
+import { MAX_FLEET_ITEMS, MIN_FLEET_ITEMS } from '@/domain/fleet';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { appDate } from '@/server/app-date';
+import { assetsOn } from '@/server/asset-state';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
 
-export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
+export default async function HomePage({ params, searchParams }: PageProps<'/[locale]'>) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  // Render on every request: prices depend on today's date and on the database.
-  await connection();
+  const search = catalogueSearchString(parseCatalogueQuery(await searchParams));
+  if (search) redirect(`/${locale}/catalogue${search}`);
 
+  // Render on every request: the count depends on the app's date and the database.
+  await connection();
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
-  const groups = assetCategorySchema.options
-    .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
-    .filter((group) => group.assets.length > 0);
+  const { today } = await appDate();
+  const available = (await assetsOn(db, today)).filter(
+    (item) => item.asset.status === 'available'
+  ).length;
+
+  const steps = [t('home.step1'), t('home.step2'), t('home.step3'), t('home.step4')];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t('catalogue.title')}
-        </h1>
-        <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
+      <div className="max-w-3xl">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">{t('home.title')}</h1>
+        <p className="mt-4 text-lg text-stone-700 sm:text-xl dark:text-stone-300">
+          {t('home.intro')}
+        </p>
         <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
           <time dateTime={today}>
-            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+            {t('home.available', { count: available, date: formatIsoDate(today, locale) })}
           </time>
         </p>
       </div>
 
-      {groups.length === 0 ? (
-        <p className="mt-10 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
-          {t('catalogue.empty')}
-        </p>
-      ) : null}
+      <div className="mt-10 grid gap-6 md:grid-cols-2">
+        <Choice
+          headingId="home-catalogue"
+          title={t('home.catalogueTitle')}
+          text={t('home.catalogueText')}
+          href={`/${locale}/catalogue`}
+          action={t('home.catalogueButton')}
+          primary
+        />
+        <Choice
+          headingId="home-fleet"
+          title={t('home.fleetTitle')}
+          text={t('home.fleetText', { min: MIN_FLEET_ITEMS, max: MAX_FLEET_ITEMS })}
+          href={`/${locale}/fleet`}
+          action={t('home.fleetButton')}
+        />
+      </div>
 
-      {groups.map((group) => (
-        <section
-          key={group.category}
-          aria-labelledby={`category-${group.category}`}
-          className="mt-12"
-        >
-          <div className="flex items-baseline justify-between gap-4 border-b border-stone-200 pb-3 dark:border-stone-800">
-            <h2 id={`category-${group.category}`} className="text-xl font-semibold">
-              {t(`category.${group.category}`)}
-            </h2>
-            <p className="text-sm text-stone-600 dark:text-stone-400">
-              {t('catalogue.itemCount', { count: group.assets.length })}
-            </p>
-          </div>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {group.assets.map((asset) => (
-              <li key={asset.id}>
-                <AssetCard
-                  asset={asset}
-                  price={listPriceOn(priceLists, asset.id, today)}
-                  locale={locale}
-                  t={t}
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      <section aria-labelledby="home-steps" className="mt-14">
+        <h2 id="home-steps" className="text-xl font-semibold">
+          {t('home.stepsTitle')}
+        </h2>
+        <ol className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step, index) => (
+            <li
+              key={step}
+              className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900"
+            >
+              <span
+                aria-hidden="true"
+                className="flex size-8 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white"
+              >
+                {index + 1}
+              </span>
+              <p className="mt-3 text-stone-700 dark:text-stone-300">{step}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
     </div>
+  );
+}
+
+type ChoiceProps = {
+  headingId: string;
+  title: string;
+  text: string;
+  href: string;
+  action: string;
+  primary?: boolean;
+};
+
+/** One way in: a card with a heading, a sentence and a big link. */
+function Choice({ headingId, title, text, href, action, primary = false }: ChoiceProps) {
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="flex flex-col rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8 dark:border-stone-800 dark:bg-stone-900"
+    >
+      <h2 id={headingId} className="text-2xl font-semibold">
+        {title}
+      </h2>
+      <p className="mt-3 flex-1 text-stone-700 dark:text-stone-300">{text}</p>
+      <Link
+        href={href}
+        className={`mt-6 inline-block self-start rounded-lg px-5 py-3 font-semibold shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-stone-900 ${
+          primary
+            ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+            : 'bg-white text-emerald-800 ring-1 ring-emerald-700/50 ring-inset hover:bg-emerald-50 dark:bg-stone-900 dark:text-emerald-300 dark:ring-emerald-400/50 dark:hover:bg-emerald-950'
+        }`}
+      >
+        {action}
+      </Link>
+    </section>
   );
 }

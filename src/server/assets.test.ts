@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  getAsset,
+  listAssets,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -54,6 +61,18 @@ describe('listAssets', () => {
   });
 });
 
+describe('getAsset', () => {
+  it('returns one asset in the data-pack shape', async () => {
+    await seedAssets(db, dataPack);
+    expect(await getAsset(db, 'ebike-003')).toEqual(dataPack.find((a) => a.id === 'ebike-003'));
+  });
+
+  it('returns null for an unknown id', async () => {
+    await seedAssets(db, dataPack);
+    expect(await getAsset(db, 'ebike-999')).toBeNull();
+  });
+});
+
 describe('changeAssetStatus', () => {
   it('updates the status and writes an audit row with from and to', async () => {
     await seedAssets(db, dataPack);
@@ -84,6 +103,8 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      reserved_for: null,
+      second_life_price_cents: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

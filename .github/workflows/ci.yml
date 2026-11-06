@@ -73,3 +73,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Browser and accessibility tests
+        run: npm run test:e2e

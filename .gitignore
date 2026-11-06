@@ -25,3 +25,5 @@ src/generated/
 .DS_Store
 npm-debug.log*
 .vercel
+
+tmp

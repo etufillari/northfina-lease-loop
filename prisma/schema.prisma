@@ -15,19 +15,24 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  usage_value             Int
+  previous_lives          Int
+  status                  String // available | leased | reserved | returned | sold
+  // Who a reserved item is held for (a data pack customer id): someone it was passed on to.
+  reserved_for            String?
+  // Set when the item is refurbished for a new life: its net list price from then on, in place
+  // of the price lists (the item is used now, so its original list price no longer applies).
+  second_life_price_cents Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   @@index([category])
 }
@@ -45,4 +50,178 @@ model AuditLog {
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// A submitted lease application: the answers, the decision and a snapshot of the quoted
+// price. The price is recalculated on the server, never taken from the browser, and stored
+// with its price list version so a later contract can show which price was agreed.
+model Application {
+  id                  String   @id @default(uuid())
+  created_at          DateTime @default(now())
+  quote_date          String // YYYY-MM-DD the price was calculated on
+  asset_id            String
+  customer_id         String? // data pack customer who applied; null for a guest
+  customer_type       String // consumer | sole_trader | company
+  applicant_name      String?
+  term_months         Int
+  down_payment_cents  Int
+  list_price_cents    Int
+  price_list_version  Int
+  financed_cents      Int
+  monthly_net_cents   Int
+  vat_basis_points    Int // 25.5 % → 2550, kept as an integer like money
+  monthly_gross_cents Int
+  decision            String // approved | rejected | manual_review
+  reasons_json        String // JSON array of eligibility rule ids
+  answers_json        String // JSON object: question id → answer
+  fleet_id            String? // shared by the applications of one fleet (several items at once)
+  // A company application waiting only for its signatory (q_signatory_email) can be signed or
+  // declined by that person (admin, Signatures). Signing creates the contract; declining is
+  // recorded here. A fleet's applications are declined together.
+  signature_declined_date String? // YYYY-MM-DD, the app's date
+  signature_declined_by   String? // the signatory's email
+  signature_decline_note  String?
+
+  @@index([asset_id])
+  @@index([customer_id])
+  @@index([fleet_id])
+}
+
+// A signed lease contract. Every price field is COPIED from the approved application at
+// signing and never recalculated, so later price lists can't change it. VAT is not stored:
+// it is charged at the rate on each invoice's own date.
+model Contract {
+  id                 String   @id
+  created_at         DateTime @default(now())
+  application_id     String   @unique
+  asset_id           String
+  customer_id        String? // copied from the application; null for a guest
+  signed_date        String // YYYY-MM-DD
+  signer_name        String
+  customer_type      String
+  customer_name      String
+  customer_email     String?
+  business_id        String?
+  start_date         String // YYYY-MM-DD, the signing day
+  end_date           String // YYYY-MM-DD, last day of the lease
+  term_months        Int
+  quote_date         String // when the locked price was calculated
+  price_list_version Int
+  list_price_cents   Int
+  down_payment_cents Int
+  financed_cents     Int
+  monthly_net_cents  Int
+  buyout_cents       Int
+  status             String // active | returned | bought | passed_on
+  returned_date      String? // YYYY-MM-DD the item came back at the end of the term
+  bought_date        String? // YYYY-MM-DD the customer bought the item at the end
+  buyout_paid_cents  Int? // what they paid for it, incl. VAT
+  // Early exit: the day the lease was ended before its last day, and the exit fee (incl. VAT)
+  // when the item was returned. Invoices after that day are cancelled.
+  exited_early_date  String?
+  exit_fee_cents     Int?
+  fleet_id           String? // set when signed as part of a fleet (see Application.fleet_id)
+
+  @@index([asset_id])
+  @@index([customer_id])
+  @@index([fleet_id])
+}
+
+// A paid invoice. Invoices themselves are derived from the contract (src/domain/invoicing.ts);
+// only the payment is stored. Demo payments: no money moves and no bank details are taken.
+model InvoicePayment {
+  id             Int      @id @default(autoincrement())
+  created_at     DateTime @default(now())
+  contract_id    String
+  invoice_number Int // 1 = the first month of the lease
+  paid_date      String // YYYY-MM-DD, the app's date when it was paid
+  amount_cents   Int // the invoice total incl. VAT that was paid
+
+  @@unique([contract_id, invoice_number])
+}
+
+// A VAT rate added on the admin page, e.g. 27 % from 2027-07-01. It applies from its date until
+// the next change, on top of data/vat-rates.json (which is never edited). One per start date.
+model VatChange {
+  id                Int      @id @default(autoincrement())
+  created_at        DateTime @default(now())
+  valid_from        String   @unique // YYYY-MM-DD
+  rate_basis_points Int // 27 % → 2700, an integer like money
+}
+
+// End of term, "pass it on": the lessee names another customer for the item's next life.
+// The item goes back for a check first; the recipient accepts (it is reserved for them, and
+// the second-life step leases it to them) or declines (it joins the normal second-life pool).
+model Handover {
+  id             String   @id @default(uuid())
+  created_at     DateTime @default(now())
+  contract_id    String   @unique
+  asset_id       String
+  from_name      String
+  to_customer_id String
+  status         String // pending | accepted | declined
+  passed_date    String // YYYY-MM-DD
+  decided_date   String?
+  // The recipient accepted, then changed their mind: the hold ends on this day.
+  released_date  String?
+
+  @@index([to_customer_id])
+}
+
+// A returned item checked and refurbished for its next life (admin, Second life). Together
+// with the contracts this is the item's passport: every life and every fix.
+model Refurbishment {
+  id               Int      @id @default(autoincrement())
+  created_at       DateTime @default(now())
+  asset_id         String
+  refurbished_date String // YYYY-MM-DD, the app's date
+  condition_before String
+  condition_after  String
+  usage_before     Int
+  usage_after      Int
+  steps_json       String // JSON array of the refurbishment step ids that were done
+  cost_cents       Int // what the refurbishment cost (net)
+  price_cents      Int // the new net list price for the next life
+  notes            String?
+  actor            String
+
+  @@index([asset_id])
+}
+
+// An issued invoice: written once, when the app's date reaches the invoice date, with an
+// `invoice.issued` audit row. The amounts are recorded as billed; invoices are still derived
+// from the locked contract (src/domain/invoicing.ts), so this record and the schedule agree.
+model InvoiceIssue {
+  id               Int      @id @default(autoincrement())
+  created_at       DateTime @default(now())
+  contract_id      String
+  invoice_number   Int
+  issued_date      String // YYYY-MM-DD, the invoice date
+  net_cents        Int
+  vat_basis_points Int // 25.5 % → 2550
+  vat_cents        Int
+  total_cents      Int
+
+  @@unique([contract_id, invoice_number])
+}
+
+// A customer asks for an item that isn't free yet (leased, or back and waiting for its check)
+// to be held for them, with what they need from it. When the item is refurbished, staff can
+// hold it for one of them (admin, Second life). The customer can withdraw at any time, which
+// also ends the hold. Each change is dated, so time travel replays it.
+model HoldRequest {
+  id                String   @id @default(uuid())
+  created_at        DateTime @default(now())
+  asset_id          String
+  customer_id       String // a data pack customer
+  requested_date    String // YYYY-MM-DD
+  term_months       Int // the lease term they want
+  max_monthly_cents Int // their budget: the monthly rent incl. VAT
+  min_condition     String // poor | fair | good | like_new | new
+  status            String // waiting | held | withdrawn
+  held_date         String? // YYYY-MM-DD staff held the item for them
+  withdrawn_date    String? // YYYY-MM-DD they withdrew (ends the hold if it was held)
+
+  @@index([asset_id])
+  @@index([customer_id])
 }

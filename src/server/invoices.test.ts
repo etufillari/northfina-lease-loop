@@ -1,0 +1,223 @@
+// Runs against a real, migrated SQLite database (see tests/global-setup.ts).
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { loadAssets } from '@/data/load';
+import { createTestDb } from '../../tests/helpers/test-db';
+import { submitApplication } from './applications';
+import { seedAssets } from './assets';
+import { signContract } from './contracts';
+import { contractInvoices, payAllDue, payInvoice, receivedInvoices } from './invoices';
+import type { PrismaClient } from './prisma-client';
+
+let db: PrismaClient;
+let cleanup: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db, cleanup } = await createTestDb());
+});
+afterAll(async () => {
+  await cleanup();
+});
+beforeEach(async () => {
+  await db.invoiceIssue.deleteMany();
+  await db.invoicePayment.deleteMany();
+  await db.contract.deleteMany();
+  await db.application.deleteMany();
+  await db.auditLog.deleteMany();
+  await db.asset.deleteMany();
+  await seedAssets(db, await loadAssets());
+});
+
+/** Aino leases laptop-001 for 12 months from 5 Nov 2026 (no income question under €2,000). */
+async function ainosContract(customerId: string | null = 'cust-aino') {
+  const application = await submitApplication(
+    db,
+    {
+      assetId: 'laptop-001',
+      termMonths: 12,
+      downPaymentCents: 0,
+      customerId,
+      answers: {
+        q_customer_type: 'consumer',
+        q_full_name: 'Aino Virtanen',
+        q_birth_date: '1997-04-12',
+        q_email: 'aino@example.com',
+        q_country: 'FI',
+        q_employment: 'employed',
+      },
+    },
+    '2026-11-05'
+  );
+  if (!application.ok) throw new Error(application.reason);
+  const signed = await signContract(
+    db,
+    { applicationId: application.application.id, signerName: 'Aino Virtanen' },
+    '2026-11-05'
+  );
+  if (!signed.ok) throw new Error(signed.reason);
+  return signed.contract;
+}
+
+describe('payInvoice', () => {
+  it('pays an issued invoice, stores the amount and writes an audit row', async () => {
+    const contract = await ainosContract();
+    const result = await payInvoice(
+      db,
+      { contractId: contract.id, invoiceNumber: 2, actor: 'Aino Virtanen' },
+      '2026-12-10'
+    );
+    // laptop-001: 119900 × 0.056022 = 6717 net, + 25.5 % VAT 1713 = 8430
+    expect(result).toEqual({ ok: true, paidDate: '2026-12-10', amountCents: 8_430 });
+
+    const invoices = await contractInvoices(db, contract, '2026-12-10');
+    expect(invoices?.[1]).toMatchObject({ status: 'paid', paidDate: '2026-12-10' });
+    const audit = await db.auditLog.findMany({ where: { action: 'invoice.paid' } });
+    expect(audit).toHaveLength(1);
+    expect(audit[0]?.entity_id).toBe(`${contract.id}#2`);
+  });
+
+  it('treats the first month as paid by signing, so it cannot be paid again', async () => {
+    const contract = await ainosContract();
+    const [first] = (await contractInvoices(db, contract, '2026-11-05')) ?? [];
+    expect(first).toMatchObject({ status: 'paid', paidDate: '2026-11-05', paidAtSigning: true });
+    expect(
+      await payInvoice(
+        db,
+        { contractId: contract.id, invoiceNumber: 1, actor: 'Aino' },
+        '2026-11-05'
+      )
+    ).toEqual({ ok: false, reason: 'already_paid' });
+    expect(await db.invoicePayment.count()).toBe(0);
+  });
+
+  it('refuses an invoice that has not been issued yet', async () => {
+    const contract = await ainosContract();
+    expect(
+      await payInvoice(
+        db,
+        { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' },
+        '2026-12-04'
+      )
+    ).toEqual({ ok: false, reason: 'not_issued' });
+  });
+
+  it('refuses to pay the same invoice twice', async () => {
+    const contract = await ainosContract();
+    const pay = () =>
+      payInvoice(db, { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' }, '2026-12-05');
+    await pay();
+    expect(await pay()).toEqual({ ok: false, reason: 'already_paid' });
+    expect(await db.invoicePayment.count()).toBe(1);
+  });
+
+  it('refuses unknown contracts and invoice numbers outside the term', async () => {
+    const contract = await ainosContract();
+    expect(
+      await payInvoice(db, { contractId: 'nope', invoiceNumber: 1, actor: 'Aino' }, '2026-11-05')
+    ).toEqual({ ok: false, reason: 'contract_not_found' });
+    expect(
+      await payInvoice(
+        db,
+        { contractId: contract.id, invoiceNumber: 13, actor: 'Aino' },
+        '2030-01-01'
+      )
+    ).toEqual({ ok: false, reason: 'invoice_not_found' });
+  });
+});
+
+describe('receivedInvoices', () => {
+  it('lists only the invoices that have arrived, newest first, per customer', async () => {
+    const contract = await ainosContract();
+    await payInvoice(
+      db,
+      { contractId: contract.id, invoiceNumber: 1, actor: 'Aino' },
+      '2026-11-05'
+    );
+
+    const received = await receivedInvoices(db, { customerId: 'cust-aino' }, '2027-01-10');
+    expect(received.map((r) => [r.invoice.number, r.invoice.status])).toEqual([
+      [3, 'due'],
+      [2, 'due'],
+      [1, 'paid'],
+    ]);
+    expect(await receivedInvoices(db, { customerId: 'cust-mikko' }, '2027-01-10')).toEqual([]);
+    expect(await receivedInvoices(db, null, '2027-01-10')).toHaveLength(3);
+  });
+});
+
+describe('payments and time travel', () => {
+  it('does not count a payment before its date, and moves it when paid earlier', async () => {
+    const contract = await ainosContract();
+    // Travel ahead to 10 Jan 2027 and pay invoice 2 (due 5 Dec 2026)
+    await payInvoice(
+      db,
+      { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' },
+      '2027-01-10'
+    );
+
+    // Back in November the invoice isn't out yet, so it isn't paid either
+    const november = await contractInvoices(db, contract, '2026-11-20');
+    expect(november?.[1]).toMatchObject({ status: 'upcoming', paidDate: null });
+
+    // On 6 Dec it is due again, and paying then moves the one payment to 6 Dec
+    const december = await contractInvoices(db, contract, '2026-12-06');
+    expect(december?.[1]).toMatchObject({ status: 'due' });
+    expect(
+      await payInvoice(
+        db,
+        { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' },
+        '2026-12-06'
+      )
+    ).toMatchObject({ ok: true, paidDate: '2026-12-06' });
+    expect(await db.invoicePayment.count()).toBe(1);
+    expect((await contractInvoices(db, contract, '2027-01-10'))?.[1]).toMatchObject({
+      status: 'paid',
+      paidDate: '2026-12-06',
+    });
+  });
+});
+
+describe('payAllDue', () => {
+  it('pays every due invoice of one contract, and nothing that is upcoming', async () => {
+    const contract = await ainosContract();
+    // On 10 Jan 2027 invoices 2 (Dec) and 3 (Jan) are due; 4 onwards are upcoming
+    expect(
+      await payAllDue(db, { contractId: contract.id, filter: null, actor: 'Aino' }, '2027-01-10')
+    ).toEqual({ paidCount: 2, paidCents: 8_430 + 8_463 });
+    expect(await db.invoicePayment.count()).toBe(2);
+    expect(
+      await payAllDue(db, { contractId: contract.id, filter: null, actor: 'Aino' }, '2027-01-10')
+    ).toEqual({ paidCount: 0, paidCents: 0 });
+  });
+
+  it('pays only the chosen customer’s invoices', async () => {
+    await ainosContract();
+    expect(
+      await payAllDue(db, { filter: { customerId: 'cust-mikko' }, actor: 'Mikko' }, '2027-01-10')
+    ).toEqual({ paidCount: 0, paidCents: 0 });
+    expect(
+      await payAllDue(db, { filter: { customerId: 'cust-aino' }, actor: 'Aino' }, '2027-01-10')
+    ).toMatchObject({ paidCount: 2 });
+  });
+});
+
+describe('issuing invoices', () => {
+  it('issues each invoice once when its date is reached, with an audit row', async () => {
+    const contract = await ainosContract();
+    await contractInvoices(db, contract, '2027-01-10'); // invoices 1–3 are dated by then
+    await contractInvoices(db, contract, '2027-01-10'); // reading again issues nothing new
+    const issued = await db.invoiceIssue.findMany({ orderBy: { invoice_number: 'asc' } });
+    expect(issued.map((i) => [i.invoice_number, i.issued_date, i.total_cents])).toEqual([
+      [1, '2026-11-05', 8_430],
+      [2, '2026-12-05', 8_430],
+      [3, '2027-01-05', 8_463], // 26 % VAT from 2027
+    ]);
+    const audit = await db.auditLog.findMany({ where: { action: 'invoice.issued' } });
+    expect(audit.map((a) => a.entity_id)).toEqual([1, 2, 3].map((n) => `${contract.id}#${n}`));
+  });
+
+  it('does not issue invoices whose date hasn’t come', async () => {
+    const contract = await ainosContract();
+    await contractInvoices(db, contract, '2026-11-05');
+    expect(await db.invoiceIssue.count()).toBe(1);
+  });
+});

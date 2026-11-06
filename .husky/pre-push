@@ -1,6 +1,11 @@
 # Runs before every push: the fast part of what CI checks.
+# One command per line: `set -e` stops at the first failing line. (Inside an `a && b` chain it
+# would not, so a failed type check used to end the chain and still print "Ready to push".)
 set -e
 
 echo "🧪 Type check, tests, file size and no-AI checks before push…"
-npm run typecheck && npm test && npm run check:file-size && npm run check:no-ai
+npm run typecheck
+npm test
+npm run check:file-size
+npm run check:no-ai
 echo "✅ Ready to push"

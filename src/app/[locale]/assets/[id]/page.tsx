@@ -1,0 +1,254 @@
+// One item in detail: what we know about it, today's net list price, the monthly price with
+// term and down-payment sliders (Spine step 2), and the item's history so far.
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
+import { AssetHistoryPanel } from '@/components/asset-history-panel';
+import { Co2Panel } from '@/components/co2-panel';
+import { PriceCalculator } from '@/components/price-calculator';
+import { StatusBadge } from '@/components/status-badge';
+import { loadCoefficientTable, loadCustomers } from '@/data/load';
+import { effectivePriceLists } from '@/server/second-life';
+import { effectiveVatRates } from '@/server/vat';
+import { parseCatalogueQuery } from '@/domain/catalogue';
+import { catalogueSearch, parseCataloguePaging } from '@/domain/catalogue-pages';
+import { formatEuro } from '@/domain/money';
+import { listPriceOn, nextPriceChange } from '@/domain/price-list';
+import { parsePriceSelection } from '@/domain/price-selection';
+import { vatPercentOn } from '@/domain/vat';
+import { formatIsoDate } from '@/i18n/format';
+import { getT } from '@/i18n/get-t';
+import { intlLocale, isLocale } from '@/i18n/locales';
+import { getAsset } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
+import { itemImpact } from '@/server/co2';
+import { contractOn } from '@/domain/state-on';
+import { TimeTravelNotice } from '@/components/time-travel-notice';
+import { listContractsForAsset } from '@/server/contracts';
+import { listRefurbishments } from '@/server/second-life';
+import { assetTimeline } from '@/domain/asset-timeline';
+import { currentViewer } from '@/server/current-viewer';
+import { viewerCustomerId } from '@/server/viewer';
+import { canBeLeasedBy } from '@/domain/availability';
+import { canRequestHold } from '@/domain/holds';
+import { leaseTerms } from '@/domain/pricing';
+import { HoldPanel } from '@/components/hold-panel';
+import { listHoldRequests } from '@/server/holds';
+import { db } from '@/server/db';
+import { appDate } from '@/server/app-date';
+
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/assets/[id]'>): Promise<Metadata> {
+  const { locale, id } = await params;
+  if (!isLocale(locale)) return {};
+  const asset = await getAsset(db, id);
+  if (!asset) return {};
+  return { title: `${asset.make} ${asset.model} – ${getT(locale)('brand.name')}` };
+}
+
+export default async function AssetPage({
+  params,
+  searchParams,
+}: PageProps<'/[locale]/assets/[id]'>) {
+  const { locale, id } = await params;
+  if (!isLocale(locale)) notFound();
+  // The catalogue passes its filters and page along (?q=&category=…&page=). They survive a
+  // language switch, so "Back to catalogue" returns to the same page in the language you use now.
+  const search = await searchParams;
+  const backHref = `/${locale}/catalogue${catalogueSearch(parseCatalogueQuery(search), parseCataloguePaging(search))}`;
+
+  // Render on every request: the price depends on today's date and the item on the database.
+  await connection();
+
+  const { today } = await appDate();
+  // The item as it was on the app's date (time travel goes both ways; see asset-state.ts).
+  const [item, priceLists, table, vatRates] = await Promise.all([
+    assetOn(db, id, today),
+    effectivePriceLists(db, today),
+    loadCoefficientTable(),
+    effectiveVatRates(db),
+  ]);
+  if (!item) notFound();
+  const asset = item.asset;
+
+  const t = getT(locale);
+  const [viewer, customers, allContracts, allRefurbishments, impact] = await Promise.all([
+    currentViewer(),
+    loadCustomers(),
+    listContractsForAsset(db, asset.id),
+    listRefurbishments(db, asset.id),
+    itemImpact(item, today),
+  ]);
+  const contracts = allContracts.flatMap((c) => contractOn(c, today) ?? []);
+  const refurbishments = allRefurbishments.filter((r) => r.date <= today);
+  // The passport: the data pack's counted lives, then our own leases and refurbishments.
+  const timeline = assetTimeline(
+    asset,
+    contracts.map((c) => ({
+      startDate: c.startDate,
+      endDate: c.endDate,
+      status: c.status,
+      customerName: c.customerName,
+      closedDate: c.boughtDate ?? c.returnedDate,
+    })),
+    refurbishments.map((r) => ({
+      date: r.date,
+      conditionBefore: r.conditionBefore,
+      conditionAfter: r.conditionAfter,
+      priceCents: r.priceCents,
+    })),
+    today
+  );
+  const reservedFor = item.reservedFor;
+  const heldForName = customers.find((c) => c.id === reservedFor)?.name ?? null;
+  // Available to anyone, or reserved for the viewer (an item passed on to them).
+  // Locked while the item has later history: you can look at the past, not change it.
+  const leasable =
+    !item.laterHistory &&
+    canBeLeasedBy({ status: asset.status, reservedFor }, viewerCustomerId(viewer));
+  // A customer can ask for an item that isn't free yet, see their request, or let go of an item
+  // held for them. Not while looking at the past (time travel).
+  const customerId = viewer.kind === 'customer' ? viewer.customer.id : null;
+  const myRequest =
+    customerId && !item.laterHistory
+      ? (await listHoldRequests(db, { assetId: asset.id, customerId }, today))[0]
+      : undefined;
+  const holdPanel =
+    !customerId || item.laterHistory ? null : reservedFor === customerId ? (
+      <HoldPanel mode="held" assetId={asset.id} locale={locale} />
+    ) : myRequest ? (
+      <HoldPanel mode="waiting" assetId={asset.id} locale={locale} request={myRequest} />
+    ) : canRequestHold({ status: asset.status, reservedFor }, customerId) ? (
+      <HoldPanel mode="request" assetId={asset.id} locale={locale} terms={leaseTerms(table)} />
+    ) : null;
+  const price = listPriceOn(priceLists, asset.id, today);
+  const change = nextPriceChange(priceLists, asset.id, today);
+  const vatPercent = vatPercentOn(vatRates, today);
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+
+  const facts: [string, string][] = [
+    [t('asset.category'), t(`category.${asset.category}`)],
+    [t('asset.modelYear'), String(asset.model_year)],
+    [t('asset.serialNumber'), asset.serial_number],
+    [t('asset.id'), asset.id],
+  ];
+
+  const top = (
+    <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
+      <section
+        aria-labelledby="details-heading"
+        className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+      >
+        <h2 id="details-heading" className="text-lg font-semibold">
+          {t('asset.details')}
+        </h2>
+        <dl className="mt-4 divide-y divide-stone-100 text-sm dark:divide-stone-800">
+          {facts.map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4 py-2.5">
+              <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+              <dd className="text-right font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section
+        aria-labelledby="price-heading"
+        className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+      >
+        <h2 id="price-heading" className="text-lg font-semibold">
+          {t('asset.listPrice')}
+        </h2>
+        <p className="mt-3 text-3xl font-semibold tabular-nums">
+          {price.ok ? euro(price.priceCents) : t('asset.noPrice')}
+        </p>
+        <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+          <time dateTime={today}>
+            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+          </time>
+          {price.ok ? (
+            <>
+              {' · '}
+              {item.secondLifePriceCents
+                ? t('asset.secondLifePrice')
+                : t('asset.priceListVersion', { version: price.priceListVersion })}
+            </>
+          ) : null}
+        </p>
+        {change ? (
+          <p className="mt-4 rounded-lg bg-stone-100 p-3 text-sm text-stone-800 dark:bg-stone-800 dark:text-stone-200">
+            {t('asset.nextPrice', {
+              date: formatIsoDate(change.validFrom, locale),
+              price: euro(change.priceCents),
+            })}
+          </p>
+        ) : null}
+      </section>
+    </div>
+  );
+  // The panels set their own top margin; in the layout the gap does that job.
+  const bottom = (
+    <div className="space-y-6 [&>*]:mt-0">
+      {holdPanel}
+      <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
+      <Co2Panel impact={impact} isEbike={asset.category === 'e_bike'} locale={locale} t={t} />
+    </div>
+  );
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+      <Link
+        href={backHref}
+        className="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
+      >
+        <span aria-hidden="true">&larr;</span>
+        {t('asset.backToCatalogue')}
+      </Link>
+
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {asset.make} {asset.model}
+          </h1>
+        </div>
+        <StatusBadge status={asset.status} t={t} />
+      </div>
+
+      {item.laterHistory ? (
+        <TimeTravelNotice text={t('timeTravel.lockedItem')} locale={locale} t={t} inline />
+      ) : null}
+
+      {asset.status !== 'available' ? (
+        <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          {leasable
+            ? t('asset.statusNote.reservedForYou')
+            : heldForName
+              ? t('asset.statusNote.heldFor', { name: heldForName })
+              : t(`asset.statusNote.${asset.status}`)}
+        </p>
+      ) : null}
+
+      {/* Only an available item with a price can be quoted: the calculator then lays out the
+          page with the price breakdown in a sidebar. Otherwise the status note explains why. */}
+      {leasable && price.ok && vatPercent !== null ? (
+        <PriceCalculator
+          assetId={asset.id}
+          listPriceCents={price.priceCents}
+          vatPercent={vatPercent}
+          table={table}
+          initial={parsePriceSelection(search, price.priceCents, table)}
+          locale={locale}
+          top={top}
+          bottom={bottom}
+        />
+      ) : (
+        <div className="mt-8 max-w-4xl space-y-6">
+          {top}
+          {bottom}
+        </div>
+      )}
+    </div>
+  );
+}

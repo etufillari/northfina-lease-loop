@@ -1,7 +1,7 @@
 # src/domain: the business rules
 
-This folder holds the rules of Lease Loop as plain functions. Most of your
-hackathon work belongs here.
+This folder holds every business rule of Lease Loop as a plain function. Pages, API routes
+and the database layer call these; none of them decides anything on its own.
 
 ## Rules for this folder
 
@@ -22,20 +22,13 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 ## What is here
 
-| File             | What it does                                                             |
-| ---------------- | ------------------------------------------------------------------------ |
-| `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term. |
-| `price-list.ts`  | Worked example: finds the net list price of an asset on a date.          |
-| `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.              |
+Every module has its tests next to it (`pricing.ts` → `pricing.test.ts`). The reasoning behind
+each rule is in [docs/DECISIONS.md](../../docs/DECISIONS.md).
 
-## What teams are expected to add
-
-Create these as you need them. Do not commit empty files.
-
-- `pricing`: monthly rent, down payment, VAT and the end-of-term buyout price.
-- `question-flow`: which question to ask next, from `data/questions.json`, and what happens
-  to answers that stop applying.
-- `contract`: build the contract from an approved application and lock it so it cannot change.
-- `invoicing`: the monthly invoices for a contract, including a VAT rate change mid-contract.
-- `end-of-term`: return, buy out or extend, and the value of the returned item.
-- `second-life`: refurbishment cost, matching a returned item to the waiting list, CO2 saved.
+| Area               | Modules                                                                                                                                                                                                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Price              | `coefficient` (band and factor), `price-list` (price on a date), `pricing` (quote, down-payment limits), `rounding`, `money`, `euro-input`, `vat`                                                                                                                                |
+| Applying           | `question-flow` (which question next, pruning), `answer-check` (an answer fits its question), `eligibility` (the six rules, with reasons), `affordability` (30 % in every month), `business-id`                                                                                  |
+| Contract and money | `contract` (lock at signing, quote validity), `invoicing` (the schedule, leftover cents), `calendar` (clamped due dates, ages), `buyout`, `early-exit`                                                                                                                           |
+| Holds and claims   | `holds` (every hold length in one table), `claims` (one physical item, one contract)                                                                                                                                                                                             |
+| Second life        | `residual` (market value and its factors), `usage` (lifetime and since-reset counters), `inspection` (return grade, wear across leases), `second-life` (refurbish, upgrade, re-price, match), `second-life-allocation` (the whole desk: one offer per person, whole sets), `co2` |

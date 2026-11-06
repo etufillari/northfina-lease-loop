@@ -77,3 +77,7 @@ Full check passes: 318 tests, production build and all repository checks. An iso
 ## Fresh testing baseline
 
 At the user’s request, local dev.db was backed up, reset and reseeded after the five-smart-problem work. Verified: 30 original synthetic assets and zero applications, contracts, leases, invoices, returns, offers, settlements, allocations, command receipts and audit records. Local database files and credentials are excluded from Git.
+
+## Submission README and temporary public demo
+
+The root README now explains the business problem, full lifecycle, five smart problems, setup, demo, trade-offs and required upstream submission. A dedicated synthetic-database copy is exposed through a temporary Cloudflare tunnel; see DEPLOYMENT.md. HTTPS origins are allowed only for the exact configured development hostname, with regression tests. The demo requires the local computer/server/tunnel to remain running. No local operator credential was sent during public automated checks.

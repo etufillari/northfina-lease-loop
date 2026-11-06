@@ -200,14 +200,6 @@ export const translatedTextSchema = z.strictObject({
   et: z.string(),
 });
 
-/** Text that is always in English and may have translations. */
-export const localizedTextSchema = z.strictObject({
-  en: z.string(),
-  fi: z.string().optional(),
-  sv: z.string().optional(),
-  et: z.string().optional(),
-});
-
 /**
  * Which value a condition looks at: a deal field, or an earlier answer (`answers.<question id>`).
  */
@@ -243,14 +235,14 @@ export const questionSchema = z
     id: z.string().regex(/^q_[a-z0-9_]+$/),
     type: questionTypeSchema,
     text: translatedTextSchema,
-    why_we_ask: localizedTextSchema,
+    why_we_ask: translatedTextSchema,
     /** Empty list = always ask. */
     ask_when: z.array(askWhenConditionSchema),
     /** Allowed answers; only for `choice` questions. */
     options: z.array(z.string()).min(1).optional(),
     blocks_application_when: z.array(blockRuleSchema).optional(),
     validation: z
-      .strictObject({ format: z.literal('finnish_business_id'), hint: z.string() })
+      .strictObject({ format: z.literal('finnish_business_id'), hint: translatedTextSchema })
       .optional(),
   })
   .refine((q) => (q.type === 'choice') === (q.options !== undefined), {
@@ -258,7 +250,10 @@ export const questionSchema = z
   });
 export type Question = z.infer<typeof questionSchema>;
 
-export const eligibilityRuleSchema = z.strictObject({ id: z.string(), text: z.string() });
+export const eligibilityRuleSchema = z.strictObject({
+  id: z.string(),
+  text: translatedTextSchema,
+});
 export type EligibilityRule = z.infer<typeof eligibilityRuleSchema>;
 
 export const questionsFileSchema = z.strictObject({

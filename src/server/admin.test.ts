@@ -91,7 +91,11 @@ describe('adminOverview', () => {
       returned: 6,
       sold: 0,
     });
+    // Newest first: the three invoices issued by 10 Jan 2027, then the signing and applications
     expect(overview.audit.map((a) => a.action)).toEqual([
+      'invoice.issued',
+      'invoice.issued',
+      'invoice.issued',
       'contract.signed',
       'application.submitted',
       'application.submitted',

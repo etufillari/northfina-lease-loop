@@ -24,11 +24,12 @@ export type AdminOverview = {
 };
 
 export async function adminOverview(db: PrismaClient, todayIso: string): Promise<AdminOverview> {
-  const [contracts, decisions, statuses, received, audit] = await Promise.all([
+  // Invoices first: reading them issues any that are due, so the audit log below includes that.
+  const received = await receivedInvoices(db, null, todayIso);
+  const [contracts, decisions, statuses, audit] = await Promise.all([
     listContracts(db),
     db.application.groupBy({ by: ['decision'], _count: { _all: true } }),
     db.asset.groupBy({ by: ['status'], _count: { _all: true } }),
-    receivedInvoices(db, null, todayIso),
     db.auditLog.findMany({ orderBy: { id: 'desc' }, take: 15 }),
   ]);
 

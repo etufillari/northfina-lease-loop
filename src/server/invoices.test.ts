@@ -18,6 +18,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  await db.invoiceIssue.deleteMany();
   await db.invoicePayment.deleteMany();
   await db.contract.deleteMany();
   await db.application.deleteMany();
@@ -196,5 +197,27 @@ describe('payAllDue', () => {
     expect(
       await payAllDue(db, { filter: { customerId: 'cust-aino' }, actor: 'Aino' }, '2027-01-10')
     ).toMatchObject({ paidCount: 2 });
+  });
+});
+
+describe('issuing invoices', () => {
+  it('issues each invoice once when its date is reached, with an audit row', async () => {
+    const contract = await ainosContract();
+    await contractInvoices(db, contract, '2027-01-10'); // invoices 1–3 are dated by then
+    await contractInvoices(db, contract, '2027-01-10'); // reading again issues nothing new
+    const issued = await db.invoiceIssue.findMany({ orderBy: { invoice_number: 'asc' } });
+    expect(issued.map((i) => [i.invoice_number, i.issued_date, i.total_cents])).toEqual([
+      [1, '2026-11-05', 8_430],
+      [2, '2026-12-05', 8_430],
+      [3, '2027-01-05', 8_463], // 26 % VAT from 2027
+    ]);
+    const audit = await db.auditLog.findMany({ where: { action: 'invoice.issued' } });
+    expect(audit.map((a) => a.entity_id)).toEqual([1, 2, 3].map((n) => `${contract.id}#${n}`));
+  });
+
+  it('does not issue invoices whose date hasn’t come', async () => {
+    const contract = await ainosContract();
+    await contractInvoices(db, contract, '2026-11-05');
+    expect(await db.invoiceIssue.count()).toBe(1);
   });
 });

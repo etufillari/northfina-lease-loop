@@ -7,6 +7,7 @@ import { effectiveVatRates } from './vat';
 import {
   invoiceSchedule,
   withStatus,
+  type Invoice,
   type InvoicePaymentRecord,
   type InvoiceWithStatus,
 } from '@/domain/invoicing';
@@ -35,7 +36,70 @@ export async function contractInvoices(
     listPayments(db, contract.id),
   ]);
   const schedule = invoiceSchedule(contract, vatRates);
-  return schedule.ok ? withStatus(schedule.invoices, payments, today, contract.signedDate) : null;
+  if (!schedule.ok) return null;
+  await issueDueInvoices(db, contract, schedule.invoices, today);
+  return withStatus(schedule.invoices, payments, today, contract.signedDate);
+}
+
+/**
+ * Issues every invoice whose date has been reached on `today` and isn't issued yet: records it
+ * as billed and writes an `invoice.issued` audit row, in one transaction per invoice. Runs
+ * whenever a contract's invoices are read, so issuing happens exactly once, on (or after) the
+ * invoice date, however the app is used. The record is dated on the invoice date, so travelling
+ * back in time still shows the invoice as upcoming before that date.
+ */
+export async function issueDueInvoices(
+  db: PrismaClient,
+  contract: Contract,
+  invoices: readonly Invoice[],
+  today: string
+): Promise<number> {
+  const issued = new Set(
+    (
+      await db.invoiceIssue.findMany({
+        where: { contract_id: contract.id },
+        select: { invoice_number: true },
+      })
+    ).map((row) => row.invoice_number)
+  );
+  let count = 0;
+  for (const invoice of invoices) {
+    if (invoice.dueDate > today || issued.has(invoice.number)) continue;
+    try {
+      await withAudit(
+        db,
+        {
+          actor: 'billing',
+          action: 'invoice.issued',
+          entityType: 'invoice',
+          entityId: `${contract.id}#${invoice.number}`,
+          details: {
+            invoiceDate: invoice.dueDate,
+            netCents: invoice.netCents,
+            vatPercent: invoice.vatPercent,
+            totalCents: invoice.totalCents,
+          },
+        },
+        (tx) =>
+          tx.invoiceIssue.create({
+            data: {
+              contract_id: contract.id,
+              invoice_number: invoice.number,
+              issued_date: invoice.dueDate,
+              net_cents: invoice.netCents,
+              vat_basis_points: Math.round(invoice.vatPercent * 100),
+              vat_cents: invoice.vatCents,
+              total_cents: invoice.totalCents,
+            },
+          })
+      );
+      count += 1;
+    } catch (error) {
+      // Issued a moment ago by another request: the unique key keeps it to one.
+      if ((error as { code?: string }).code !== 'P2002') throw error;
+    }
+  }
+  return count;
 }
 
 export type ReceivedInvoice = { contract: Contract; invoice: InvoiceWithStatus };

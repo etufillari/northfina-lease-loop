@@ -171,3 +171,20 @@ model Refurbishment {
 
   @@index([asset_id])
 }
+
+// An issued invoice: written once, when the app's date reaches the invoice date, with an
+// `invoice.issued` audit row. The amounts are recorded as billed; invoices are still derived
+// from the locked contract (src/domain/invoicing.ts), so this record and the schedule agree.
+model InvoiceIssue {
+  id               Int      @id @default(autoincrement())
+  created_at       DateTime @default(now())
+  contract_id      String
+  invoice_number   Int
+  issued_date      String // YYYY-MM-DD, the invoice date
+  net_cents        Int
+  vat_basis_points Int // 25.5 % → 2550
+  vat_cents        Int
+  total_cents      Int
+
+  @@unique([contract_id, invoice_number])
+}

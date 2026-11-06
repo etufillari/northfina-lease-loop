@@ -113,6 +113,12 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
             : formatEuro(contractThen.buyoutPaidCents, intlLocale[locale])
         }
         passedTo={passedTo}
+        exitedEarlyDate={contractThen.exitedEarlyDate}
+        exitFee={
+          contractThen.exitFeeCents === null
+            ? null
+            : formatEuro(contractThen.exitFeeCents, intlLocale[locale])
+        }
         monthsIssued={splitByDate(invoices, today).issued.length}
         termMonths={contract.termMonths}
         locale={locale}

@@ -1,5 +1,6 @@
 // Where the lease stands on the app's date. Once it has ended it links to the end-of-term page
-// (buy, return or pass on); after the choice it says what happened.
+// (buy, return or pass on); while it runs it links to ending it early; after the choice it
+// says what happened.
 import Link from 'next/link';
 import type { ContractStage } from '@/domain/contract';
 import { formatIsoDate } from '@/i18n/format';
@@ -19,6 +20,10 @@ type EndOfTermPanelProps = {
   boughtFor: string | null;
   /** Who it was passed on to, when it was. */
   passedTo: string | null;
+  /** Set when the lease was ended before its last day (src/domain/early-exit.ts). */
+  exitedEarlyDate: string | null;
+  /** Formatted exit fee paid when it was returned early. */
+  exitFee: string | null;
   monthsIssued: number;
   termMonths: number;
   locale: Locale;
@@ -31,22 +36,36 @@ export function EndOfTermPanel(props: EndOfTermPanelProps) {
   const decided = status !== 'active';
   const waiting = stage === 'ended' && !decided;
 
+  const early = props.exitedEarlyDate !== null;
   const text =
-    status === 'returned'
-      ? t('endOfTerm.returned', { date: date(props.returnedDate) })
-      : status === 'bought'
-        ? t('endOfTerm.bought', { date: date(props.boughtDate), amount: props.boughtFor ?? '' })
-        : status === 'passed_on'
-          ? t('endOfTerm.passedOn', { date: date(props.returnedDate), name: props.passedTo ?? '' })
-          : stage === 'not_started'
-            ? t('endOfTerm.notStarted', { date: date(props.startDate) })
-            : stage === 'active'
-              ? t('endOfTerm.active', {
-                  month: props.monthsIssued,
-                  total: props.termMonths,
-                  date: date(props.endDate),
+    early && status === 'returned'
+      ? t('endOfTerm.exitedReturned', {
+          date: date(props.exitedEarlyDate),
+          amount: props.exitFee ?? '',
+        })
+      : early && status === 'bought'
+        ? t('endOfTerm.exitedBought', {
+            date: date(props.exitedEarlyDate),
+            amount: props.boughtFor ?? '',
+          })
+        : status === 'returned'
+          ? t('endOfTerm.returned', { date: date(props.returnedDate) })
+          : status === 'bought'
+            ? t('endOfTerm.bought', { date: date(props.boughtDate), amount: props.boughtFor ?? '' })
+            : status === 'passed_on'
+              ? t('endOfTerm.passedOn', {
+                  date: date(props.returnedDate),
+                  name: props.passedTo ?? '',
                 })
-              : t('endOfTerm.ended', { date: date(props.endDate) });
+              : stage === 'not_started'
+                ? t('endOfTerm.notStarted', { date: date(props.startDate) })
+                : stage === 'active'
+                  ? t('endOfTerm.active', {
+                      month: props.monthsIssued,
+                      total: props.termMonths,
+                      date: date(props.endDate),
+                    })
+                  : t('endOfTerm.ended', { date: date(props.endDate) });
 
   return (
     <section
@@ -69,6 +88,15 @@ export function EndOfTermPanel(props: EndOfTermPanelProps) {
           className="mt-4 inline-block rounded-lg bg-sky-700 px-5 py-2.5 font-semibold text-white hover:bg-sky-800"
         >
           {t('notifications.choose')}
+        </Link>
+      ) : null}
+
+      {stage === 'active' && !decided ? (
+        <Link
+          href={`/${locale}/contracts/${contractId}/exit`}
+          className="mt-4 inline-block text-sm font-medium text-stone-700 underline underline-offset-4 hover:text-stone-900 dark:text-stone-300 dark:hover:text-stone-100"
+        >
+          {t('exit.link')}
         </Link>
       ) : null}
 

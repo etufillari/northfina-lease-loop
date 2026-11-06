@@ -82,10 +82,12 @@ export function AssetImage({
 type AssetCardProps = {
   asset: Asset;
   imageUrl: string | null;
-  /** The net list price on the as-of date (the second-life re-price when there is one). */
-  listPriceCents: number | null;
+  /** The list price on the as-of date (the second-life re-price when there is one). */
+  listPrice: { netCents: number; grossCents: number | null } | null;
   /** Monthly rent at the chosen term, no down payment; null when it cannot be priced. */
   monthly: { netCents: number; grossCents: number } | null;
+  /** Show every price with VAT (true) or without (false): never a mix on one card. */
+  withVat: boolean;
   termMonths: number;
   vatRatePercent: number | null;
   /** Priced at the second-life desk's re-price instead of the price list. */
@@ -97,8 +99,9 @@ type AssetCardProps = {
 export function AssetCard({
   asset,
   imageUrl,
-  listPriceCents,
+  listPrice,
   monthly,
+  withVat,
   termMonths,
   vatRatePercent,
   secondLife = false,
@@ -106,6 +109,12 @@ export function AssetCard({
   t,
 }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  // Without a known VAT rate there is no gross amount, so the card falls back to net.
+  const showGross = withVat && vatRatePercent !== null;
+  const vatNote = showGross ? t('price.inclVat', { rate: vatRatePercent }) : t('price.exclVat');
+  const listCents =
+    listPrice === null ? null : showGross ? listPrice.grossCents : listPrice.netCents;
   const status = statusStyles[asset.status];
 
   return (
@@ -151,38 +160,36 @@ export function AssetCard({
           />
         </dl>
 
-        <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-          <div>
-            <p className="text-xs text-stone-600 dark:text-stone-400">
-              {secondLife ? t('asset.secondLifePrice') : t('asset.listPrice')}
-            </p>
-            <p className="text-lg font-semibold tabular-nums">
-              {listPriceCents !== null
-                ? formatEuro(listPriceCents, intlLocale[locale])
-                : t('asset.noPrice')}
-            </p>
-          </div>
-          <div className="text-right">
-            {monthly ? (
-              <>
-                <p className="text-xl font-semibold tabular-nums">
-                  {formatEuro(monthly.grossCents, intlLocale[locale])}
-                  <span className="text-sm font-normal text-stone-600 dark:text-stone-400">
-                    {t('common.perMonth')}
-                  </span>
-                </p>
-                <p className="text-xs text-stone-600 dark:text-stone-400">
+        <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
+          {monthly ? (
+            <>
+              <p className="flex flex-wrap items-baseline gap-x-1">
+                <span className="text-2xl font-semibold tabular-nums">
+                  {euro(showGross ? monthly.grossCents : monthly.netCents)}
+                </span>
+                <span className="text-sm text-stone-600 dark:text-stone-400">
+                  {t('common.perMonth')}
+                </span>
+              </p>
+              <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+                <span className="whitespace-nowrap">
                   {t('catalogue.payments', { count: termMonths })}
-                  {vatRatePercent !== null
-                    ? ` · ${t('price.inclVat', { rate: vatRatePercent })}`
-                    : ''}{' '}
-                  · {t('catalogue.noDownPayment')}
-                </p>
-              </>
-            ) : (
-              <p className="text-xl font-semibold">{t('asset.noPrice')}</p>
-            )}
-          </div>
+                </span>
+                {' · '}
+                <span className="whitespace-nowrap">{vatNote}</span>
+              </p>
+            </>
+          ) : (
+            <p className="text-xl font-semibold">{t('asset.noPrice')}</p>
+          )}
+          <p className="mt-3 flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-stone-600 dark:text-stone-400">
+              {secondLife ? t('asset.secondLifePrice') : t('catalogue.listPrice')}
+            </span>
+            <span className="font-medium tabular-nums">
+              {listCents !== null ? euro(listCents) : t('asset.noPrice')}
+            </span>
+          </p>
         </div>
       </div>
     </article>

@@ -1,7 +1,8 @@
 'use client';
 // The interactive part of the catalogue: one category at a time (remembered per customer),
-// a term picker that re-prices every card, and filters for budget, condition and model
-// year. No money is computed here — the server priced every asset at every term.
+// a term picker that re-prices every card, a with/without VAT switch that every price on
+// the page follows, and filters for budget, condition and model year. No money is computed
+// here — the server priced every asset at every term, net and with VAT.
 import Link from 'next/link';
 import { useState } from 'react';
 import { AssetCard, CategoryIcon } from '@/components/asset-card';
@@ -14,8 +15,9 @@ import type { Locale } from '@/i18n/locales';
 export type CatalogueItem = {
   asset: Asset;
   imageUrl: string | null;
-  /** The net list price on the as-of date (the second-life re-price when there is one). */
-  listPriceCents: number | null;
+  /** The list price on the as-of date (the second-life re-price when there is one); the
+   *  VAT-inclusive amount is null only when no VAT rate is known for the date. */
+  listPrice: { netCents: number; grossCents: number | null } | null;
   secondLife: boolean;
   /** Term months → monthly rent with no down payment; null when not priceable. */
   monthly: Record<number, { netCents: number; grossCents: number } | null>;
@@ -50,6 +52,8 @@ export function CatalogueBrowser({
   const [minCondition, setMinCondition] = useState<'any' | AssetCondition>('any');
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
+  // One switch for every price on the page, so a card never mixes net and gross.
+  const [withVat, setWithVat] = useState(true);
 
   function pickCategory(next: AssetCategory) {
     setCategory(next);
@@ -70,8 +74,9 @@ export function CatalogueBrowser({
     const price = monthly[term] ?? null;
     if (minCents !== null || maxCents !== null) {
       if (price === null) return false;
-      if (minCents !== null && price.grossCents < minCents) return false;
-      if (maxCents !== null && price.grossCents > maxCents) return false;
+      const shown = withVat ? price.grossCents : price.netCents;
+      if (minCents !== null && shown < minCents) return false;
+      if (maxCents !== null && shown > maxCents) return false;
     }
     if (minCondition !== 'any' && !meetsMinCondition(asset.condition, minCondition)) return false;
     const from = Number(yearFrom);
@@ -147,9 +152,27 @@ export function CatalogueBrowser({
               {t('price.months', { months })}
             </button>
           ))}
-          <span className="text-xs text-stone-500 dark:text-stone-400">
-            {t('catalogue.noDownPayment')}
-          </span>
+          <div
+            role="group"
+            aria-label={t('catalogue.vat.label')}
+            className="ml-auto inline-flex rounded-lg p-0.5 ring-1 ring-stone-300 ring-inset dark:ring-stone-700"
+          >
+            {[true, false].map((option) => (
+              <button
+                key={String(option)}
+                type="button"
+                aria-pressed={withVat === option}
+                onClick={() => setWithVat(option)}
+                className={`rounded-md px-3 py-1 text-sm font-medium ${
+                  withVat === option
+                    ? 'bg-emerald-700 text-white'
+                    : 'hover:bg-emerald-50 dark:hover:bg-stone-800'
+                }`}
+              >
+                {t(option ? 'catalogue.vat.incl' : 'catalogue.vat.excl')}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -227,7 +250,7 @@ export function CatalogueBrowser({
         </div>
       ) : (
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map(({ asset, imageUrl, listPriceCents, secondLife, monthly }) => (
+          {filtered.map(({ asset, imageUrl, listPrice, secondLife, monthly }) => (
             <li key={asset.id}>
               <Link
                 href={`/${locale}/assets/${asset.id}${asOfParam ? `?asOf=${asOfParam}` : ''}`}
@@ -236,7 +259,8 @@ export function CatalogueBrowser({
                 <AssetCard
                   asset={asset}
                   imageUrl={imageUrl}
-                  listPriceCents={listPriceCents}
+                  listPrice={listPrice}
+                  withVat={withVat}
                   monthly={monthly[term] ?? null}
                   termMonths={term}
                   vatRatePercent={vatRatePercent}

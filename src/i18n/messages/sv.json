@@ -28,7 +28,6 @@
   "asset.modelYear": "Årsmodell",
   "asset.usage": "Total användning",
   "asset.previousLives": "Tidigare leasingperioder",
-  "asset.listPrice": "Listpris exkl. moms",
   "asset.priceListVersion": "Prislista {version}",
   "asset.noPrice": "Inget pris för detta datum",
   "usage.km": "{value} km",
@@ -393,7 +392,6 @@
   "me.action.view": "Visa ansökan",
   "catalogue.pickCategory": "Välj kategori",
   "catalogue.termLabel": "Leasingperiod:",
-  "catalogue.noDownPayment": "ingen kontantinsats",
   "catalogue.filter.monthlyMin": "Månadsbetalning från (€)",
   "catalogue.filter.monthlyMax": "Månadsbetalning högst (€)",
   "catalogue.filter.condition": "Skick minst",
@@ -511,5 +509,9 @@
   "date.invalid": "Skriv datumet som dd.mm.åååå, t.ex. 06.11.2026",
   "date.between": "Välj ett datum från {min} till {max}",
   "date.from": "Välj {min} eller senare",
-  "date.until": "Välj {max} eller tidigare"
+  "date.until": "Välj {max} eller tidigare",
+  "catalogue.vat.label": "Priser",
+  "catalogue.vat.incl": "Inkl. moms",
+  "catalogue.vat.excl": "Exkl. moms",
+  "catalogue.listPrice": "Listpris"
 }

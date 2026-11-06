@@ -38,6 +38,7 @@ describe('toSecondLifeRequest', () => {
       preferred_term_months: 12,
       needed_by: '2026-11-10',
       joined_on: '2026-10-01',
+      quantity: 1,
       who: 'Delivery courier, accepts scratches',
     });
   });

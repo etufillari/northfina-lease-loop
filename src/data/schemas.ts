@@ -344,6 +344,8 @@ export const secondLifeRequestSchema = z.strictObject({
   needed_by: isoDateSchema,
   /** When this person joined the waiting list. Matching is first come, first served. */
   joined_on: isoDateSchema,
+  /** How many items this entry wants (wait-08's three office laptops). Default: one. */
+  quantity: z.number().int().positive().default(1),
   who: z.string(),
 });
 export type SecondLifeRequest = z.infer<typeof secondLifeRequestSchema>;

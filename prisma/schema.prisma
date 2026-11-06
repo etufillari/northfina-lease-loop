@@ -192,6 +192,8 @@ model WaitlistEntry {
   preferred_term_months      Int
   needed_by                  String
   joined_on                  String
+  // How many items this entry wants; an offer fills it one asset at a time.
+  quantity                   Int      @default(1)
   who                        String
   status                     String   @default("waiting") // waiting | offered | leased | removed
   offered_asset_id           String?

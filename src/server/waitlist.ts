@@ -16,6 +16,7 @@ export async function seedWaitlist(db: PrismaClient, demand: readonly SecondLife
         preferred_term_months: entry.preferred_term_months,
         needed_by: entry.needed_by,
         joined_on: entry.joined_on,
+        quantity: entry.quantity,
         who: entry.who,
       },
     });

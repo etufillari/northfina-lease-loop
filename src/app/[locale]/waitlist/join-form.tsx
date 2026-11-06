@@ -108,12 +108,15 @@ export function JoinForm({
     }
   }
 
+  // One fixed height for selects and inputs, and every field's label on a single line above
+  // it, so the fields of each row line up.
   const field =
-    'mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900';
+    'mt-1 block h-10 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm dark:border-stone-700 dark:bg-stone-900';
+  const caption = 'mt-1 block text-xs font-normal text-stone-500 dark:text-stone-400';
   return (
     <form
       onSubmit={submit}
-      className="mt-4 grid items-end gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2 dark:border-stone-800 dark:bg-stone-900"
+      className="mt-4 grid items-start gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2 dark:border-stone-800 dark:bg-stone-900"
     >
       <label className="text-sm font-medium">
         {t('waitlist.join.category')}
@@ -132,8 +135,7 @@ export function JoinForm({
       <fieldset className="text-sm">
         <legend className="font-medium">{t('waitlist.join.budget')}</legend>
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-stone-700 dark:text-stone-300">
-            {t('waitlist.join.budgetMin')}
+          <label>
             <input
               className={field}
               inputMode="decimal"
@@ -141,9 +143,9 @@ export function JoinForm({
               onChange={(e) => setMinBudget(e.target.value)}
               placeholder="0"
             />
+            <span className={caption}>{t('waitlist.join.budgetMin')}</span>
           </label>
-          <label className="text-stone-700 dark:text-stone-300">
-            {t('waitlist.join.budgetMax')}
+          <label>
             <input
               className={field}
               inputMode="decimal"
@@ -152,6 +154,7 @@ export function JoinForm({
               placeholder="45"
               required
             />
+            <span className={caption}>{t('waitlist.join.budgetMax')}</span>
           </label>
         </div>
       </fieldset>

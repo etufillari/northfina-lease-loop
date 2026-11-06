@@ -1,3 +1,5 @@
+import * as hegel from '@hegeldev/hegel';
+import * as gs from '@hegeldev/hegel/generators';
 import { describe, expect, it } from 'vitest';
 import { formatEuro, parseEuroToCents } from './money';
 
@@ -58,4 +60,57 @@ describe('parseEuroToCents', () => {
   it('rejects amounts too large to hold exactly', () => {
     expect(parseEuroToCents('9'.repeat(30))).toBeNull();
   });
+});
+
+describe('money property tests (Hegel)', () => {
+  it('throws RangeError on any non-integer cents', () =>
+    hegel.test((tc) => {
+      const base = tc.draw(gs.integers({ minValue: -1_000_000_000, maxValue: 1_000_000_000 }));
+      const frac = tc.draw(
+        gs.floats({ minValue: 0.01, maxValue: 0.99, allowNan: false, allowInfinity: false })
+      );
+      const nonInt = base + frac;
+      tc.assume(!Number.isInteger(nonInt));
+      expect(() => formatEuro(nonInt, 'en')).toThrow(RangeError);
+    }));
+
+  it('formats any safe integer cents without throwing', () =>
+    hegel.test((tc) => {
+      const cents = tc.draw(gs.integers());
+      const locale = tc.draw(gs.sampledFrom(['fi', 'en', 'sv', 'et', 'fi-FI', 'en-GB']));
+      const result = formatEuro(cents, locale);
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+    }));
+
+  it('parseEuroToCents never crashes on arbitrary text input', () =>
+    hegel.test((tc) => {
+      const str = tc.draw(gs.text());
+      const result = parseEuroToCents(str);
+      if (result !== null) {
+        expect(Number.isSafeInteger(result)).toBe(true);
+        expect(result).toBeGreaterThanOrEqual(0);
+      }
+    }));
+
+  it('accurately parses euro amounts with dot or comma without float error', () =>
+    hegel.test((tc) => {
+      const euros = tc.draw(gs.integers({ minValue: 0, maxValue: 10_000_000 }));
+      const cents = tc.draw(gs.integers({ minValue: 0, maxValue: 99 }));
+      const separator = tc.draw(gs.sampledFrom(['.', ',']));
+      const centsStr = String(cents).padStart(2, '0');
+      const input = `${euros}${separator}${centsStr}`;
+
+      const parsed = parseEuroToCents(input);
+      expect(parsed).toBe(euros * 100 + cents);
+    }));
+
+  it('round-trips formatEuro through parseEuroToCents for Finnish currency formatting', () =>
+    hegel.test((tc) => {
+      const cents = tc.draw(gs.integers({ minValue: 0, maxValue: 100_000_000_00 }));
+      const formatted = formatEuro(cents, 'fi');
+      const stripped = formatted.replace('€', '').trim();
+      const parsed = parseEuroToCents(stripped);
+      expect(parsed).toBe(cents);
+    }));
 });

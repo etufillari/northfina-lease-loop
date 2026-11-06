@@ -1,3 +1,5 @@
+import * as hegel from '@hegeldev/hegel';
+import * as gs from '@hegeldev/hegel/generators';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadVatRates } from '@/data/load';
 import type { CoefficientTable, VatRates } from '@/data/schemas';
@@ -285,4 +287,107 @@ describe('calculateContractQuote', () => {
       })
     ).toThrow(RangeError);
   });
+});
+
+describe('contract-pricing property tests (Hegel: Money that adds up)', () => {
+  it('property: down payment bounds always align to step and preserve min financed amount', () =>
+    hegel.test((tc) => {
+      const listPriceCents = tc.draw(gs.integers({ minValue: 0, maxValue: 50_000_000 }));
+      const stepCents = tc.draw(gs.sampledFrom([1_000, 2_500, 5_000, 10_000]));
+      const bounds = downPaymentBoundsFor(table, listPriceCents, stepCents);
+
+      expect(bounds.minCents).toBe(0);
+      expect(bounds.maxCents).toBeGreaterThanOrEqual(0);
+      expect(bounds.maxCents % stepCents).toBe(0);
+
+      const lowestFinanced = Math.min(...table.bands.map((b) => b.min_financed_cents));
+      if (listPriceCents <= lowestFinanced) {
+        expect(bounds.maxCents).toBe(0);
+      } else {
+        expect(listPriceCents - bounds.maxCents).toBeGreaterThanOrEqual(lowestFinanced);
+      }
+
+      // Clamping property: always within [0, maxCents]
+      const arbitraryDownPayment = tc.draw(
+        gs.integers({ minValue: -1_000_000, maxValue: 100_000_000 })
+      );
+      const clamped = clampDownPaymentCents(arbitraryDownPayment, bounds);
+      expect(clamped).toBeGreaterThanOrEqual(bounds.minCents);
+      expect(clamped).toBeLessThanOrEqual(bounds.maxCents);
+    }));
+
+  it('property: Money that adds up — quote arithmetic adds up to the exact cent across random contracts', () =>
+    hegel.test(
+      (tc) => {
+        const terms = availableTermsFromTable(table);
+        const termMonths = tc.draw(gs.sampledFrom(terms));
+        const isoDate = tc.draw(
+          gs.sampledFrom(['2025-06-15', '2026-11-05', '2026-12-31', '2027-01-01', '2028-03-31'])
+        );
+
+        // Draw financed amount within valid coefficient table bounds
+        const lowestFinanced = Math.min(...table.bands.map((b) => b.min_financed_cents));
+        const highestFinanced = Math.max(...table.bands.map((b) => b.max_financed_cents));
+        const financedCents = tc.draw(
+          gs.integers({ minValue: lowestFinanced, maxValue: highestFinanced })
+        );
+        const downPaymentCents = tc.draw(gs.integers({ minValue: 0, maxValue: 20_000_000 }));
+        const listPriceCents = financedCents + downPaymentCents;
+
+        const result = calculateContractQuote({
+          listPriceCents,
+          priceListVersion: 1,
+          downPaymentCents,
+          termMonths,
+          isoDate,
+          coefficientTable: table,
+          vatRates,
+        });
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+
+        const { quote } = result;
+
+        // Financed amount invariant
+        expect(quote.financedCents).toBe(listPriceCents - downPaymentCents);
+
+        // Safe integer invariants for all monetary values
+        const moneyFields: (keyof typeof quote)[] = [
+          'listPriceCents',
+          'downPaymentCents',
+          'financedCents',
+          'monthlyNetRentCents',
+          'monthlyVatCents',
+          'monthlyGrossRentCents',
+          'buyoutNetCents',
+          'totalRentNetCents',
+          'totalRentGrossCents',
+          'totalLeaseNetCents',
+          'totalWithBuyoutNetCents',
+        ];
+        for (const field of moneyFields) {
+          const val = quote[field];
+          expect(typeof val).toBe('number');
+          expect(Number.isSafeInteger(val)).toBe(true);
+          expect(val).toBeGreaterThanOrEqual(0);
+        }
+
+        // Monthly row adds up: gross = net + vat
+        expect(quote.monthlyGrossRentCents).toBe(quote.monthlyNetRentCents + quote.monthlyVatCents);
+
+        // Total rent adds up: net total = monthly net * term
+        expect(quote.totalRentNetCents).toBe(quote.monthlyNetRentCents * termMonths);
+
+        // Total rent gross adds up: gross total = monthly gross * term
+        expect(quote.totalRentGrossCents).toBe(quote.monthlyGrossRentCents * termMonths);
+
+        // Total lease net = down payment + total rent net
+        expect(quote.totalLeaseNetCents).toBe(quote.downPaymentCents + quote.totalRentNetCents);
+
+        // Total with buyout net = total lease net + buyout net
+        expect(quote.totalWithBuyoutNetCents).toBe(quote.totalLeaseNetCents + quote.buyoutNetCents);
+      },
+      { testCases: 250 }
+    ));
 });

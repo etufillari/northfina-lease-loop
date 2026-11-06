@@ -1,87 +1,135 @@
-# Lease Loop · Northfina × Hive Helsinki hackathon
+# Lease Loop
 
-Starter repo for the **Lease Loop** challenge, 5–6 November 2026 at Hive Helsinki. Teams of 3 build a circular-economy leasing app: one e-bike, laptop or tractor, three lives.
+**One e-bike, laptop or tractor, three lives.** Lease Loop takes an item from a price quote to a signed contract, through every monthly invoice, to the end of the lease. Then it gives the item a second and a third life with someone new.
 
-- 📋 **The challenge:** [CHALLENGE.md](CHALLENGE.md)
-- 📐 **Engineering rules (35 % of your score):** [RULES.md](RULES.md)
-- 🗂️ **The data pack:** [data/DATA.md](data/DATA.md)
+Built for the Northfina × Hive Helsinki hackathon (5–6 Nov 2026). The challenge is in [CHALLENGE.md](CHALLENGE.md), the rules in [RULES.md](RULES.md), and the starter repo's original README in [docs/STARTER_README.md](docs/STARTER_README.md).
 
-**Northfina** is a Helsinki-based leasing platform. It started as Etufillari, a bike-leasing service, and now leases any kind of asset. Dealers, banks and customers use it to get from a price quote to a signed contract, then through monthly invoices to the end of the lease. This repo is a small, independent playground, not our product code.
+There is no AI inside the app. Everything runs on rules, data and plain arithmetic.
 
 ---
 
-## Quick start
-
-You need **Git** and **Node.js 22** (with [nvm](https://github.com/nvm-sh/nvm): `nvm install` reads `.nvmrc`).
+## Run it
 
 ```bash
-git clone https://github.com/<your-team>/northfina-lease-loop.git
-cd northfina-lease-loop
-nvm install          # Node 22
-npm ci               # installs dependencies and the Git hooks
-npm run db:setup     # creates .env and a local SQLite database with the 30 assets
-npm run dev          # http://localhost:3000
+npm ci
+npm run db:setup      # creates .env and a seeded SQLite database
+npm run dev           # http://localhost:3000
 ```
 
-You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
+Before a demo, `npm run db:reset` gives a clean database.
 
-| Command                 | What it does                                                   |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run dev`           | Start the app with hot reload                                  |
-| `npm test`              | Run all tests once (`npm run test:watch` to keep them running) |
-| `npm run test:coverage` | Tests with the 60 % coverage gate                              |
-| `npm run check:all`     | **Everything CI runs.** Run it before you push                 |
-| `npm run db:migrate`    | After you change `prisma/schema.prisma`: creates a migration   |
-| `npm run db:reset`      | Wipe the local database and seed it again                      |
-| `npm run db:studio`     | Browse the database in your browser                            |
+Two controls in the header make the demo work:
+
+- **Acting as**: a demo login. Pick a customer from the data pack (Aino, Mikko, Norvi, …) and the app prefills their answers. It shows only their own contracts and invoices.
+- **Time travel**: set the app's date, for example to month 7 of a lease, or to the day after it ends. It works **both ways**. Travelling back shows everything as it was on that date, and anything that happened later is locked until you come back.
+
+The **Admin** link in the footer opens totals, VAT changes, the fleet's CO₂ saving, the audit log and the second-life workbench.
 
 ---
 
-## 15-minute tour
+## A four-minute demo
 
-New to TypeScript, Next.js or Prisma? Read these files in this order:
-
-1. **`data/`**: the synthetic data pack. Open `assets.json` and `coefficient-table.json`, then the worked example in [DATA.md](data/DATA.md).
-2. **`src/data/`**: Zod schemas that load and type-check every data file. If you want to know a field's type, look here.
-3. **`src/domain/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
-4. **`src/domain/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
-5. **`src/app/[locale]/page.tsx`**: the catalogue page. Next.js App Router: every folder under `src/app/` is a URL.
-6. **`src/app/api/assets/`**: API routes. They use the response envelope (`src/server/api-response.ts`), and the status change writes an audit row in the same transaction (`src/server/audit.ts`).
-7. **`prisma/schema.prisma`**: the database. Add your own models (Contract, Invoice, …) and run `npm run db:migrate`.
-
-Handy docs: [Next.js App Router](https://nextjs.org/docs/app), [TypeScript for programmers who know C](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes.html), [Prisma](https://www.prisma.io/docs), [Vitest](https://vitest.dev/guide/), [Tailwind CSS](https://tailwindcss.com/docs).
-
-Everything in the skeleton is replaceable. Keep the rules, not necessarily the code.
+| #   | Do this                                                            | What it shows                                                                                                                     |
+| --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Act as **Aino**, open **ebike-003** and move the sliders           | Live price with a plain-language breakdown (card 1, Smart Problem 6)                                                              |
+| 2   | Apply, then sign                                                   | Questions appear only when they apply, each with "why we ask"; the price is locked at signing                                     |
+| 3   | Travel to **20 Jan 2027** and open the invoices                    | December at 25.5 % VAT and January at 26 %: the rent is locked, the tax is not, and the invoice says so (card 3, Smart Problem 1) |
+| 4   | Travel to **20 May 2027**, then contract → **End the lease early** | The exit price, worked out line by line, with the first month free (card 8, Smart Problem 2)                                      |
+| 5   | Admin → Second life → **ebike-007**                                | Refurbish or not, a new price, and who on the waiting list gets it and why (card 9, Smart Problem 3)                              |
+| 6   | Open **ebike-008**                                                 | Its passport across three lives and the CO₂ it saved, weighted by how worn it is (card 10, Smart Problem 7)                       |
+| 7   | Act as **Norvi**, then catalogue → **Lease several items at once** | One application and one signature for a whole fleet; "can't sign for the company" goes to a person (card 6)                       |
 
 ---
 
-## Submitting
+## Scenario cards
 
-You can't push to this repo. You work in **your own fork** and send us a **pull request**.
+All ten work. Each one is covered by unit or database tests, and most also by the browser tests.
 
-1. **One person per team forks** this repo (the **Fork** button, top right) and adds the other two as collaborators in the fork (_Settings → Collaborators_).
-2. **Enable Actions in the fork**: open the fork's **Actions** tab and click _"I understand my workflows, go ahead and enable them"_. Now CI runs on every push.
-3. Everyone clones the fork and commits as usual. Small, conventional commits; the hooks help.
-4. **Before Friday 6 November 16:00**, open a pull request from your fork to `etufillari/northfina-lease-loop` `main`.
-   - Title: `Team <name>: <your product name>`.
-   - Fill in the template: members, the Smart Problems you picked, and how to demo.
-   - You can open it early and keep pushing until the deadline.
-5. **At 16:00 we record the latest commit of every open pull request.** That commit is what we judge. Anything pushed later is ignored, and pull requests opened after 16:00 don't count.
-
-We won't merge pull requests. They're only how you hand in your work.
-
-**Heads-up:** forks of a public repo are public, so other teams can see your fork. Your commit history shows who built what, and copying another team's work disqualifies both copies.
+| Card               | Where to see it                                     | What happens                                                                                                                                                                        |
+| ------------------ | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Happy path       | ebike-003 → apply → contract                        | 107.30 € a month + VAT 27.36 € = 134.66 €. The first three invoices and the total cost are shown                                                                                    |
+| 2 Price lock       | laptop-004: quote on 5 Nov, sign on 6 Nov           | The contract keeps the quoted v1 list price. It shows today's 8 % lower v2 price and says why: the quote was agreed and is valid for 14 days, and later price lists don't change it |
+| 3 Tax is not price | ebike-001 invoices                                  | December 25.5 %, January 26 %. The bill warns ahead of the change and stops warning once it has happened                                                                            |
+| 4 Calendar traps   | laptop-001 from 31 Jan 2026                         | Due 28 Feb 2026 and 29 Feb 2028 (a leap year). Months are clamped, never skipped                                                                                                    |
+| 5 Too young        | Act as Mikko → laptop-008                           | A kind "no": under 18, with what a parent or guardian could do instead. He can't send the form                                                                                      |
+| 6 Who can sign?    | Act as Norvi → fleet                                | Manual review, and we ask the signatory (the email they gave) to sign for the whole fleet                                                                                           |
+| 7 Big ticket       | Act as Haapala → farm-002, 48 months, 20,000 € down | 125,000 € financed brings in the big-deal questions (annual revenue, beneficial owners, farm registry, PEP). One owner is a politically exposed person, so a person must review it  |
+| 8 Early exit       | Aino, month 7 of 36                                 | 29 rents left. Still owed 3,306.66 €, the bike is worth 2,878.60 €, so returning it costs 539.36 € incl. VAT                                                                        |
+| 9 Second life      | ebike-007, fair, 18,400 km                          | Refurbish to good. **wait-13** gets it: its 24-month rent fits the 90 € budget, while wait-02's 12-month rent doesn't                                                               |
+| 10 Third life      | ebike-008                                           | Passport plus CO₂: 2 reuse lives × 145 kg × 20 % life left = 59 kg. A naive count would claim 290 kg                                                                                |
 
 ---
 
-## Your code is yours
+## Smart Problems: what's smart about it
 
-The starter code in this repo is MIT-licensed (see [LICENSE](LICENSE)); use it however you like.
+**1 · Lock the price, not the tax.** The contract copies the net rent from the approved quote and never recalculates it. Each invoice uses the VAT rate on its own date, rounded once to the cent. The invoice explains why its total changed. Admin can add a future VAT change, and the warnings and invoices follow it.
 
-**Your team owns the code you write.** Opening a pull request gives Northfina permission to read and run your code for judging and for interviews with your team. Nothing more: we won't merge it, reuse it or publish it elsewhere without asking you first.
+**2 · Fair early exit.** _Still owed today_ = the remaining rents plus the buyout, each discounted back to today at the contract's own interest rate. Paying early shouldn't cost interest you no longer owe.
 
-## Help
+- **Buy now:** pay what is still owed.
+- **Return now:** pay what is still owed **minus what the item is worth today** (from the residual curves), never below zero.
+- **Consistent with the end of the term:** in the last month, "buy now" is exactly the buyout.
+- **First month free:** returning before the second invoice costs nothing.
+- **Settled first:** open invoices must be paid before the exit.
 
-- During the hackathon: **#ask-a-mentor** on the hackathon Discord.
-- A bug in this starter repo: open a GitHub issue here.
-- Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+[`src/domain/early-exit.ts`](src/domain/early-exit.ts)
+
+**3 · Second-life matchmaking.**
+
+- **Value:** age curve × condition × usage.
+- **Refurbishing:** the plan comes from the cost table, plus preset or custom repairs.
+- **New price:** the value after refurbishment, in whole euros.
+- **Waiting list:** those it actually suits come first (budget at their term, minimum condition), then the earliest deadline, then who signed up first.
+- **Bonus:** every item has a **passport** of its lives.
+
+[`src/domain/second-life.ts`](src/domain/second-life.ts)
+
+**7 · Circular impact.** A reuse life avoids making a new item, minus the refurbishment. A nearly worn-out item only replaces part of a new one, so the saving is scaled by the life it has left, using the same factors that price it. Every reuse life is scaled by today's state, so the figure under-counts rather than over-claims. E-bike km "instead of a car" is shown separately, because a new bike would do that too. The admin page has the fleet total.
+
+[`src/domain/co2.ts`](src/domain/co2.ts)
+
+**Also covered:**
+
+- **4 · Question flow** ([`question-flow.ts`](src/domain/question-flow.ts)): questions are targeted by customer type, item, amount and earlier answers. Changing an earlier answer drops the answers that no longer apply, and the decision is yes, no or a person with reasons.
+- **5 · Money that adds up:** integer cents, rounded once, half up. The invoices add up exactly, which is tested across all terms and a wide range of rents.
+- **6 · Explain my price:** every number in the breakdown has a plain-language line.
+
+## Wildcards
+
+- **Time travel that goes both ways:** state is replayed from dated records. See [`src/domain/state-on.ts`](src/domain/state-on.ts).
+- **Fleet leasing:** 2–20 items, with one decision and one all-or-nothing signature.
+- **Demo login** and **pass-on** to another customer, who must accept.
+- **Printable contract and invoices** (Print → PDF).
+- **Four languages** (en, fi, sv, et). Switching language never loses what you've typed.
+- **Accessibility-first:** WCAG 2.1 AA, checked automatically with axe-core in light and dark mode. See [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), including how to test with a screen reader.
+
+---
+
+## Engineering
+
+| Rule                      | How we keep it                                                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure, tested domain logic | Every business rule is in [`src/domain/`](src/domain/) as a pure function with its own test                                                                          |
+| Tests                     | 430 unit and database tests (Vitest, a real SQLite test DB) plus 44 browser checks (`npm run test:e2e`: headless Chrome, scenario cards and axe-core). All run in CI |
+| Money in cents            | Integers everywhere. [`money.ts`](src/domain/money.ts) rounds once, half up                                                                                          |
+| API envelope              | Every route goes through `handleRoute` / `ok` / `fail` ([`api-response.ts`](src/server/api-response.ts))                                                             |
+| Audit log                 | Every change to data goes through `withAudit`, so the change and its audit row are written in one transaction. Issuing an invoice is audited too                     |
+| Files under 600 lines     | `npm run check:file-size`                                                                                                                                            |
+| Hooks and commits         | Husky pre-commit and pre-push, conventional commits, never `--no-verify`                                                                                             |
+| CI                        | Format, lint, types, file size, no-AI check, coverage, build and browser tests                                                                                       |
+
+```
+src/domain/    rules: pricing, invoicing, early exit, second life, CO₂, fleet, time travel…
+src/server/    database access; each write is one transaction with its audit row
+src/app/       pages (/[locale]/…) and API routes (/api/…)
+src/components UI
+tests/e2e/     browser tests and the accessibility pass
+data/          the synthetic data pack (unchanged)
+```
+
+## Team
+
+| Name          | GitHub                                           | Main focus                                                                                                     |
+| ------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Armin Kuburas | [@ArminKuburas](https://github.com/ArminKuburas) | Catalogue, pricing, contracts, invoices, time travel, end of term, second life, early exit, CO₂, fleets, tests |
+| Johnny Varila | jvarila                                          | The smart question flow and the application                                                                    |

@@ -135,6 +135,7 @@ export async function createContract(
     price_list_version: pricingSnapshot.sources.priceListVersion,
     coefficient_band: pricing.coefficientBand,
     coefficient_factor_ppm: Math.round(pricing.monthlyFactor * 1_000_000),
+    annual_interest_basis_points: pricing.annualInterestBasisPoints,
     monthly_net_rent_cents: pricing.monthlyNetRentCents,
     buyout_cents: pricing.endOfTermBuyoutCents,
     pricing_snapshot_json: JSON.stringify(pricingSnapshot),

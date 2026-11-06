@@ -43,6 +43,9 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 export const endOfTermActionSchema = z.enum(['bought', 'returned', 'passed_on']);
 export type EndOfTermAction = z.infer<typeof endOfTermActionSchema>;
 
+export const earlyExitActionSchema = z.enum(['bought', 'returned']);
+export type EarlyExitAction = z.infer<typeof earlyExitActionSchema>;
+
 export const assetHistoryEventSchema = z.enum([
   'lease_started',
   'returned',

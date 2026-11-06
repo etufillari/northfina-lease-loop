@@ -38,6 +38,18 @@
       "value": "0"
     },
     {
+      "key": "earlyExitRequestId",
+      "value": "early-exit-request-from-previous-response"
+    },
+    {
+      "key": "earlyExitEffectiveOn",
+      "value": "2026-12-05"
+    },
+    {
+      "key": "earlyExitSettlementCents",
+      "value": "0"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -364,6 +376,131 @@
                   "    pm.response.to.have.status(200);",
                   "    pm.expect(body.success).to.eql(true);",
                   "    pm.expect(body.data.invoice.paymentStatus).to.eql('paid');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Early exit",
+      "description": "Quotes a return on the next invoice anniversary, records the pending request, and processes it after the first invoice has been paid.",
+      "item": [
+        {
+          "name": "Quote early return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"returned\",\n  \"requestedOn\": \"2026-11-06\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/early-exit/quote"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('early-exit quote is available', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.quote.quote.effectiveOn).to.eql('2026-12-05');",
+                  "});",
+                  "pm.collectionVariables.set('earlyExitEffectiveOn', body.data.quote.quote.effectiveOn);",
+                  "pm.collectionVariables.set('earlyExitSettlementCents', String(body.data.quote.settlementTotalCents));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request early return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"returned\",\n  \"requestedOn\": \"2026-11-06\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/early-exit"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('early-exit request is pending', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.request.status).to.eql('pending');",
+                  "});",
+                  "pm.collectionVariables.set('earlyExitRequestId', body.data.request.id);",
+                  "pm.collectionVariables.set('earlyExitSettlementCents', String(body.data.request.settlementTotalCents));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Process early return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processedOn\": \"{{earlyExitEffectiveOn}}\",\n  \"settlementPaidCents\": {{earlyExitSettlementCents}},\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/early-exit/process"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('early exit is completed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.termination.status).to.eql('completed');",
+                  "    pm.expect(body.data.termination.action).to.eql('returned');",
                   "});"
                 ]
               }

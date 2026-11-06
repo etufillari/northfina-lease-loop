@@ -31,6 +31,7 @@ const quote: QuoteData = {
     financedCents: 389_000,
     termMonths: 36,
     coefficientBand: 'B',
+    annualInterestBasisPoints: 790,
     monthlyFactor: 0.027584,
     monthlyNetRentCents: 10_730,
     buyoutPercent: 15,

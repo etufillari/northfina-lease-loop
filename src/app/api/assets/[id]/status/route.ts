@@ -5,11 +5,13 @@ import { z } from 'zod';
 import { assetStatusSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { changeAssetStatus } from '@/server/assets';
+import { completeReservation } from '@/server/reservations';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
   status: assetStatusSchema,
   actor: z.string().trim().min(1).max(100),
+  token: z.string().trim().optional(),
 });
 
 export const PATCH = handleRoute(
@@ -19,6 +21,10 @@ export const PATCH = handleRoute(
 
     const result = await changeAssetStatus(db, { id, status: body.status, actor: body.actor });
     if (!result.ok) return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);
+
+    if (body.token) {
+      await completeReservation(db, { assetId: id, token: body.token, actor: body.actor });
+    }
 
     return ok(result.asset);
   }

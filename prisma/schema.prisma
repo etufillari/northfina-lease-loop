@@ -52,10 +52,11 @@ model Asset {
   created_at             DateTime @default(now())
   updated_at             DateTime @updatedAt
 
-  prices    PriceListEntry[]
-  quotes    Quote[]
-  contracts Contract[]
-  events    AssetEvent[]
+  prices       PriceListEntry[]
+  quotes       Quote[]
+  contracts    Contract[]
+  events       AssetEvent[]
+  reservations AssetReservation[]
 
   @@index([category])
   @@index([status])
@@ -441,4 +442,24 @@ model AuditLog {
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// Temporary reservation of an asset during an application in progress.
+// Created with status 'active' when a customer applies, released if abandoned
+// or rejected, expired if timed out, or completed upon signing.
+model AssetReservation {
+  id         String   @id @default(uuid())
+  asset_id   String
+  token      String   @unique
+  actor      String
+  status     String // active | released | expired | completed
+  expires_at DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  asset Asset @relation(fields: [asset_id], references: [id])
+
+  @@index([asset_id])
+  @@index([token])
+  @@index([status])
 }

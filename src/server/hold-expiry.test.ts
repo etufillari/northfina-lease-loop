@@ -166,3 +166,29 @@ describe('catching up', () => {
     expect(summary.nominations).toEqual([{ day: '2026-11-06', assetId: 'ebike-004' }]);
   });
 });
+
+describe('an item seeded as reserved with no hold at all', () => {
+  it('is freed by the overnight run: offered to the waiting list or back in the catalogue', async () => {
+    const test = await freshDb();
+    // The data pack ships ebike-009 as `reserved` without any reservation row: nothing
+    // could ever lapse on it, so before this rule it stayed reserved forever.
+    const before = await test.db.asset.findUniqueOrThrow({ where: { id: 'ebike-009' } });
+    expect(before.status).toBe('reserved');
+    expect(await test.db.reservation.count({ where: { asset_id: 'ebike-009' } })).toBe(0);
+
+    await expireLapsedHolds(test.db, { from: DAY0, to: '2026-11-06' });
+
+    // Either listed again, or offered onward — but never reserved without a live hold.
+    const after = await test.db.asset.findUniqueOrThrow({ where: { id: 'ebike-009' } });
+    if (after.status === 'reserved') {
+      expect(
+        await test.db.reservation.count({ where: { asset_id: 'ebike-009', active: true } })
+      ).toBeGreaterThan(0);
+    }
+    const audit = await test.db.auditLog.findFirst({
+      where: { action: 'asset.orphaned_reservation_released' },
+    });
+    expect(audit?.actor).toBe(SYSTEM_ACTOR);
+    await test.cleanup();
+  });
+});

@@ -115,6 +115,41 @@ async function runDay(db: Db, day: string, actor: string, summary: LapseSummary)
 }
 
 /**
+ * A `reserved` item with NO active hold at all can never free itself: nothing lapses, so no
+ * job ever touches it (e.g. an item seeded as reserved without a backing reservation).
+ * Every real hold writes a Reservation row, so "reserved with zero active rows" is safely an
+ * orphan. The overnight run frees them through the usual gate: the waiting list first, then
+ * the catalogue.
+ */
+async function releaseOrphanedReservations(db: Db, actor: string, asOf: string) {
+  const reserved = await db.asset.findMany({
+    where: { status: 'reserved' },
+    select: { id: true },
+  });
+  for (const asset of reserved) {
+    const holds = await db.reservation.count({ where: { asset_id: asset.id, active: true } });
+    if (holds > 0) continue;
+    await withAudit(
+      db,
+      {
+        actor,
+        action: 'asset.orphaned_reservation_released',
+        entityType: 'asset',
+        entityId: asset.id,
+        details: { reason: 'reserved with no active hold' },
+      },
+      async (tx) => {
+        // Re-check inside the transaction: a hold may have appeared in the meantime.
+        const fresh = await tx.asset.findUnique({ where: { id: asset.id } });
+        const count = await tx.reservation.count({ where: { asset_id: asset.id, active: true } });
+        if (fresh?.status !== 'reserved' || count > 0) return;
+        await passItemsOn(tx, { assetIds: [asset.id], asOf, reason: 'orphaned_reservation' });
+      }
+    );
+  }
+}
+
+/**
  * Runs the overnight job for every day in (`from`, `to`] on which a hold lapses. Safe to run
  * again over the same days: what has lapsed is already gone.
  */
@@ -131,5 +166,6 @@ export async function expireLapsedHolds(
     await runDay(db, day, actor, summary);
     after = day;
   }
+  await releaseOrphanedReservations(db, actor, input.to);
   return summary;
 }

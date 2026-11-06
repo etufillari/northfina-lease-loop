@@ -70,6 +70,10 @@
       "value": "wait-13"
     },
     {
+      "key": "impactAsOf",
+      "value": "2026-11-06"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -689,6 +693,62 @@
                   "    pm.expect(body.success).to.eql(true);",
                   "    pm.expect(body.data.asset.status).to.eql('reserved');",
                   "    pm.expect(body.data.match.requestId).to.eql('wait-13');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Circular impact",
+      "description": "Read-only CO₂ and indicative money savings for one asset and the whole fleet.",
+      "item": [
+        {
+          "name": "Asset impact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/ebike-008/impact?asOf={{impactAsOf}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('asset impact succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.impact.co2.reuseLives).to.eql(2);",
+                  "    pm.expect(body.data.impact.co2.savedByLife.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fleet impact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/impact/fleet?asOf={{impactAsOf}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('fleet impact succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.totals.assetCount).to.be.greaterThan(0);",
+                  "    pm.expect(body.data.excluded).to.eql([]);",
                   "});"
                 ]
               }

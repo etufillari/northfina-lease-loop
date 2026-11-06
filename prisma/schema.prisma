@@ -1,3 +1,4 @@
+
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
 // SQLite has no enums here, so allowed values (category, condition, status) are
@@ -29,8 +30,9 @@ model Asset {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  quotes    Quote[]
-  contracts Contract[]
+  quotes         Quote[]
+  contracts      Contract[]
+  return_requests ReturnRequest[]
 
   @@index([category])
 }
@@ -89,10 +91,62 @@ model Contract {
   contract_net_total_cents Int
   price_lock_json          String // which price was locked and why
   invoices                 Invoice[]
+  return_requests          ReturnRequest[]
 
   @@index([asset_id])
   @@index([customer_id])
   @@index([end_date])
+}
+
+// A customer's request to return a leased asset, followed by dealer inspection,
+// refurbishment planning, approval and completion.
+// The asset itself is not made available for matching until completion.
+model ReturnRequest {
+  id          String   @id
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Original lease and customer
+  asset_id    String
+  asset       Asset    @relation(fields: [asset_id], references: [id])
+  contract_id String
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  customer_id String
+
+  // requested | received | planned | approved | completed | cancelled
+  status String
+
+  // Customer return request
+  expected_return_date String?
+
+  // Dealer receipt and inspection snapshot
+  received_at              DateTime?
+  received_by              String?
+  inspected_condition      String?
+  inspected_usage_unit     String?
+  inspected_usage_value    Int?
+  usage_since_last_service Int?
+
+  // Refurbishment plan snapshot
+  target_condition               String?
+  refurbishment_plan_json        String?
+  refurbishment_total_cost_cents Int?
+  resulting_condition            String?
+  resulting_usage_unit           String?
+  resulting_usage_value          Int?
+
+  // Dealer approval
+  approved_at DateTime?
+  approved_by String?
+
+  // Dealer confirms refurbishment work is complete
+  completed_at DateTime?
+  completed_by String?
+
+  @@index([asset_id, status])
+  @@index([contract_id])
+  @@index([customer_id])
+  @@index([status])
 }
 
 // An issued invoice. The VAT rate and amounts are stored, so history never changes even if
@@ -125,7 +179,7 @@ model AuditLog {
   action       String // e.g. asset.status_changed
   entity_type  String // e.g. asset
   entity_id    String
-  details_json String? // JSON text, e.g. {"from":"available","to":"reserved"}
+  details_json String? // JSON text, e.g. {"from":"available","to":"returned"}
 
   @@index([entity_type, entity_id])
   @@index([created_at])

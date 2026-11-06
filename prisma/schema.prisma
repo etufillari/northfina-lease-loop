@@ -29,7 +29,91 @@ model Asset {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
+  quotes    Quote[]
+  contracts Contract[]
+
   @@index([category])
+}
+
+// A priced offer, saved as it was shown. Never updated; it is not binding until signed.
+// Dates are ISO `YYYY-MM-DD` text, money is integer euro cents, VAT excluded.
+model Quote {
+  id                       String    @id
+  created_at               DateTime  @default(now())
+  asset_id                 String
+  asset                    Asset     @relation(fields: [asset_id], references: [id])
+  customer_id              String?
+  quoted_on                String
+  price_list_version       Int? // null: a second-life price, not from a price list
+  list_price_cents         Int
+  down_payment_cents       Int
+  term_months              Int
+  financed_cents           Int
+  band                     String
+  monthly_factor           Float
+  annual_interest_percent  Float
+  monthly_net_rent_cents   Int
+  buyout_percent           Float
+  buyout_net_cents         Int
+  contract_net_total_cents Int
+  contract                 Contract?
+
+  @@index([asset_id])
+}
+
+// The locked agreement: a full copy of the signed terms, so it needs no price list or quote
+// to be reproduced. Pricing columns are never updated after signing.
+model Contract {
+  id                       String    @id
+  created_at               DateTime  @default(now())
+  quote_id                 String    @unique // one quote can be signed once
+  quote                    Quote     @relation(fields: [quote_id], references: [id])
+  asset_id                 String
+  asset                    Asset     @relation(fields: [asset_id], references: [id])
+  customer_id              String
+  status                   String // active
+  signed_on                String
+  start_date               String
+  end_date                 String // last day covered by the lease
+  price_list_version       Int?
+  list_price_cents         Int
+  down_payment_cents       Int
+  term_months              Int
+  financed_cents           Int
+  band                     String
+  monthly_factor           Float
+  annual_interest_percent  Float
+  monthly_net_rent_cents   Int
+  buyout_percent           Float
+  buyout_net_cents         Int
+  contract_net_total_cents Int
+  price_lock_json          String // which price was locked and why
+  invoices                 Invoice[]
+
+  @@index([asset_id])
+  @@index([customer_id])
+  @@index([end_date])
+}
+
+// An issued invoice. The VAT rate and amounts are stored, so history never changes even if
+// the VAT data does. Invoices not issued yet are computed and shown as a forecast.
+model Invoice {
+  id               String   @id
+  created_at       DateTime @default(now())
+  contract_id      String
+  contract         Contract @relation(fields: [contract_id], references: [id])
+  sequence         Int // 0 = down payment, 1..term = rents
+  kind             String // down_payment | rent
+  invoice_date     String
+  due_date         String
+  period_start     String?
+  period_end       String?
+  net_cents        Int
+  vat_rate_percent Float
+  vat_cents        Int
+  gross_cents      Int
+
+  @@unique([contract_id, sequence]) // what makes invoice generation idempotent
 }
 
 // Who changed what, and when. Written in the same transaction as the change

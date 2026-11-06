@@ -16,12 +16,6 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 
-export type SignedContract = {
-  assetId: string;
-  signedOn: string;
-  quote: ContractQuote;
-};
-
 export type ContractProps = {
   asset: Asset;
   price: ListPriceResult;
@@ -31,13 +25,11 @@ export type ContractProps = {
   locale: Locale;
   initialTermMonths?: number;
   initialDownPaymentCents?: number;
-  initialSignedContract?: SignedContract | null;
   defaultBreakdownOpen?: boolean;
-  onSign?: (signed: SignedContract) => void;
   onClose?: () => void;
   /**
    * Set when the configurator is used to change the terms of an application in progress. The
-   * Apply link and Sign are replaced by one "Use these terms" button that reports the choice.
+   * Apply link is replaced by one "Use these terms" button that reports the choice.
    */
   onUseTerms?: (choice: { termMonths: number; downPaymentCents: number }) => void;
 };
@@ -53,9 +45,7 @@ export function Contract({
   locale,
   initialTermMonths,
   initialDownPaymentCents = 0,
-  initialSignedContract = null,
   defaultBreakdownOpen = false,
-  onSign,
   onClose,
   onUseTerms,
 }: ContractProps) {
@@ -80,17 +70,10 @@ export function Contract({
   const [rawDownPaymentCents, setRawDownPaymentCents] = useState<number>(() =>
     clampDownPaymentCents(initialDownPaymentCents, bounds)
   );
-  const [signedContract, setSignedContract] = useState<SignedContract | null>(
-    initialSignedContract
-  );
   const [isBreakdownOpen, setIsBreakdownOpen] = useState<boolean>(defaultBreakdownOpen);
 
-  const isSigned = signedContract !== null;
-  const termMonths = isSigned ? signedContract.quote.termMonths : selectedTermMonths;
-  const downPaymentCents = isSigned
-    ? signedContract.quote.downPaymentCents
-    : clampDownPaymentCents(rawDownPaymentCents, bounds);
-
+  const termMonths = selectedTermMonths;
+  const downPaymentCents = clampDownPaymentCents(rawDownPaymentCents, bounds);
   const liveQuoteResult = price.ok
     ? calculateContractQuote({
         listPriceCents: price.priceCents,
@@ -103,14 +86,9 @@ export function Contract({
       })
     : null;
 
-  const activeQuote: ContractQuote | null = isSigned
-    ? signedContract.quote
-    : liveQuoteResult?.ok
-      ? liveQuoteResult.quote
-      : null;
+  const activeQuote: ContractQuote | null = liveQuoteResult?.ok ? liveQuoteResult.quote : null;
 
   const isAssetAvailable = asset.status === 'available';
-  const canSign = !isSigned && isAssetAvailable && price.ok && liveQuoteResult?.ok === true;
 
   const termIndex = Math.max(0, terms.indexOf(termMonths));
   const lowestMinFinancedCents = Math.min(
@@ -119,17 +97,6 @@ export function Contract({
   const highestMaxFinancedCents = Math.max(
     ...coefficientTable.bands.map((b) => b.max_financed_cents)
   );
-
-  function handleSign() {
-    if (!canSign || !activeQuote) return;
-    const signed: SignedContract = {
-      assetId: asset.id,
-      signedOn: isoDate,
-      quote: activeQuote,
-    };
-    setSignedContract(signed);
-    onSign?.(signed);
-  }
 
   return (
     <section
@@ -152,18 +119,12 @@ export function Contract({
           </p>
         </div>
 
-        <span
-          className={`inline-flex items-center gap-[8px] rounded-full px-[12px] py-[4px] text-[0.75rem] font-semibold ring-1 ring-inset ${
-            isSigned
-              ? 'bg-[#eaf0ec] text-[#14522a] ring-[#cde5d5] dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800'
-              : 'bg-[#f6f7f8] text-[#123054] ring-[#ccd7e6] dark:bg-stone-800 dark:text-sky-200 dark:ring-stone-700'
-          }`}
-        >
+        <span className="inline-flex items-center gap-[8px] rounded-full bg-[#f6f7f8] px-[12px] py-[4px] text-[0.75rem] font-semibold text-[#123054] ring-1 ring-[#ccd7e6] ring-inset dark:bg-stone-800 dark:text-sky-200 dark:ring-stone-700">
           <span
             aria-hidden="true"
-            className={`size-[8px] rounded-full ${isSigned ? 'bg-[#16A34A] dark:bg-emerald-400' : 'bg-[#2877d7] dark:bg-sky-400'}`}
+            className="size-[8px] rounded-full bg-[#2877d7] dark:bg-sky-400"
           />
-          {isSigned ? t('contract.statusSigned') : t('contract.statusDraft')}
+          {t('contract.statusDraft')}
         </span>
       </div>
 
@@ -193,7 +154,7 @@ export function Contract({
             max={Math.max(0, terms.length - 1)}
             step={1}
             value={termIndex}
-            disabled={isSigned || terms.length <= 1}
+            disabled={terms.length <= 1}
             aria-valuetext={t('contract.termValue', { months: termMonths })}
             onChange={(event) => {
               const nextTerm = terms[Number(event.target.value)];
@@ -211,7 +172,6 @@ export function Contract({
                 <button
                   key={months}
                   type="button"
-                  disabled={isSigned}
                   onClick={() => setSelectedTermMonths(months)}
                   className={`rounded-[4px] px-[8px] py-[4px] text-[0.75rem] font-medium transition-colors ${
                     isSelected
@@ -250,7 +210,7 @@ export function Contract({
             max={bounds.maxCents}
             step={bounds.stepCents}
             value={downPaymentCents}
-            disabled={isSigned || !price.ok || bounds.maxCents === 0}
+            disabled={!price.ok || bounds.maxCents === 0}
             aria-valuetext={formatEuro(downPaymentCents, intlTag)}
             onChange={(event) => {
               setRawDownPaymentCents(Number(event.target.value));
@@ -414,28 +374,6 @@ export function Contract({
         </div>
       ) : null}
 
-      {/* Signed confirmation state */}
-      {signedContract ? (
-        <div
-          role="status"
-          className="mt-[16px] rounded-[8px] border border-[#cde5d5] bg-[#eaf0ec] p-[16px] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-        >
-          <p className="text-[0.875rem] font-semibold">
-            {t('contract.signedBannerTitle', {
-              date: formatIsoDate(signedContract.signedOn, locale),
-            })}
-          </p>
-          <p className="mt-[4px] text-[0.875rem]">
-            {t('contract.signedBannerBody', {
-              netRent: formatEuro(signedContract.quote.monthlyNetRentCents, intlTag),
-              version: signedContract.quote.priceListVersion,
-              months: signedContract.quote.termMonths,
-              downPayment: formatEuro(signedContract.quote.downPaymentCents, intlTag),
-            })}
-          </p>
-        </div>
-      ) : null}
-
       {/* Actions */}
       <div className="mt-[24px] flex flex-wrap items-center justify-end gap-[12px]">
         {onClose ? (
@@ -466,25 +404,24 @@ export function Contract({
         ) : null}
 
         {/* Spine step 3: the application carries the chosen term and net down payment. */}
-        {!onUseTerms && !isSigned && isAssetAvailable && activeQuote ? (
-          <Link
-            href={`/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`}
-            className="rounded-[8px] border border-[#2877d7] bg-transparent px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#1354a5] transition-colors hover:bg-[#f6f7f8] dark:border-sky-500 dark:text-sky-400 dark:hover:bg-stone-800"
-          >
-            {t('contract.applyButton')}
-          </Link>
+        {!onUseTerms ? (
+          isAssetAvailable && activeQuote ? (
+            <Link
+              href={`/${locale}/apply?asset=${asset.id}&term=${activeQuote.termMonths}&down=${activeQuote.downPaymentCents}`}
+              className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500"
+            >
+              {t('contract.applyButton')}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="rounded-[8px] bg-[#857f7a] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] opacity-60 cursor-not-allowed dark:bg-stone-700 dark:text-stone-400"
+            >
+              {t('contract.applyButton')}
+            </button>
+          )
         ) : null}
-
-        {onUseTerms ? null : (
-          <button
-            type="button"
-            disabled={!canSign}
-            onClick={handleSign}
-            className="rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a] dark:bg-sky-600 dark:hover:bg-sky-500 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
-          >
-            {isSigned ? t('contract.signedButton') : t('contract.signButton')}
-          </button>
-        )}
       </div>
     </section>
   );
@@ -508,9 +445,6 @@ export type ContractDrawerTriggerProps = Omit<ContractProps, 'onClose'>;
  */
 export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [signedContract, setSignedContract] = useState<SignedContract | null>(
-    props.initialSignedContract ?? null
-  );
   const t = getT(props.locale);
 
   useEffect(() => {
@@ -531,18 +465,12 @@ export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         className={`w-full rounded-[8px] px-[16px] py-[8px] text-[0.875rem] font-semibold transition-colors ${
-          signedContract
-            ? 'border border-[#cde5d5] bg-[#eaf0ec] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
-            : isOpen
-              ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
-              : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500'
+          isOpen
+            ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
+            : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500'
         }`}
       >
-        {signedContract
-          ? t('contract.statusSigned')
-          : isOpen
-            ? t('contract.hideButton')
-            : t('contract.openButton')}
+        {isOpen ? t('contract.hideButton') : t('contract.openButton')}
       </button>
 
       {isOpen ? (
@@ -558,15 +486,7 @@ export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
           }}
         >
           <div className="my-auto max-h-[92dvh] w-full max-w-2xl overflow-y-auto">
-            <Contract
-              {...props}
-              initialSignedContract={signedContract}
-              onSign={(signed) => {
-                setSignedContract(signed);
-                props.onSign?.(signed);
-              }}
-              onClose={() => setIsOpen(false)}
-            />
+            <Contract {...props} onClose={() => setIsOpen(false)} />
           </div>
         </div>
       ) : null}

@@ -1,8 +1,9 @@
-// The second-life desk (scenario card 9): every returned asset gets the frozen domain call
-// `secondLifeDecision` with the price-list v1 price as its original price, the as-of date and
-// the live waiting list. Executing a decision writes it in one audited transaction: the
-// refurbishment (and upgrade) on the passport, the asset's new condition and usage, one more
-// life, and — when someone on the waiting list won — a 7-day offer hold for them.
+// The second-life desk (scenario card 9). Every returned asset gets the frozen domain call
+// `secondLifeDecision` (v1 price as the original price, the as-of date, the live waiting
+// list), shared out across the whole desk by `allocateDesk`: one person never wins two
+// cards, and a multi-item waiter's items are pooled until the set is complete. Executing a
+// decision writes it in one audited transaction: the refurbishment (and upgrade) on the
+// passport, the asset's new condition and usage, the life count, and the offer or pool hold.
 import {
   loadCo2Factors,
   loadCoefficientTable,
@@ -11,23 +12,26 @@ import {
   loadResidualCurves,
 } from '@/data/load';
 import { secondLifeRequestSchema, type Asset, type SecondLifeRequest } from '@/data/schemas';
-import { addDays } from '@/domain/calendar';
 import { co2AvoidedKg } from '@/domain/co2';
 import { listPriceOn } from '@/domain/price-list';
 import { quoteFor, type Quote } from '@/domain/pricing';
-import { secondLifeDecision, type SecondLifeDecision } from '@/domain/second-life';
+import type { SecondLifeDecision } from '@/domain/second-life';
+import {
+  allocateDesk,
+  type DeskAllocation,
+  type DeskItem,
+  type DeskOutcome,
+} from '@/domain/second-life-allocation';
 import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+import { holdForPool, offerSet, pooledAssetsByWaiter, pooledRent } from './second-life-pools';
 import { listWaitlist } from './waitlist';
 
 type Db = PrismaClient;
 
 /** The "original price" of every residual calculation: the asset's price in price list v1. */
 export const ORIGINAL_PRICE_DATE = '2026-01-01';
-
-/** Second-life offers hold the item for the waiter this many days (docs/DECISIONS.md). */
-export const OFFER_HOLD_DAYS = 7;
 
 /** A waiting-list row back in the data-pack shape the domain expects. */
 export function toSecondLifeRequest(row: WaitlistEntry): SecondLifeRequest {
@@ -55,84 +59,99 @@ export function lifeCo2Kg(
   return { kg: Math.round(kg * 10) / 10, remainingValueFraction };
 }
 
-async function loadInputs(db: Db) {
-  const [curves, costs, table, priceLists, rows] = await Promise.all([
-    loadResidualCurves(),
-    loadRefurbishmentCosts(),
-    loadCoefficientTable(),
-    loadPriceLists(),
-    listWaitlist(db),
-  ]);
-  // Only people still waiting compete: someone already offered an item is not matched twice.
-  const demand = rows.filter((row) => row.status === 'waiting').map(toSecondLifeRequest);
-  return { curves, costs, table, priceLists, demand };
-}
-
 export type SecondLifePreview = {
   asset: Asset;
   asOf: string;
   originalListPriceCents: number;
   decision: SecondLifeDecision;
+  /** What the desk does with it: offer, pool, complete a pool, list or scrap. */
+  outcome: DeskOutcome;
   /** Everyone the decision looked at, by id, so the desk can say who they are. */
   waiters: Record<string, SecondLifeRequest>;
   winner: SecondLifeRequest | null;
-  /** The winner's lease at their preferred term, with no down payment. */
+  /** The winner's lease for this item at their preferred term, with no down payment. */
   winnerQuote: Quote | null;
+  /** Items already held for the winner from earlier desk runs (pools only). */
+  pooledAssetIds: string[];
 };
 
 export type SecondLifeFailure = 'not_found' | 'not_returned' | 'no_v1_price';
 export type SecondLifePreviewResult =
   { ok: true; preview: SecondLifePreview } | { ok: false; reason: SecondLifeFailure };
 
-function decide(
-  asset: Asset,
-  asOf: string,
-  inputs: Awaited<ReturnType<typeof loadInputs>>
-): SecondLifePreviewResult {
-  if (asset.status !== 'returned') return { ok: false, reason: 'not_returned' };
-  const v1 = listPriceOn(inputs.priceLists, asset.id, ORIGINAL_PRICE_DATE);
-  if (!v1.ok) return { ok: false, reason: 'no_v1_price' };
+/** The desk: every asset waiting in `returned`, shared out in asset-id order. */
+export async function listReturnedDecisions(
+  db: Db,
+  asOf: string
+): Promise<Array<{ assetId: string; result: SecondLifePreviewResult }>> {
+  const [curves, costs, table, priceLists, rows, assetRows, pools] = await Promise.all([
+    loadResidualCurves(),
+    loadRefurbishmentCosts(),
+    loadCoefficientTable(),
+    loadPriceLists(),
+    listWaitlist(db),
+    db.asset.findMany({ where: { status: 'returned' }, orderBy: { id: 'asc' } }),
+    pooledAssetsByWaiter(db),
+  ]);
+  // Only people still waiting compete: someone already offered an item is not matched twice.
+  const demand = rows.filter((row) => row.status === 'waiting').map(toSecondLifeRequest);
+  const byId = new Map(demand.map((w) => [w.id, w]));
 
-  const decision = secondLifeDecision(
-    { asset, originalListPriceCents: v1.priceCents, asOfDate: asOf },
-    {
-      curves: inputs.curves,
-      costs: inputs.costs,
-      demand: inputs.demand,
-      table: inputs.table,
-    }
-  );
-  const byId = new Map(inputs.demand.map((w) => [w.id, w]));
-  const waiters: Record<string, SecondLifeRequest> = {};
-  for (const verdict of decision.considered) {
-    const waiter = byId.get(verdict.id);
-    if (waiter) waiters[verdict.id] = waiter;
+  const items: DeskItem[] = [];
+  for (const row of assetRows) {
+    const v1 = listPriceOn(priceLists, row.id, ORIGINAL_PRICE_DATE);
+    if (v1.ok) items.push({ asset: toAsset(row), originalListPriceCents: v1.priceCents });
   }
-  const winner = decision.winnerId ? (byId.get(decision.winnerId) ?? null) : null;
-  const quoted = winner
-    ? quoteFor({
-        listPriceCents: decision.financedCents,
-        downPaymentCents: 0,
-        termMonths: winner.preferred_term_months,
-        table: inputs.table,
-      })
-    : null;
+  const pooled = Object.fromEntries(Object.entries(pools).map(([id, ids]) => [id, ids.length]));
+  const allocations = new Map(
+    allocateDesk(items, { asOfDate: asOf, demand, pooled }, { curves, costs, table }).map((a) => [
+      a.assetId,
+      a,
+    ])
+  );
 
-  return {
-    ok: true,
-    preview: {
-      asset,
+  const toPreview = (item: DeskItem, allocation: DeskAllocation): SecondLifePreview => {
+    const { decision } = allocation;
+    const waiters: Record<string, SecondLifeRequest> = {};
+    for (const verdict of decision.considered) {
+      const waiter = byId.get(verdict.id);
+      if (waiter) waiters[verdict.id] = waiter;
+    }
+    const winner = decision.winnerId ? (byId.get(decision.winnerId) ?? null) : null;
+    const quoted = winner
+      ? quoteFor({
+          listPriceCents: decision.financedCents,
+          downPaymentCents: 0,
+          termMonths: winner.preferred_term_months,
+          table,
+        })
+      : null;
+    return {
+      ...item,
       asOf,
-      originalListPriceCents: v1.priceCents,
       decision,
+      outcome: allocation.outcome,
       waiters,
       winner,
       winnerQuote: quoted?.ok ? quoted.quote : null,
-    },
+      pooledAssetIds: winner ? (pools[winner.id] ?? []) : [],
+    };
   };
+
+  return assetRows.map((row) => {
+    const item = items.find((i) => i.asset.id === row.id);
+    const allocation = allocations.get(row.id);
+    return {
+      assetId: row.id,
+      result:
+        item && allocation
+          ? { ok: true, preview: toPreview(item, allocation) }
+          : { ok: false, reason: 'no_v1_price' },
+    };
+  });
 }
 
-/** The decision for one returned asset, without changing anything. */
+/** The desk's decision for one asset, exactly as its card shows it. Changes nothing. */
 export async function previewSecondLife(
   db: Db,
   assetId: string,
@@ -140,17 +159,9 @@ export async function previewSecondLife(
 ): Promise<SecondLifePreviewResult> {
   const row = await db.asset.findUnique({ where: { id: assetId } });
   if (!row) return { ok: false, reason: 'not_found' };
-  return decide(toAsset(row), asOf, await loadInputs(db));
-}
-
-/** The desk: a decision for every asset waiting in `returned`, oldest id first. */
-export async function listReturnedDecisions(
-  db: Db,
-  asOf: string
-): Promise<Array<{ assetId: string; result: SecondLifePreviewResult }>> {
-  const rows = await db.asset.findMany({ where: { status: 'returned' }, orderBy: { id: 'asc' } });
-  const inputs = await loadInputs(db);
-  return rows.map((row) => ({ assetId: row.id, result: decide(toAsset(row), asOf, inputs) }));
+  if (row.status !== 'returned') return { ok: false, reason: 'not_returned' };
+  const desk = await listReturnedDecisions(db, asOf);
+  return desk.find((entry) => entry.assetId === assetId)!.result;
 }
 
 /**
@@ -168,14 +179,19 @@ async function endedLifeUncounted(db: Db, assetId: string): Promise<boolean> {
   return last?.type === 'returned';
 }
 
+/** What the execute actually did (a pool completes only when its items are really held). */
+export type AppliedOutcome = 'offer' | 'pool' | 'complete_pool' | 'list_available' | 'parts_bin';
+
 export type ExecuteSecondLifeResult =
-  | { ok: true; preview: SecondLifePreview; co2AvoidedKg: number | null }
+  | { ok: true; preview: SecondLifePreview; applied: AppliedOutcome; co2AvoidedKg: number | null }
   | { ok: false; reason: SecondLifeFailure };
 
 /**
- * Carries out the decision. It is recomputed here, so the browser never tells the server
- * what to do. Asset status afterwards: `reserved` (with a waitlist_offer Reservation) when a
- * waiter won, `available` when it is listed publicly, `sold` when it goes to the parts bin.
+ * Carries out the card's decision. It is recomputed here, so the browser never tells the
+ * server what to do. Status afterwards: `reserved` (offer or pool hold) when a waiter won,
+ * `available` when listed publicly, `sold` when it goes to the parts bin. A pool completes on
+ * the items really held in the database, so executing a desk's cards in any order ends in
+ * the same state.
  */
 export async function executeSecondLife(
   db: Db,
@@ -184,11 +200,12 @@ export async function executeSecondLife(
   const previewed = await previewSecondLife(db, input.assetId, input.asOf);
   if (!previewed.ok) return previewed;
   const { preview } = previewed;
-  const { asset, decision, asOf } = preview;
+  const { asset, decision, outcome, winner, asOf } = preview;
+  const rent = preview.winnerQuote?.monthlyNetRentCents ?? null;
   const previousLives = asset.previous_lives + ((await endedLifeUncounted(db, asset.id)) ? 1 : 0);
 
   const co2 =
-    decision.action === 'parts_bin'
+    outcome.kind === 'parts_bin'
       ? null
       : lifeCo2Kg(
           {
@@ -199,6 +216,15 @@ export async function executeSecondLife(
           await loadCo2Factors()
         );
 
+  // A pool completes on the items really held now, not on the card's projection.
+  const poolFor =
+    outcome.kind === 'pool' || outcome.kind === 'complete_pool' ? (winner ?? null) : null;
+  const held = poolFor ? ((await pooledAssetsByWaiter(db))[poolFor.id] ?? []) : [];
+  let applied: AppliedOutcome;
+  if (poolFor) applied = held.length + 1 >= poolFor.quantity ? 'complete_pool' : 'pool';
+  else if (outcome.kind === 'pool' || outcome.kind === 'complete_pool') applied = 'list_available';
+  else applied = outcome.kind;
+
   await withAudit(
     db,
     {
@@ -207,13 +233,13 @@ export async function executeSecondLife(
       entityType: 'asset',
       entityId: asset.id,
       details: {
-        action: decision.action,
+        outcome: applied,
         refurbishment: decision.requiredItems.map((i) => i.id),
         refurbishmentCents: decision.requiredTotalCents,
         upgrade: decision.upgrade,
         financedCents: decision.financedCents,
         winnerId: decision.winnerId,
-        monthlyNetRentCents: preview.winnerQuote?.monthlyNetRentCents ?? null,
+        monthlyNetRentCents: rent,
       },
     },
     async (tx) => {
@@ -222,7 +248,7 @@ export async function executeSecondLife(
           data: { asset_id: asset.id, type, on_date: asOf, details_json: JSON.stringify(details) },
         });
 
-      if (decision.action === 'parts_bin') {
+      if (applied === 'parts_bin') {
         await event('parts_bin', {
           valueAsIsCents: decision.valueAsIsCents,
           financedCents: decision.financedCents,
@@ -242,35 +268,35 @@ export async function executeSecondLife(
         co2AvoidedKg: co2?.kg ?? null,
       });
       if (decision.upgrade) await event('upgraded', decision.upgrade);
-
-      const winner = preview.winner;
       await tx.asset.update({
         where: { id: asset.id },
         data: {
           condition: decision.upgrade?.to ?? asset.condition,
           usage_value: decision.usageAfterRefurb,
           previous_lives: previousLives,
-          status: winner ? 'reserved' : 'available',
+          status: 'available',
         },
       });
-      if (!winner) return;
+      if (applied === 'list_available' || !winner) return;
 
-      await tx.waitlistEntry.update({
-        where: { id: winner.id },
-        data: { status: 'offered', offered_asset_id: asset.id },
-      });
-      const until = addDays(asOf, OFFER_HOLD_DAYS);
-      await tx.reservation.create({
-        data: { asset_id: asset.id, customer_id: null, kind: 'waitlist_offer', until },
-      });
-      await event('offered_to_waiter', {
-        waiterId: winner.id,
-        who: winner.who,
-        termMonths: winner.preferred_term_months,
-        monthlyNetRentCents: preview.winnerQuote?.monthlyNetRentCents ?? null,
-        until,
-      });
+      if (applied === 'pool') {
+        await holdForPool(tx, {
+          assetId: asset.id,
+          waiter: winner,
+          filled: held.length + 1,
+          monthlyNetRentCents: rent,
+          asOf,
+        });
+        return;
+      }
+      // A plain offer (nothing held) is a set of one; a completed pool offers every item.
+      const items = [];
+      for (const assetId of held) {
+        items.push({ assetId, monthlyNetRentCents: await pooledRent(tx, assetId) });
+      }
+      items.push({ assetId: asset.id, monthlyNetRentCents: rent });
+      await offerSet(tx, { waiter: winner, items, asOf });
     }
   );
-  return { ok: true, preview, co2AvoidedKg: co2?.kg ?? null };
+  return { ok: true, preview, applied, co2AvoidedKg: co2?.kg ?? null };
 }

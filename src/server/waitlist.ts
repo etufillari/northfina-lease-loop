@@ -1,6 +1,6 @@
 // The second-life waiting list rows, seeded from data/second-life-demand.json.
 import { secondLifeRequestSchema, type SecondLifeRequest } from '@/data/schemas';
-import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
+import type { Prisma, PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
 
 /** A waiting-list row back in the data-pack shape the domain expects. */
 export function toSecondLifeRequest(row: WaitlistEntry): SecondLifeRequest {
@@ -19,7 +19,10 @@ export function toSecondLifeRequest(row: WaitlistEntry): SecondLifeRequest {
   });
 }
 
-export async function seedWaitlist(db: PrismaClient, demand: readonly SecondLifeRequest[]) {
+export async function seedWaitlist(
+  db: PrismaClient | Prisma.TransactionClient,
+  demand: readonly SecondLifeRequest[]
+) {
   let created = 0;
   for (const entry of demand) {
     const existing = await db.waitlistEntry.findUnique({ where: { id: entry.id } });

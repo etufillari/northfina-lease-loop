@@ -1,5 +1,5 @@
 // POST /api/waitlist/:id/leave  body: { actor }  [?asOf=]
-// Leaves the queue; anything held in a pool for the entry is passed on.
+// Leaves the queue.
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { db } from '@/server/db';

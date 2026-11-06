@@ -116,10 +116,20 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   charged a new battery twice, once in the higher value and again as a cost (6 Nov). Card 9:
   ebike-007 → wait-02 at €64.97/month for 12 months (financed €1,159.76).
 - **Waiting list:** customers join in the app (one place per category, first come first
-  served from the join date). An offer holds the item (or a full set for a multi-item
-  waiter) for 7 days; accepting starts a normal application at the second-life price, no
+  served from the join date). An offer holds the item (or a whole set for a multi-item
+  waiter) for 3 days; accepting starts a normal application at the second-life price, no
   down payment, preferred term. Declining or not answering takes the person off the list
-  and passes the item to the next person in line at the same price.
+  and passes the item to the next person in line at the same price. The customer's page
+  shows offers in their own section and what they still wait for; entries they left,
+  declined or leased drop off, and the place in the queue is not shown (it moves for
+  reasons the customer cannot see).
+- **Multi-item waiters (6 Nov, replacing pooling):** nothing is ever held back for an
+  incomplete set. Someone who wants n items wins only when the whole set is free at the same
+  moment — the item at hand plus refurbished items already listed in the catalogue that fit
+  them too — and then the set is offered together. Otherwise they are skipped for that item
+  ("fits, but wants a set") and it goes to the next person in line at once. When a declined
+  set is passed on, its own items count, so it can go whole to the next person who wants
+  that many. The budget is compared with the rent of ONE item.
 - **Matching:** filter by category, minimum condition, budget ≥ new rent, deadline not past;
   then **first come, first served** on `joined_on` (field added to the data for this).
 - **Passport:** every lifecycle change appends an AssetEvent; the asset page shows the full
@@ -129,7 +139,11 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 ## Cross-cutting
 
 - Every domain function takes an ISO date; `src/server/today.ts` supplies "today", and an
-  as-of override doubles as the demo's time-travel mode.
+  as-of override doubles as the demo's time-travel mode. Time travel only moves forward
+  (contracts, invoices and offers are written on their day, so going back would contradict
+  the records); "Reset demo" rebuilds the database from the data pack in one audited
+  transaction and restarts on 1 Jan 2026, the first day of price list v1, so every scenario
+  card can be replayed going forward. The demo controls sit in their own bar above the nav.
 - App-side asset states add `leased`; every `reserved` is backed by a Reservation row
   (who, why, until when).
 - All the repo rules in RULES.md apply: pure tested domain code, integer cents, API

@@ -68,7 +68,9 @@ export type WaiterVerdict = {
     | 'deadline_passed'
     | 'over_budget'
     | 'under_budget'
-    | 'unpriceable';
+    | 'unpriceable'
+    /** Wants several, and too few matching items are free right now (the desk's set rule). */
+    | 'set_incomplete';
   monthlyNetRentCents?: number;
 };
 

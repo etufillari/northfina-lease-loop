@@ -2,7 +2,7 @@
 // Profile data beyond name and email is filled in by the first application (and saved as
 // defaults only when the customer opts in).
 import type { Customer as DataCustomer } from '@/data/schemas';
-import type { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
 
 type DbClient = PrismaClient;
@@ -53,7 +53,10 @@ function toRowData(customer: DataCustomer) {
 }
 
 /** Adds data-pack customers that are missing; never overwrites app changes. */
-export async function seedCustomers(db: DbClient, customers: readonly DataCustomer[]) {
+export async function seedCustomers(
+  db: DbClient | Prisma.TransactionClient,
+  customers: readonly DataCustomer[]
+) {
   let created = 0;
   for (const customer of customers) {
     const existing = await db.customer.findUnique({ where: { id: customer.id } });

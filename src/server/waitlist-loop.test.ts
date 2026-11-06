@@ -74,7 +74,7 @@ describe('card 10: Sanna leases ebike-008 from the waiting list', () => {
   it('shows her the offer: the item, the rent and how long it is held', async () => {
     const [view] = await customerWaitlist(db, 'cust-sanna', AS_OF);
     expect(view!.entry).toMatchObject({ id: 'wait-01', status: 'offered' });
-    expect(view!.position).toBeNull();
+    expect(view!.pastDeadline).toBe(false);
     expect(view!.offer).toEqual({
       items: [
         {
@@ -169,7 +169,7 @@ describe('card 10: Sanna leases ebike-008 from the waiting list', () => {
 });
 
 describe('joining the list in the app', () => {
-  it('Aino joins for an e-bike and gets a place in the queue', async () => {
+  it('Aino joins for an e-bike and sees it among what she is waiting for', async () => {
     const joined = await joinAino();
     if (!joined.ok) throw new Error(joined.reason);
     expect(joined.entry).toMatchObject({
@@ -179,11 +179,11 @@ describe('joining the list in the app', () => {
       status: 'waiting',
     });
     const [view] = await customerWaitlist(db, 'cust-aino', AS_OF);
-    // Everyone still waiting for an e-bike who joined before her, plus one.
-    const ahead = (await staffWaitlist(db, AS_OF)).filter(
-      (v) => v.entry.category === 'e_bike' && v.position !== null && v.entry.id !== view!.entry.id
-    );
-    expect(view!.position).toBe(ahead.length + 1);
+    expect(view).toMatchObject({ entry: { id: joined.entry.id }, pastDeadline: false });
+    expect(view).not.toHaveProperty('position');
+    // Staff see her too, in queue order.
+    const staff = await staffWaitlist(db, AS_OF);
+    expect(staff.some((v) => v.entry.id === joined.entry.id)).toBe(true);
   });
 
   it('refuses a second place in the same category, a past deadline and an unpriced term', async () => {
@@ -213,6 +213,9 @@ describe('joining the list in the app', () => {
     expect(await leaveWaitlist(db, { ...input, actor: 'cust-aino' })).toEqual({ ok: true });
     const entry = await db.waitlistEntry.findUniqueOrThrow({ where: { id: joined.entry.id } });
     expect(entry).toMatchObject({ status: 'removed', left_reason: 'left' });
+    // Gone from her page.
+    const views = await customerWaitlist(db, 'cust-aino', AS_OF);
+    expect(views.map((v) => v.entry.id)).not.toContain(joined.entry.id);
   });
 });
 
@@ -228,7 +231,7 @@ describe('card 9: Pekka declines ebike-007', () => {
       where: { customer_id: 'cust-aino', category: 'e_bike' },
     });
     expect(declined.passedOn).toEqual([
-      { assetId: 'ebike-007', outcome: { kind: 'offer', waiterId: aino.id } },
+      { assetId: 'ebike-007', outcome: { kind: 'offer', waiterId: aino.id, withAssetIds: [] } },
     ]);
     const pekka = await db.waitlistEntry.findUniqueOrThrow({ where: { id: 'wait-02' } });
     expect(pekka).toMatchObject({ status: 'removed', left_reason: 'declined' });
@@ -273,7 +276,7 @@ describe('an offer nobody answers', () => {
     const result = await expireOffer(db, { entryId: 'wait-13', actor: 'staff', asOf: later });
     if (!result.ok) throw new Error(result.reason);
     expect(result.passedOn).toEqual([
-      { assetId: 'ebike-011', outcome: { kind: 'offer', waiterId: 'wait-04' } },
+      { assetId: 'ebike-011', outcome: { kind: 'offer', waiterId: 'wait-04', withAssetIds: [] } },
     ]);
     const entry = await db.waitlistEntry.findUniqueOrThrow({ where: { id: 'wait-13' } });
     expect(entry).toMatchObject({ status: 'removed', left_reason: 'offer_expired' });

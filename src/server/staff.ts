@@ -10,7 +10,7 @@ type Db = PrismaClient;
 
 /** Statuses that wait for a person on the staff side. */
 /** Holds owned by the waiting-list rules, which staff decisions leave alone. */
-const WAITLIST_HOLDS = ['waitlist_offer', 'waitlist_pool'];
+const WAITLIST_HOLDS = ['waitlist_offer'];
 
 export const STAFF_QUEUE_STATUSES = ['manual_review', 'awaiting_signature'] as const;
 export type StaffQueueStatus = (typeof STAFF_QUEUE_STATUSES)[number];

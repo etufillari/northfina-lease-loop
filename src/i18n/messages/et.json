@@ -40,7 +40,7 @@
   "asset.previousLives": "Varasemad liisinguperioodid",
   "asset.listPrice": "Hinnakirja hind käibemaksuta",
   "asset.priceListVersion": "Hinnakiri {version}",
-  "asset.secondLifePrice": "Teise elu hind",
+  "asset.price": "Hind käibemaksuta",
   "asset.noPrice": "Sellel kuupäeval hind puudub",
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laadimistsüklit",

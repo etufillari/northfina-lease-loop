@@ -19,6 +19,7 @@ type AssetCardProps = {
 };
 
 export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProps) {
+  const isRelisted = price.ok && price.priceListVersion === null;
   const headingId = `asset-${asset.id}`;
   const fallbackImage = categoryFallbackImages[asset.category];
 
@@ -62,17 +63,13 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
           />
         </dl>
 
-        {/* List price */}
+        {/* Price: a re-listed item has no price list */}
         <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
           <div className="flex items-end justify-between gap-3 px-3">
             <div className="text-xs text-stone-600 dark:text-stone-400">
-              <p>{t('asset.listPrice')}</p>
-              {price.ok ? (
-                <p>
-                  {price.priceListVersion === null
-                    ? t('asset.secondLifePrice')
-                    : t('asset.priceListVersion', { version: price.priceListVersion })}
-                </p>
+              <p>{isRelisted ? t('asset.price') : t('asset.listPrice')}</p>
+              {price.ok && price.priceListVersion !== null ? (
+                <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
               ) : null}
             </div>
 

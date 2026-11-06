@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { loadQuestions } from '@/data/load';
 import { messages } from './get-t';
 import { locales } from './locales';
 
@@ -23,5 +24,13 @@ describe('translation files', () => {
       const translated = messages[locale][key as keyof typeof messages.en];
       expect(placeholders(translated), `${locale}: ${key}`).toEqual(placeholders(english));
     }
+  });
+
+  // The data pack explains each question in English only; without a key the other
+  // languages would show English text.
+  it('has a "why we ask" message for every question in the data pack', async () => {
+    const { questions } = await loadQuestions();
+    const missing = questions.map((q) => `why.${q.id}`).filter((key) => !(key in messages.en));
+    expect(missing).toEqual([]);
   });
 });

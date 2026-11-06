@@ -22,6 +22,16 @@ export function answerLabel(t: Translate, value: string): string {
   return key in messages.en ? t(key as MessageKey) : value;
 }
 
+/**
+ * Why we ask a question. The data pack only has English explanations, so the words live in the
+ * i18n files under `why.<question id>`. A question without a key falls back to the data pack.
+ */
+export function whyWeAskText(t: Translate, question: Question, locale: Locale): string {
+  const key = `why.${question.id}`;
+  if (key in messages.en) return t(key as MessageKey);
+  return question.why_we_ask[locale] ?? question.why_we_ask.en;
+}
+
 type QuestionFieldProps = {
   question: Question;
   locale: Locale;
@@ -35,7 +45,7 @@ export function QuestionField({ question, locale, t, value, onChange }: Question
   const whyId = `${inputId}-why`;
   const hintId = `${inputId}-hint`;
   const label = question.text[locale];
-  const why = question.why_we_ask[locale] ?? question.why_we_ask.en;
+  const why = whyWeAskText(t, question, locale);
 
   const whyWeAsk = (
     <p id={whyId} className={mutedClass}>

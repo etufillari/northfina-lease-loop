@@ -173,7 +173,7 @@
   "passOn.nominateButton": "Nimeä",
   "passOn.nominated": "Kutsu lähetetty. Jos hän hyväksyy, tuote varataan hänelle 3 päiväksi, kun se on palautettu ja valmis.",
   "transfer.title": "Jatka tätä leasingia",
-  "transfer.intro": "Jatkat jäljellä olevaa maksuohjelmaa sellaisenaan: {rent} / kk ({vat}), noin {months} kk jäljellä, ei käsirahaa.",
+  "transfer.intro": "Jatkat jäljellä olevaa maksuohjelmaa sellaisenaan: {rent} / kk ({vat}), {months} kk jäljellä, ei käsirahaa.",
   "transfer.apply": "Hae jatkajaksi",
   "transfer.invalid": "Tämä siirtolinkki ei ole enää voimassa.",
   "fleet.title": "Leasaa kalusto",

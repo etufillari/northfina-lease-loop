@@ -192,7 +192,7 @@
   "passOn.nominateButton": "Nominate",
   "passOn.nominated": "Invitation sent. If they accept, the item is held for them for 3 days once it is back and ready.",
   "transfer.title": "Take over this lease",
-  "transfer.intro": "You take over the remaining schedule exactly as it is: {rent} / month ({vat}), about {months} months left, no down payment.",
+  "transfer.intro": "You take over the remaining schedule exactly as it is: {rent} / month ({vat}), {months} months left, no down payment.",
   "transfer.apply": "Apply to take over",
   "transfer.invalid": "This transfer link is no longer valid.",
   "fleet.title": "Lease a fleet",

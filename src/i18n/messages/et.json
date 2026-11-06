@@ -173,7 +173,7 @@
   "passOn.nominateButton": "Nimeta",
   "passOn.nominated": "Kutse saadetud. Kui ta nõustub, hoitakse eset talle 3 päeva, kui see on tagasi ja valmis.",
   "transfer.title": "Võta see rent üle",
-  "transfer.intro": "Võtad järelejäänud graafiku üle sellisena, nagu see on: {rent} / kuu ({vat}), umbes {months} kuud jäänud, ilma sissemakseta.",
+  "transfer.intro": "Võtad järelejäänud graafiku üle sellisena, nagu see on: {rent} / kuu ({vat}), {months} kuud jäänud, ilma sissemakseta.",
   "transfer.apply": "Taotle ülevõtmist",
   "transfer.invalid": "See üleandmislink ei kehti enam.",
   "fleet.title": "Rendi autopark",

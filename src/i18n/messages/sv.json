@@ -173,7 +173,7 @@
   "passOn.nominateButton": "Nominera",
   "passOn.nominated": "Inbjudan skickad. Om hen tackar ja reserveras artikeln åt hen i 3 dagar när den är tillbaka och klar.",
   "transfer.title": "Ta över denna leasing",
-  "transfer.intro": "Du tar över den återstående planen som den är: {rent} / mån ({vat}), cirka {months} månader kvar, ingen handpenning.",
+  "transfer.intro": "Du tar över den återstående planen som den är: {rent} / mån ({vat}), {months} månader kvar, ingen handpenning.",
   "transfer.apply": "Ansök om att ta över",
   "transfer.invalid": "Denna överlåtelselänk är inte längre giltig.",
   "fleet.title": "Leasa en flotta",

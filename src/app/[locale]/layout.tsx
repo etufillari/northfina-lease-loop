@@ -44,7 +44,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <UserSwitcher locale={locale} />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>

@@ -379,16 +379,21 @@ export function ApplicationWizard({
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                confirmBasics(batchItems.map(({ question, value }) => ({ id: question.id, value })))
-              }
-              className="mt-4 rounded-xl bg-emerald-700 px-4 py-2.5 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
-            >
-              {t('apply.confirmAll')}
-            </button>
+            {/* Same size and place as every Continue button: bottom right. */}
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  confirmBasics(
+                    batchItems.map(({ question, value }) => ({ id: question.id, value }))
+                  )
+                }
+                className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+              >
+                {t('apply.confirmAll')}
+              </button>
+            </div>
           </section>
         ) : null}
         {showBatch && answerError ? (
@@ -414,13 +419,16 @@ export function ApplicationWizard({
                       ? optionLabel(t, String(prefill[current.id]))
                       : current.type === 'money'
                         ? euro(Number(prefill[current.id]))
-                        : String(prefill[current.id])}
+                        : Array.isArray(prefill[current.id])
+                          ? (prefill[current.id] as string[]).join(', ')
+                          : String(prefill[current.id])}
                   </span>
+                  {/* Same size and place as every Continue button: bottom right. */}
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => send(current.id, prefill[current.id])}
-                    className="rounded-lg bg-emerald-700 px-3 py-1.5 font-medium text-white hover:bg-emerald-800"
+                    className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
                   >
                     {t('apply.confirm')}
                   </button>

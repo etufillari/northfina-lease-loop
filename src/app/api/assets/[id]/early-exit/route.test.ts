@@ -67,6 +67,21 @@ describe('POST /api/assets/[id]/early-exit', () => {
     });
   });
 
+  it('passes the offer token through, for both choices, so the server prices the offer', async () => {
+    const { executeEarlyExit } = await import('@/server/early-exit');
+    const spy = vi.mocked(executeEarlyExit);
+    spy.mockClear();
+
+    expect((await post('ebike-002', { ...CARD_8, token: 'offer-token' })).status).toBe(200);
+    expect((await post('ebike-002', { ...RETURN, token: 'offer-token' })).status).toBe(200);
+    expect(spy.mock.calls.map(([, input]) => input.token)).toEqual(['offer-token', 'offer-token']);
+  });
+
+  it('rejects an empty or oversized token', async () => {
+    expect((await post('ebike-002', { ...CARD_8, token: '' })).status).toBe(400);
+    expect((await post('ebike-002', { ...CARD_8, token: 'x'.repeat(201) })).status).toBe(400);
+  });
+
   it('rejects a body that sends an amount instead of contract terms', async () => {
     const { status, json } = await post('ebike-003', { ...CARD_8, netCents: 1 });
     expect(status).toBe(400);

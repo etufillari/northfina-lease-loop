@@ -22,7 +22,8 @@ export type EarlyExitOptionsProps = {
   locale: Locale;
   quote: EarlyExitQuote;
   /** The contract the page was opened with: sent back unchanged by the form. */
-  contract: { asset: string; term: number; down: number; signedOn: string };
+  /** `token` identifies a longer-term offer the contract was signed under (its locked price). */
+  contract: { asset: string; term: number; down: number; signedOn: string; token?: string };
   exitMonth: number;
   /** The inspection the quote is priced with. `inspectedBy` is empty until it is entered. */
   inspection: ReturnInspection & { inspectedBy: string };
@@ -201,6 +202,7 @@ export function EarlyExitOptions({
         <input type="hidden" name="term" value={contract.term} />
         <input type="hidden" name="down" value={contract.down} />
         <input type="hidden" name="signedOn" value={contract.signedOn} />
+        {contract.token ? <input type="hidden" name="token" value={contract.token} /> : null}
 
         <label className="text-[0.875rem] font-semibold">
           {t('invoices.earlyExit.monthLabel')}

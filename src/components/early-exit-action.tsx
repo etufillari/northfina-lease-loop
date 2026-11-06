@@ -16,7 +16,8 @@ import { intlLocale, type Locale } from '@/i18n/locales';
 export type EarlyExitActionProps = {
   locale: Locale;
   choice: 'buyout' | 'return';
-  contract: { asset: string; term: number; down: number; signedOn: string };
+  /** `token` identifies a longer-term offer the contract was signed under (its locked price). */
+  contract: { asset: string; term: number; down: number; signedOn: string; token?: string };
   exitMonth: number;
   /** The inspection shown on the page. Sent with a return; ignored for a buyout. */
   inspection: ReturnInspection & { inspectedBy: string };
@@ -60,6 +61,7 @@ export function EarlyExitAction({
           termMonths: contract.term,
           downPaymentCents: contract.down,
           signedOn: contract.signedOn,
+          ...(contract.token ? { token: contract.token } : {}),
           exitMonth,
           ...(choice === 'return' ? { inspection } : {}),
         }),

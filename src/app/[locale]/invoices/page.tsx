@@ -34,7 +34,7 @@ import {
 } from '@/domain/end-of-term';
 import { addMonthsClamped } from '@/domain/invoice-schedule';
 import { formatEuro } from '@/domain/money';
-import { listPriceOn } from '@/domain/price-list';
+import { loadContractPrice } from '@/server/contract-price';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
@@ -73,15 +73,6 @@ export default async function InvoicesPage({
   const { asset: assetId, term, down, token } = query.data;
   const signedOn = query.data.signedOn ?? todayIso();
 
-  const offerReservation = token
-    ? await db.assetReservation.findFirst({
-        where: {
-          token,
-          asset_id: assetId,
-          reservation_type: 'offer',
-        },
-      })
-    : null;
   const [
     assets,
     priceLists,
@@ -105,20 +96,18 @@ export default async function InvoicesPage({
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message locale={locale} text={t('apply.notFound')} />;
 
-  const effectiveOfferedOn = offerReservation?.offered_on ?? null;
-  const offerPrice =
-    offerReservation &&
-    offerReservation.list_price_cents !== null &&
-    offerReservation.price_list_version !== null
-      ? {
-          ok: true as const,
-          priceCents: offerReservation.list_price_cents,
-          priceListVersion: offerReservation.price_list_version,
-        }
-      : null;
-  const cataloguePriceOnSigned = listPriceOn(priceLists, asset.id, signedOn);
+  // The same price the early-exit route charges from: the offer's locked price, if any.
+  const contractPrice = await loadContractPrice(db, {
+    assetId: asset.id,
+    signedOn,
+    token,
+    priceLists,
+  });
+  const effectiveOfferedOn = contractPrice.offeredOn;
+  const offerPrice = contractPrice.offer;
+  const cataloguePriceOnSigned = contractPrice.catalogue;
 
-  const price = offerPrice ?? cataloguePriceOnSigned;
+  const { price } = contractPrice;
   if (!price.ok) return <Message locale={locale} text={t('asset.noPrice')} />;
 
   const hasOfferPriceProtection = Boolean(
@@ -355,7 +344,7 @@ export default async function InvoicesPage({
         <EarlyExitOptions
           locale={locale}
           quote={earlyExit}
-          contract={{ asset: asset.id, term: quote.termMonths, down, signedOn }}
+          contract={{ asset: asset.id, term: quote.termMonths, down, signedOn, token }}
           exitMonth={exitMonth}
           inspection={{ ...inspection, inspectedBy: query.data.inspectedBy ?? '' }}
           inspectionProblem={inspectionCheck.ok ? undefined : inspectionCheck.problem}

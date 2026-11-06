@@ -17,6 +17,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await db.auditLog.deleteMany();
+  await db.assetReservation.deleteMany();
   await db.asset.deleteMany();
   await seedAssets(db, await loadAssets());
   // Aino signed card 1, which reserved the bike.
@@ -154,6 +155,70 @@ describe('executeEarlyExit', () => {
     });
     expect(await auditRows()).toHaveLength(1);
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } })).status).toBe('sold');
+  });
+
+  describe('a contract signed under a longer-term offer', () => {
+    // ebike-002 was offered on 5 Nov 2026 at its price list 1 price (249 900) and signed on
+    // 6 Nov, when price list 2 already charged 262 400. The offer price is locked.
+    const OFFER_CONTRACT: ExecuteEarlyExitInput = {
+      assetId: 'ebike-002',
+      choice: 'buyout',
+      termMonths: 36,
+      downPaymentCents: 0,
+      signedOn: '2026-11-06',
+      exitMonth: 7,
+      token: 'offer-token',
+      actor: 'cust-test',
+    };
+
+    beforeEach(async () => {
+      await db.asset.update({ where: { id: 'ebike-002' }, data: { status: 'reserved' } });
+      await db.assetReservation.create({
+        data: {
+          asset_id: 'ebike-002',
+          token: 'offer-token',
+          actor: 'cust-test',
+          status: 'completed',
+          expires_at: new Date('2026-11-19T00:00:00Z'),
+          reservation_type: 'offer',
+          offered_on: '2026-11-05',
+          list_price_cents: 249_900,
+          price_list_version: 1,
+          term_months: 36,
+          down_payment_cents: 0,
+        },
+      });
+    });
+
+    it('charges the early buyout from the offer price, as the invoices page shows it', async () => {
+      // Rent 249 900 × 0.027584 = 6 893; buyout 37 485; balance with 29 rents left.
+      const result = await executeEarlyExit(db, OFFER_CONTRACT);
+      expect(result).toMatchObject({ ok: true, receipt: { netCents: 212_422 } });
+
+      const [row] = await auditRows();
+      expect(row?.details.contract).toMatchObject({
+        listPriceCents: 249_900,
+        priceListVersion: 1,
+        monthlyNetRentCents: 6_893,
+        signedUnderOffer: true,
+      });
+    });
+
+    it('without the token, prices from the catalogue on the signing day', async () => {
+      const { token: _token, ...withoutToken } = OFFER_CONTRACT;
+      const result = await executeEarlyExit(db, withoutToken);
+      expect(result).toMatchObject({ ok: true, receipt: { netCents: 223_053 } });
+      expect((await auditRows())[0]?.details.contract.signedUnderOffer).toBe(false);
+    });
+
+    it("ignores an unknown token or another asset's offer", async () => {
+      const unknown = await executeEarlyExit(db, { ...OFFER_CONTRACT, token: 'nope' });
+      expect(unknown).toMatchObject({ ok: true, receipt: { netCents: 223_053 } });
+
+      // The offer belongs to ebike-002, so it must not lower the price of ebike-003.
+      const other = await executeEarlyExit(db, { ...CARD_8, token: 'offer-token' });
+      expect(other).toMatchObject({ ok: true, receipt: { netCents: 330_666 } });
+    });
   });
 
   it('lets only one of two simultaneous exits through', async () => {

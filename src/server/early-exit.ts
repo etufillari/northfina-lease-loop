@@ -24,9 +24,9 @@ import {
   type InspectionProblem,
   type ReturnInspection,
 } from '@/domain/early-exit';
-import { listPriceOn } from '@/domain/price-list';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+import { loadContractPrice } from './contract-price';
 import type { PrismaClient } from './prisma-client';
 
 export type EarlyExitChoice = 'buyout' | 'return';
@@ -38,6 +38,8 @@ export type ExecuteEarlyExitInput = {
   termMonths: number;
   downPaymentCents: number;
   signedOn: string;
+  /** The longer-term offer the contract was signed under, if any: its price is locked. */
+  token?: string;
   /** Leave on the due date of this rent row (1 = the first rent). */
   exitMonth: number;
   /** Required for a return; on a return it becomes the asset's condition and usage. */
@@ -93,7 +95,13 @@ export async function executeEarlyExit(
       loadVatRates(),
     ]);
 
-  const price = listPriceOn(priceLists, asset.id, input.signedOn);
+  // The same price the invoices page shows: the offer's locked price, if any.
+  const { price, offer } = await loadContractPrice(db, {
+    assetId: asset.id,
+    signedOn: input.signedOn,
+    token: input.token,
+    priceLists,
+  });
   if (!price.ok) return { ok: false, reason: 'invalid_contract' };
   const quoted = calculateContractQuote({
     listPriceCents: price.priceCents,
@@ -145,6 +153,8 @@ export async function executeEarlyExit(
             termMonths: input.termMonths,
             downPaymentCents: input.downPaymentCents,
             priceListVersion: quoted.quote.priceListVersion,
+            listPriceCents: quoted.quote.listPriceCents,
+            signedUnderOffer: offer !== null,
             monthlyNetRentCents: quoted.quote.monthlyNetRentCents,
             buyoutNetCents: quoted.quote.buyoutNetCents,
           },

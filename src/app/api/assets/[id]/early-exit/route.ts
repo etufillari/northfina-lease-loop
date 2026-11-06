@@ -13,6 +13,8 @@ const contractFields = {
   termMonths: z.number().int().positive(),
   downPaymentCents: z.number().int().min(0),
   signedOn: isoDateSchema,
+  // A contract signed under a longer-term offer is priced at the offer's locked price.
+  token: z.string().min(1).max(200).optional(),
   exitMonth: z.number().int().min(1),
   actor: z.string().trim().min(1).max(100).default('customer'),
 };

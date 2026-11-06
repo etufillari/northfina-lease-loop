@@ -4,7 +4,7 @@ import { assetCategorySchema } from '@/data/schemas';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
-const contactEmail = 'customer.service@example.com';
+const contactEmail = 'service@example.com';
 const contactPhone = '+358 00 000 0000';
 
 const linkClasses =
@@ -38,7 +38,7 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Translate }) {
           <h2 className="font-semibold text-white">{t('footer.customerService')}</h2>
           <ul className="mt-3 space-y-2">
             <li>
-              <a href={`mailto:${contactEmail}`} className={`${linkClasses} break-all`}>
+              <a href={`mailto:${contactEmail}`} className={`${linkClasses} break-words`}>
                 {contactEmail}
               </a>
             </li>

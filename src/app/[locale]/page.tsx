@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { CategoryIllustration } from '@/components/category-illustration';
 import { assetCategorySchema } from '@/data/schemas';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -40,27 +41,36 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
             <p className="mt-2 max-w-2xl text-ink-600 dark:text-ink-400">
               {t('catalogue.categoryIntro')}
             </p>
-            <ul className="mt-6 grid gap-4 md:grid-cols-3">
+            <ul className="mt-8 grid gap-6 lg:grid-cols-3">
               {assetCategorySchema.options.map((category) => {
                 const count = assets.filter((asset) => asset.category === category).length;
                 return (
                   <li key={category}>
                     <Link
                       href={`/${locale}/catalogue/${category}`}
-                      className="group block h-full rounded-2xl border border-ink-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-ink-800 dark:bg-ink-900 dark:hover:border-brand-700"
+                      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-ink-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md motion-reduce:transform-none dark:border-ink-800 dark:bg-ink-900 dark:hover:border-brand-700"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <h3 className="text-lg font-semibold">{t(`category.${category}`)}</h3>
+                      <div className="flex items-center justify-center bg-brand-50 px-8 py-10 text-brand-600 lg:px-10 lg:py-14 dark:bg-ink-800 dark:text-brand-300">
+                        <div className="w-full max-w-72 transition-transform group-hover:scale-105 motion-reduce:transform-none">
+                          <CategoryIllustration category={category} />
+                        </div>
+                      </div>
+                      <div className="flex flex-1 items-start justify-between gap-4 p-6 lg:p-8">
+                        <div className="min-w-0">
+                          <h3 className="text-xl font-semibold lg:text-2xl">
+                            {t(`category.${category}`)}
+                          </h3>
+                          <p className="mt-2 text-ink-600 dark:text-ink-400">
+                            {t('catalogue.itemCount', { count })}
+                          </p>
+                        </div>
                         <span
                           aria-hidden="true"
-                          className="text-xl text-brand-700 transition-transform group-hover:translate-x-1 dark:text-brand-400"
+                          className="text-2xl text-brand-700 transition-transform group-hover:translate-x-1 motion-reduce:transform-none dark:text-brand-400"
                         >
                           →
                         </span>
                       </div>
-                      <p className="mt-3 text-sm text-ink-600 dark:text-ink-400">
-                        {t('catalogue.itemCount', { count })}
-                      </p>
                     </Link>
                   </li>
                 );

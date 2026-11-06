@@ -13,8 +13,11 @@ export type Deal = {
   category: AssetCategory;
   financed_amount_cents: number;
   term_months: number;
+  /** True when our records hold no income for this applicant. */
+  income_unknown?: boolean;
 };
 
+const INCOME_QUESTION = 'q_monthly_income';
 const ANSWER_FIELD_PREFIX = 'answers.';
 
 /** Who is leasing, from the q_customer_type answer. */
@@ -48,6 +51,11 @@ function conditionHolds(condition: AskWhenCondition, deal: Deal, answers: Answer
 }
 
 function questionApplies(question: Question, deal: Deal, answers: Answers): boolean {
+  // The data asks for income on bigger deals only, because a consumer's record normally holds
+  // it. Every consumer has an affordability check, so with no record the form has to ask.
+  if (question.id === INCOME_QUESTION && deal.income_unknown && deal.customer_type === 'consumer') {
+    return true;
+  }
   return question.ask_when.every((condition) => conditionHolds(condition, deal, answers));
 }
 

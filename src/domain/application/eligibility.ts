@@ -92,7 +92,8 @@ function isAffordable(rentCents: number, incomeCents: number): boolean {
 
 /**
  * Any failed rule rejects the application, and every failed rule is listed so the customer
- * sees all of them at once. Otherwise a PEP goes to manual review. Everyone else is approved.
+ * sees all of them at once. Otherwise a PEP, or a consumer whose income nobody knows, goes to
+ * manual review. Everyone else is approved.
  * Who may sign for a company is not an eligibility rule: it is checked at signing.
  */
 export function decide(input: EligibilityInput): Eligibility {
@@ -100,6 +101,7 @@ export function decide(input: EligibilityInput): Eligibility {
   const reasons: EligibilityReason[] = [];
   let eligible_from: string | null = null;
   const applicantType = answeredCustomerType(answers) ?? customer.type;
+  let incomeUnknown = false;
 
   const minAge = minimumAge(questions);
   const birthDate = applicantBirthDate(customer, answers);
@@ -115,11 +117,10 @@ export function decide(input: EligibilityInput): Eligibility {
   }
 
   if (applicantType === 'consumer' && monthlyRentWithVatCents !== null) {
-    // An unknown income cannot show the rent is affordable, so it does not pass.
+    // An unknown income proves nothing either way, so a person decides.
     const income = applicantIncome(customer, answers);
-    if (income === null || !isAffordable(monthlyRentWithVatCents, income)) {
-      reasons.push('affordability');
-    }
+    if (income === null) incomeUnknown = true;
+    else if (!isAffordable(monthlyRentWithVatCents, income)) reasons.push('affordability');
   }
 
   if (applicantType !== 'consumer') {
@@ -134,8 +135,16 @@ export function decide(input: EligibilityInput): Eligibility {
 
   if (reasons.length > 0) return { decision: 'rejected', reasons, eligible_from };
 
-  if (customer.is_pep || answers.q_pep === 'yes') {
-    return { decision: 'manual_review', reasons: ['pep_manual_review'], eligible_from: null };
+  const isPep = customer.is_pep || answers.q_pep === 'yes';
+  if (isPep || incomeUnknown) {
+    return {
+      decision: 'manual_review',
+      reasons: [
+        ...(isPep ? (['pep_manual_review'] as const) : []),
+        ...(incomeUnknown ? (['income_review'] as const) : []),
+      ],
+      eligible_from: null,
+    };
   }
   return { decision: 'approved', reasons: [], eligible_from: null };
 }

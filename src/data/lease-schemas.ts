@@ -25,6 +25,7 @@ export const eligibilityReasonSchema = z.enum([
   'affordability',
   'business_id',
   'pep_manual_review',
+  'income_review',
   'financed_limits',
 ]);
 export type EligibilityReason = z.infer<typeof eligibilityReasonSchema>;

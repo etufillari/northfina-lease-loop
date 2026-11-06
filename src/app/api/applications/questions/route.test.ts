@@ -123,6 +123,22 @@ describe('POST /api/applications/questions', () => {
     expect(hinted.hint).toBe('1234567-8 ja kelvollinen tarkistusnumero');
   });
 
+  it('asks for income on a small deal when the record has none', async () => {
+    const small = {
+      asset_id: 'ebike-006',
+      term_months: 36,
+      answers: { q_customer_type: 'consumer' },
+    };
+    const idsFor = async () =>
+      (await post(small)).body.data.questions.map((question: { id: string }) => question.id);
+
+    await actAs({ sub: 'cust-pekka', role: 'client' });
+    expect(await idsFor()).toContain('q_monthly_income');
+
+    await actAs(AINO);
+    expect(await idsFor()).not.toContain('q_monthly_income');
+  });
+
   it('does not leak the internal rules of a question', async () => {
     await actAs(AINO);
     const { body } = await post(deal);

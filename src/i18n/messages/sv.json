@@ -133,6 +133,7 @@
   "application.reason.affordability": "Månadshyran skulle bli mer än 30 % av din nettoinkomst. En billigare produkt, en längre period eller en första förhöjd hyra kan hjälpa.",
   "application.reason.business_id": "FO-numret är inte giltigt. Kontrollera det och ansök igen.",
   "application.reason.pep_manual_review": "Eftersom en person i politiskt utsatt ställning berörs granskar någon i vårt team ansökan.",
+  "application.reason.income_review": "Vi saknar uppgifter om din inkomst, så någon i vårt team granskar ansökan.",
   "application.reason.financed_limits": "Finansieringsbeloppet måste vara mellan 300 och 250 000 euro.",
   "application.reason.reviewedRejected": "En person i vårt team har granskat ansökan och kunde inte godkänna den.",
   "application.review.title": "Granska din ansökan",

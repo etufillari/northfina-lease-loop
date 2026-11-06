@@ -133,6 +133,7 @@
   "application.reason.affordability": "Kuumakse oleks üle 30 % sinu netosissetulekust. Aidata võib odavam toode, pikem liisinguperiood või sissemakse.",
   "application.reason.business_id": "Ettevõtte registrikood ei ole kehtiv. Palun kontrolli seda ja esita taotlus uuesti.",
   "application.reason.pep_manual_review": "Kuna asjaga on seotud riikliku taustaga isik, vaatab taotluse üle meie meeskonna liige.",
+  "application.reason.income_review": "Meil puuduvad andmed sinu sissetuleku kohta, seega vaatab taotluse üle meie meeskonna liige.",
   "application.reason.financed_limits": "Finantseeritav summa peab olema vahemikus 300 kuni 250 000 eurot.",
   "application.reason.reviewedRejected": "Meie meeskonna liige vaatas taotluse üle ega saanud seda heaks kiita.",
   "application.review.title": "Vaata oma taotlus üle",

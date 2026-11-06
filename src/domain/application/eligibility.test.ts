@@ -250,9 +250,29 @@ describe('decide: the answered type', () => {
     expect(decide(input('cust-broken-id', { answers })).decision).toBe('approved');
   });
 
-  it('does not pass affordability when no income is known', () => {
+  it('sends a consumer with no known income to a person, not to a rejection', () => {
     const answers = { q_customer_type: 'consumer' };
-    expect(decide(input('cust-norvi', { answers })).reasons).toEqual(['affordability']);
+    expect(decide(input('cust-norvi', { answers }))).toEqual({
+      decision: 'manual_review',
+      reasons: ['income_review'],
+      eligible_from: null,
+    });
+  });
+
+  it('lists both reasons for a PEP whose income is unknown', () => {
+    const answers = { q_customer_type: 'consumer', q_pep: 'yes' };
+    expect(decide(input('cust-norvi', { answers }))).toMatchObject({
+      decision: 'manual_review',
+      reasons: ['pep_manual_review', 'income_review'],
+    });
+  });
+
+  it('still rejects for another rule when the income is unknown', () => {
+    const answers = { q_customer_type: 'consumer', q_country: 'other' };
+    expect(decide(input('cust-norvi', { answers }))).toMatchObject({
+      decision: 'rejected',
+      reasons: ['residency'],
+    });
   });
 
   it('counts PEP status from the record, whatever type is answered', () => {

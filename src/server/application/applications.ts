@@ -96,6 +96,7 @@ async function prepare(
     category: assetCategorySchema.parse(asset.category),
     financed_amount_cents: financedCents,
     term_months: termMonths,
+    income_unknown: request.customer.type !== 'consumer',
   };
 
   const { questions: allQuestions } = await loadQuestions();

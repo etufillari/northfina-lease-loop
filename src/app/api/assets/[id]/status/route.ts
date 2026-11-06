@@ -49,6 +49,20 @@ export const PATCH = handleRoute(
         if (signed.reason === 'asset_not_available') {
           return fail(409, 'ASSET_NOT_AVAILABLE', 'This asset is not available for leasing');
         }
+        if (signed.reason === 'application_in_review') {
+          return fail(
+            409,
+            'APPLICATION_IN_REVIEW',
+            'Application requires manual review before signing'
+          );
+        }
+        if (signed.reason === 'application_not_approved') {
+          return fail(
+            422,
+            'APPLICATION_NOT_APPROVED',
+            'Application has not been approved for signing'
+          );
+        }
         return fail(422, 'INVALID_CONTRACT', 'Contract terms cannot be priced');
       }
 

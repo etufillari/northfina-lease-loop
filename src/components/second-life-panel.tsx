@@ -70,7 +70,13 @@ export function SecondLifePanel({
   const [error, setError] = useState<string | null>(null);
 
   const money = (cents: number) => formatEuro(cents, intlTag);
-  const seededLives = Array.from({ length: previousLives }, (_, i) => i + 1);
+  const recordedCompletedLives = events.filter(
+    (e) => e.toStatus === 'returned' || e.toStatus === 'sold'
+  ).length;
+  const activeLeaseCount = events.at(-1)?.toStatus === 'leased' ? 1 : 0;
+  const unrecordedSeededLives = Math.max(0, previousLives - recordedCompletedLives);
+  const totalPassportLives = previousLives + activeLeaseCount;
+  const seededLives = Array.from({ length: unrecordedSeededLives }, (_, i) => i + 1);
 
   async function handleRelist() {
     if (isRelisting) return;
@@ -200,7 +206,7 @@ export function SecondLifePanel({
       {/* Asset passport */}
       <div className="rounded-[8px] border border-[#dad9d8] bg-[#FFFFFF] p-[12px] text-[0.875rem] dark:border-stone-800 dark:bg-stone-900">
         <p className="text-[0.75rem] font-bold tracking-wider text-[#1354a5] uppercase dark:text-sky-400">
-          {t('secondLife.passportHeading', { lives: previousLives })}
+          {t('secondLife.passportHeading', { lives: totalPassportLives })}
         </p>
         <ul className="mt-[6px] space-y-[4px] text-[0.75rem] text-[#615b57] dark:text-stone-400">
           {seededLives.map((life) => (

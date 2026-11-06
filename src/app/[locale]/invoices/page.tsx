@@ -215,12 +215,18 @@ export default async function InvoicesPage({
     date: formatIsoDate(addMonthsClamped(signedOn, index), locale),
   }));
 
+  const isRelistedContract = persisted
+    ? persisted.isRelisted
+    : Boolean(cataloguePriceOnSigned.ok && cataloguePriceOnSigned.isRelisted);
+
   const summaryRows: [string, string][] = [
     [t('apply.deal.item'), `${asset.make} ${asset.model}`],
     [t('invoices.signedDate'), formattedSignedDate],
     [t('apply.deal.term'), t('apply.deal.termValue', { months: quote.termMonths })],
     [
-      t('contract.listPrice', { version: quote.priceListVersion }),
+      isRelistedContract
+        ? t('secondLife.relistPriceLabel')
+        : t('contract.listPrice', { version: quote.priceListVersion }),
       formatEuro(quote.listPriceCents, intlTag),
     ],
     ...(validOfferPrice && validCataloguePrice

@@ -3,6 +3,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { Asset } from '@/data/schemas';
 import { calculateContractQuote, type ContractQuote } from '@/domain/contract-pricing';
+import { decideEligibility } from '@/domain/eligibility';
 import {
   addMonthsClamped,
   generateInvoiceSchedule,
@@ -55,7 +56,13 @@ export type SignContractResult =
     }
   | {
       ok: false;
-      reason: 'not_found' | 'reservation_conflict' | 'asset_not_available' | 'invalid_contract';
+      reason:
+        | 'not_found'
+        | 'reservation_conflict'
+        | 'asset_not_available'
+        | 'invalid_contract'
+        | 'application_not_approved'
+        | 'application_in_review';
     };
 
 class ContractConflictError extends Error {
@@ -166,15 +173,35 @@ export async function signContract(
 
   const rawAnswers = input.answers ?? {};
   const customerType = rawAnswers['q_customer_type'];
+  const deal = {
+    category: asset.category,
+    financed_amount_cents: quote.financedCents,
+    term_months: quote.termMonths,
+    ...(typeof customerType === 'string' ? { customer_type: customerType } : {}),
+  };
   const { kept: keptAnswers } = pruneAnswers(questionsFile.questions, {
-    deal: {
-      category: asset.category,
-      financed_amount_cents: quote.financedCents,
-      term_months: quote.termMonths,
-      ...(typeof customerType === 'string' ? { customer_type: customerType } : {}),
-    },
+    deal,
     answers: rawAnswers,
   });
+
+  const eligibility = decideEligibility({
+    questions: questionsFile.questions,
+    coefficientTable,
+    deal,
+    answers: keptAnswers,
+    contractStartDate: signedOn,
+    monthlyRentInclVatCents: quote.monthlyGrossRentCents,
+  });
+
+  if (eligibility.decision !== 'yes') {
+    return {
+      ok: false,
+      reason:
+        eligibility.decision === 'manual_review'
+          ? 'application_in_review'
+          : 'application_not_approved',
+    };
+  }
 
   const factorPpm = fractionToPpm(quote.factor);
   const annualInterestBp = percentToBp(quote.band.annual_interest_percent);
@@ -263,8 +290,8 @@ export async function signContract(
             quote_id: createdQuote.id,
             created_on: signedOn,
             answers_json: JSON.stringify(keptAnswers),
-            decision: 'yes',
-            reasons_json: '[]',
+            decision: eligibility.decision,
+            reasons_json: JSON.stringify(eligibility.reasons),
             status: 'signed',
           },
         });
@@ -376,6 +403,7 @@ export type PersistedContractView = {
   contractId: string;
   status: string;
   signedOn: string;
+  isRelisted: boolean;
   quote: ContractQuote;
   schedule: InvoiceSchedule;
 };
@@ -472,6 +500,7 @@ export async function findPersistedContract(
     contractId: row.id,
     status: row.status,
     signedOn: row.signed_on,
+    isRelisted: row.price_list_version === null,
     quote,
     schedule: {
       signedOn: row.signed_on,

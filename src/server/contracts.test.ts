@@ -37,6 +37,31 @@ describe('subtractOneDayIso', () => {
   });
 });
 
+const AINO_EBIKE_ANSWERS = {
+  q_customer_type: 'consumer',
+  q_full_name: 'Aino Virtanen',
+  q_email: 'aino@example.com',
+  q_usage_purpose: 'commuting',
+  q_birth_date: '1991-06-18',
+  q_country: 'FI',
+  q_employment: 'employed',
+  q_monthly_income: 310_000,
+};
+
+const HAAPALA_COMPANY_ANSWERS = {
+  q_customer_type: 'company',
+  q_company_name: 'Haapalan Tila Oy',
+  q_business_id: '2876543-5',
+  q_vat_registered: 'yes',
+  q_country: 'FI',
+  q_email: 'office@haapala.example.com',
+  q_annual_revenue: 95_000_000,
+  q_beneficial_owners: 'Jussi Haapala (60 %)',
+  q_can_sign: 'yes',
+  q_farm_registry: 'yes',
+  q_pep: 'no',
+};
+
 describe('signContract and findPersistedContract', () => {
   it('persists Quote, Application, Contract, InvoiceRow[], AssetEvent, and sets Asset to leased (Card 1)', async () => {
     const reserved = await reserveAsset(db, {
@@ -55,8 +80,7 @@ describe('signContract and findPersistedContract', () => {
       signedOn: '2026-11-05',
       token: reserved.reservation.token,
       answers: {
-        q_customer_type: 'consumer',
-        q_email: 'aino@example.com',
+        ...AINO_EBIKE_ANSWERS,
         q_pep: 'no', // pruned for consumer on ebike-003
       },
     });
@@ -85,10 +109,8 @@ describe('signContract and findPersistedContract', () => {
       where: { id: signed.applicationId },
     });
     expect(application.status).toBe('signed');
-    expect(JSON.parse(application.answers_json)).toEqual({
-      q_customer_type: 'consumer',
-      q_email: 'aino@example.com',
-    });
+    expect(application.decision).toBe('yes');
+    expect(JSON.parse(application.answers_json)).toEqual(AINO_EBIKE_ANSWERS);
 
     const contract = await db.contract.findUniqueOrThrow({ where: { id: signed.contractId } });
     expect(contract).toMatchObject({
@@ -140,6 +162,7 @@ describe('signContract and findPersistedContract', () => {
       termMonths: 48,
       downPaymentCents: 2_000_000,
       signedOn: '2026-11-05',
+      answers: HAAPALA_COMPANY_ANSWERS,
     });
     expect(signed.ok).toBe(true);
     if (!signed.ok) return;
@@ -167,6 +190,7 @@ describe('signContract and findPersistedContract', () => {
       termMonths: 36,
       downPaymentCents: 0,
       signedOn: '2026-11-05',
+      answers: AINO_EBIKE_ANSWERS,
     });
     expect(signed.ok).toBe(true);
     if (!signed.ok) return;
@@ -210,6 +234,7 @@ describe('signContract and findPersistedContract', () => {
       termMonths: 36,
       downPaymentCents: 0,
       signedOn: '2026-11-05',
+      answers: AINO_EBIKE_ANSWERS,
     });
     expect(firstLease.ok).toBe(true);
     if (!firstLease.ok) return;
@@ -245,6 +270,7 @@ describe('signContract and findPersistedContract', () => {
       termMonths: 12,
       downPaymentCents: 0,
       signedOn: '2029-11-05',
+      answers: AINO_EBIKE_ANSWERS,
     });
     expect(secondLease.ok).toBe(true);
     if (!secondLease.ok) return;
@@ -299,5 +325,52 @@ describe('signContract and findPersistedContract', () => {
         downPaymentCents: 0,
       })
     ).toEqual({ ok: false, reason: 'invalid_contract' });
+  });
+
+  it('refuses signing when answers are missing, rejected, or require manual review without storing a fake approval', async () => {
+    // Missing answers (incomplete)
+    expect(
+      await signContract(db, {
+        assetId: 'ebike-003',
+        actor: 'x',
+        termMonths: 12,
+        downPaymentCents: 0,
+        signedOn: '2026-11-06',
+      })
+    ).toEqual({ ok: false, reason: 'application_not_approved' });
+
+    // Underage applicant (hard no)
+    expect(
+      await signContract(db, {
+        assetId: 'ebike-003',
+        actor: 'mikko',
+        termMonths: 12,
+        downPaymentCents: 0,
+        signedOn: '2026-11-06',
+        answers: {
+          ...AINO_EBIKE_ANSWERS,
+          q_birth_date: '2009-03-10',
+        },
+      })
+    ).toEqual({ ok: false, reason: 'application_not_approved' });
+
+    // PEP applicant (manual review)
+    expect(
+      await signContract(db, {
+        assetId: 'farm-002',
+        actor: 'haapala',
+        termMonths: 48,
+        downPaymentCents: 2_000_000,
+        signedOn: '2026-11-05',
+        answers: {
+          ...HAAPALA_COMPANY_ANSWERS,
+          q_pep: 'yes',
+          q_pep_details: 'Municipal board member',
+        },
+      })
+    ).toEqual({ ok: false, reason: 'application_in_review' });
+
+    expect(await db.application.count()).toBe(0);
+    expect(await db.contract.count()).toBe(0);
   });
 });

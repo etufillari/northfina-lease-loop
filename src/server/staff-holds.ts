@@ -1,6 +1,7 @@
 // Holds that ran out. An approved application holds its items for 7 days; if nobody signs in
 // time, signing is refused (signApplication) but the reservation would otherwise keep the
 // items "reserved" forever. Staff release them here, one audited change per application.
+import { isLapsed } from '@/domain/holds';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
@@ -20,7 +21,7 @@ const HOLD_KINDS = ['approval_hold', 'awaiting_signatory'];
 
 /** True when `asOf` is after the last day of the hold (the hold includes `holdUntil`). */
 export function isHoldExpired(holdUntil: string | null, asOf: string): boolean {
-  return holdUntil !== null && asOf > holdUntil;
+  return holdUntil !== null && isLapsed(holdUntil, asOf);
 }
 
 // ISO dates compare as strings, so `lt` is "the hold's last day is before asOf".

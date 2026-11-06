@@ -3,6 +3,7 @@
 // been invoiced, writes the outcome in one audited transaction and stamps the passport.
 import { loadCoefficientTable, loadVatRates } from '@/data/load';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
+import { holdUntil } from '@/domain/holds';
 import { earlyExitQuote, type EarlyExitBreakdown } from '@/domain/early-exit';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -252,7 +253,7 @@ export async function nominateSuccessor(
             asset_id: link.asset_id,
             customer_id: nominee?.id ?? null,
             kind: 'nomination',
-            until: addDays(input.asOf, 7),
+            until: holdUntil('nomination', input.asOf),
           },
         });
         await tx.assetEvent.create({

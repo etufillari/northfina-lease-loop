@@ -2,7 +2,8 @@
 // amounts freeze at signing — later price-list changes never touch them. VAT is NOT locked.
 // A quote is valid through the end of the next calendar day (scenario card 2: quoted
 // Thu 5 Nov on list v1, signed Fri 6 Nov when v2 is live → the v1 price holds).
-import { addMonthsClamped, nextDay } from './calendar';
+import { addDays, addMonthsClamped } from './calendar';
+import { QUOTE_VALID_DAYS } from './holds';
 import type { Quote } from './pricing';
 
 /** A lease may start at most this many months after signing. */
@@ -31,7 +32,9 @@ export function lockContract(input: {
   startDate: string;
   usagePurpose?: string | null;
 }): LockResult {
-  if (input.signedDate > nextDay(input.quoteDate)) return { ok: false, reason: 'quote_expired' };
+  if (input.signedDate > addDays(input.quoteDate, QUOTE_VALID_DAYS)) {
+    return { ok: false, reason: 'quote_expired' };
+  }
   if (input.startDate < input.signedDate) return { ok: false, reason: 'start_before_signing' };
   if (input.startDate > addMonthsClamped(input.signedDate, MAX_START_MONTHS_AHEAD)) {
     return { ok: false, reason: 'start_too_far_ahead' };

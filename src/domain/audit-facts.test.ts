@@ -52,6 +52,25 @@ describe('auditFacts', () => {
     ]);
   });
 
+  it('shows the rent of a contract sent to the signatory (D-050)', () => {
+    const details = {
+      signatoryEmail: 'ceo@norvi.example.com',
+      monthlyNetRentCents: 15899,
+      priceCheck: 'unchanged',
+      asOf: '2026-11-06',
+    };
+    expect(auditFacts('contract.sent_to_signatory', details)).toEqual([
+      { key: 'rent', value: { type: 'money', cents: 15899 } },
+    ]);
+  });
+
+  it('shows the day the lease took effect when the signatory signed (D-050)', () => {
+    const details = { from: 'awaiting_signatory', to: 'active', asOf: '2026-11-20' };
+    expect(auditFacts('contract.signed_by_signatory', details)).toEqual([
+      { key: 'effective', value: { type: 'date', iso: '2026-11-20' } },
+    ]);
+  });
+
   it('shows the effective date and buyout excl. VAT of an end-of-term buy', () => {
     const details = {
       assetId: 'ebike-001',

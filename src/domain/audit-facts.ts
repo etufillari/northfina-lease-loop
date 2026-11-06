@@ -122,7 +122,11 @@ export function auditFacts(action: string, details: unknown): AuditFact[] {
   const fields = record(details);
   if (!fields) return [];
   if (action === 'quote.created') return quoteFacts(fields);
-  if (action === 'contract.signed') return signedFacts(fields);
+  // Sent to the signatory locks the price like signing does; their signature starts it (D-050).
+  if (action === 'contract.signed' || action === 'contract.sent_to_signatory') {
+    return signedFacts(fields);
+  }
+  if (action === 'contract.signed_by_signatory') return collect([['effective', date(fields.asOf)]]);
   if (action.startsWith('contract.ended_')) return endedFacts(fields);
   if (action === 'asset.relisted') return relistedFacts(fields);
   return [];

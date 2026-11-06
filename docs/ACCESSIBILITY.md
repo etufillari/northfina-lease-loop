@@ -13,7 +13,7 @@ Lease Loop aims for **WCAG 2.1 AA** in all four languages, in light and dark mod
   - The page has a title.
   - A skip link leads to `<main id="main">`.
 
-The pages checked are the catalogue (en and fi), an item, the application form (as a guest and prefilled as Aino), fleet leasing, contracts, a contract, an invoice, the payment page, the early-exit page, notifications, admin, and the second-life list and workbench. Four of them are checked again in dark mode, which has its own colours.
+The pages checked are the home page and the catalogue (en and fi), an item, the application form (as a guest and prefilled as Aino), fleet leasing, contracts, a contract, an invoice, the payment page, the early-exit page, notifications, admin, and the second-life list and workbench. Five of them are checked again in dark mode, which has its own colours.
 
 ```bash
 npm run build
@@ -49,7 +49,7 @@ Press **Cmd + F5**. Use **Ctrl + Option + U** for the rotor (headings, links, fo
 
 ### A five-minute script for this app
 
-1. **Open the catalogue.** Press **Tab** once. "Skip to content" should be the first thing you hear. Press Enter, and you land on the list.
+1. **Open the catalogue** (the header's Catalogue link). Press **Tab** once. "Skip to content" should be the first thing you hear. Press Enter, and you land on the list.
 2. **Press H.** You hear the page heading, then each item's name.
 3. **Switch the language to Suomi.** The voice should change to Finnish pronunciation, because the page's `lang` changes.
 4. **Open an item and move the term and down-payment sliders with the arrow keys.** You should hear the new value, and the monthly price updates.

@@ -44,7 +44,9 @@ async function audit(page, check, path, label = path) {
 export default async function accessibility(page, check) {
   const guestPages = [
     '/en',
+    '/en/catalogue',
     '/fi',
+    '/fi/catalogue',
     '/en/assets/ebike-003',
     '/en/apply?asset=ebike-003&term=36&down=0',
     '/en/fleet',
@@ -68,7 +70,13 @@ export default async function accessibility(page, check) {
   // Dark mode has its own colours, so its contrast is checked too.
   await page.js(`document.cookie = 'lease-loop-date=; path=/; max-age=0'`);
   await page.emulateDark(true);
-  for (const path of ['/en', '/en/assets/ebike-003', `/en/contracts/${contract.id}`, '/en/admin']) {
+  for (const path of [
+    '/en',
+    '/en/catalogue',
+    '/en/assets/ebike-003',
+    `/en/contracts/${contract.id}`,
+    '/en/admin',
+  ]) {
     await audit(page, check, path, `${path} (dark)`);
   }
   await page.emulateDark(false);

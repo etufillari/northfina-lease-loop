@@ -18,6 +18,8 @@ npm run dev           # http://localhost:3000
 
 Before a demo, `npm run db:reset` gives a clean database.
 
+The home page welcomes you and has the two ways in: **lease one item** from the catalogue, or **lease several items at once** (a fleet, for companies).
+
 Two controls in the header make the demo work:
 
 - **Acting as**: a demo login. Pick a customer from the data pack (Aino, Mikko, Norvi, …) and the app prefills their answers. It shows only their own contracts and invoices.
@@ -29,15 +31,15 @@ The **Admin** link in the footer opens totals, VAT changes, the fleet's CO₂ sa
 
 ## A four-minute demo
 
-| #   | Do this                                                            | What it shows                                                                                                                                                                   |
-| --- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Act as **Aino**, open **ebike-003** and move the sliders           | Live price with a plain-language breakdown (card 1, Smart Problem 6)                                                                                                            |
-| 2   | Apply, then sign                                                   | Questions appear only when they apply, each with "why we ask"; the price is locked at signing                                                                                   |
-| 3   | Travel to **20 Jan 2027** and open the invoices                    | December at 25.5 % VAT and January at 26 %: the rent is locked, the tax is not, and the invoice says so (card 3, Smart Problem 1)                                               |
-| 4   | Travel to **20 May 2027**, then contract → **End the lease early** | The exit price, worked out line by line, with the first month free (card 8, Smart Problem 2)                                                                                    |
-| 5   | Admin → Second life → **ebike-007**                                | Refurbish or not, a new price, and who on the waiting list gets it and why (card 9, Smart Problem 3)                                                                            |
-| 6   | Open **ebike-008**                                                 | Its passport across three lives and the CO₂ it saved, weighted by how worn it is (card 10, Smart Problem 7)                                                                     |
-| 7   | Act as **Norvi**, open **ebike-004** and apply                     | "Can't sign for the company" goes to a person, kindly explained (card 6). Then catalogue → **Lease several items at once**: one application and one signature for a whole fleet |
+| #   | Do this                                                            | What it shows                                                                                                                                                              |
+| --- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Act as **Aino**, open **ebike-003** and move the sliders           | Live price with a plain-language breakdown (card 1, Smart Problem 6)                                                                                                       |
+| 2   | Apply, then sign                                                   | Questions appear only when they apply, each with "why we ask"; the price is locked at signing                                                                              |
+| 3   | Travel to **20 Jan 2027** and open the invoices                    | December at 25.5 % VAT and January at 26 %: the rent is locked, the tax is not, and the invoice says so (card 3, Smart Problem 1)                                          |
+| 4   | Travel to **20 May 2027**, then contract → **End the lease early** | The exit price, worked out line by line, with the first month free (card 8, Smart Problem 2)                                                                               |
+| 5   | Admin → Second life → **ebike-007**                                | Refurbish or not, a new price, and who on the waiting list gets it and why (card 9, Smart Problem 3)                                                                       |
+| 6   | Open **ebike-008**                                                 | Its passport across three lives and the CO₂ it saved, weighted by how worn it is (card 10, Smart Problem 7)                                                                |
+| 7   | Act as **Norvi**, open **ebike-004** and apply                     | "Can't sign for the company" goes to a person, kindly explained (card 6). Then home → **Lease several items at once**: one application and one signature for a whole fleet |
 
 ---
 

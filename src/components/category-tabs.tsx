@@ -36,7 +36,7 @@ export function CategoryTabs({ query, matching, onChange, locale, t }: CategoryT
           return (
             <li key={category ?? 'all'}>
               <Link
-                href={`/${locale}${catalogueSearchString(next)}`}
+                href={`/${locale}/catalogue${catalogueSearchString(next)}`}
                 aria-current={active ? 'true' : undefined}
                 onClick={(event) => {
                   // Let modified clicks (new tab, new window) behave like a normal link.

@@ -52,7 +52,7 @@ export default async function AssetPage({
   // The catalogue passes its filters along (?q=&category=…). They survive a language switch,
   // so "Back to catalogue" returns to the same search in the language you are using now.
   const search = await searchParams;
-  const backHref = `/${locale}${catalogueSearchString(parseCatalogueQuery(search))}`;
+  const backHref = `/${locale}/catalogue${catalogueSearchString(parseCatalogueQuery(search))}`;
 
   // Render on every request: the price depends on today's date and the item on the database.
   await connection();

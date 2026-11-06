@@ -62,7 +62,6 @@
   "price.exclVat": "{amount} ilman alv:tä",
   "price.term": "Sopimuskausi",
   "price.months": "{months} kk",
-  "price.monthsUnit": "kk",
   "price.downPayment": "Käsiraha",
   "price.minDownPayment": "Tähän tuotteeseen tarvitaan vähintään {amount} käsirahaa, koska rahoitamme enintään {max}.",
   "price.noDownPayment": "Hinta on niin lähellä vähimmäismäärää, ettei käsirahaa voi maksaa.",

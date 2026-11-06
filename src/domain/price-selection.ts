@@ -50,15 +50,6 @@ export function snapDownPayment(
   return Math.min(range.maxCents, Math.max(range.minCents, snapped));
 }
 
-/** The offered term closest to `months`; a tie goes to the shorter term. */
-export function nearestTerm(terms: readonly number[], months: number): number | null {
-  let best: number | null = null;
-  for (const term of terms) {
-    if (best === null || Math.abs(term - months) < Math.abs(best - months)) best = term;
-  }
-  return best;
-}
-
 const EURO_INPUT = /^(\d+)(?:[.,](\d{1,2}))?$/;
 
 /**

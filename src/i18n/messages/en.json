@@ -32,5 +32,12 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
+  "price.back": "← Back to catalogue",
+  "price.downRange": "You can put down between {min} and {max}.",
+  "price.unavailable.title": "This item can't be leased right now",
+  "price.unavailable.reserved": "It is reserved for another customer.",
+  "price.unavailable.returned": "It has just come back from a lease. It gets a new price once it has been checked and fixed up.",
+  "price.unavailable.no_price": "There is no price for this item on this date.",
+  "price.unavailable.below_minimum": "Its price is under {minimum}, the smallest amount we can lease.",
   "footer.skeleton": "Starter skeleton — replace me"
 }

@@ -6,6 +6,7 @@ import { calculateQuote } from './pricing';
 import {
   clampDownPayment,
   downPaymentRange,
+  leaseOffer,
   lowerRentOption,
   offeredTerms,
   type DownPaymentRange,
@@ -129,6 +130,42 @@ describe('downPaymentRange', () => {
         }
       )
     );
+  });
+});
+
+describe('leaseOffer', () => {
+  const priced = (priceCents: number) => ({ ok: true, priceCents, priceListVersion: 2 }) as const;
+
+  it('offers an available item with its price and range', () => {
+    expect(leaseOffer(table, 'available', priced(30_300))).toEqual({
+      ok: true,
+      listPriceCents: 30_300,
+      priceListVersion: 2,
+      range: { minCents: 0, maxCents: 300, stepCents: 100 },
+    });
+  });
+
+  it.each(['reserved', 'returned'] as const)('does not offer a %s item', (status) => {
+    expect(leaseOffer(table, status, priced(100_000))).toEqual({ ok: false, reason: status });
+  });
+
+  it('puts the status before the price', () => {
+    expect(leaseOffer(table, 'reserved', priced(1_000))).toEqual({
+      ok: false,
+      reason: 'reserved',
+    });
+  });
+
+  it('does not offer an item with no price on the date', () => {
+    const noPrice = { ok: false, reason: 'no_price_list_on_date' } as const;
+    expect(leaseOffer(table, 'available', noPrice)).toEqual({ ok: false, reason: 'no_price' });
+  });
+
+  it('does not offer an item under the minimum', () => {
+    expect(leaseOffer(table, 'available', priced(28_900))).toEqual({
+      ok: false,
+      reason: 'below_minimum',
+    });
   });
 });
 

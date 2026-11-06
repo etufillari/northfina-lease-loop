@@ -32,5 +32,12 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
+  "price.back": "← Tillbaka till katalogen",
+  "price.downRange": "Du kan betala {min}–{max} i kontantinsats.",
+  "price.unavailable.title": "Den här produkten kan inte leasas just nu",
+  "price.unavailable.reserved": "Den är reserverad för en annan kund.",
+  "price.unavailable.returned": "Den har just kommit tillbaka från ett leasingavtal. Den får ett nytt pris när den har kontrollerats och rustats upp.",
+  "price.unavailable.no_price": "Produkten har inget pris det här datumet.",
+  "price.unavailable.below_minimum": "Priset är under {minimum}, som är det minsta belopp vi kan leasa ut.",
   "footer.skeleton": "Startskelett — byt ut mig"
 }

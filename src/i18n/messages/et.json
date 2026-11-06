@@ -32,5 +32,12 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
+  "price.back": "← Tagasi kataloogi",
+  "price.downRange": "Sissemakse võib olla {min}–{max}.",
+  "price.unavailable.title": "Seda toodet ei saa praegu liisida",
+  "price.unavailable.reserved": "See on broneeritud teisele kliendile.",
+  "price.unavailable.returned": "See tuli just liisingust tagasi. Uue hinna saab see pärast kontrolli ja korrastamist.",
+  "price.unavailable.no_price": "Sellel tootel pole sel kuupäeval hinda.",
+  "price.unavailable.below_minimum": "Selle hind on alla {minimum}, mis on väikseim liisitav summa.",
   "footer.skeleton": "Algmall — asenda mind"
 }

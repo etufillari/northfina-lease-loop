@@ -1,6 +1,7 @@
 // What a customer may pick for an item: the terms on offer and the down payments that keep the
 // financed amount inside the coefficient table. Used by the price sliders.
-import type { CoefficientTable } from '@/data/schemas';
+import type { AssetStatus, CoefficientTable } from '@/data/schemas';
+import type { ListPriceResult } from './price-list';
 import { calculateQuote, type QuoteBreakdown } from './pricing';
 
 const EURO = 100;
@@ -52,6 +53,33 @@ export function downPaymentRange(
   const stepCents =
     STEP_BY_RANGE_WIDTH.find((row) => width <= row.upToCents)?.stepCents ?? WIDEST_STEP_CENTS;
   return { ok: true, range: { minCents, maxCents, stepCents } };
+}
+
+export type LeaseOffer =
+  | { ok: true; listPriceCents: number; priceListVersion: number; range: DownPaymentRange }
+  | { ok: false; reason: 'reserved' | 'returned' | 'no_price' | 'below_minimum' };
+
+/**
+ * Whether the customer can pick a lease for this item, and if not, why. The item's status comes
+ * first: a reserved item is not on offer whatever it costs. A returned item gets its price
+ * from the second-life assessment, so its list price says nothing about its next lease.
+ */
+export function leaseOffer(
+  table: CoefficientTable,
+  status: AssetStatus,
+  price: ListPriceResult
+): LeaseOffer {
+  if (status !== 'available') return { ok: false, reason: status };
+  if (!price.ok) return { ok: false, reason: 'no_price' };
+
+  const range = downPaymentRange(table, price.priceCents);
+  if (!range.ok) return range;
+  return {
+    ok: true,
+    listPriceCents: price.priceCents,
+    priceListVersion: price.priceListVersion,
+    range: range.range,
+  };
 }
 
 /** Whole euros inside the range, for a typed amount or one read from a URL. */

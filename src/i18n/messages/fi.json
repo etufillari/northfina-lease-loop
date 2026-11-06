@@ -32,5 +32,12 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
+  "price.back": "← Takaisin valikoimaan",
+  "price.downRange": "Käsiraha voi olla {min}–{max}.",
+  "price.unavailable.title": "Tätä tuotetta ei voi vuokrata juuri nyt",
+  "price.unavailable.reserved": "Se on varattu toiselle asiakkaalle.",
+  "price.unavailable.returned": "Se palasi juuri vuokralta. Se saa uuden hinnan, kun se on tarkastettu ja kunnostettu.",
+  "price.unavailable.no_price": "Tuotteella ei ole hintaa tälle päivälle.",
+  "price.unavailable.below_minimum": "Sen hinta on alle {minimum}, joka on pienin vuokrattava summa.",
   "footer.skeleton": "Aloituspohja — korvaa minut"
 }

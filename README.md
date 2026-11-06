@@ -3,8 +3,7 @@
 A circular leasing app for e-bikes, laptops and farm machines, built for the Northfina × Hive
 Helsinki hackathon (5–6 Nov 2026). One item goes round the whole loop: catalogue → live price
 → application → signed contract → monthly invoices → end of term (buy, return or pass on) →
-second life (inspect, refurbish, re-price, lease to the next person) — and again. Passing a
-lease on works two ways: a hand-over link mid-term, or a successor nominated for when it ends.
+second life (inspect, refurbish, re-price, lease to the next person) — and again.
 
 No AI inside the product: every decision is a tested rule over the data pack. The challenge is
 in [CHALLENGE.md](CHALLENGE.md), the rules in [RULES.md](RULES.md), and every product and
@@ -29,6 +28,10 @@ on the passport, from the second life on, and a per-customer counter on My page)
   running the overnight job for every day passed — unsigned approvals expire, unanswered offers
   pass to the next person — plus a **Reset** that rebuilds the data pack and starts on 1 Jan 2026.
 - **Fleet leases:** several distinct items in one contract, banded on the total.
+- **Pass it on, during the lease too:** beyond the required end-of-term pass (a nominated
+  successor gets a priority claim on the item for a new lease, ahead of the waiting list),
+  a lessee can hand the **remaining** lease over mid-term with a link: the next person goes
+  through the normal questions and takes over the locked rent and the invoices not yet due.
 
 ## Run it
 

@@ -391,27 +391,81 @@ describe('inspectReturn', () => {
     expect(result.received_at).toBeInstanceOf(Date);
     expect(result.inspected_at).toBeInstanceOf(Date);
 
+    // The lease ends with the inspection: the asset takes the inspected values and is returned.
     const assetAfter = await db.asset.findUniqueOrThrow({
       where: { id: contract.assetId },
     });
 
-    expect(assetAfter.status).toBe(assetBefore.status);
-    expect(assetAfter.condition).toBe(assetBefore.condition);
-    expect(assetAfter.usage_value).toBe(assetBefore.usage_value);
+    expect(assetBefore.status).toBe('reserved');
+    expect(assetAfter).toMatchObject({
+      status: 'returned',
+      condition: 'fair',
+      usage_value: 18_400,
+    });
 
-    expect(
-      await db.auditLog.findFirst({
-        where: {
-          action: 'return.inspected',
-          entity_id: returnRequest.id,
-        },
-      })
-    ).toMatchObject({
+    const endedContract = await db.contract.findUniqueOrThrow({ where: { id: contract.id } });
+
+    expect(endedContract.status).toBe('ended');
+
+    const audit = await db.auditLog.findFirst({
+      where: {
+        action: 'return.inspected',
+        entity_id: returnRequest.id,
+      },
+    });
+
+    expect(audit).toMatchObject({
       actor,
       action: 'return.inspected',
       entity_type: 'return_request',
       entity_id: returnRequest.id,
     });
+    expect(JSON.parse(audit?.details_json ?? '{}')).toMatchObject({
+      asset: {
+        condition: { from: assetBefore.condition, to: 'fair' },
+        usageValue: { from: assetBefore.usage_value, to: 18_400 },
+        status: { from: 'reserved', to: 'returned' },
+      },
+      contract: { id: contract.id, status: { from: 'active', to: 'ended' } },
+    });
+  });
+
+  it('rolls the inspection back when the contract is no longer active', async () => {
+    const { contract, returnRequest } = await createReturnForAsset();
+
+    await markReturnReceived(db, returnRequest.id, { actor });
+    await db.contract.update({ where: { id: contract.id }, data: { status: 'ended' } });
+
+    expect(
+      await getErrorCode(
+        inspectReturn(db, returnRequest.id, { condition: 'fair', usageValue: 100, actor })
+      )
+    ).toBe('CONTRACT_NOT_ACTIVE');
+
+    const unchanged = await db.returnRequest.findUniqueOrThrow({ where: { id: returnRequest.id } });
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: contract.assetId } });
+
+    expect(unchanged.status).toBe('received');
+    expect(unchanged.inspected_at).toBeNull();
+    expect(asset.status).toBe('reserved');
+  });
+
+  it('rolls the inspection back when the asset is not on an active lease', async () => {
+    const { contract, returnRequest } = await createReturnForAsset();
+
+    await markReturnReceived(db, returnRequest.id, { actor });
+    await db.asset.update({ where: { id: contract.assetId }, data: { status: 'available' } });
+
+    expect(
+      await getErrorCode(
+        inspectReturn(db, returnRequest.id, { condition: 'fair', usageValue: 100, actor })
+      )
+    ).toBe('ASSET_NOT_ON_ACTIVE_LEASE');
+
+    const unchanged = await db.returnRequest.findUniqueOrThrow({ where: { id: returnRequest.id } });
+
+    expect(unchanged.status).toBe('received');
+    expect(await db.auditLog.count({ where: { action: 'return.inspected' } })).toBe(0);
   });
 
   it('rejects inspection before physical receipt', async () => {
@@ -586,12 +640,12 @@ describe('planReturn', () => {
 
     expect(savedPlan.actions.length).toBeGreaterThan(0);
 
-    // Planning must not update the original asset.
+    // Planning leaves the asset as the inspection set it: returned, not yet refurbished.
     const asset = await db.asset.findUniqueOrThrow({
       where: { id: contract.assetId },
     });
 
-    expect(asset.status).toBe('reserved');
+    expect(asset).toMatchObject({ status: 'returned', condition: 'fair', usage_value: 18_400 });
   });
 
   it('rejects planning before inspection', async () => {

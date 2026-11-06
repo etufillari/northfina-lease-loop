@@ -46,6 +46,11 @@ export function toAssetRowData(asset: Asset) {
   };
 }
 
+export async function getAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
+}
+
 export async function listAssets(
   db: PrismaClient,
   filter: { category?: AssetCategory } = {}

@@ -4,13 +4,14 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { CatalogueBrowser } from '@/components/catalogue-browser';
-import { loadPriceLists } from '@/data/load';
+
 import { parseCatalogueQuery } from '@/domain/catalogue';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
+import { effectivePriceLists } from '@/server/second-life';
 import { appDate } from '@/server/app-date';
 
 export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
@@ -25,7 +26,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   // never reads the clock.
   const { today } = await appDate();
   const query = parseCatalogueQuery(await searchParams);
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assets, priceLists] = await Promise.all([listAssets(db), effectivePriceLists(db)]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">

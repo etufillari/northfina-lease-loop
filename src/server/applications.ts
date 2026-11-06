@@ -4,7 +4,8 @@
 // the price or approve itself.
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { loadCoefficientTable, loadPriceLists, loadQuestions } from '@/data/load';
+import { loadCoefficientTable, loadQuestions } from '@/data/load';
+import { effectivePriceLists } from './second-life';
 import { effectiveVatRates } from './vat';
 import { decideApplication, questionContext } from '@/domain/application';
 import { listPriceOn } from '@/domain/price-list';
@@ -60,7 +61,7 @@ export async function submitApplication(
 ): Promise<SubmitApplicationResult> {
   const [asset, priceLists, table, vatRates, questionsFile] = await Promise.all([
     getAsset(db, input.assetId),
-    loadPriceLists(),
+    effectivePriceLists(db),
     loadCoefficientTable(),
     effectiveVatRates(db),
     loadQuestions(),

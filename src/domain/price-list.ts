@@ -83,3 +83,23 @@ export function differentPriceOn(
   if (!today.ok || today.priceCents === lockedPriceCents) return null;
   return { priceCents: today.priceCents, priceListVersion: today.priceListVersion };
 }
+
+/**
+ * The price lists with refurbished items' second-life prices in place of their list prices.
+ * A refurbished item is used now, so the price it had when new no longer applies on any date;
+ * every list gets the second-life price instead. Other items are unchanged.
+ */
+export function applySecondLifePrices(
+  priceLists: readonly PriceList[],
+  secondLifePrices: Readonly<Record<string, number>>
+): PriceList[] {
+  const ids = Object.keys(secondLifePrices);
+  if (ids.length === 0) return [...priceLists];
+  return priceLists.map((list) => {
+    const prices = { ...list.prices };
+    for (const id of ids) {
+      if (id in prices) prices[id] = secondLifePrices[id] as number;
+    }
+    return { ...list, prices };
+  });
+}

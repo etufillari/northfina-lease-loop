@@ -1,7 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPriceLists } from '@/data/load';
 import type { PriceList } from '@/data/schemas';
-import { differentPriceOn, listPriceOn, nextPriceChange } from './price-list';
+import {
+  applySecondLifePrices,
+  differentPriceOn,
+  listPriceOn,
+  nextPriceChange,
+} from './price-list';
 
 let priceLists: PriceList[];
 beforeAll(async () => {
@@ -146,5 +151,22 @@ describe('differentPriceOn', () => {
 
   it('is null when there is no price today', () => {
     expect(differentPriceOn(priceLists, 'ebike-999', '2026-11-06', 100)).toBeNull();
+  });
+});
+
+describe('applySecondLifePrices', () => {
+  it('replaces a refurbished item’s price on every list, and leaves the rest alone', () => {
+    const lists = applySecondLifePrices(priceLists, { 'ebike-007': 132_000 });
+    expect(listPriceOn(lists, 'ebike-007', '2026-11-05')).toMatchObject({ priceCents: 132_000 });
+    expect(listPriceOn(lists, 'ebike-007', '2026-11-06')).toMatchObject({ priceCents: 132_000 });
+    expect(listPriceOn(lists, 'ebike-001', '2026-11-05')).toMatchObject({ priceCents: 189_900 });
+    // the data pack's lists themselves are not changed
+    expect(listPriceOn(priceLists, 'ebike-007', '2026-11-05')).toMatchObject({
+      priceCents: 549_000,
+    });
+  });
+
+  it('ignores ids that are not in the price lists', () => {
+    expect(applySecondLifePrices(priceLists, { 'ebike-999': 1 })).toEqual(priceLists);
   });
 });

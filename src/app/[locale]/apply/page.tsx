@@ -13,9 +13,10 @@ import { questionContext } from '@/domain/application';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
 import { parsePriceSelection } from '@/domain/price-selection';
-import { quoteLease } from '@/domain/pricing';
-import { vatPercentOn } from '@/domain/vat';
-import { formatIsoDate } from '@/i18n/format';
+import { leaseTotalCents, quoteLease } from '@/domain/pricing';
+import { addDays, addMonths, QUOTE_VALID_DAYS } from '@/domain/contract';
+import { nextVatChange, vatPercentOn } from '@/domain/vat';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
@@ -89,6 +90,8 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
 
   const quote = quoted.quote;
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  // A VAT change already planned before the lease would end (e.g. 26 % from 1 Jan 2027).
+  const vatChange = nextVatChange(vatRates, today, addMonths(today, quote.termMonths));
   const dealHref = `${itemHref}?term=${quote.termMonths}&down=${quote.downPaymentCents}`;
   const summary: [string, string][] = [
     [t('apply.item'), `${asset.make} ${asset.model}`],
@@ -127,11 +130,40 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
               <dd className="mt-1 font-semibold">{value}</dd>
             </div>
           ))}
+          {/* The whole lease at today's VAT: what the customer pays in all, unless they buy it. */}
+          <div className="rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-200 ring-inset sm:col-span-2 dark:bg-emerald-950/40 dark:ring-emerald-800">
+            <dt className="text-xs font-medium text-emerald-900 dark:text-emerald-200">
+              {t('apply.total')}
+            </dt>
+            <dd className="mt-1">
+              <span className="text-lg font-semibold tabular-nums">
+                {euro(leaseTotalCents(quote))}
+              </span>
+              <span className="block text-sm text-stone-700 dark:text-stone-300">
+                {t('apply.totalValue', {
+                  down: euro(quote.downPaymentCents),
+                  count: quote.termMonths,
+                  monthly: euro(quote.monthlyGrossCents),
+                })}
+              </span>
+              <span className="mt-2 block text-xs text-stone-600 dark:text-stone-400">
+                {vatChange
+                  ? t('apply.totalVatPlanned', {
+                      percent: formatNumber(quote.vatPercent, locale),
+                      next: formatNumber(vatChange.ratePercent, locale),
+                      date: formatIsoDate(vatChange.validFrom, locale),
+                    })
+                  : t('apply.totalVatNote', { percent: formatNumber(quote.vatPercent, locale) })}
+              </span>
+            </dd>
+          </div>
         </dl>
         <p className="mt-3 text-xs text-stone-600 dark:text-stone-400">
           {t('apply.priceNote', {
             version: price.priceListVersion,
             date: formatIsoDate(today, locale),
+            days: QUOTE_VALID_DAYS,
+            until: formatIsoDate(addDays(today, QUOTE_VALID_DAYS), locale),
           })}
         </p>
       </section>

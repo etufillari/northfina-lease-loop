@@ -191,12 +191,14 @@ export type SignFleetResult =
 export async function signFleet(
   db: PrismaClient,
   input: { fleetId: string; signerName: string },
-  todayIso: string
+  todayIso: string,
+  /** The company's signatory signing for the applicant (card 6), and their email. */
+  signatory?: { email: string }
 ): Promise<SignFleetResult> {
   const applications = await listFleetApplications(db, input.fleetId);
   if (applications.length === 0) return { ok: false, reason: 'fleet_not_found' };
   for (const application of applications) {
-    const check = await signingCheck(db, application, todayIso);
+    const check = await signingCheck(db, application, todayIso, { asSignatory: !!signatory });
     if (!check.ok) return { ok: false, reason: check.reason, assetId: application.assetId };
   }
 
@@ -205,7 +207,7 @@ export async function signFleet(
   const done = await withAudit(
     db,
     {
-      actor: input.signerName,
+      actor: signatory ? `${input.signerName} <${signatory.email}>` : input.signerName,
       action: 'fleet.signed',
       entityType: 'fleet',
       entityId: input.fleetId,
@@ -213,6 +215,7 @@ export async function signFleet(
         contractIds: signed.map((s) => s.id),
         assetIds: applications.map((a) => a.assetId),
         monthlyNetCents: applications.reduce((cents, a) => cents + a.monthlyNetCents, 0),
+        ...(signatory ? { signedBy: 'signatory', signatoryEmail: signatory.email } : {}),
       },
     },
     async (tx) => {

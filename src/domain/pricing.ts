@@ -132,3 +132,15 @@ export function quoteLease(input: QuoteInput, table: CoefficientTable): QuoteRes
     },
   };
 }
+
+/**
+ * What the whole lease costs the customer at today's VAT rate: the down payment plus every
+ * monthly rent incl. VAT. Buying the item at the end is not included (it is a choice). If VAT
+ * changes during the lease, each invoice uses the rate on its own date, so this total moves
+ * with it while the rent before VAT stays locked.
+ */
+export function leaseTotalCents(
+  quote: Pick<LeaseQuote, 'downPaymentCents' | 'totalGrossRentCents'>
+): number {
+  return quote.downPaymentCents + quote.totalGrossRentCents;
+}

@@ -24,31 +24,62 @@ export function findChrome() {
   return found;
 }
 
-/** Starts headless Chrome and returns a page driver bound to `baseUrl`. */
-export async function launch(baseUrl, { port = 9350 } = {}) {
+/**
+ * Starts Chrome and waits up to `timeoutMs` for its first page's DevTools socket. A cold
+ * start on a busy CI runner can take well over 10 s, so this waits 30 s, and `launch` tries
+ * three times before giving up, saying what Chrome printed.
+ */
+async function startChrome(port, timeoutMs = 30_000) {
   const profile = mkdtempSync(join(tmpdir(), 'lease-loop-e2e-'));
   const chrome = spawn(findChrome(), [
     '--headless=new',
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${profile}`,
     '--no-first-run',
+    '--no-default-browser-check',
     '--window-size=1280,900',
-    // CI containers often can't use Chrome's sandbox.
-    ...(process.env.CI ? ['--no-sandbox'] : []),
+    // CI containers often can't use Chrome's sandbox or a large /dev/shm.
+    ...(process.env.CI ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
     'about:blank',
   ]);
+  let output = '';
+  chrome.stderr?.on('data', (chunk) => (output = (output + chunk).slice(-2000)));
+  let exited = false;
+  chrome.on('exit', () => (exited = true));
 
-  let socketUrl = null;
-  for (let i = 0; i < 50 && !socketUrl; i++) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline && !exited) {
     try {
       const targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
-      socketUrl = targets.find((t) => t.type === 'page')?.webSocketDebuggerUrl ?? null;
+      const socketUrl = targets.find((t) => t.type === 'page')?.webSocketDebuggerUrl;
+      if (socketUrl) return { chrome, profile, socketUrl };
     } catch {
       // not up yet
     }
-    if (!socketUrl) await sleep(200);
+    await sleep(250);
   }
-  if (!socketUrl) throw new Error('Chrome did not start');
+  chrome.kill();
+  try {
+    rmSync(profile, { recursive: true, force: true });
+  } catch {
+    // Chrome may still hold the profile on Windows; it is in the temp folder anyway.
+  }
+  throw new Error(`Chrome did not start${exited ? ' (it exited)' : ''}. ${output.trim()}`);
+}
+
+/** Starts headless Chrome and returns a page driver bound to `baseUrl`. */
+export async function launch(baseUrl, { port = 9350 } = {}) {
+  let started = null;
+  for (let attempt = 1; !started; attempt++) {
+    try {
+      // A fresh port each time, in case the last Chrome still holds the old one.
+      started = await startChrome(port + attempt - 1);
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      console.warn(`Chrome did not start (attempt ${attempt} of 3), trying again…`);
+    }
+  }
+  const { chrome, profile, socketUrl } = started;
 
   const ws = new WebSocket(socketUrl);
   await new Promise((resolve) => ws.addEventListener('open', resolve, { once: true }));
@@ -113,12 +144,12 @@ export async function launch(baseUrl, { port = 9350 } = {}) {
       );
       await settle();
     },
-    /** Sets a select/input value the way React notices, then waits. */
+    /** Sets a select, input or textarea value the way React notices, then waits. */
     async set(selector, value, eventName = 'change') {
       await js(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)});
         if (!el) throw new Error('missing ' + ${JSON.stringify(selector)});
-        const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+        const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
         Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(value)});
         el.dispatchEvent(new Event(${JSON.stringify(eventName)}, { bubbles: true }));
       })()`);

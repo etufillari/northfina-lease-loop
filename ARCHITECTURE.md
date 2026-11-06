@@ -344,7 +344,7 @@ Every route checks the table. Sign, exit, end-of-term and relist each run inside
 
 ### 10.3 Config
 
-`src/domain/config.ts` holds tunable numbers: affordability 30 %, minimum age 18, exit fee 0, return credit 100 %, minimum relist condition `good` (`fair` only for entries that accept it), down payment slider step €50. Plain constants, passed into functions as arguments so tests can vary them. Rates, bands and thresholds keep coming from the data files.
+`src/domain/config.ts` holds tunable numbers: affordability 30 %, minimum age 18, minimum relist condition `good` (`fair` only for entries that accept it), down payment slider step €50. Plain constants, passed into functions as arguments so tests can vary them. Rates, bands and thresholds keep coming from the data files.
 
 ## 11. API conventions
 

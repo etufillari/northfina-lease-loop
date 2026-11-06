@@ -7,10 +7,6 @@ import type { AssetCondition } from '@/data/schemas';
 export type LeaseConfig = {
   /** Share of monthly net income a consumer may spend on rent incl. VAT, in percent. */
   affordabilityPercent: number;
-  /** Extra fee on any early exit, net cents. */
-  earlyExitFeeCents: number;
-  /** Share of the item's net market value credited on an early return, in basis points. */
-  returnCreditBp: number;
   /** Lowest condition a returned item may be relisted at without a waiting-list exception. */
   minimumRelistCondition: AssetCondition;
   /** Down payment slider step, net cents. */
@@ -19,8 +15,6 @@ export type LeaseConfig = {
 
 export const LEASE_CONFIG: Readonly<LeaseConfig> = Object.freeze({
   affordabilityPercent: 30,
-  earlyExitFeeCents: 0,
-  returnCreditBp: 10_000, // 100 %
   minimumRelistCondition: 'good',
   downPaymentStepCents: 5_000, // €50
 });

@@ -16,16 +16,16 @@ vi.mock('@/components/lease-engine-panel', () => ({
   LeaseEnginePanel: ({
     contractId,
     leaseId,
-    status,
+    locale,
   }: {
     contractId: string;
     leaseId: string | null;
-    status: string;
+    locale: string;
   }) =>
     createElement(
       'div',
       { 'data-testid': 'lease-engine-panel' },
-      `${contractId}:${leaseId}:${status}`
+      `${contractId}:${leaseId}:${locale}`
     ),
 }));
 vi.mock('@/data/load', () => ({ loadAssets: vi.fn().mockResolvedValue([]) }));
@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe('customer lease page', () => {
-  it('renders engine demo controls for each saved lease', async () => {
+  it('renders lease actions for each saved lease', async () => {
     mocks.listContracts.mockResolvedValue([
       {
         signedDate: '2025-10-15',
@@ -74,6 +74,6 @@ describe('customer lease page', () => {
 
     expect(markup).toContain('dark:text-stone-100');
     expect(markup).toContain('data-testid="lease-engine-panel"');
-    expect(markup).toContain('contract-aino-1:lease-aino-1:ACTIVE');
+    expect(markup).toContain('contract-aino-1:lease-aino-1:en');
   });
 });

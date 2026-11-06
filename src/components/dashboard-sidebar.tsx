@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import type { ActiveUserOption, CustomerType } from '@/active-user';
 import { getT } from '@/i18n/get-t';
@@ -12,11 +15,12 @@ export function DashboardSidebar({
   activeUserData: [ActiveUserOption[], ActiveUserOption | null] | null;
 }) {
   const t = getT(locale);
+  const pathname = usePathname();
   const links = [
     { href: `/${locale}`, label: t('nav.catalogue'), icon: '▦' },
     { href: `/${locale}/leases`, label: t('nav.leases'), icon: '▣' },
     { href: `/${locale}/saved`, label: t('nav.saved'), icon: '♡' },
-    { href: `/${locale}`, label: t('nav.transactions'), icon: '⇄' },
+    { href: `/${locale}/invoices`, label: t('nav.transactions'), icon: '⇄' },
     { href: `/${locale}/account`, label: t('nav.account'), icon: '♙' },
     ...(process.env.NODE_ENV === 'development'
       ? [{ href: `/${locale}/circular`, label: t('circular.title'), icon: '↻' }]
@@ -33,23 +37,29 @@ export function DashboardSidebar({
       </Link>
       <nav className="mt-10" aria-label={t('nav.dashboard')}>
         <ul className="space-y-2">
-          {links.map((link, index) => (
-            <li key={`${link.label}-${index}`}>
-              <Link
-                href={link.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  index === 0
-                    ? 'bg-white/20 text-white'
-                    : 'text-blue-100 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <span aria-hidden="true" className="w-5 text-center text-lg">
-                  {link.icon}
-                </span>
-                {link.label}
-              </Link>
-            </li>
-          ))}
+          {links.map((link) => {
+            const active =
+              link.href === `/${locale}`
+                ? pathname === link.href || pathname.startsWith(`/${locale}/assets`)
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <li key={link.label}>
+                <Link
+                  href={link.href}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                    active
+                      ? 'bg-white/20 text-white'
+                      : 'text-blue-100 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span aria-hidden="true" className="w-5 text-center text-lg">
+                    {link.icon}
+                  </span>
+                  {link.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
       <div

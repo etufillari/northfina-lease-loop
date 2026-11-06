@@ -5,7 +5,12 @@
 // The invoices page and the early-exit route both call this, so the price a customer is shown
 // and the price the server charges always come from the same contract.
 import type { PriceList } from '@/data/schemas';
-import { contractListPrice, type ListPriceResult, listPriceOn } from '@/domain/price-list';
+import {
+  contractListPrice,
+  effectiveAssetPriceOn,
+  type ListPriceResult,
+  listPriceOn,
+} from '@/domain/price-list';
 import type { PrismaClient } from './prisma-client';
 
 export type ContractPrice = {
@@ -23,6 +28,7 @@ export async function loadContractPrice(
   db: PrismaClient,
   input: {
     assetId: string;
+    asset?: { id: string; relist_price_cents?: number | null };
     signedOn: string;
     termMonths: number;
     downPaymentCents: number;
@@ -56,7 +62,9 @@ export async function loadContractPrice(
           priceListVersion: reservation.price_list_version,
         }
       : null;
-  const catalogue = listPriceOn(input.priceLists, input.assetId, input.signedOn);
+  const catalogue = input.asset
+    ? effectiveAssetPriceOn(input.priceLists, input.asset, input.signedOn)
+    : listPriceOn(input.priceLists, input.assetId, input.signedOn);
 
   return {
     price: contractListPrice({ offer, catalogue }),

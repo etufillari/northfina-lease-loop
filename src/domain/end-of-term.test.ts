@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  loadAssets,
   loadCo2Factors,
   loadCoefficientTable,
+  loadPriceLists,
   loadResidualCurves,
   loadSecondLifeDemand,
   loadVatRates,
@@ -10,8 +12,11 @@ import {
   calculateAvoidedCo2,
   calculateBuyoutSettlement,
   calculateResidualMarketValue,
+  deriveAssetSecondLifeValuation,
+  evaluateSecondLifeCandidates,
   interpolateResidualCurve,
   matchSecondLifeWaitingList,
+  monthsBetweenIso,
 } from './end-of-term';
 
 describe('calculateBuyoutSettlement', () => {
@@ -202,5 +207,112 @@ describe('calculateAvoidedCo2', () => {
         firstListPriceCents: 0,
       })
     ).toBe(0);
+  });
+});
+
+describe('evaluateSecondLifeCandidates and deriveAssetSecondLifeValuation', () => {
+  it('explains why wait-13 is excluded on Card 9 while wait-02 wins', async () => {
+    const [assets, priceLists, residualCurves, coefficientTable, secondLifeDemand, co2Factors] =
+      await Promise.all([
+        loadAssets(),
+        loadPriceLists(),
+        loadResidualCurves(),
+        loadCoefficientTable(),
+        loadSecondLifeDemand(),
+        loadCo2Factors(),
+      ]);
+
+    const ebike007 = assets.find((a) => a.id === 'ebike-007')!;
+    const valuation = deriveAssetSecondLifeValuation({
+      asset: ebike007,
+      priceLists,
+      residualCurves,
+      coefficientTable,
+      secondLifeDemand,
+      co2Factors,
+      asOf: '2026-11-05',
+    });
+
+    expect(valuation.ageMonths).toBe(46);
+    expect(valuation.relistPriceCents).toBe(92_781);
+    expect(valuation.canRelist).toBe(true);
+    expect(valuation.matches[0]?.request.id).toBe('wait-02');
+    expect(valuation.matches[0]?.monthlyNetRentCents).toBe(5198);
+    expect(valuation.excluded.find((e) => e.request.id === 'wait-13')?.reason).toBe(
+      'condition_too_low'
+    );
+  });
+
+  it('marks laptop-006 as below_minimum because its relist value (27577) is under €300', async () => {
+    const [assets, priceLists, residualCurves, coefficientTable, secondLifeDemand, co2Factors] =
+      await Promise.all([
+        loadAssets(),
+        loadPriceLists(),
+        loadResidualCurves(),
+        loadCoefficientTable(),
+        loadSecondLifeDemand(),
+        loadCo2Factors(),
+      ]);
+
+    const laptop006 = assets.find((a) => a.id === 'laptop-006')!;
+    const valuation = deriveAssetSecondLifeValuation({
+      asset: laptop006,
+      priceLists,
+      residualCurves,
+      coefficientTable,
+      secondLifeDemand,
+      co2Factors,
+      asOf: '2026-11-05',
+    });
+
+    expect(valuation.relistPriceCents).toBe(27_577);
+    expect(valuation.canRelist).toBe(false);
+    expect(valuation.cannotRelistReason).toBe('below_minimum');
+  });
+
+  it('recalculates market value for a returned asset even if a previous-life relist_price_cents is present', async () => {
+    const [assets, priceLists, residualCurves, coefficientTable, secondLifeDemand, co2Factors] =
+      await Promise.all([
+        loadAssets(),
+        loadPriceLists(),
+        loadResidualCurves(),
+        loadCoefficientTable(),
+        loadSecondLifeDemand(),
+        loadCo2Factors(),
+      ]);
+
+    const ebike007 = assets.find((a) => a.id === 'ebike-007')!;
+    const valuation = deriveAssetSecondLifeValuation({
+      asset: { ...ebike007, status: 'returned', relist_price_cents: 250_000 },
+      priceLists,
+      residualCurves,
+      coefficientTable,
+      secondLifeDemand,
+      co2Factors,
+      asOf: '2026-11-05',
+    });
+
+    expect(valuation.relistPriceCents).toBe(92_781);
+  });
+
+  it('validates ISO dates in monthsBetweenIso and reports excluded reasons', async () => {
+    expect(monthsBetweenIso('2023-01-01', '2026-11-05')).toBe(46);
+    expect(monthsBetweenIso('2026-11-05', '2023-01-01')).toBe(0);
+    expect(() => monthsBetweenIso('bad', '2026-11-05')).toThrow(RangeError);
+    expect(() => monthsBetweenIso('2026-11-05', 'bad')).toThrow(RangeError);
+
+    const [demand, coefficientTable] = await Promise.all([
+      loadSecondLifeDemand(),
+      loadCoefficientTable(),
+    ]);
+    const evalOverBudget = evaluateSecondLifeCandidates({
+      category: 'e_bike',
+      condition: 'good',
+      relistPriceCents: 900_000,
+      demand,
+      asOf: '2026-11-05',
+      coefficientTable,
+    });
+    expect(evalOverBudget.excluded.some((e) => e.reason === 'over_budget')).toBe(true);
   });
 });

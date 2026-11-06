@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPriceLists } from '@/data/load';
 import type { PriceList } from '@/data/schemas';
-import { contractListPrice, listPriceOn } from './price-list';
+import { contractListPrice, effectiveAssetPriceOn, listPriceOn } from './price-list';
 
 let priceLists: PriceList[];
 beforeAll(async () => {
@@ -63,6 +63,42 @@ describe('listPriceOn', () => {
 
   it('throws on a date that is not YYYY-MM-DD, because that is a bug in the caller', () => {
     expect(() => listPriceOn(priceLists, 'ebike-001', '6.11.2026')).toThrow(RangeError);
+  });
+});
+
+describe('effectiveAssetPriceOn', () => {
+  it('uses relist_price_cents when present on a relisted asset', () => {
+    expect(
+      effectiveAssetPriceOn(
+        priceLists,
+        { id: 'ebike-007', relist_price_cents: 92_781 },
+        '2026-11-05'
+      )
+    ).toEqual({
+      ok: true,
+      priceCents: 92_781,
+      priceListVersion: 1,
+      isRelisted: true,
+    });
+  });
+
+  it('falls back to listPriceOn when relist_price_cents is absent or null', () => {
+    expect(
+      effectiveAssetPriceOn(priceLists, { id: 'ebike-003', relist_price_cents: null }, '2026-11-05')
+    ).toEqual({
+      ok: true,
+      priceCents: 389_000,
+      priceListVersion: 1,
+    });
+  });
+
+  it('rejects invalid dates or non-integer relist_price_cents', () => {
+    expect(() => effectiveAssetPriceOn(priceLists, { id: 'ebike-003' }, 'bad-date')).toThrow(
+      RangeError
+    );
+    expect(() =>
+      effectiveAssetPriceOn(priceLists, { id: 'ebike-003', relist_price_cents: -10 }, '2026-11-05')
+    ).toThrow(RangeError);
   });
 });
 

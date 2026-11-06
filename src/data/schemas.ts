@@ -28,7 +28,7 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned', 'sold']);
+export const assetStatusSchema = z.enum(['available', 'reserved', 'leased', 'returned', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */
@@ -53,6 +53,12 @@ export const assetSchema = z.strictObject({
   /** How many lease contracts this item has already been through. */
   previous_lives: z.number().int().nonnegative(),
   status: assetStatusSchema,
+  /** Second-life relist price in cents, set when a returned item is relisted. */
+  relist_price_cents: centsSchema.optional(),
+  /** ISO date YYYY-MM-DD when the asset was first leased. */
+  first_lease_date: isoDateSchema.optional(),
+  /** Net list price in cents when the asset was first leased. */
+  first_list_price_cents: centsSchema.optional(),
 });
 export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);

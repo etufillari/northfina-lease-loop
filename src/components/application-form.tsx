@@ -321,9 +321,20 @@ export function ApplicationForm({
       const response = await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'reserved', actor, token: token ?? undefined }),
+        body: JSON.stringify({
+          status: 'leased',
+          actor,
+          token: token ?? undefined,
+          termMonths: signTarget.termMonths,
+          downPaymentCents: signTarget.downPaymentCents,
+          signedOn: signTarget.signedOn,
+          answers,
+        }),
       });
-      const json = (await response.json()) as { success?: boolean };
+      const json = (await response.json()) as {
+        success?: boolean;
+        data?: { contractId?: string };
+      };
       if (!response.ok || !json.success) {
         throw new Error('sign failed');
       }
@@ -336,6 +347,7 @@ export function ApplicationForm({
         down: String(signTarget.downPaymentCents),
         signedOn: signTarget.signedOn,
         ...(token ? { token } : {}),
+        ...(json.data?.contractId ? { contractId: json.data.contractId } : {}),
       });
       router.push(`/${locale}/invoices?${params.toString()}`);
     } catch {

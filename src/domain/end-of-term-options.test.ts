@@ -47,6 +47,10 @@ describe('getRemainingMonths', () => {
       ok: false,
       reason: 'invalid_term',
     });
+    expect(getRemainingMonths('9999-12-31', '9999-12-31', 12)).toEqual({
+      ok: false,
+      reason: 'invalid_date',
+    });
   });
 });
 

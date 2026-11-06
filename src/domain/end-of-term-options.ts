@@ -25,13 +25,13 @@ export function getRemainingMonths(
   }
 
   const endDate = anniversary(startDate, termMonths);
-  if (!endDate.ok) return endDate;
+  if (!endDate.ok) return { ok: false, reason: 'invalid_date' };
   if (today >= endDate.value) return { ok: true, months: 0 };
 
   let elapsedMonths = 0;
   for (let month = 1; month <= termMonths; month++) {
     const monthStart = anniversary(startDate, month);
-    if (!monthStart.ok) return monthStart;
+    if (!monthStart.ok) return { ok: false, reason: 'invalid_date' };
     if (monthStart.value > today) break;
     elapsedMonths = month;
   }

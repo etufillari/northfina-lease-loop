@@ -1,14 +1,26 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Question, QuestionsFile } from '@/data/schemas';
-import { resolveQuestionFlow, type ApplicationAnswers } from '@/domain/question-flow';
-import { getT } from '@/i18n/get-t';
+import Link from 'next/link';
+import type { AssetCategory, Question, QuestionsFile } from '@/data/schemas';
+import {
+  evaluateCollectedApplication,
+  type ApplicationEvaluationContext,
+} from '@/domain/application-result';
+import type { ApplicationDecision, ApplicationReason } from '@/domain/application';
+import {
+  resolveQuestionFlow,
+  type ApplicationAnswers,
+  type BlockingReason,
+} from '@/domain/question-flow';
+import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
 type ApplicationQuestionProps = {
   question: Question;
   questionsFile: QuestionsFile;
+  category: AssetCategory;
+  financedAmountCents: number;
   contractStartDate: string;
   locale: Locale;
 };
@@ -16,6 +28,8 @@ type ApplicationQuestionProps = {
 export function ApplicationQuestion({
   question,
   questionsFile,
+  category,
+  financedAmountCents,
   contractStartDate,
   locale,
 }: ApplicationQuestionProps) {
@@ -24,6 +38,8 @@ export function ApplicationQuestion({
   const [questionHistory, setQuestionHistory] = useState([question.id]);
   const [isComplete, setIsComplete] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [blockingReason, setBlockingReason] = useState<BlockingReason>();
+  const [decision, setDecision] = useState<ApplicationDecision>();
   const answerControlRef = useRef<HTMLInputElement>(null);
   const t = getT(locale);
   const currentQuestion =
@@ -46,6 +62,8 @@ export function ApplicationQuestion({
       questionsFile,
       {
         customerType,
+        category,
+        financedAmountCents,
         answers: nextAnswers,
       },
       contractStartDate
@@ -53,6 +71,9 @@ export function ApplicationQuestion({
     if (flow.blockingReasons.some((reason) => reason.questionId === currentQuestion.id)) {
       setAnswers(flow.answers);
       setIsBlocked(true);
+      setBlockingReason(
+        flow.blockingReasons.find((reason) => reason.questionId === currentQuestion.id)
+      );
       return;
     }
     const currentIndex = flow.applicableQuestions.findIndex(
@@ -61,10 +82,16 @@ export function ApplicationQuestion({
     const nextQuestion = flow.applicableQuestions[currentIndex + 1];
     setAnswers(flow.answers);
     setIsBlocked(false);
+    setBlockingReason(undefined);
     if (nextQuestion) {
       setCurrentQuestionId(nextQuestion.id);
       setQuestionHistory((current) => [...current, nextQuestion.id]);
     } else {
+      const evaluationContext: ApplicationEvaluationContext = {
+        contractStartDate,
+        financedAmountCents,
+      };
+      setDecision(evaluateCollectedApplication(flow.answers, evaluationContext));
       setIsComplete(true);
     }
   }
@@ -75,25 +102,62 @@ export function ApplicationQuestion({
     setCurrentQuestionId(previousQuestionId);
     setQuestionHistory((current) => current.slice(0, -1));
     setIsBlocked(false);
+    setBlockingReason(undefined);
     setIsComplete(false);
   }
 
   if (isComplete) {
+    const resultStyles =
+      decision?.decision === 'approved'
+        ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950'
+        : decision?.decision === 'declined'
+          ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950'
+          : 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950';
+    const backButtonStyles =
+      decision?.decision === 'approved'
+        ? 'border-emerald-700 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-300 dark:text-emerald-200 dark:hover:bg-emerald-900'
+        : decision?.decision === 'declined'
+          ? 'border-red-700 text-red-800 hover:bg-red-100 dark:border-red-300 dark:text-red-200 dark:hover:bg-red-900'
+          : 'border-amber-700 text-amber-800 hover:bg-amber-100 dark:border-amber-300 dark:text-amber-200 dark:hover:bg-amber-900';
     return (
-      <section className="mt-10 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900 dark:bg-emerald-950">
-        <h2 className="text-xl font-semibold">{t('application.completeTitle')}</h2>
-        <p className="mt-2 text-stone-700 dark:text-stone-300">
-          {t('application.completeDescription')}
-        </p>
+      <section className={`mt-10 rounded-2xl border p-6 ${resultStyles}`}>
+        <h2 className="text-xl font-semibold">
+          {decisionLabel(decision?.decision ?? 'declined', t)}
+        </h2>
+        <p className="mt-2 text-stone-700 dark:text-stone-300">{t('application.thankYou')}</p>
+        {decision && decision.reasons.length > 0 && (
+          <ul className="mt-4 list-disc space-y-1 pl-5 text-stone-700 dark:text-stone-300">
+            {decision.reasons.map((reason) => (
+              <li key={reason}>{t(reasonLabelKey[reason])}</li>
+            ))}
+          </ul>
+        )}
+        {decision?.decision === 'approved' && (
+          <Link
+            href={`/${locale}/contract`}
+            className="mt-6 inline-flex rounded-xl bg-emerald-700 px-5 py-3 font-medium text-white transition hover:bg-emerald-800"
+          >
+            {t('application.continueToContract')}
+          </Link>
+        )}
         <button
           type="button"
           onClick={goBack}
-          className="mt-6 rounded-xl border border-emerald-700 px-5 py-3 font-medium text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-300 dark:text-emerald-200 dark:hover:bg-emerald-900"
+          className={`mt-6 ml-3 rounded-xl border px-5 py-3 font-medium transition ${backButtonStyles}`}
         >
           {t('application.back')}
         </button>
       </section>
     );
+  }
+
+  function decisionLabel(
+    decision: ApplicationDecision['decision'],
+    t: ReturnType<typeof getT>
+  ): string {
+    if (decision === 'approved') return t('application.decision.approved');
+    if (decision === 'manual_review') return t('application.decision.manualReview');
+    return t('application.decision.declined');
   }
 
   return (
@@ -137,7 +201,10 @@ export function ApplicationQuestion({
           role="alert"
           className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
         >
-          <strong>{t('application.blockedTitle')}</strong> {t('application.blockedDescription')}
+          <strong>{t('application.blockedTitle')}</strong>{' '}
+          {blockingReason
+            ? t(blockingReasonLabelKey(blockingReason))
+            : t('application.blockedDescription')}
         </p>
       )}
 
@@ -158,6 +225,7 @@ export function ApplicationQuestion({
                   checked={answer === option}
                   onChange={() => {
                     setIsBlocked(false);
+                    setBlockingReason(undefined);
                     setAnswers((current) => ({ ...current, [currentQuestion.id]: option }));
                   }}
                   className="size-4 accent-emerald-700"
@@ -173,6 +241,7 @@ export function ApplicationQuestion({
             value={typeof answer === 'string' ? answer : ''}
             onChange={(event) => {
               setIsBlocked(false);
+              setBlockingReason(undefined);
               setAnswers((current) => ({ ...current, [currentQuestion.id]: event.target.value }));
             }}
             className="w-full rounded-xl border border-stone-300 bg-transparent px-4 py-3 dark:border-stone-700"
@@ -199,6 +268,24 @@ export function ApplicationQuestion({
       </div>
     </form>
   );
+}
+
+const reasonLabelKey: Record<ApplicationReason, MessageKey> = {
+  under_minimum_age: 'application.reason.underMinimumAge',
+  unsupported_residency: 'application.reason.unsupportedResidency',
+  unaffordable: 'application.reason.unaffordable',
+  invalid_business_id: 'application.reason.invalidBusinessId',
+  unauthorised_signatory: 'application.reason.unauthorisedSignatory',
+  financed_amount_out_of_range: 'application.reason.financedAmountOutOfRange',
+  pep_manual_review: 'application.reason.pepManualReview',
+  missing_required_information: 'application.reason.missingInformation',
+} as const;
+
+function blockingReasonLabelKey(reason: BlockingReason): MessageKey {
+  if (reason.rule === 'age_under') return reasonLabelKey.under_minimum_age;
+  if (reason.rule === 'invalid_business_id') return reasonLabelKey.invalid_business_id;
+  if (reason.questionId === 'q_country') return reasonLabelKey.unsupported_residency;
+  return reasonLabelKey.missing_required_information;
 }
 
 function optionLabel(option: string, t: ReturnType<typeof getT>): string {

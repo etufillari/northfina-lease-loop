@@ -11,7 +11,7 @@ import {
   loadRefurbishmentCosts,
   loadResidualCurves,
 } from '@/data/load';
-import { secondLifeRequestSchema, type Asset, type SecondLifeRequest } from '@/data/schemas';
+import type { Asset, SecondLifeRequest } from '@/data/schemas';
 import { co2AvoidedKg } from '@/domain/co2';
 import { listPriceOn } from '@/domain/price-list';
 import { quoteFor, type Quote } from '@/domain/pricing';
@@ -22,31 +22,18 @@ import {
   type DeskItem,
   type DeskOutcome,
 } from '@/domain/second-life-allocation';
-import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
+import type { PrismaClient } from '@/generated/prisma/client';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
 import { holdForPool, offerSet, pooledAssetsByWaiter, pooledRent } from './second-life-pools';
-import { listWaitlist } from './waitlist';
+import { listWaitlist, toSecondLifeRequest } from './waitlist';
 
 type Db = PrismaClient;
 
 /** The "original price" of every residual calculation: the asset's price in price list v1. */
 export const ORIGINAL_PRICE_DATE = '2026-01-01';
 
-/** A waiting-list row back in the data-pack shape the domain expects. */
-export function toSecondLifeRequest(row: WaitlistEntry): SecondLifeRequest {
-  return secondLifeRequestSchema.parse({
-    id: row.id,
-    category: row.category,
-    max_monthly_net_rent_cents: row.max_monthly_net_rent_cents,
-    min_condition: row.min_condition,
-    preferred_term_months: row.preferred_term_months,
-    needed_by: row.needed_by,
-    joined_on: row.joined_on,
-    quantity: row.quantity,
-    who: row.who,
-  });
-}
+export { toSecondLifeRequest } from './waitlist';
 
 /** kg CO2e avoided by the life that starts now, rounded to 0.1 kg for display and storage. */
 export function lifeCo2Kg(
@@ -275,14 +262,17 @@ export async function executeSecondLife(
           usage_value: decision.usageAfterRefurb,
           previous_lives: previousLives,
           status: 'available',
+          // The re-price (docs/DECISIONS.md): quoted from now on instead of the list price.
+          second_life_price_cents: decision.financedCents,
         },
       });
       if (applied === 'list_available' || !winner) return;
+      const waiter = { ...winner, customer_id: winner.customer_id ?? null };
 
       if (applied === 'pool') {
         await holdForPool(tx, {
           assetId: asset.id,
-          waiter: winner,
+          waiter,
           filled: held.length + 1,
           monthlyNetRentCents: rent,
           asOf,
@@ -295,7 +285,7 @@ export async function executeSecondLife(
         items.push({ assetId, monthlyNetRentCents: await pooledRent(tx, assetId) });
       }
       items.push({ assetId: asset.id, monthlyNetRentCents: rent });
-      await offerSet(tx, { waiter: winner, items, asOf });
+      await offerSet(tx, { waiter, items, asOf });
     }
   );
   return { ok: true, preview, applied, co2AvoidedKg: co2?.kg ?? null };

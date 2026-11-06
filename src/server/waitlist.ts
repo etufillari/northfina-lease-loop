@@ -1,6 +1,22 @@
 // The second-life waiting list rows, seeded from data/second-life-demand.json.
-import type { SecondLifeRequest } from '@/data/schemas';
-import type { PrismaClient } from '@/generated/prisma/client';
+import { secondLifeRequestSchema, type SecondLifeRequest } from '@/data/schemas';
+import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
+
+/** A waiting-list row back in the data-pack shape the domain expects. */
+export function toSecondLifeRequest(row: WaitlistEntry): SecondLifeRequest {
+  return secondLifeRequestSchema.parse({
+    id: row.id,
+    category: row.category,
+    max_monthly_net_rent_cents: row.max_monthly_net_rent_cents,
+    min_condition: row.min_condition,
+    preferred_term_months: row.preferred_term_months,
+    needed_by: row.needed_by,
+    joined_on: row.joined_on,
+    quantity: row.quantity,
+    customer_id: row.customer_id ?? undefined,
+    who: row.who,
+  });
+}
 
 export async function seedWaitlist(db: PrismaClient, demand: readonly SecondLifeRequest[]) {
   let created = 0;

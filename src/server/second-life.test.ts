@@ -39,6 +39,7 @@ describe('toSecondLifeRequest', () => {
       needed_by: '2026-11-10',
       joined_on: '2026-10-01',
       quantity: 1,
+      customer_id: 'cust-pekka',
       who: 'Delivery courier, accepts scratches',
     });
   });

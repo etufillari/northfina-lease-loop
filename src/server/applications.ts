@@ -200,13 +200,36 @@ export async function startApplication(
   }
   const assets = await db.asset.findMany({ where: { id: { in: input.assetIds } } });
   if (assets.length !== input.assetIds.length) return { ok: false, reason: 'unknown_asset' };
-  if (assets.some((a) => a.status === 'leased' || a.status === 'reserved' || a.status === 'sold')) {
+  if (assets.some((a) => a.status === 'leased' || a.status === 'sold')) {
     return { ok: false, reason: 'asset_unavailable' };
+  }
+  // A reserved item is open only to the customer it is held for: a waiting-list offer or an
+  // end-of-term nomination names them on the Reservation.
+  const reserved = assets.filter((a) => a.status === 'reserved').map((a) => a.id);
+  if (reserved.length > 0) {
+    const holds = await db.reservation.findMany({
+      where: {
+        asset_id: { in: reserved },
+        active: true,
+        customer_id: input.customerId,
+        kind: { in: ['waitlist_offer', 'nomination'] },
+      },
+    });
+    if (reserved.some((id) => !holds.some((hold) => hold.asset_id === id))) {
+      return { ok: false, reason: 'asset_unavailable' };
+    }
   }
   if (new Set(assets.map((a) => a.category)).size > 1) {
     return { ok: false, reason: 'mixed_categories' };
   }
-  const live = await buildLiveQuote(input);
+  const live = await buildLiveQuote({
+    ...input,
+    secondLifePricesCents: Object.fromEntries(
+      assets
+        .filter((a) => a.second_life_price_cents !== null)
+        .map((a) => [a.id, a.second_life_price_cents!])
+    ),
+  });
   if (!live.ok) return { ok: false, reason: live.reason };
 
   const applicationId = crypto.randomUUID();

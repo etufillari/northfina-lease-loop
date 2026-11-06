@@ -157,6 +157,17 @@ export async function signApplication(
         where: { id: application.id },
         data: { status: 'signed' },
       });
+      // A lease that came from a waiting-list offer closes that entry.
+      const offers = await tx.reservation.findMany({
+        where: {
+          asset_id: { in: quoteAssetIds(quote) },
+          active: true,
+          waitlist_entry_id: { not: null },
+        },
+      });
+      for (const entryId of new Set(offers.map((offer) => offer.waitlist_entry_id!))) {
+        await tx.waitlistEntry.update({ where: { id: entryId }, data: { status: 'leased' } });
+      }
       for (const assetId of quoteAssetIds(quote)) {
         await tx.reservation.updateMany({
           where: { asset_id: assetId, active: true },

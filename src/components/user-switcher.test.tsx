@@ -13,13 +13,20 @@ const users: User[] = [
   { id: 'staff-dealer', name: 'Dealer', role: 'dealer', kind: 'staff' },
 ];
 
-function stubSession(current: User | null) {
+const signatory: User = {
+  id: 'sign-norvi-ceo',
+  name: 'Anna Norvi',
+  role: 'signatory',
+  kind: 'signatory',
+};
+
+function stubSession(current: User | null, everyone: User[] = users) {
   const answer = (data: unknown) => new Response(JSON.stringify({ success: true, data }));
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
       if (url.endsWith('/demo-date')) return answer({ date: '2026-11-05', is_demo: false });
-      return answer(url.endsWith('/users') ? users : current);
+      return answer(url.endsWith('/users') ? everyone : current);
     })
   );
 }
@@ -27,8 +34,8 @@ function stubSession(current: User | null) {
 const reviewLink = messages.en['staff.applications.title'];
 const dashboardLink = messages.en['dealer.title'];
 
-async function renderAs(current: User | null) {
-  stubSession(current);
+async function renderAs(current: User | null, everyone: User[] = users) {
+  stubSession(current, everyone);
   render(<UserSwitcher locale="en" />);
   await waitFor(() => expect(screen.getByRole('combobox').hasAttribute('disabled')).toBe(false));
 }
@@ -79,6 +86,15 @@ describe('UserSwitcher', () => {
       'href',
       '/en/admin/audit-log'
     );
+  });
+
+  it('sends a signatory to the applications waiting for them, and nowhere else', async () => {
+    await renderAs(signatory, [...users, signatory]);
+
+    expect(
+      await screen.findByRole('link', { name: messages.en['account.applications.title'] })
+    ).toHaveAttribute('href', '/en/account/applications');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 
   it('gives a customer no staff links', async () => {

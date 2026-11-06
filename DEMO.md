@@ -31,7 +31,7 @@ Then open <http://localhost:3000/en>.
 | Rejected, wrong business ID     | Typo Trading Oy                                            | `laptop-005`                            | My applications                   |
 | Waiting for manual review       | Northfina admin, or Haapala                                | `farm-003`                              | Manual review, or My applications |
 | Approved, ready to sign         | Lena Tamm                                                  | `ebike-006`                             | My applications                   |
-| Waiting for a company signature | Anna Norvi                                                 | `laptop-010`                            | `/en/account/applications`        |
+| Waiting for a company signature | Anna Norvi                                                 | `laptop-010`                            | My applications                   |
 | Signed, crosses the VAT change  | Pekka Korhonen                                             | `ebike-005`                             | Contracts, Invoices               |
 | Held for someone                | Jonas Lind, or Dealer desk                                 | `ebike-002`                             | Catalogue, or Dealer dashboard    |
 | Re-listed used item             | Anyone                                                     | `ebike-011`                             | Catalogue                         |
@@ -87,7 +87,7 @@ Answers: Consumer, Lena Tamm, 30 August 1991, `lena.tamm@example.com`, Estonia, 
 2. Log in as Northfina admin and set the date to **6 Nov 2026**.
 3. Log in as Lena and open the contract.
 
-**Expect:** base price **€3,490.00** from price list 1, and list price on signing **€3,211.00**. The rent stays at **€96.27**: the customer keeps the quoted price even though today's list is lower.
+**Expect:** base price **€3,490.00** from price list 1, and list price on signing **€3,211.00**. The rent stays at **€96.27**, and a line under the prices says the customer keeps the price from their quote.
 
 ### Card 3: Tax is not price
 
@@ -137,7 +137,7 @@ Answers: Consumer, Mikko Laine, 10 March 2009, `mikko.laine@example.com`, Finlan
 | Politically exposed     | No                        |
 
 1. Submit and open the contract. **Expect:** it says the designated signatory must sign, and there is no sign button.
-2. Log in as **Anna Norvi** and go to `/en/account/applications`.
+2. Log in as **Anna Norvi** and click **My applications** in the header.
 3. Click **Continue to contract** on `ebike-004`, then sign.
 
 The app leases one item per contract, so this card covers one bike, not 4.
@@ -230,7 +230,6 @@ Set the date past **8 January 2027** instead, and any contract nobody decided on
 
 ## Not built yet
 
-- A header link for signatories.
 - Early exit (card 8).
 - Waiting-list matching and refurbishment costs (card 9).
 - The item passport and CO₂ savings (card 10).

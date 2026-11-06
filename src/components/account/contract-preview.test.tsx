@@ -168,6 +168,63 @@ describe('ContractPreview', () => {
     expect(screen.getByRole('note')).toHaveTextContent('1. tammikuuta 2027');
   });
 
+  it('says why the quoted price wins when the list has moved', async () => {
+    await renderPreview('en', {
+      quote_date: '2026-11-05',
+      base_price_cents: 349_000,
+      list_price_on_signing_cents: 321_100,
+    });
+
+    const note = screen.getByText(/You keep the price/);
+    expect(note).toHaveTextContent('5 November 2026');
+    expect(note).toHaveTextContent('€3,490.00');
+    expect(note).toHaveTextContent('€3,211.00');
+  });
+
+  it('says nothing about the lock when the prices match', async () => {
+    await renderPreview();
+    expect(screen.queryByText(/You keep the price/)).toBeNull();
+  });
+
+  it('says nothing about the lock for a re-listed item', async () => {
+    await renderPreview('en', { list_price_on_signing_cents: null });
+    expect(screen.queryByText(/You keep the price/)).toBeNull();
+  });
+
+  it('sends a customer to their contracts after signing', async () => {
+    await renderPreview();
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { customer_id: 'cust-a', signed_by: 'cust-a' } }), {
+        status: 201,
+      })
+    );
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: en['contract.sign'] }));
+
+    expect(await screen.findByRole('link', { name: en['contract.viewContracts'] })).toHaveAttribute(
+      'href',
+      '/en/account/contracts'
+    );
+  });
+
+  it('sends a signatory back to applications, because contracts are not theirs to read', async () => {
+    await renderPreview();
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { customer_id: 'cust-norvi', signed_by: 'sign-ceo' } }), {
+        status: 201,
+      })
+    );
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: en['contract.sign'] }));
+
+    expect(await screen.findByRole('link', { name: en['contract.back'] })).toHaveAttribute(
+      'href',
+      '/en/account/applications'
+    );
+  });
+
   it('can still be signed', async () => {
     await renderPreview();
 

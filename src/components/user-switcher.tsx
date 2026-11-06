@@ -139,7 +139,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   const currentUser = users.find((user) => user.id === currentId);
 
   const links: { href: string; label: string }[] = [];
-  if (currentUser?.kind === 'customer') {
+  if (currentUser?.kind === 'customer' || currentUser?.kind === 'signatory') {
     links.push({
       href: `/${locale}/account/applications`,
       label: t('account.applications.title'),

@@ -101,6 +101,8 @@ export default function ContractPreview({ locale, applicationId }: Props) {
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
   const [signed, setSigned] = useState(false);
+  // A signatory signs for a company, but its contracts are not theirs to read.
+  const [signedForCompany, setSignedForCompany] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -172,6 +174,8 @@ export default function ContractPreview({ locale, applicationId }: Props) {
         throw new Error(extractErrorCode(payload));
       }
 
+      const contract = extractData<{ customer_id?: string; signed_by?: string }>(payload);
+      setSignedForCompany(contract.signed_by !== contract.customer_id);
       setSigned(true);
     } catch (error) {
       setSignError(
@@ -217,10 +221,10 @@ export default function ContractPreview({ locale, applicationId }: Props) {
           <p className="mt-2 text-muted-foreground">{t('contract.signedDescription')}</p>
 
           <a
-            href={`/${locale}/account/applications`}
+            href={`/${locale}/account/${signedForCompany ? 'applications' : 'contracts'}`}
             className="mt-6 inline-flex rounded-md bg-primary px-5 py-2.5 text-primary-foreground"
           >
-            {t('contract.back')}
+            {signedForCompany ? t('contract.back') : t('contract.viewContracts')}
           </a>
         </div>
       </div>
@@ -297,6 +301,17 @@ export default function ContractPreview({ locale, applicationId }: Props) {
             value={preview.price_list_version ?? '—'}
           />
         </div>
+
+        {preview.list_price_on_signing_cents !== null &&
+          preview.list_price_on_signing_cents !== preview.base_price_cents && (
+            <p className="text-sm text-emerald-300">
+              {t('contract.priceLockNote', {
+                date: formatIsoDate(preview.quote_date, locale),
+                quoted: formatMoney(preview.base_price_cents),
+                list: formatMoney(preview.list_price_on_signing_cents),
+              })}
+            </p>
+          )}
 
         <div className="grid gap-6 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3">
           <Detail label={t('contract.totalNet')} value={formatMoney(preview.total_net_cents)} />

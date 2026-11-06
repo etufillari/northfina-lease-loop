@@ -7,7 +7,7 @@ import {
   type Contract,
   type Invoice,
 } from '@/data/lease-schemas';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadCustomers, loadPriceLists, loadVatRates } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import {
   buildContract,
@@ -66,6 +66,9 @@ export function toContract(row: ContractRow): Contract {
  */
 export type ContractView = Contract &
   InvoiceTotals & {
+    asset_name: string;
+    /** Who a passed-on item went to, in words. */
+    passed_to_name: string | null;
     list_price_on_signing_cents: number | null;
     end_choice: EndChoice;
     choice_deadline: string;
@@ -75,16 +78,29 @@ export async function contractViews(
   db: PrismaClient,
   contracts: readonly Contract[]
 ): Promise<ContractView[]> {
-  const [priceLists, today, invoiceRows] = await Promise.all([
+  const [priceLists, customers, today, invoiceRows, assets] = await Promise.all([
     loadPriceLists(),
+    loadCustomers(),
     currentDate(db),
     db.invoice.findMany({ where: { contract_id: { in: contracts.map(({ id }) => id) } } }),
+    db.asset.findMany({
+      where: { id: { in: contracts.map(({ asset_id }) => asset_id) } },
+      select: { id: true, make: true, model: true },
+    }),
   ]);
   const invoices = invoiceRows.map(toInvoice);
+
+  const assetName = (id: string) => {
+    const asset = assets.find((candidate) => candidate.id === id);
+    return asset ? `${asset.make} ${asset.model}` : id;
+  };
+  const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? id;
 
   return contracts.map((contract) => ({
     ...contract,
     ...invoiceTotals(invoices.filter((invoice) => invoice.contract_id === contract.id)),
+    asset_name: assetName(contract.asset_id),
+    passed_to_name: contract.passed_to === null ? null : customerName(contract.passed_to),
     list_price_on_signing_cents: listPriceOnSigning(contract, priceLists),
     end_choice: endChoice(contract, today),
     choice_deadline: choiceDeadline(contract),

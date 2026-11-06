@@ -102,8 +102,6 @@ export default function ContractPreview({ locale, applicationId }: Props) {
   const [signError, setSignError] = useState<string | null>(null);
   const [signed, setSigned] = useState(false);
 
-  const [reload, setReload] = useState(0);
-
   useEffect(() => {
     const controller = new AbortController();
 
@@ -147,7 +145,7 @@ export default function ContractPreview({ locale, applicationId }: Props) {
     void fetchPreview();
 
     return () => controller.abort();
-  }, [applicationId, reload]);
+  }, [applicationId]);
 
   async function handleSign() {
     if (!confirmed || !preview?.can_sign || signing) {
@@ -201,14 +199,6 @@ export default function ContractPreview({ locale, applicationId }: Props) {
           {loadError && (
             <p className="mt-2 text-sm text-muted-foreground">{errorMessage(loadError, t)}</p>
           )}
-
-          <button
-            type="button"
-            onClick={() => setReload((value) => value + 1)}
-            className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground"
-          >
-            {t('contract.retry')}
-          </button>
         </div>
       </div>
     );
@@ -410,24 +400,24 @@ export default function ContractPreview({ locale, applicationId }: Props) {
       </section>
 
       {/* Signing */}
-      <section className="space-y-5 rounded-lg border p-6">
+      <section className="space-y-5 rounded-xl border border-emerald-900/60 bg-emerald-950/10 p-6">
         {preview.can_sign ? (
           <>
-            <p className="text-sm text-muted-foreground">{t('contract.calculatedNote')}</p>
+            <p className="text-sm text-emerald-200/70">{t('contract.calculatedNote')}</p>
 
-            <label className="flex cursor-pointer items-start gap-3">
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-4">
               <input
                 type="checkbox"
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
-                className="mt-1 size-4 accent-primary"
+                className="mt-1 size-4 accent-emerald-500"
               />
 
-              <span className="text-sm">{t('contract.confirmation')}</span>
+              <span className="text-sm text-stone-200">{t('contract.confirmation')}</span>
             </label>
 
             {signError && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-red-400">
                 {signError}
               </p>
             )}
@@ -436,17 +426,17 @@ export default function ContractPreview({ locale, applicationId }: Props) {
               type="button"
               onClick={handleSign}
               disabled={!confirmed || signing}
-              className="rounded-md bg-primary px-6 py-3 font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {signing ? t('contract.signing') : t('contract.sign')}
             </button>
           </>
         ) : (
           <div className="space-y-2">
-            <p className="font-medium">{t('contract.signatoryRequired')}</p>
+            <p className="font-medium text-stone-100">{t('contract.signatoryRequired')}</p>
 
             {preview.signatory_email && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-stone-400">
                 {t('contract.signatoryEmail')}: {preview.signatory_email}
               </p>
             )}

@@ -1,4 +1,5 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
+import Link from 'next/link';
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/pricing/price-list';
@@ -82,6 +83,14 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
       </div>
+
+      <Link
+        href={`/${locale}/catalogue/${asset.category}/${asset.id}`}
+        aria-describedby={headingId}
+        className="mt-4 font-medium text-emerald-800 underline-offset-4 hover:underline dark:text-emerald-300"
+      >
+        {t('asset.chooseLease')}
+      </Link>
     </article>
   );
 }

@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  getAsset,
+  listAssets,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from '../prisma-client';
 
 let db: PrismaClient;
@@ -36,6 +43,19 @@ describe('seedAssets', () => {
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).status).toBe(
       'reserved'
     );
+  });
+});
+
+describe('getAsset', () => {
+  it('returns one asset in the data-pack shape', async () => {
+    await seedAssets(db, dataPack);
+    expect(await getAsset(db, 'ebike-003')).toEqual(
+      dataPack.find((asset) => asset.id === 'ebike-003')
+    );
+  });
+
+  it('returns null for an unknown asset', async () => {
+    expect(await getAsset(db, 'missing')).toBeNull();
   });
 });
 

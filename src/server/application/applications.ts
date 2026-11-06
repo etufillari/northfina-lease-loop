@@ -76,6 +76,7 @@ async function prepare(
   const date = await currentDate(db);
 
   const priced = await quoteAsset(db, {
+    customerId: request.customer.id,
     assetId,
     date,
     termMonths,

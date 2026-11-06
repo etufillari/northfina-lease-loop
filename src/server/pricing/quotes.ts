@@ -3,6 +3,7 @@
 // its own VAT.
 import type { Quote, QuoteFailureReason } from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import { isHeldForSomeoneElse } from '@/domain/assets/status';
 import { assetPriceOn } from '@/domain/pricing/price-list';
 import { downPaymentLimits, quote } from '@/domain/pricing/pricing';
 import { vatCents, vatRateOn } from '@/domain/vat';
@@ -48,16 +49,20 @@ export async function quoteAsset(
     date: string;
     termMonths: number;
     downPaymentCents: number;
+    /** Who is asking. An item held for someone else cannot be quoted. */
+    customerId?: string;
   }
 ): Promise<QuoteAssetResult> {
-  const { assetId, date, termMonths, downPaymentCents } = input;
+  const { assetId, date, termMonths, downPaymentCents, customerId } = input;
 
   const asset = await db.asset.findUnique({
     where: { id: assetId },
-    select: { status: true, relist_price_cents: true },
+    select: { status: true, relist_price_cents: true, reserved_for: true },
   });
   if (!asset) return { ok: false, reason: 'asset_not_found' };
-  if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
+  if (asset.status !== 'available' || isHeldForSomeoneElse(asset.reserved_for, customerId)) {
+    return { ok: false, reason: 'asset_not_available' };
+  }
 
   const [priceLists, table, vatRates] = await Promise.all([
     loadPriceLists(),

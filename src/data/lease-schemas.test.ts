@@ -55,6 +55,7 @@ const contract = {
   start_on: '2026-11-05',
   planned_end_on: '2029-11-04',
   actual_end_on: null,
+  passed_to: null,
   status: 'active',
 };
 

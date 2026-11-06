@@ -50,7 +50,8 @@ describe('POST /api/contracts/:id/end', () => {
     ['passed_on', 'returned'],
   ])('lets the customer choose %s', async (outcome, assetStatus) => {
     await actAs(AINO);
-    const { status, body } = await end({ outcome });
+    const passedTo = outcome === 'passed_on' ? { passed_to: 'cust-wait-01' } : {};
+    const { status, body } = await end({ outcome, ...passedTo });
     expect(status).toBe(200);
     expect(body.data).toMatchObject({ status: outcome, actual_end_on: '2029-11-05' });
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
@@ -66,6 +67,29 @@ describe('POST /api/contracts/:id/end', () => {
     const { status, body } = await end({ outcome: 'returned' });
     expect(status).toBe(409);
     expect(body.error.code).toBe(code);
+  });
+
+  it('records who an item is passed on to, and holds it for them', async () => {
+    await actAs(AINO);
+    const { body } = await end({ outcome: 'passed_on', passed_to: 'cust-wait-02' });
+    expect(body.data.passed_to).toBe('cust-wait-02');
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(asset.reserved_for).toBe('cust-wait-02');
+  });
+
+  it.each([
+    ['nobody', { outcome: 'passed_on' }],
+    ['someone not on the waiting list', { outcome: 'passed_on', passed_to: 'cust-lena' }],
+    ['someone waiting for another category', { outcome: 'passed_on', passed_to: 'cust-wait-06' }],
+    ['themselves', { outcome: 'passed_on', passed_to: 'cust-aino' }],
+    ['someone, while returning it', { outcome: 'returned', passed_to: 'cust-wait-01' }],
+  ])('answers 422 for naming %s', async (_name, body) => {
+    await actAs(AINO);
+    const result = await end(body);
+    expect(result.status).toBe(422);
+    expect(result.body.error.code).toBe('INVALID_PASS_ON_TARGET');
+    const contract = await db.contract.findUniqueOrThrow({ where: { id: contractId } });
+    expect(contract.status).toBe('active');
   });
 
   it('answers 409 for a second choice', async () => {

@@ -35,6 +35,8 @@ model Asset {
   status                  String // available | reserved | leased | returned | sold
   // Set when a used item is re-listed. Replaces the price list for its next lease.
   relist_price_cents      Int?
+  // The customer this item is held for after being passed on. Nobody else can lease it.
+  reserved_for            String?
   // For items first leased before the app. Later items keep this on their first AssetLife.
   first_leased_on         String?
   first_lease_price_cents Int?
@@ -88,6 +90,7 @@ model Contract {
   start_on                     String
   planned_end_on               String
   actual_end_on                String?
+  passed_to                    String? // the customer it was passed on to
   status                       String // active | bought_out | returned | passed_on | exited_early
   price_list_version           Int? // null for a re-listed item, which has no list price
   base_price_cents             Int

@@ -3,9 +3,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ainoEbikeAnswers } from '../../../tests/helpers/applicants';
 import { applyFor, findCustomer, resetLeaseData, signFor } from '../../../tests/helpers/lease-flow';
 import { createTestDb } from '../../../tests/helpers/test-db';
-import { contractViews, getContract } from '../contract/contracts';
+import { submitApplication } from '../application/applications';
+import { contractViews, getContract, previewContract, signContract } from '../contract/contracts';
 import { listInvoices } from '../invoicing/invoices';
+import { quoteAsset } from '../pricing/quotes';
 import type { PrismaClient } from '../prisma-client';
+import { relistAsset } from '../second-life/relist';
 import { closeDueContracts, closeExpiredContracts, endContract } from './contract-end';
 
 let db: PrismaClient;
@@ -70,10 +73,27 @@ describe('endContract: the customer chooses', () => {
     expect(await listInvoices(db, { contractId })).toHaveLength(36);
   });
 
-  it('passes the item on, which works like a return for now', async () => {
-    expect(await end('passed_on')).toMatchObject({ ok: true, contract: { status: 'passed_on' } });
-    expect(await assetStatus()).toBe('returned');
+  it('passes the item on to someone waiting, and holds it for them', async () => {
+    const customer = await findCustomer('cust-aino');
+    const result = await endContract(db, {
+      contractId,
+      customer,
+      outcome: 'passed_on',
+      passedTo: 'cust-wait-02',
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      contract: { status: 'passed_on', passed_to: 'cust-wait-02' },
+    });
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(asset).toMatchObject({ status: 'returned', reserved_for: 'cust-wait-02' });
     expect(await life()).toMatchObject({ outcome: 'passed_on' });
+  });
+
+  it('refuses to pass the item on without a valid person', async () => {
+    expect(await end('passed_on')).toEqual({ ok: false, reason: 'invalid_pass_on_target' });
+    expect(await assetStatus()).toBe('leased');
   });
 
   it('writes one audit row in the customer name', async () => {
@@ -207,6 +227,77 @@ describe('closeDueContracts', () => {
     expect(await closeDueContracts(db)).toEqual({ closed: [] });
     await setDate('2029-11-12');
     expect(await closeDueContracts(db)).toEqual({ closed: [contractId] });
+  });
+});
+
+describe('an item passed on to someone', () => {
+  beforeEach(async () => {
+    await setDate('2029-11-05');
+    await endContract(db, {
+      contractId,
+      customer: await findCustomer('cust-aino'),
+      outcome: 'passed_on',
+      passedTo: 'cust-wait-02',
+    });
+    await relistAsset(db, {
+      assetId: 'ebike-003',
+      condition: 'good',
+      usageValue: 8_000,
+      actor: 'staff-dealer',
+    });
+  });
+
+  const answers = { ...ainoEbikeAnswers, q_monthly_income: 260_000 };
+
+  it('stays held after the dealer re-lists it', async () => {
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(asset).toMatchObject({ status: 'available', reserved_for: 'cust-wait-02' });
+  });
+
+  it('can be leased by the person it is held for, which clears the hold', async () => {
+    const application = await applyFor(db, 'cust-wait-02', 'ebike-003', answers, {
+      termMonths: 24,
+    });
+    expect(application.decision).toBe('approved');
+
+    const signed = await signFor(db, 'cust-wait-02', application.id);
+    expect(signed).toMatchObject({ customer_id: 'cust-wait-02', status: 'active' });
+
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(asset).toMatchObject({ status: 'leased', reserved_for: null });
+  });
+
+  it('cannot be quoted or applied for by anyone else', async () => {
+    const customer = await findCustomer('cust-lena');
+    const deal = { assetId: 'ebike-003', termMonths: 24, downPaymentCents: 0 };
+
+    expect(await quoteAsset(db, { ...deal, date: '2029-11-05', customerId: customer.id })).toEqual({
+      ok: false,
+      reason: 'asset_not_available',
+    });
+    expect(await submitApplication(db, { ...deal, customer, answers })).toEqual({
+      ok: false,
+      reason: 'asset_not_available',
+    });
+  });
+
+  it('cannot be signed by someone approved before the hold', async () => {
+    await db.asset.update({ where: { id: 'ebike-003' }, data: { reserved_for: null } });
+    const application = await applyFor(db, 'cust-lena', 'ebike-003', answers, { termMonths: 24 });
+    await db.asset.update({
+      where: { id: 'ebike-003' },
+      data: { reserved_for: 'cust-wait-02' },
+    });
+    const customer = await findCustomer('cust-lena');
+
+    expect(await previewContract(db, { applicationId: application.id, customer })).toEqual({
+      ok: false,
+      reason: 'asset_not_available',
+    });
+    expect(await signContract(db, { applicationId: application.id, customer })).toEqual({
+      ok: false,
+      reason: 'asset_not_available',
+    });
   });
 });
 

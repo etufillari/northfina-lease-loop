@@ -136,5 +136,61 @@
     "monthly_net_income_cents": 240000,
     "is_pep": false,
     "story": "Returned his e-bike (ebike-008) after 24 months and wants a newer one."
+  },
+  {
+    "id": "cust-wait-01",
+    "type": "consumer",
+    "name": "Ella Salmi",
+    "birth_date": "2003-05-14",
+    "country": "FI",
+    "city": "Helsinki",
+    "email": "ella.salmi@example.com",
+    "employment": "student",
+    "monthly_net_income_cents": 110000,
+    "is_pep": false,
+    "waitlist_id": "wait-01",
+    "story": "Student on the waiting list for a used e-bike (wait-01)."
+  },
+  {
+    "id": "cust-wait-02",
+    "type": "consumer",
+    "name": "Jonas Lind",
+    "birth_date": "1994-09-21",
+    "country": "FI",
+    "city": "Espoo",
+    "email": "jonas.lind@example.com",
+    "employment": "self_employed",
+    "monthly_net_income_cents": 260000,
+    "is_pep": false,
+    "waitlist_id": "wait-02",
+    "story": "Delivery courier on the waiting list for a used e-bike (wait-02)."
+  },
+  {
+    "id": "cust-wait-06",
+    "type": "consumer",
+    "name": "Noora Heikkinen",
+    "birth_date": "2006-02-03",
+    "country": "FI",
+    "city": "Helsinki",
+    "email": "noora.heikkinen@example.com",
+    "employment": "student",
+    "monthly_net_income_cents": 95000,
+    "is_pep": false,
+    "waitlist_id": "wait-06",
+    "story": "First-year student on the waiting list for a used laptop (wait-06)."
+  },
+  {
+    "id": "cust-wait-11",
+    "type": "sole_trader",
+    "name": "Timo Rautio",
+    "business_id": "3400000-9",
+    "birth_date": "1981-11-30",
+    "country": "FI",
+    "city": "Seinäjoki",
+    "email": "timo.rautio@example.com",
+    "vat_registered": true,
+    "is_pep": false,
+    "waitlist_id": "wait-11",
+    "story": "Seasonal contractor on the waiting list for a used farm machine (wait-11)."
   }
 ]

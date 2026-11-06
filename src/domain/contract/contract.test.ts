@@ -187,6 +187,7 @@ describe('buildContract', () => {
     const contract = {
       id: 'con-1',
       signed_by: 'cust-aino',
+      passed_to: null,
       ...build(application(), '2026-11-05'),
     };
     expect(contractSchema.safeParse(contract).success).toBe(true);
@@ -246,6 +247,7 @@ describe('openLife', () => {
   const contract = (overrides: Partial<Application> = {}) => ({
     id: 'con-1',
     signed_by: 'cust-aino',
+    passed_to: null,
     ...build(application(overrides), '2026-11-05'),
   });
 

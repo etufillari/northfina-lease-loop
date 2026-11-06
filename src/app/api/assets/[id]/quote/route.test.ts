@@ -4,10 +4,12 @@ import { loadAssets } from '@/data/load';
 import { seedAssets } from '@/server/assets/assets';
 import type { PrismaClient } from '@/server/prisma-client';
 import { todayIso } from '@/server/date/today';
+import { AINO, TEST_SECRET, actAs } from '../../../../../../tests/helpers/act-as';
 import { createTestDb } from '../../../../../../tests/helpers/test-db';
 import { GET } from './route';
 
 const testDb = vi.hoisted(() => ({ current: undefined as PrismaClient | undefined }));
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
 vi.mock('@/server/db', () => ({
   get db() {
     return testDb.current;
@@ -17,12 +19,15 @@ vi.mock('@/server/db', () => ({
 let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
+  vi.stubEnv('JWT_SECRET', TEST_SECRET);
+  await actAs(null);
   const created = await createTestDb();
   testDb.current = created.db;
   cleanup = created.cleanup;
   await seedAssets(created.db, await loadAssets());
 });
 afterAll(async () => {
+  vi.unstubAllEnvs();
   await cleanup();
 });
 
@@ -72,6 +77,23 @@ describe('GET /api/assets/:id/quote', () => {
       });
     } finally {
       await testDb.current?.appSetting.deleteMany();
+    }
+  });
+
+  it('quotes an item held for someone only for that person', async () => {
+    const asset = { where: { id: 'ebike-003' } };
+    await testDb.current?.asset.update({ ...asset, data: { reserved_for: 'cust-aino' } });
+    try {
+      expect((await getQuote('ebike-003', 'term=36')).status).toBe(409);
+
+      await actAs({ sub: 'cust-lena', role: 'client' });
+      expect((await getQuote('ebike-003', 'term=36')).status).toBe(409);
+
+      await actAs(AINO);
+      expect((await getQuote('ebike-003', 'term=36')).status).toBe(200);
+    } finally {
+      await actAs(null);
+      await testDb.current?.asset.update({ ...asset, data: { reserved_for: null } });
     }
   });
 

@@ -60,6 +60,8 @@ export const assetSchema = z.strictObject({
   first_lease_price_cents: centsSchema.optional(),
   /** The price a re-listed item leases at. Set by the app, never in the data pack. */
   relist_price_cents: centsSchema.optional(),
+  /** The customer this item is held for after being passed on. Set by the app. */
+  reserved_for: z.string().min(1).optional(),
 });
 export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);
@@ -288,6 +290,8 @@ const customerBase = {
   is_pep: z.boolean(),
   /** Why this test customer exists. */
   story: z.string(),
+  /** Their entry in second-life-demand.json. Added by this team, so they can be passed items. */
+  waitlist_id: z.string().min(1).optional(),
 };
 
 export const employmentSchema = z.enum([

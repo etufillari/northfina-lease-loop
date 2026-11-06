@@ -71,7 +71,11 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {group.assets.map((asset) => {
               const price = assetPriceOn(priceLists, asset, today);
-              const canLease = asset.status === 'available' && price.ok && vatRate.ok;
+              const canLease =
+                asset.status === 'available' &&
+                asset.reserved_for === undefined &&
+                price.ok &&
+                vatRate.ok;
               return (
                 <li key={asset.id}>
                   <AssetCard

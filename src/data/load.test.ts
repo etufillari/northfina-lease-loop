@@ -78,6 +78,18 @@ describe('data pack', () => {
     }
   });
 
+  it('links every waiting customer to a real waiting-list entry', async () => {
+    const [customers, demand] = await Promise.all([loadCustomers(), loadSecondLifeDemand()]);
+    const waiting = customers.filter((customer) => customer.waitlist_id !== undefined);
+    expect(waiting.length).toBeGreaterThan(0);
+    for (const customer of waiting) {
+      expect(
+        demand.map((entry) => entry.id),
+        customer.id
+      ).toContain(customer.waitlist_id);
+    }
+  });
+
   it('gives every used item a first lease, and no new item one', async () => {
     for (const asset of await loadAssets()) {
       const hasFirstLease =

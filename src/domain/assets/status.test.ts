@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assetStatusSchema } from '@/data/schemas';
-import { canChangeStatusByHand } from './status';
+import { canChangeStatusByHand, isHeldForSomeoneElse } from './status';
 
 describe('canChangeStatusByHand', () => {
   it.each([
@@ -25,5 +25,21 @@ describe('canChangeStatusByHand', () => {
       expect(canChangeStatusByHand(from, 'leased')).toBe(false);
       expect(canChangeStatusByHand(from, 'sold')).toBe(false);
     }
+  });
+});
+
+describe('isHeldForSomeoneElse', () => {
+  it('leaves an item with no hold open to everyone', () => {
+    expect(isHeldForSomeoneElse(null, 'cust-aino')).toBe(false);
+    expect(isHeldForSomeoneElse(undefined, undefined)).toBe(false);
+  });
+
+  it('lets the person it is held for through', () => {
+    expect(isHeldForSomeoneElse('cust-aino', 'cust-aino')).toBe(false);
+  });
+
+  it('stops everyone else, and the logged out', () => {
+    expect(isHeldForSomeoneElse('cust-aino', 'cust-lena')).toBe(true);
+    expect(isHeldForSomeoneElse('cust-aino', undefined)).toBe(true);
   });
 });

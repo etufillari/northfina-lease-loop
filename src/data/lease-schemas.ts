@@ -128,6 +128,8 @@ export const contractSchema = z.strictObject({
   start_on: isoDateSchema,
   planned_end_on: isoDateSchema,
   actual_end_on: isoDateSchema.nullable(),
+  /** The customer it was passed on to, when the status is `passed_on`. */
+  passed_to: z.string().min(1).nullable(),
   status: contractStatusSchema,
 });
 export type Contract = z.infer<typeof contractSchema>;

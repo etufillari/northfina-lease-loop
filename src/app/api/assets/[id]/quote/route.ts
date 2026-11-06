@@ -3,7 +3,9 @@
 // date the app runs on). `on` only previews a price; applications never take a date from here.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
+import { actingCustomerId } from '@/domain/identity';
 import { fail, handleRoute, ok } from '@/server/api-response';
+import { getActor } from '@/server/auth/actor';
 import { currentDate } from '@/server/date/app-date';
 import { db } from '@/server/db';
 import { quoteAsset } from '@/server/pricing/quotes';
@@ -20,7 +22,10 @@ export const GET = handleRoute(
     const searchParams = new URL(request.url).searchParams;
     const query = querySchema.parse(Object.fromEntries(searchParams));
 
+    const actor = await getActor();
+
     const result = await quoteAsset(db, {
+      customerId: actor ? actingCustomerId(actor) : undefined,
       assetId: id,
       date: query.on ?? (await currentDate(db)),
       termMonths: query.term,

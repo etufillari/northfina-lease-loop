@@ -2,7 +2,7 @@
 // it on, from the planned end date until the choice window closes. Past that, the contract
 // closes as returned, so a lease cannot run on with nobody having decided.
 import type { Contract, Invoice, LifeOutcome } from '@/data/lease-schemas';
-import type { Asset, VatRates } from '@/data/schemas';
+import type { Asset, AssetCategory, Customer, SecondLifeRequest, VatRates } from '@/data/schemas';
 import { addDays } from '../dates';
 import { vatCents, vatRateOn } from '../vat';
 
@@ -41,6 +41,23 @@ export function endProblem(
   if (state === 'closed') return 'already_ended';
   if (state === 'not_due') return 'not_due';
   return state === 'expired' ? 'window_closed' : null;
+}
+
+/**
+ * Who an item can be passed on to: customers on the waiting list for its category, other than
+ * the owner. `needed_by` is ignored, because every date passes before a lease can end.
+ */
+export function passOnCandidates(
+  customers: readonly Customer[],
+  demand: readonly SecondLifeRequest[],
+  category: AssetCategory,
+  ownerId: string
+): Customer[] {
+  return customers.filter(
+    (customer) =>
+      customer.id !== ownerId &&
+      demand.some((entry) => entry.id === customer.waitlist_id && entry.category === category)
+  );
 }
 
 export function assetStatusAfter(

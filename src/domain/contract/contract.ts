@@ -45,7 +45,7 @@ export function buildContract(
   application: Application,
   lockedPrice: Quote,
   signedOn: string
-): Omit<Contract, 'id' | 'signed_by'> {
+): Omit<Contract, 'id' | 'signed_by' | 'passed_to'> {
   const startOn = application.start_on > signedOn ? application.start_on : signedOn;
 
   return {

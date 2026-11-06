@@ -8,3 +8,11 @@ const SET_BY_CONTRACTS: readonly AssetStatus[] = ['leased', 'sold'];
 export function canChangeStatusByHand(from: AssetStatus, to: AssetStatus): boolean {
   return !SET_BY_CONTRACTS.includes(from) && !SET_BY_CONTRACTS.includes(to);
 }
+
+/** True when the item is held for a customer other than this one, or for anyone at all. */
+export function isHeldForSomeoneElse(
+  reservedFor: string | null | undefined,
+  customerId: string | undefined
+): boolean {
+  return reservedFor !== null && reservedFor !== undefined && reservedFor !== customerId;
+}

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
-import { mergeVatRates, vatPercentOn } from './vat';
+import { mergeVatRates, nextVatChange, vatPercentOn } from './vat';
 
 let vatRates: VatRates;
 beforeAll(async () => {
@@ -72,5 +72,19 @@ describe('mergeVatRates', () => {
       expect(dayAfter.toISOString().slice(0, 10)).toBe(start);
     }
     expect(merged.rates.at(-1)).toMatchObject({ rate_percent: 24, valid_to: null });
+  });
+});
+
+describe('nextVatChange', () => {
+  it('finds the January 2027 change during a lease that runs past it', () => {
+    expect(nextVatChange(vatRates, '2026-11-06', '2029-11-05')).toEqual({
+      validFrom: '2027-01-01',
+      ratePercent: 26,
+    });
+  });
+
+  it('is null when the rate stays the same for the whole lease', () => {
+    expect(nextVatChange(vatRates, '2026-11-06', '2026-12-31')).toBeNull();
+    expect(nextVatChange(vatRates, '2027-01-01', '2030-01-01')).toBeNull();
   });
 });

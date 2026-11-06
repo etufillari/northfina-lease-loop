@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
 import { downPaymentRange } from './pricing';
-import { parseEuroInput, parsePriceSelection, snapDownPayment } from './price-selection';
+import { parsePriceSelection, parseWholeEuroInput, settleDownPayment } from './price-selection';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -33,9 +33,16 @@ describe('parsePriceSelection', () => {
     expect(parsePriceSelection({ term: 'abc' }, EBIKE, table).termMonths).toBe(36);
   });
 
-  it('snaps the down payment to the slider step', () => {
-    expect(parsePriceSelection({ down: '50499' }, EBIKE, table).downPaymentCents).toBe(50_000);
-    expect(parsePriceSelection({ down: '50500' }, EBIKE, table).downPaymentCents).toBe(51_000);
+  it('keeps a whole-euro down payment exactly, even between slider steps', () => {
+    expect(parsePriceSelection({ down: '123400' }, EBIKE, table).downPaymentCents).toBe(123_400);
+    expect(parsePriceSelection({ down: '2049900' }, FARM_006, table).downPaymentCents).toBe(
+      2_049_900
+    );
+  });
+
+  it('rounds a down payment with cents to whole euros, half up', () => {
+    expect(parsePriceSelection({ down: '123449' }, EBIKE, table).downPaymentCents).toBe(123_400);
+    expect(parsePriceSelection({ down: '123450' }, EBIKE, table).downPaymentCents).toBe(123_500);
   });
 
   it('clamps the down payment into the allowed range', () => {
@@ -61,33 +68,35 @@ describe('parsePriceSelection', () => {
   });
 });
 
-describe('snapDownPayment', () => {
-  it('snaps to the step and clamps into the range', () => {
+describe('settleDownPayment', () => {
+  it('keeps whole euros, rounds cents half up and clamps into the range', () => {
     const range = downPaymentRange(FARM_006, table);
     if (!range.ok) throw new Error('farm-006 should be leasable');
-    expect(snapDownPayment(2_049_900, range)).toBe(2_000_000);
-    expect(snapDownPayment(2_050_000, range)).toBe(2_100_000);
-    expect(snapDownPayment(0, range)).toBe(1_000_000);
-    expect(snapDownPayment(99_999_999, range)).toBe(range.maxCents);
+    expect(settleDownPayment(2_049_900, range)).toBe(2_049_900);
+    expect(settleDownPayment(2_049_949, range)).toBe(2_049_900);
+    expect(settleDownPayment(2_049_950, range)).toBe(2_050_000);
+    expect(settleDownPayment(0, range)).toBe(1_000_000);
+    expect(settleDownPayment(99_999_999, range)).toBe(range.maxCents);
   });
 });
 
-describe('parseEuroInput', () => {
-  it('reads whole euros and up to two decimals with a dot or a comma', () => {
-    expect(parseEuroInput('20000')).toBe(2_000_000);
-    expect(parseEuroInput('1234,5')).toBe(123_450);
-    expect(parseEuroInput('1234.05')).toBe(123_405);
-    expect(parseEuroInput('0.1')).toBe(10);
+describe('parseWholeEuroInput', () => {
+  it('reads whole euros, with zero cents written out or not', () => {
+    expect(parseWholeEuroInput('20000')).toBe(2_000_000);
+    expect(parseWholeEuroInput('1234')).toBe(123_400);
+    expect(parseWholeEuroInput('1500,00')).toBe(150_000);
+    expect(parseWholeEuroInput('1500.0')).toBe(150_000);
+    expect(parseWholeEuroInput('0')).toBe(0);
   });
 
   it('ignores spaces used as thousands separators and a trailing euro sign', () => {
-    expect(parseEuroInput('20 000')).toBe(2_000_000);
-    expect(parseEuroInput('20\u00a0000 €')).toBe(2_000_000);
+    expect(parseWholeEuroInput('20 000')).toBe(2_000_000);
+    expect(parseWholeEuroInput('20\u00a0000 €')).toBe(2_000_000);
   });
 
-  it('refuses anything that is not an amount', () => {
-    for (const text of ['', ' ', '-5', 'abc', '1.234', '1,2,3', '12e3']) {
-      expect(parseEuroInput(text)).toBeNull();
+  it('refuses cents and anything that is not an amount', () => {
+    for (const text of ['1234,56', '1234.5', '0.10', '', ' ', '-5', 'abc', '1.234', '12e3']) {
+      expect(parseWholeEuroInput(text)).toBeNull();
     }
   });
 });

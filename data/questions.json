@@ -37,8 +37,11 @@
         "et": "Kes liisib?"
       },
       "why_we_ask": {
-        "en": "Everything else depends on this."
-      },
+        "en": "Everything else depends on this.",
+        "fi": "Kaikki muu riippuu tästä.",
+        "et": "Kõik muu sõltub sellest.",
+        "sv": "Allt annat beror på detta."
+},
       "ask_when": [],
       "options": [
         "consumer",

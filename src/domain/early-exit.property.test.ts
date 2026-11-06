@@ -359,10 +359,12 @@ describe('early-exit property tests (Hegel: Fair early exit)', () => {
           usage: { unit, value: uVal2 },
         });
 
+        // Holds across the battery threshold too: a usage-resetting step can only lower the
+        // credit, so more usage never makes a return cheaper.
+        expect(qUse1.returnCreditCents).toBeGreaterThanOrEqual(qUse2.returnCreditCents);
+        expect(qUse2.returnItem.netCents).toBeGreaterThanOrEqual(qUse1.returnItem.netCents);
         if (qUse1.refurbishment.resetsUsage === qUse2.refurbishment.resetsUsage) {
           expect(qUse1.marketValue.valueCents).toBeGreaterThanOrEqual(qUse2.marketValue.valueCents);
-          expect(qUse1.returnCreditCents).toBeGreaterThanOrEqual(qUse2.returnCreditCents);
-          expect(qUse2.returnItem.netCents).toBeGreaterThanOrEqual(qUse1.returnItem.netCents);
         }
       },
       { testCases: 200 }

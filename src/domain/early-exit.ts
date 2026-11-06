@@ -15,8 +15,9 @@
 //   credited at what it is worth to the lessor in cash: its market value
 //   (`calculateResidualMarketValue`) at the inspected condition and usage, minus the fixed
 //   refurbishment it needs before it can be leased again (`fixedRefurbishmentFor`), never below
-//   0. A step that resets the usage counter (a new battery) values the item at 0 usage. The cost
-//   never exceeds the rents that are still to come.
+//   0. A step that resets the usage counter (a new battery) is only used when it gives the
+//   lower credit (see `calculateEarlyExit`), so more usage never makes a return cheaper. The
+//   cost never exceeds the rents that are still to come.
 //
 // The condition and the usage at exit come from the return inspection, never from the stored
 // asset: the stored reading is from when the lease started. `checkReturnInspection` rejects a
@@ -181,7 +182,10 @@ export type EarlyExitQuote = {
     usageValue: number;
     valueCents: number;
   };
-  /** Fixed steps the returned item needs before its next lease. */
+  /**
+   * Fixed steps the customer is charged for. A usage-resetting step (a new battery) is listed
+   * only when valuing the item after it gives the lower credit.
+   */
   refurbishment: RefurbishmentPlan;
   /** What the returned item is credited at: market value minus refurbishment, at least 0. */
   returnCreditCents: number;
@@ -251,7 +255,7 @@ export function calculateEarlyExit(input: EarlyExitInput): EarlyExitQuote {
       `usage at exit (${usage.value}) is below the usage at the start (${usageAtStartValue})`
     );
   }
-  const refurbishment = fixedRefurbishmentFor({
+  const fullPlan = fixedRefurbishmentFor({
     rules: input.refurbishmentRules,
     usage: { ...usage, sinceLastService: usage.value - usageAtStartValue },
   });
@@ -259,18 +263,48 @@ export function calculateEarlyExit(input: EarlyExitInput): EarlyExitQuote {
   // Age is the rent periods started, so at the end of the term it equals the term (the same
   // age the end-of-term relist price uses).
   const ageMonths = billedMonths;
-  const valuedUsage = { unit: usage.unit, value: refurbishment.resetsUsage ? 0 : usage.value };
-  const marketValueCents = calculateResidualMarketValue({
-    firstListPriceCents: input.firstListPriceCents,
-    ageMonths,
-    category: input.category,
-    condition: input.condition,
-    usage: valuedUsage,
-    residualCurves: input.residualCurves,
+  const credit = (usageValue: number, refurbishment: RefurbishmentPlan) => {
+    const marketValueCents = calculateResidualMarketValue({
+      firstListPriceCents: input.firstListPriceCents,
+      ageMonths,
+      category: input.category,
+      condition: input.condition,
+      usage: { unit: usage.unit, value: usageValue },
+      residualCurves: input.residualCurves,
+    });
+    // The refurbishment can at most cancel the credit: the customer never pays for it directly.
+    const refurbishmentChargedCents = Math.min(refurbishment.totalCents, marketValueCents);
+    return {
+      usageValue,
+      refurbishment,
+      marketValueCents,
+      refurbishmentChargedCents,
+      returnCreditCents: marketValueCents - refurbishmentChargedCents,
+    };
+  };
+
+  // Two ways to value the returned item; the customer is credited the LOWER one:
+  // - as returned: valued at the inspected usage, minus the steps that do not reset it;
+  // - after a usage-resetting step (a new battery): valued at 0 usage, minus every step.
+  // Taking the lower one means a reset step can only cost the customer, never earn them
+  // money: otherwise one more kilometre past the battery threshold would wipe the whole usage
+  // penalty (up to 20 %) for a 350 € battery and make the return cheaper.
+  const resettingRuleIds = new Set(
+    input.refurbishmentRules.filter((rule) => rule.resets_usage).map((rule) => rule.id)
+  );
+  const keptSteps = fullPlan.steps.filter((step) => !resettingRuleIds.has(step.id));
+  const asReturned = credit(usage.value, {
+    steps: keptSteps,
+    totalCents: keptSteps.reduce((sum, step) => sum + step.costCents, 0),
+    resetsUsage: false,
   });
-  // The refurbishment can at most cancel the credit: the customer never pays for it directly.
-  const refurbishmentChargedCents = Math.min(refurbishment.totalCents, marketValueCents);
-  const returnCreditCents = marketValueCents - refurbishmentChargedCents;
+  const afterReset = fullPlan.resetsUsage ? credit(0, fullPlan) : null;
+  const valued =
+    afterReset && afterReset.returnCreditCents < asReturned.returnCreditCents
+      ? afterReset
+      : asReturned;
+  const { refurbishment, marketValueCents, refurbishmentChargedCents, returnCreditCents } = valued;
+  const valuedUsage = { unit: usage.unit, value: valued.usageValue };
 
   const baseLines: EarlyExitLine[] = [
     {

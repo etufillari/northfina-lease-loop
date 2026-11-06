@@ -302,18 +302,44 @@ describe('calculateEarlyExit', () => {
     expect(await at(9_000)).toBeGreaterThan(await at(2_000));
   });
 
-  it('from 15 000 km a new battery is deducted and the item is valued as if at 0 km', async () => {
+  it('from 15 000 km credits the lower of "as returned" and "after a new battery"', async () => {
     const quote = calculateEarlyExit(
       await cardInput('2027-05-05', { usage: { unit: 'km', value: 15_000 } })
     );
+    // As returned: 264 520 × 0.80 (usage cap -20 %) = 211 616, minus the 4 500 inspection.
+    // After a new battery: valued at 0 km, 264 520 - 35 000 - 4 500 = 225 020. Lower wins.
+    expect(quote.refurbishment.steps.map((s) => s.id)).toEqual(['safety_inspection']);
+    expect(quote.marketValue).toMatchObject({ usageValue: 15_000, valueCents: 211_616 });
+    expect(quote.returnCreditCents).toBe(207_116);
+    expect(quote.returnItem.netCents).toBe(330_666 - 207_116);
+  });
+
+  it('one more kilometre past the battery threshold never makes a return cheaper', async () => {
+    // Review of PR #28: card 8 cost 1 235.50 € at 14 999 km but 1 056.46 € at 15 000 km.
+    const at = async (km: number) =>
+      calculateEarlyExit(await cardInput('2027-05-05', { usage: { unit: 'km', value: km } }))
+        .returnItem.netCents;
+    expect(await at(14_999)).toBe(123_550);
+    expect(await at(15_000)).toBe(123_550);
+    expect(await at(30_000)).toBe(123_550);
+  });
+
+  it('charges the new battery and values at 0 km when that gives the lower credit', async () => {
+    // A 1 500 € bike: the usage penalty is 20 % of 1 020 € = 204 €, less than the 350 € battery.
+    const quote = calculateEarlyExit(
+      await cardInput('2027-05-05', {
+        firstListPriceCents: 150_000,
+        usage: { unit: 'km', value: 15_000 },
+      })
+    );
+    // 150 000 × 80 % × 0.85 = 102 000 at 0 km; 102 000 - 35 000 - 4 500 = 62 500,
+    // below 102 000 × 0.80 - 4 500 = 77 100 as returned.
     expect(quote.refurbishment.steps.map((s) => s.id)).toEqual([
       'battery_replacement',
       'safety_inspection',
     ]);
-    expect(quote.marketValue).toMatchObject({ usageValue: 0, valueCents: 264_520 });
-    // 264 520 - 35 000 - 4 500
-    expect(quote.returnCreditCents).toBe(225_020);
-    expect(quote.returnItem.netCents).toBe(330_666 - 225_020);
+    expect(quote.marketValue).toMatchObject({ usageValue: 0, valueCents: 102_000 });
+    expect(quote.returnCreditCents).toBe(62_500);
   });
 
   it('refurbishment never makes the credit negative', async () => {

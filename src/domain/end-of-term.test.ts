@@ -17,6 +17,7 @@ import {
   evaluateSecondLifeCandidates,
   interpolateResidualCurve,
   matchSecondLifeWaitingList,
+  monthsBetweenIso,
   rankWaitingList,
 } from './end-of-term';
 

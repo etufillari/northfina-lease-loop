@@ -22,9 +22,12 @@ import type {
   VatRates,
 } from '@/data/schemas';
 import { monthlyFactorFor, monthlyNetRentFor } from './coefficient';
+import { listPriceOn } from './price-list';
 import { fractionToBp, percentToBp, roundRatio, toWholeNumber } from './rounding';
 import { priceLine } from './schedule';
 import { vatRateOn } from './vat';
+
+const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const CONDITION_RANKS: Record<AssetCondition, number> = {
   poor: 1,
@@ -194,13 +197,21 @@ export type WaitingListExclusionReason =
   | 'over_budget'
   | 'below_minimum'
   | 'above_maximum'
-  | 'unknown_term';
+  | 'unknown_term'
+  | 'not_financeable';
 
 export type WaitingListExclusion = {
   request: SecondLifeRequest;
   reason: WaitingListExclusionReason;
   /** Rent at their preferred term, when it could be priced (set for `over_budget`). */
   monthlyNetRentCents?: number;
+};
+
+export type ExcludedWaitingListCandidate = WaitingListExclusion;
+
+export type SecondLifeMatchEvaluation = {
+  matches: WaitingListMatch[];
+  excluded: ExcludedWaitingListCandidate[];
 };
 
 export type WaitingListRanking = {
@@ -280,6 +291,191 @@ export function rankWaitingList(input: WaitingListInput): WaitingListRanking {
 /** The ranked candidates only. See `rankWaitingList` for the excluded entries and why. */
 export function matchSecondLifeWaitingList(input: WaitingListInput): WaitingListMatch[] {
   return rankWaitingList(input).candidates;
+}
+
+/**
+ * Evaluates all waiting-list entries in `demand` for the asset's category, returning both
+ * ranked eligible matches and excluded candidates with their exclusion reason.
+ */
+export function evaluateSecondLifeCandidates(input: WaitingListInput): SecondLifeMatchEvaluation {
+  const ranking = rankWaitingList(input);
+  return {
+    matches: ranking.candidates,
+    excluded: ranking.excluded,
+  };
+}
+
+/**
+ * Computes whole calendar months elapsed between `startIso` (`YYYY-MM-DD`) and `endIso`
+ * (`YYYY-MM-DD`), floored at 0.
+ */
+export function monthsBetweenIso(startIso: string, endIso: string): number {
+  const startMatch = ISO_DATE_PATTERN.exec(startIso);
+  if (!startMatch) {
+    throw new RangeError(`startIso must look like YYYY-MM-DD, got "${startIso}"`);
+  }
+  const endMatch = ISO_DATE_PATTERN.exec(endIso);
+  if (!endMatch) {
+    throw new RangeError(`endIso must look like YYYY-MM-DD, got "${endIso}"`);
+  }
+
+  const startMonths = Number(startMatch[1]) * 12 + (Number(startMatch[2]) - 1);
+  const endMonths = Number(endMatch[1]) * 12 + (Number(endMatch[2]) - 1);
+  return Math.max(0, endMonths - startMonths);
+}
+
+export type SecondLifeValuation = {
+  firstLeaseDate: string;
+  firstListPriceCents: number;
+  currentNewListPriceCents: number | null;
+  ageMonths: number;
+  curvePercent: number;
+  relistPriceCents: number;
+  customerSavingsCents: number;
+  avoidedCo2Kg: number;
+  matches: WaitingListMatch[];
+  excluded: ExcludedWaitingListCandidate[];
+  canRelist: boolean;
+  cannotRelistReason?: 'condition_too_low' | 'below_minimum';
+};
+
+/**
+ * Computes the complete second-life valuation, matchmaking, and circular impact for a
+ * returned or multi-life asset as of `asOf` (ARCHITECTURE.md §9).
+ *
+ * Seeded assets with `previous_lives > 0` and no recorded `first_lease_date` use
+ * `${model_year}-01-01` and the earliest price list in `priceLists`.
+ */
+export function deriveAssetSecondLifeValuation(input: {
+  asset: Pick<
+    Asset,
+    | 'id'
+    | 'category'
+    | 'model_year'
+    | 'condition'
+    | 'usage'
+    | 'previous_lives'
+    | 'relist_price_cents'
+    | 'first_lease_date'
+    | 'first_list_price_cents'
+  > & { status?: Asset['status'] };
+  priceLists: readonly PriceList[];
+  residualCurves: ResidualCurves;
+  coefficientTable: CoefficientTable;
+  secondLifeDemand: readonly SecondLifeRequest[];
+  co2Factors: Co2Factors;
+  asOf: string;
+}): SecondLifeValuation {
+  const {
+    asset,
+    priceLists,
+    residualCurves,
+    coefficientTable,
+    secondLifeDemand,
+    co2Factors,
+    asOf,
+  } = input;
+
+  const firstLeaseDate =
+    asset.first_lease_date ?? `${String(asset.model_year).padStart(4, '0')}-01-01`;
+  const earliestList = [...priceLists].sort((a, b) => a.version - b.version)[0];
+  const firstListPriceCents = asset.first_list_price_cents ?? earliestList?.prices[asset.id] ?? 0;
+
+  const currentList = listPriceOn(priceLists, asset.id, asOf);
+  const currentNewListPriceCents = currentList.ok ? currentList.priceCents : null;
+
+  const ageMonths = monthsBetweenIso(firstLeaseDate, asOf);
+  const curvePoints = residualCurves.curves[asset.category];
+  if (!curvePoints) {
+    throw new Error(`No residual curve found for category "${asset.category}"`);
+  }
+  const curvePercent = interpolateResidualCurve(curvePoints, ageMonths);
+
+  // Returned assets always recalculate residual market value as of `asOf` so a stale
+  // relist_price_cents from a previous life is never reused when relisting for a third life.
+  const computedMarketValueCents = calculateResidualMarketValue({
+    firstListPriceCents,
+    ageMonths,
+    category: asset.category,
+    condition: asset.condition,
+    usage: asset.usage,
+    residualCurves,
+  });
+  const relistPriceCents =
+    asset.status && asset.status !== 'returned' && asset.relist_price_cents != null
+      ? asset.relist_price_cents
+      : computedMarketValueCents;
+
+  const referenceNewPrice = currentNewListPriceCents ?? firstListPriceCents;
+  const customerSavingsCents = Math.max(0, referenceNewPrice - relistPriceCents);
+
+  const avoidedCo2Kg = calculateAvoidedCo2({
+    category: asset.category,
+    co2Factors,
+    relistPriceCents,
+    firstListPriceCents,
+  });
+
+  const { matches, excluded } = evaluateSecondLifeCandidates({
+    category: asset.category,
+    condition: asset.condition,
+    relistPriceCents,
+    demand: secondLifeDemand,
+    asOf,
+    coefficientTable,
+  });
+
+  const lowestBandMinCents = Math.min(...coefficientTable.bands.map((b) => b.min_financed_cents));
+
+  // Who may lease it (ARCHITECTURE.md §9): at least `good`, unless a matched waiting-list entry
+  // accepts `fair`. A `poor` item is never relisted. Relist price must also meet minimum band.
+  if (asset.condition === 'poor' || (asset.condition === 'fair' && matches.length === 0)) {
+    return {
+      firstLeaseDate,
+      firstListPriceCents,
+      currentNewListPriceCents,
+      ageMonths,
+      curvePercent,
+      relistPriceCents,
+      customerSavingsCents,
+      avoidedCo2Kg,
+      matches,
+      excluded,
+      canRelist: false,
+      cannotRelistReason: 'condition_too_low',
+    };
+  }
+
+  if (relistPriceCents < lowestBandMinCents) {
+    return {
+      firstLeaseDate,
+      firstListPriceCents,
+      currentNewListPriceCents,
+      ageMonths,
+      curvePercent,
+      relistPriceCents,
+      customerSavingsCents,
+      avoidedCo2Kg,
+      matches,
+      excluded,
+      canRelist: false,
+      cannotRelistReason: 'below_minimum',
+    };
+  }
+
+  return {
+    firstLeaseDate,
+    firstListPriceCents,
+    currentNewListPriceCents,
+    ageMonths,
+    curvePercent,
+    relistPriceCents,
+    customerSavingsCents,
+    avoidedCo2Kg,
+    matches,
+    excluded,
+    canRelist: true,
+  };
 }
 
 export type AvoidedCo2Input = {

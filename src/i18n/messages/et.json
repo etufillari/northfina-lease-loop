@@ -444,5 +444,12 @@
   "waitlist.join.badRange": "Miinimum ei saa olla maksimumist suurem.",
   "secondLife.verdict.under_budget": "Välja jäetud: üür alla nende miinimumeelarve",
   "secondLife.uploadPhoto": "Vaheta foto",
-  "waitlist.needsRange": "{condition} või parem · {min}–{max} / kuu ilma käibemaksuta · {term} kuud · vaja hiljemalt {date}"
+  "waitlist.needsRange": "{condition} või parem · {min}–{max} / kuu ilma käibemaksuta · {term} kuud · vaja hiljemalt {date}",
+  "staff.expired.title": "Lõppenud broneeringud",
+  "staff.expired.noSignature": "Kinnitatud, kuid keegi ei allkirjastanud {date} jooksul.",
+  "staff.expired.noSignatory": "Allkirjastaja ei allkirjastanud {date} jooksul.",
+  "staff.expired.explain": "Vabastamine lõpetab need taotlused ja tagastab tooted kataloogi järgmisele kliendile. Iga vabastamine kirjutatakse auditilogisse.",
+  "staff.expired.release": "Vabasta {count} lõppenud broneeringut",
+  "staff.done.released": "Vabastati {applications} taotlust. {items} toodet on taas saadaval.",
+  "staff.audit.action.application.hold_expired": "Vabastas lõppenud broneeringu"
 }

@@ -444,5 +444,12 @@
   "waitlist.join.badRange": "Vähimmäissumma ei voi olla enimmäissummaa suurempi.",
   "secondLife.verdict.under_budget": "Rajattu pois: vuokra alle vähimmäisbudjetin",
   "secondLife.uploadPhoto": "Vaihda kuva",
-  "waitlist.needsRange": "{condition} tai parempi · {min}–{max} / kk ilman alv:tä · {term} kk · tarvitaan {date} mennessä"
+  "waitlist.needsRange": "{condition} tai parempi · {min}–{max} / kk ilman alv:tä · {term} kk · tarvitaan {date} mennessä",
+  "staff.expired.title": "Päättyneet varaukset",
+  "staff.expired.noSignature": "Hyväksytty, mutta kukaan ei allekirjoittanut {date} mennessä.",
+  "staff.expired.noSignatory": "Allekirjoittaja ei allekirjoittanut {date} mennessä.",
+  "staff.expired.explain": "Vapauttaminen päättää nämä hakemukset ja palauttaa tuotteet luetteloon seuraavalle asiakkaalle. Jokainen vapautus kirjataan muutoslokiin.",
+  "staff.expired.release": "Vapauta {count} päättynyttä varausta",
+  "staff.done.released": "Vapautettiin {applications} hakemusta. {items} tuotetta on taas saatavilla.",
+  "staff.audit.action.application.hold_expired": "Vapautti päättyneen varauksen"
 }

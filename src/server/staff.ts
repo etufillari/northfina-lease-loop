@@ -2,7 +2,7 @@
 // staff can take on a manual review. Signing for an absent signatory reuses
 // signApplication (src/server/contracts.ts) with the signatory's e-mail as the actor.
 import { addDays } from '@/domain/calendar';
-import type { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
 
@@ -15,9 +15,9 @@ const WAITLIST_HOLDS = ['waitlist_offer', 'waitlist_pool'];
 export const STAFF_QUEUE_STATUSES = ['manual_review', 'awaiting_signature'] as const;
 export type StaffQueueStatus = (typeof STAFF_QUEUE_STATUSES)[number];
 
-export type StaffQueueItem = {
+export type StaffQueueItem<Status extends string = StaffQueueStatus> = {
   applicationId: string;
-  status: StaffQueueStatus;
+  status: Status;
   customerId: string;
   customerName: string | null;
   /** Every item in the application: one, or a fleet of distinct items. */
@@ -32,13 +32,14 @@ export type StaffQueueItem = {
   submittedAt: string;
 };
 
-/** Everything waiting for staff, oldest first: first come, first served. */
-export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
-  const applications = await db.application.findMany({
-    where: { status: { in: [...STAFF_QUEUE_STATUSES] } },
-    include: { quote: true },
-    orderBy: [{ updated_at: 'asc' }, { id: 'asc' }],
-  });
+/** An application row with its quote included. */
+export type ApplicationWithQuote = Prisma.ApplicationGetPayload<{ include: { quote: true } }>;
+
+/** Turns application rows into desk rows, with customer and item names looked up once. */
+export async function describeApplications<Status extends string>(
+  db: Db,
+  applications: ApplicationWithQuote[]
+): Promise<StaffQueueItem<Status>[]> {
   const customerIds = [...new Set(applications.map((a) => a.customer_id))];
   const assetIds = [...new Set(applications.flatMap((a) => quoteAssetIds(a.quote)))];
   const [customers, assets] = await Promise.all([
@@ -50,7 +51,7 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
 
   return applications.map((a) => ({
     applicationId: a.id,
-    status: a.status as StaffQueueStatus,
+    status: a.status as Status,
     customerId: a.customer_id,
     customerName: customerName.get(a.customer_id) ?? null,
     assets: quoteAssetIds(a.quote).map((id) => ({ id, name: assetName.get(id) ?? null })),
@@ -62,6 +63,16 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
     holdUntil: a.hold_until,
     submittedAt: a.updated_at.toISOString(),
   }));
+}
+
+/** Everything waiting for staff, oldest first: first come, first served. */
+export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
+  const applications = await db.application.findMany({
+    where: { status: { in: [...STAFF_QUEUE_STATUSES] } },
+    include: { quote: true },
+    orderBy: [{ updated_at: 'asc' }, { id: 'asc' }],
+  });
+  return describeApplications<StaffQueueStatus>(db, applications);
 }
 
 export type StaffDecisionResult =

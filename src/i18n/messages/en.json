@@ -444,5 +444,12 @@
   "me.holdUntil": "Held for you until {date}.",
   "me.action.continue": "Continue the application",
   "me.action.sign": "Sign now",
-  "me.action.view": "View the application"
+  "me.action.view": "View the application",
+  "staff.expired.title": "Holds that ran out",
+  "staff.expired.noSignature": "Approved, but nobody signed by {date}.",
+  "staff.expired.noSignatory": "The signatory did not sign by {date}.",
+  "staff.expired.explain": "Releasing ends these applications and puts their items back in the catalogue for the next customer. Each release is written to the audit log.",
+  "staff.expired.release": "Release {count} expired holds",
+  "staff.done.released": "Released {applications} applications. {items} items are available again.",
+  "staff.audit.action.application.hold_expired": "Released an expired hold"
 }

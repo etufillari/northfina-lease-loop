@@ -444,5 +444,12 @@
   "waitlist.join.badRange": "Minimibeloppet kan inte vara större än maximibeloppet.",
   "secondLife.verdict.under_budget": "Utesluten: hyran under deras minimibudget",
   "secondLife.uploadPhoto": "Byt foto",
-  "waitlist.needsRange": "{condition} eller bättre · {min}–{max} / månad exkl. moms · {term} månader · behövs senast {date}"
+  "waitlist.needsRange": "{condition} eller bättre · {min}–{max} / månad exkl. moms · {term} månader · behövs senast {date}",
+  "staff.expired.title": "Reservationer som gått ut",
+  "staff.expired.noSignature": "Godkänd, men ingen signerade senast {date}.",
+  "staff.expired.noSignatory": "Firmatecknaren signerade inte senast {date}.",
+  "staff.expired.explain": "Att frigöra avslutar ansökningarna och lägger tillbaka artiklarna i katalogen för nästa kund. Varje frigörelse skrivs i granskningsloggen.",
+  "staff.expired.release": "Frigör {count} utgångna reservationer",
+  "staff.done.released": "Frigjorde {applications} ansökningar. {items} artiklar är tillgängliga igen.",
+  "staff.audit.action.application.hold_expired": "Frigjorde en utgången reservation"
 }

@@ -1,12 +1,10 @@
 'use client';
 // The staff desk buttons. Every action is a separate, audit-logged POST. After a success the
 // card keeps its result on screen (and the contract link); "Update the list" refreshes it.
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
-import { DateField } from '@/components/date-field';
 
 type Envelope<T> =
   { success: true; data: T } | { success: false; error: { code: string; message: string } };
@@ -144,69 +142,6 @@ export function ReviewActions({
         </button>
       </div>
       <Feedback message={message} onRefresh={refresh} refreshLabel={t('staff.refresh')} />
-    </div>
-  );
-}
-
-export function SignAsSignatory({
-  locale,
-  applicationId,
-  signatoryEmail,
-  defaultStartDate,
-}: {
-  locale: Locale;
-  applicationId: string;
-  signatoryEmail: string;
-  defaultStartDate: string;
-}) {
-  const { t, busy, done, message, run, refresh } = useAction(locale);
-  const [startDate, setStartDate] = useState(defaultStartDate);
-  const [contractId, setContractId] = useState<string | null>(null);
-  const inputId = `start-${applicationId}`;
-
-  return (
-    <div>
-      <label htmlFor={inputId} className="block text-sm font-medium">
-        {t('staff.startDate')}
-      </label>
-      <div className="mt-1 flex flex-wrap items-center gap-3">
-        <DateField
-          locale={locale}
-          id={inputId}
-          value={startDate}
-          min={defaultStartDate}
-          onChange={setStartDate}
-          className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-950"
-        />
-        <button
-          type="button"
-          disabled={busy || done || !startDate}
-          className={`${button} bg-emerald-700 text-white hover:bg-emerald-800`}
-          onClick={() =>
-            run<{ contractId: string }>(
-              `/api/applications/${applicationId}/sign`,
-              // The server signs for the signatory stored on the application.
-              { startDate },
-              (data) => {
-                setContractId(data.contractId);
-                return t('staff.done.signed');
-              }
-            )
-          }
-        >
-          {t('staff.signAs', { email: signatoryEmail })}
-        </button>
-      </div>
-      <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">{t('staff.signHint')}</p>
-      <Feedback message={message} onRefresh={refresh} refreshLabel={t('staff.refresh')} />
-      {contractId ? (
-        <Link
-          href={`/${locale}/contracts/${contractId}`}
-          className="mt-2 inline-block text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
-        >
-          {t('staff.viewContract')} →
-        </Link>
-      ) : null}
     </div>
   );
 }

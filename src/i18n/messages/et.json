@@ -272,15 +272,10 @@
   "staff.approve": "Kinnita",
   "staff.decline": "Keeldu",
   "staff.confirmDecline": "Kas lükata taotlus tagasi? Toode muutub teistele kättesaadavaks.",
-  "staff.startDate": "Liisingu alguskuupäev",
-  "staff.signAs": "Allkirjasta kui {email}",
-  "staff.signHint": "Auditilogi märgib allkirjastaja allkirja andjaks.",
   "staff.noSignatory": "Allkirjastaja e-posti pole antud. Lükka tagasi või küsi see ettevõttelt.",
   "staff.done.approved": "Kinnitatud. Kliendil on allkirjastamiseks 7 päeva.",
   "staff.done.awaitingSignature": "Kinnitatud. Nüüd ootab ettevõtte allkirjastajat.",
   "staff.done.declined": "Tagasi lükatud. Toode on taas saadaval.",
-  "staff.done.signed": "Allkirjastatud. Leping on loodud.",
-  "staff.viewContract": "Ava leping",
   "staff.refresh": "Värskenda nimekirja",
   "staff.error.alreadyHandled": "Keegi on selle taotluse juba läbi vaadanud. Värskenda nimekirja.",
   "staff.error.holdExpired": "7-päevane broneering on lõppenud. Klient peab uuesti taotlema.",
@@ -520,5 +515,6 @@
   "passport.co2FirstLife": "Uue toote esimene elutsükkel ei säästa veel midagi — sääst algab teisest elutsüklist, kui toode liisitakse uuesti uue valmistamise asemel.",
   "me.co2Title": "Sinu rendilepingute välditud CO₂",
   "me.co2Note": "{count} teise elutsükli rendist: taastatud toote rentimine väldib suurema osa uue valmistamise CO₂-st.",
-  "me.co2None": "Veel mitte midagi — sääst algab, kui rendid toote selle teisel elutsüklil uue asemel."
+  "me.co2None": "Veel mitte midagi — sääst algab, kui rendid toote selle teisel elutsüklil uue asemel.",
+  "staff.signature.waiting": "Ainult {email} saab selle lepingu allkirjastada. See ootab teda, kuni broneering aegub."
 }

@@ -1,9 +1,8 @@
 // POST /api/applications/:id/sign  body: { startDate }
 // "Verify identity electronically" — the happy-path signature. Locks the contract, creates
 // the full invoice schedule and flips the asset to leased, in one audited transaction.
-// The signer is the signed-in applicant. For an application waiting for a company's signatory,
-// staff sign for the signatory at the desk (identity checked there), recorded under the
-// signatory's e-mail as stored on the application — never one sent by the browser.
+// The signer is the signed-in applicant. An application waiting for a company's signatory
+// can be signed by the signatory alone — nobody, staff included, signs on their behalf.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
@@ -49,18 +48,10 @@ export const POST = handleRoute(
     const user = await requireUser();
     if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
-    const application = await db.application.findUnique({
-      where: { id },
-      select: { status: true, signatory_email: true },
-    });
-    const signatory =
-      user.isStaff && application?.status === 'awaiting_signature'
-        ? application.signatory_email
-        : null;
     const result = await signApplication(db, {
       applicationId: id,
       startDate: body.startDate,
-      actor: signatory ?? user.actorId,
+      actor: user.actorId,
       asOf: asOfFrom(request),
     });
     if (!result.ok) {

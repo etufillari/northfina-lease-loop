@@ -11,7 +11,7 @@ import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { listStaffQueue, type StaffQueueItem } from '@/server/staff';
 import { isHoldExpired, listExpiredHolds } from '@/server/staff-holds';
-import { ReleaseExpiredHolds, ReviewActions, SignAsSignatory } from './staff-actions';
+import { ReleaseExpiredHolds, ReviewActions } from './staff-actions';
 import { currentUser } from '@/server/current-user';
 
 type Reason = { rule: string; outcome: string };
@@ -85,13 +85,11 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
       >
         {signatures.map((item) => (
           <QueueCard key={item.applicationId} item={item} locale={locale} t={t}>
+            {/* Signing is the signatory's act alone: the desk only watches the wait. */}
             {item.signatoryEmail ? (
-              <SignAsSignatory
-                locale={locale}
-                applicationId={item.applicationId}
-                signatoryEmail={item.signatoryEmail}
-                defaultStartDate={asOf}
-              />
+              <p className="text-sm text-stone-600 dark:text-stone-400">
+                {t('staff.signature.waiting', { email: item.signatoryEmail })}
+              </p>
             ) : (
               <p className="text-sm text-red-700 dark:text-red-400">{t('staff.noSignatory')}</p>
             )}

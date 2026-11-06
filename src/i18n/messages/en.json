@@ -293,15 +293,10 @@
   "staff.approve": "Approve",
   "staff.decline": "Decline",
   "staff.confirmDecline": "Decline this application? The item becomes available to others.",
-  "staff.startDate": "Lease start date",
-  "staff.signAs": "Sign as {email}",
-  "staff.signHint": "The audit log records the signatory as the person who signed.",
   "staff.noSignatory": "No signatory e-mail was given. Decline, or ask the company for one.",
   "staff.done.approved": "Approved. The customer has 7 days to sign.",
   "staff.done.awaitingSignature": "Approved. Now waiting for the company's signatory.",
   "staff.done.declined": "Declined. The item is available again.",
-  "staff.done.signed": "Signed. The contract is created.",
-  "staff.viewContract": "Open the contract",
   "staff.refresh": "Update the list",
   "staff.error.alreadyHandled": "Someone already handled this application. Update the list to see the latest.",
   "staff.error.holdExpired": "The 7-day hold has run out. The customer needs to apply again.",
@@ -520,5 +515,6 @@
   "passport.co2FirstLife": "A new item’s first life avoids nothing — the saving starts from the second life, when leasing this item again replaces making a new one.",
   "me.co2Title": "CO₂ avoided by your leases",
   "me.co2Note": "From {count} second-life lease(s): leasing a refurbished item avoids most of the CO₂ of making a new one.",
-  "me.co2None": "Nothing yet — the saving starts when you lease an item on its second life instead of a new one."
+  "me.co2None": "Nothing yet — the saving starts when you lease an item on its second life instead of a new one.",
+  "staff.signature.waiting": "Only {email} can sign this lease. It waits for them until the hold runs out."
 }

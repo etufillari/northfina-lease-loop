@@ -272,15 +272,10 @@
   "staff.approve": "Godkänn",
   "staff.decline": "Avslå",
   "staff.confirmDecline": "Avslå ansökan? Artikeln blir tillgänglig för andra.",
-  "staff.startDate": "Leasingens startdatum",
-  "staff.signAs": "Signera som {email}",
-  "staff.signHint": "Granskningsloggen registrerar firmatecknaren som den som signerade.",
   "staff.noSignatory": "Ingen e-post till firmatecknaren angavs. Avslå eller be företaget om en.",
   "staff.done.approved": "Godkänd. Kunden har 7 dagar på sig att signera.",
   "staff.done.awaitingSignature": "Godkänd. Väntar nu på företagets firmatecknare.",
   "staff.done.declined": "Avslagen. Artikeln är tillgänglig igen.",
-  "staff.done.signed": "Signerat. Avtalet är skapat.",
-  "staff.viewContract": "Öppna avtalet",
   "staff.refresh": "Uppdatera listan",
   "staff.error.alreadyHandled": "Någon har redan hanterat ansökan. Uppdatera listan för att se läget.",
   "staff.error.holdExpired": "Reservationen på 7 dagar har gått ut. Kunden måste ansöka igen.",
@@ -520,5 +515,6 @@
   "passport.co2FirstLife": "Ett nytt föremåls första liv sparar inget ännu — besparingen börjar från det andra livet, när föremålet leasas igen i stället för att ett nytt tillverkas.",
   "me.co2Title": "CO₂ som dina leasingavtal undvikit",
   "me.co2Note": "Från {count} andra-livet-leasing(ar): att leasa ett renoverat föremål undviker det mesta av CO₂ för att tillverka ett nytt.",
-  "me.co2None": "Inget ännu — besparingen börjar när du leasar ett föremål på dess andra liv i stället för ett nytt."
+  "me.co2None": "Inget ännu — besparingen börjar när du leasar ett föremål på dess andra liv i stället för ett nytt.",
+  "staff.signature.waiting": "Endast {email} kan underteckna det här avtalet. Det väntar på dem tills reservationen löper ut."
 }

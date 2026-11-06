@@ -409,5 +409,15 @@
   "secondLife.workNote": "Northfina pays the {work} of work itself: the customer pays for what the item is worth, not for the workshop bill.",
   "secondLife.upgrade.serve_waiter": "Upgrade {from} → {to} for {cost}: without it nobody on the waiting list can take the item, and after it the item is worth {value}, more than the {work} spent on it.",
   "secondLife.upgrade.reach_listing": "Upgrade {from} → {to} for {cost}: it cannot be listed as it is; after the upgrade it is worth {value}, more than the {work} spent on it, so it beats sending it to parts.",
-  "secondLife.upgrade.pays_for_itself": "Upgrade {from} → {to} for {cost}: it adds {gain} of value, more than it costs."
+  "secondLife.upgrade.pays_for_itself": "Upgrade {from} → {to} for {cost}: it adds {gain} of value, more than it costs.",
+  "me.applications": "My applications",
+  "me.step.continue": "Questions left",
+  "me.step.sign": "Approved — ready to sign",
+  "me.step.wait_for_review": "A person is checking it",
+  "me.step.wait_for_signatory": "Waiting for the signatory",
+  "me.step.expired": "Hold expired",
+  "me.holdUntil": "Held for you until {date}.",
+  "me.action.continue": "Continue the application",
+  "me.action.sign": "Sign now",
+  "me.action.view": "View the application"
 }

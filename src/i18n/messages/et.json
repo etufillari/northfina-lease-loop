@@ -409,5 +409,15 @@
   "secondLife.workNote": "Northfina maksab {work} tööd ise: klient maksab eseme väärtuse eest, mitte töökoja arve eest.",
   "secondLife.upgrade.serve_waiter": "Tõstmine {from} → {to} hinnaga {cost}: ilma selleta ei saa keegi ootejärjekorrast eset võtta ning pärast seda on see väärt {value}, rohkem kui sellele kulutatud {work}.",
   "secondLife.upgrade.reach_listing": "Tõstmine {from} → {to} hinnaga {cost}: sellisena ei saa seda kataloogi panna; pärast on see väärt {value}, rohkem kui kulutatud {work}, seega parem kui varuosadeks.",
-  "secondLife.upgrade.pays_for_itself": "Tõstmine {from} → {to} hinnaga {cost}: see lisab väärtust {gain}, rohkem kui maksab."
+  "secondLife.upgrade.pays_for_itself": "Tõstmine {from} → {to} hinnaga {cost}: see lisab väärtust {gain}, rohkem kui maksab.",
+  "me.applications": "Minu taotlused",
+  "me.step.continue": "Küsimusi jäänud",
+  "me.step.sign": "Heaks kiidetud — valmis allkirjastamiseks",
+  "me.step.wait_for_review": "Inimene kontrollib",
+  "me.step.wait_for_signatory": "Ootab allkirjastajat",
+  "me.step.expired": "Broneering aegus",
+  "me.holdUntil": "Broneeritud sinule kuni {date}.",
+  "me.action.continue": "Jätka taotlust",
+  "me.action.sign": "Allkirjasta kohe",
+  "me.action.view": "Vaata taotlust"
 }

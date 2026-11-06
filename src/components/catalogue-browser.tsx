@@ -14,6 +14,8 @@ import type { Locale } from '@/i18n/locales';
 export type CatalogueItem = {
   asset: Asset;
   imageUrl: string | null;
+  /** The net list price on the as-of date (the second-life re-price when there is one). */
+  listPriceCents: number | null;
   secondLife: boolean;
   /** Term months → monthly rent with no down payment; null when not priceable. */
   monthly: Record<number, { netCents: number; grossCents: number } | null>;
@@ -224,7 +226,7 @@ export function CatalogueBrowser({
         </div>
       ) : (
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map(({ asset, imageUrl, secondLife, monthly }) => (
+          {filtered.map(({ asset, imageUrl, listPriceCents, secondLife, monthly }) => (
             <li key={asset.id}>
               <Link
                 href={`/${locale}/assets/${asset.id}${asOfParam ? `?asOf=${asOfParam}` : ''}`}
@@ -233,6 +235,7 @@ export function CatalogueBrowser({
                 <AssetCard
                   asset={asset}
                   imageUrl={imageUrl}
+                  listPriceCents={listPriceCents}
                   monthly={monthly[term] ?? null}
                   termMonths={term}
                   vatRatePercent={vatRatePercent}

@@ -84,6 +84,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
       return {
         asset,
         imageUrl: images[asset.id] ?? null,
+        listPriceCents: priceCents,
         secondLife: reprice !== undefined,
         monthly,
       };

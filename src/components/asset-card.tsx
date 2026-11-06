@@ -82,6 +82,8 @@ export function AssetImage({
 type AssetCardProps = {
   asset: Asset;
   imageUrl: string | null;
+  /** The net list price on the as-of date (the second-life re-price when there is one). */
+  listPriceCents: number | null;
   /** Monthly rent at the chosen term, no down payment; null when it cannot be priced. */
   monthly: { netCents: number; grossCents: number } | null;
   termMonths: number;
@@ -95,6 +97,7 @@ type AssetCardProps = {
 export function AssetCard({
   asset,
   imageUrl,
+  listPriceCents,
   monthly,
   termMonths,
   vatRatePercent,
@@ -148,29 +151,37 @@ export function AssetCard({
         </dl>
 
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-          <div className="text-xs text-stone-600 dark:text-stone-400">
-            <p>
-              {t('catalogue.monthlyFor', { months: termMonths })}
-              {secondLife ? ` · ${t('asset.secondLifePrice')}` : ''}
+          <div>
+            <p className="text-xs text-stone-600 dark:text-stone-400">
+              {secondLife ? t('asset.secondLifePrice') : t('asset.listPrice')}
             </p>
-            {monthly && vatRatePercent !== null ? (
-              <p>
-                {t('price.inclVat', { rate: vatRatePercent })} · {t('catalogue.noDownPayment')}
-              </p>
-            ) : null}
+            <p className="text-lg font-semibold tabular-nums">
+              {listPriceCents !== null
+                ? formatEuro(listPriceCents, intlLocale[locale])
+                : t('asset.noPrice')}
+            </p>
           </div>
-          <p className="text-right text-xl font-semibold tabular-nums">
+          <div className="text-right">
             {monthly ? (
               <>
-                {formatEuro(monthly.grossCents, intlLocale[locale])}
-                <span className="text-sm font-normal text-stone-600 dark:text-stone-400">
-                  {t('common.perMonth')}
-                </span>
+                <p className="text-xl font-semibold tabular-nums">
+                  {formatEuro(monthly.grossCents, intlLocale[locale])}
+                  <span className="text-sm font-normal text-stone-600 dark:text-stone-400">
+                    {t('common.perMonth')}
+                  </span>
+                </p>
+                <p className="text-xs text-stone-600 dark:text-stone-400">
+                  {t('catalogue.payments', { count: termMonths })}
+                  {vatRatePercent !== null
+                    ? ` · ${t('price.inclVat', { rate: vatRatePercent })}`
+                    : ''}{' '}
+                  · {t('catalogue.noDownPayment')}
+                </p>
               </>
             ) : (
-              t('asset.noPrice')
+              <p className="text-xl font-semibold">{t('asset.noPrice')}</p>
             )}
-          </p>
+          </div>
         </div>
       </div>
     </article>

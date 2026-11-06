@@ -418,7 +418,6 @@
   "me.action.view": "Näytä hakemus",
   "catalogue.pickCategory": "Valitse luokka",
   "catalogue.termLabel": "Vuokra-aika:",
-  "catalogue.monthlyFor": "Kuukausihinta, {months} kk",
   "catalogue.noDownPayment": "ei käsirahaa",
   "catalogue.filter.monthlyMin": "Kuukausierä alkaen (€)",
   "catalogue.filter.monthlyMax": "Kuukausierä enintään (€)",
@@ -451,5 +450,6 @@
   "staff.expired.release": "Vapauta {count} päättynyttä varausta",
   "staff.done.released": "Vapautettiin {applications} hakemusta. {items} tuotetta on taas saatavilla.",
   "staff.audit.action.application.hold_expired": "Vapautti päättyneen varauksen",
-  "common.staffOnly": "Tämä työpöytä on Northfinan henkilökunnalle. Valitse yläpalkista Henkilökunta."
+  "common.staffOnly": "Tämä työpöytä on Northfinan henkilökunnalle. Valitse yläpalkista Henkilökunta.",
+  "catalogue.payments": "{count} kuukausierää"
 }

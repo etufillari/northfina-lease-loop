@@ -46,7 +46,8 @@ export function PriceConfigurator({
   const t = getT(locale);
   const router = useRouter();
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  const [termMonths, setTermMonths] = useState(36);
+  // 48 months by default, like the catalogue's price cards.
+  const [termMonths, setTermMonths] = useState(48);
   const [downCents, setDownCents] = useState(0);
   const [live, setLive] = useState<LiveQuote | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);

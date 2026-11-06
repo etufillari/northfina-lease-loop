@@ -418,7 +418,6 @@
   "me.action.view": "Vaata taotlust",
   "catalogue.pickCategory": "Vali kategooria",
   "catalogue.termLabel": "Rendiperiood:",
-  "catalogue.monthlyFor": "Kuuhind, {months} kuud",
   "catalogue.noDownPayment": "sissemakseta",
   "catalogue.filter.monthlyMin": "Kuumakse alates (€)",
   "catalogue.filter.monthlyMax": "Kuumakse kuni (€)",
@@ -451,5 +450,6 @@
   "staff.expired.release": "Vabasta {count} lõppenud broneeringut",
   "staff.done.released": "Vabastati {applications} taotlust. {items} toodet on taas saadaval.",
   "staff.audit.action.application.hold_expired": "Vabastas lõppenud broneeringu",
-  "common.staffOnly": "See töölaud on Northfina töötajatele. Vali ülaribalt Töötajad."
+  "common.staffOnly": "See töölaud on Northfina töötajatele. Vali ülaribalt Töötajad.",
+  "catalogue.payments": "{count} kuumakset"
 }

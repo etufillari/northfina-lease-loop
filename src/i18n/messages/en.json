@@ -12,7 +12,6 @@
   "catalogue.itemCount": "{count} items",
   "catalogue.pickCategory": "Choose a category",
   "catalogue.termLabel": "Lease term:",
-  "catalogue.monthlyFor": "Monthly price, {months} mo",
   "catalogue.noDownPayment": "no down payment",
   "catalogue.filter.monthlyMin": "Monthly payment from (€)",
   "catalogue.filter.monthlyMax": "Monthly payment up to (€)",
@@ -451,5 +450,6 @@
   "staff.expired.release": "Release {count} expired holds",
   "staff.done.released": "Released {applications} applications. {items} items are available again.",
   "staff.audit.action.application.hold_expired": "Released an expired hold",
-  "common.staffOnly": "This desk is for Northfina staff. Choose Staff in the top bar to open it."
+  "common.staffOnly": "This desk is for Northfina staff. Choose Staff in the top bar to open it.",
+  "catalogue.payments": "{count} monthly payments"
 }

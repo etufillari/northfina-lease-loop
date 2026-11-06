@@ -418,7 +418,6 @@
   "me.action.view": "Visa ansökan",
   "catalogue.pickCategory": "Välj kategori",
   "catalogue.termLabel": "Leasingperiod:",
-  "catalogue.monthlyFor": "Månadspris, {months} mån",
   "catalogue.noDownPayment": "ingen kontantinsats",
   "catalogue.filter.monthlyMin": "Månadsbetalning från (€)",
   "catalogue.filter.monthlyMax": "Månadsbetalning högst (€)",
@@ -451,5 +450,6 @@
   "staff.expired.release": "Frigör {count} utgångna reservationer",
   "staff.done.released": "Frigjorde {applications} ansökningar. {items} artiklar är tillgängliga igen.",
   "staff.audit.action.application.hold_expired": "Frigjorde en utgången reservation",
-  "common.staffOnly": "Det här skrivbordet är för Northfinas personal. Välj Personal i fältet högst upp."
+  "common.staffOnly": "Det här skrivbordet är för Northfinas personal. Välj Personal i fältet högst upp.",
+  "catalogue.payments": "{count} månadsbetalningar"
 }

@@ -144,6 +144,8 @@ export type ContractPreview = Omit<
   'id' | 'status' | 'actual_end_on' | 'signed_by' | 'passed_to'
 > &
   InvoiceTotals & {
+    /** What the customer is leasing, in words. */
+    asset_name: string;
     /** The dates assume signing on this day. Signing later moves them. */
     calculated_on: string;
     /** Set when a VAT change falls within the lease, to warn the customer before they sign. */
@@ -187,7 +189,7 @@ export async function previewContract(
 
   const asset = await db.asset.findUniqueOrThrow({
     where: { id: application.asset_id },
-    select: { status: true, reserved_for: true },
+    select: { status: true, reserved_for: true, make: true, model: true },
   });
   if (asset.status !== 'available' || isHeldForSomeoneElse(asset.reserved_for, customer.id)) {
     return { ok: false, reason: 'asset_not_available' };
@@ -213,6 +215,7 @@ export async function previewContract(
     preview: {
       ...terms,
       ...invoiceTotals(invoices),
+      asset_name: `${asset.make} ${asset.model}`,
       calculated_on: contract.signed_on,
       upcoming_vat_change: upcomingVatChange(await loadVatRates(), {
         startOn: contract.start_on,

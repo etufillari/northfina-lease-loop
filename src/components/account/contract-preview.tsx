@@ -1,58 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
+import type { InvoiceKind } from '@/data/lease-schemas';
+import { formatEuro } from '@/domain/money';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
+import { intlLocale, type Locale } from '@/i18n/locales';
+import type { ContractPreview as ContractPreviewView } from '@/server/contract/contracts';
 
 type Props = {
-  locale: Parameters<typeof getT>[0];
+  locale: Locale;
   applicationId: string;
 };
 
-type PreviewInvoice = {
-  sequence: number;
-  kind: string;
-  period_start: string;
-  period_end: string;
-  invoice_date: string;
-  due_date: string;
-  net_cents: number;
-  vat_rate_basis_points: number;
-  vat_rate_percent: number;
-  vat_cents: number;
-  total_cents: number;
-  status: string;
-};
-
-type ContractPreviewData = {
-  application_id: string;
-  customer_id: string;
-  asset_id: string;
-  quantity: number;
-
-  quote_date: string;
-  signed_on: string;
-  start_on: string;
-  planned_end_on: string;
-
-  calculated_on: string;
-  list_price_on_signing_cents: number | null;
-
-  price_list_version: number | null;
-  base_price_cents: number;
-  down_payment_cents: number;
-  financed_cents: number;
-  term_months: number;
-  band: string;
-  factor_micros: number;
-  annual_interest_basis_points: number;
-  monthly_net_rent_cents: number;
-  buyout_cents: number;
-
-  can_sign: boolean;
-  signatory_email: string | null;
-  invoices: PreviewInvoice[];
-};
+type ContractPreviewData = ContractPreviewView;
 
 type ApiError = {
   code?: string;
@@ -112,35 +74,6 @@ function errorMessage(code: string, t: ReturnType<typeof getT>) {
   }
 }
 
-function formatMoney(cents: number | null) {
-  if (cents === null) {
-    return '—';
-  }
-
-  return new Intl.NumberFormat('en-FI', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(cents / 100);
-}
-
-function formatDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-
-  if (!year || !month || !day) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(year, month - 1, day));
-}
-
-function formatPeriod(start: string, end: string) {
-  return `${formatDate(start)} – ${formatDate(end)}`;
-}
-
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
@@ -152,6 +85,13 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function ContractPreview({ locale, applicationId }: Props) {
   const t = useMemo(() => getT(locale), [locale]);
+
+  const formatMoney = (cents: number | null) =>
+    cents === null ? '—' : formatEuro(cents, intlLocale[locale]);
+  const formatChange = (cents: number) => `${cents > 0 ? '+' : ''}${formatMoney(cents)}`;
+  const formatDate = (isoDate: string) => formatIsoDate(isoDate, locale, 'medium');
+  const formatPeriod = (start: string, end: string) => `${formatDate(start)} – ${formatDate(end)}`;
+  const invoiceKindLabel = (kind: InvoiceKind) => t(`contract.invoiceKind.${kind}`);
 
   const [preview, setPreview] = useState<ContractPreviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -310,9 +250,7 @@ export default function ContractPreview({ locale, applicationId }: Props) {
         <h2 className="text-lg font-semibold">{t('contract.terms')}</h2>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Detail label={t('contract.asset')} value={preview.asset_id} />
-
-          <Detail label={t('contract.quantity')} value={preview.quantity} />
+          <Detail label={t('contract.asset')} value={preview.asset_name} />
 
           <Detail label={t('contract.quoteDate')} value={formatDate(preview.quote_date)} />
 
@@ -324,7 +262,7 @@ export default function ContractPreview({ locale, applicationId }: Props) {
 
           <Detail
             label={t('contract.term')}
-            value={`${preview.term_months} ${t('contract.months')}`}
+            value={t('asset.leaseDuration', { months: preview.term_months })}
           />
         </div>
       </section>
@@ -355,7 +293,9 @@ export default function ContractPreview({ locale, applicationId }: Props) {
 
           <Detail
             label={t('contract.interest')}
-            value={`${(preview.annual_interest_basis_points / 100).toFixed(2)} %`}
+            value={`${formatNumber(preview.annual_interest_basis_points / 100, locale, {
+              minimumFractionDigits: 2,
+            })} %`}
           />
 
           <Detail label={t('contract.buyout')} value={formatMoney(preview.buyout_cents)} />
@@ -367,6 +307,32 @@ export default function ContractPreview({ locale, applicationId }: Props) {
             value={preview.price_list_version ?? '—'}
           />
         </div>
+
+        <div className="grid gap-6 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Detail label={t('contract.totalNet')} value={formatMoney(preview.total_net_cents)} />
+
+          <Detail label={t('contract.totalVat')} value={formatMoney(preview.total_vat_cents)} />
+
+          <Detail label={t('contract.totalCost')} value={formatMoney(preview.total_cents)} />
+        </div>
+
+        <p className="text-sm text-muted-foreground">{t('contract.totalNote')}</p>
+
+        {preview.upcoming_vat_change && (
+          <div role="note" className="rounded-xl border border-amber-900 bg-amber-950/40 p-4">
+            <p className="text-sm font-semibold text-amber-200">{t('contract.vatWarningTitle')}</p>
+
+            <p className="mt-1 text-sm text-amber-300">
+              {t('contract.vatWarning', {
+                date: formatIsoDate(preview.upcoming_vat_change.effective_on, locale),
+                rate: formatNumber(preview.upcoming_vat_change.rate_percent, locale),
+                total: formatMoney(preview.upcoming_vat_change.monthly_total_cents),
+                change: formatChange(preview.upcoming_vat_change.monthly_change_cents),
+                rent: formatMoney(preview.monthly_net_rent_cents),
+              })}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Invoice schedule */}
@@ -393,33 +359,49 @@ export default function ContractPreview({ locale, applicationId }: Props) {
 
               <tbody>
                 {preview.invoices.map((invoice) => (
-                  <tr key={invoice.sequence} className="border-b last:border-0">
-                    <td className="py-3 pr-4">{invoice.sequence}</td>
+                  <Fragment key={invoice.sequence}>
+                    <tr className="border-b last:border-0">
+                      <td className="py-3 pr-4">{invoice.sequence}</td>
 
-                    <td className="py-3 pr-4">{invoice.kind}</td>
+                      <td className="py-3 pr-4">{invoiceKindLabel(invoice.kind)}</td>
 
-                    <td className="py-3 pr-4 whitespace-nowrap">
-                      {formatPeriod(invoice.period_start, invoice.period_end)}
-                    </td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        {formatPeriod(invoice.period_start, invoice.period_end)}
+                      </td>
 
-                    <td className="py-3 pr-4 whitespace-nowrap">
-                      {formatDate(invoice.invoice_date)}
-                    </td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        {formatDate(invoice.invoice_date)}
+                      </td>
 
-                    <td className="py-3 pr-4 whitespace-nowrap">{formatDate(invoice.due_date)}</td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        {formatDate(invoice.due_date)}
+                      </td>
 
-                    <td className="py-3 pr-4 text-right whitespace-nowrap">
-                      {formatMoney(invoice.net_cents)}
-                    </td>
+                      <td className="py-3 pr-4 text-right whitespace-nowrap">
+                        {formatMoney(invoice.net_cents)}
+                      </td>
 
-                    <td className="py-3 pr-4 text-right whitespace-nowrap">
-                      {formatMoney(invoice.vat_cents)}
-                    </td>
+                      <td className="py-3 pr-4 text-right whitespace-nowrap">
+                        {formatMoney(invoice.vat_cents)}
+                      </td>
 
-                    <td className="py-3 text-right font-medium whitespace-nowrap">
-                      {formatMoney(invoice.total_cents)}
-                    </td>
-                  </tr>
+                      <td className="py-3 text-right font-medium whitespace-nowrap">
+                        {formatMoney(invoice.total_cents)}
+                      </td>
+                    </tr>
+
+                    {invoice.vat_change && (
+                      <tr className="border-b">
+                        <td colSpan={8} className="py-2 text-sm text-amber-300">
+                          {t('contract.vatChangeNote', {
+                            change: formatChange(invoice.vat_change.total_change_cents),
+                            from: formatNumber(invoice.vat_change.from_percent, locale),
+                            to: formatNumber(invoice.vat_change.to_percent, locale),
+                          })}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

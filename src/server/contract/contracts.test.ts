@@ -141,6 +141,13 @@ describe('previewContract', () => {
     expect(invoices[2]?.vat_change?.total_change_cents).toBe(54);
   });
 
+  it('names the item in words', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    const asset = assets.find(({ id }) => id === 'ebike-003');
+
+    expect((await previewOk(application.id)).asset_name).toBe(`${asset?.make} ${asset?.model}`);
+  });
+
   it('warns about the VAT change and gives the real total before signing', async () => {
     const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
 

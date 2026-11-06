@@ -140,25 +140,41 @@ describe('upcomingVatChange', () => {
 });
 
 describe('withStatus', () => {
+  // Signed and started on 5 Nov 2026
   const invoices = () => schedule('2026-11-05', 12, 1_000);
+  const SIGNED = '2026-11-05';
+
+  it('counts the first month as paid at signing, without a payment', () => {
+    const [first] = withStatus(invoices(), [], SIGNED, SIGNED);
+    expect(first).toMatchObject({
+      number: 1,
+      status: 'paid',
+      paidDate: SIGNED,
+      paidAtSigning: true,
+    });
+  });
 
   it('is upcoming before the invoice date, due from it, and paid once paid', () => {
     const statuses = withStatus(
       invoices(),
-      [{ invoiceNumber: 1, paidDate: '2026-11-06' }],
-      '2026-12-05'
+      [{ invoiceNumber: 2, paidDate: '2026-12-06' }],
+      '2027-01-05',
+      SIGNED
     );
-    expect(statuses.slice(0, 3).map((i) => [i.number, i.status, i.paidDate])).toEqual([
-      [1, 'paid', '2026-11-06'],
-      [2, 'due', null],
-      [3, 'upcoming', null],
+    expect(
+      statuses.slice(0, 4).map((i) => [i.number, i.status, i.paidDate, i.paidAtSigning])
+    ).toEqual([
+      [1, 'paid', SIGNED, true],
+      [2, 'paid', '2026-12-06', false],
+      [3, 'due', null, false],
+      [4, 'upcoming', null, false],
     ]);
   });
 
-  it('keeps every invoice upcoming before the lease starts', () => {
-    expect(withStatus(invoices(), [], '2026-11-04').every((i) => i.status === 'upcoming')).toBe(
-      true
-    );
+  it('keeps every invoice upcoming before the signing day (time travel backwards)', () => {
+    expect(
+      withStatus(invoices(), [], '2026-11-04', SIGNED).every((i) => i.status === 'upcoming')
+    ).toBe(true);
   });
 });
 

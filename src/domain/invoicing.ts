@@ -107,22 +107,33 @@ export function upcomingVatChange(
 
 export type InvoiceStatus = 'upcoming' | 'due' | 'paid';
 export type InvoicePaymentRecord = { invoiceNumber: number; paidDate: string };
-export type InvoiceWithStatus = Invoice & { status: InvoiceStatus; paidDate: string | null };
+export type InvoiceWithStatus = Invoice & {
+  status: InvoiceStatus;
+  paidDate: string | null;
+  /** True for the first month's rent, which is paid by signing the contract. */
+  paidAtSigning: boolean;
+};
 
 /**
  * Each invoice's status on `today`: paid if a payment is recorded for it, otherwise due once
  * its date is reached, otherwise upcoming.
+ *
+ * The first month's rent is paid by signing: invoice 1 is paid on `signedDate` without a
+ * separate payment, so invoices to pay start from month 2. (Before the signing day, when
+ * travelling back in time, it is upcoming like the rest.)
  */
 export function withStatus(
   invoices: readonly Invoice[],
   payments: readonly InvoicePaymentRecord[],
-  today: string
+  today: string,
+  signedDate: string
 ): InvoiceWithStatus[] {
   const paidOn = new Map(payments.map((p) => [p.invoiceNumber, p.paidDate]));
   return invoices.map((invoice) => {
-    const paidDate = paidOn.get(invoice.number) ?? null;
+    const paidAtSigning = invoice.number === 1 && signedDate <= today;
+    const paidDate = paidAtSigning ? signedDate : (paidOn.get(invoice.number) ?? null);
     const status: InvoiceStatus = paidDate ? 'paid' : invoice.dueDate <= today ? 'due' : 'upcoming';
-    return { ...invoice, status, paidDate };
+    return { ...invoice, status, paidDate, paidAtSigning };
   });
 }
 

@@ -286,5 +286,8 @@
   "pay.sending": "Paying…",
   "pay.failed": "The payment didn’t go through. Please try again.",
   "pay.demoTitle": "This is a demonstration",
-  "pay.demoText": "No money moves, and we don’t ask for bank or card details. Taking real payments safely (protecting bank details, preventing fraud, following payment regulations) is outside the scope of this app, and we have no way to safeguard that data. Pressing Pay only marks the invoice as paid."
+  "pay.demoText": "No money moves, and we don’t ask for bank or card details. Taking real payments safely (protecting bank details, preventing fraud, following payment regulations) is outside the scope of this app, and we have no way to safeguard that data. Pressing Pay only marks the invoice as paid.",
+  "invoice.paidAtSigning": "Paid when the contract was signed on {date}",
+  "invoices.state.paidAtSigning": "Paid at signing",
+  "contract.firstMonth": "The first month’s rent is paid when you sign the contract. Invoices to pay start from month 2."
 }

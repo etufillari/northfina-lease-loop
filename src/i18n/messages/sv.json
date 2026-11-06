@@ -286,5 +286,8 @@
   "pay.sending": "Betalar…",
   "pay.failed": "Betalningen gick inte igenom. Försök igen.",
   "pay.demoTitle": "Det här är en demonstration",
-  "pay.demoText": "Inga pengar flyttas och vi frågar inte efter bank- eller kortuppgifter. Att ta emot riktiga betalningar säkert (skydda bankuppgifter, förhindra bedrägerier, följa betalningsregler) ligger utanför den här appen, och vi har inget sätt att skydda de uppgifterna. Knappen Betala markerar bara fakturan som betald."
+  "pay.demoText": "Inga pengar flyttas och vi frågar inte efter bank- eller kortuppgifter. Att ta emot riktiga betalningar säkert (skydda bankuppgifter, förhindra bedrägerier, följa betalningsregler) ligger utanför den här appen, och vi har inget sätt att skydda de uppgifterna. Knappen Betala markerar bara fakturan som betald.",
+  "invoice.paidAtSigning": "Betald när avtalet skrevs under den {date}",
+  "invoices.state.paidAtSigning": "Betald vid underskrift",
+  "contract.firstMonth": "Den första månadens hyra betalas när du skriver under avtalet. Fakturor att betala börjar från månad 2."
 }

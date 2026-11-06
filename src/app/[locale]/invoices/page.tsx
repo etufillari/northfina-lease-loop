@@ -100,9 +100,11 @@ function Item(props: {
             {invoiceLabel(contractNumber(r.contract.id), r.invoice.number)}
           </span>{' '}
           ·{' '}
-          {r.invoice.status === 'paid' && r.invoice.paidDate
-            ? t('invoice.paidOn', { date: formatIsoDate(r.invoice.paidDate, locale) })
-            : t('pay.due', { date: formatIsoDate(r.invoice.dueDate, locale) })}
+          {r.invoice.paidAtSigning && r.invoice.paidDate
+            ? t('invoice.paidAtSigning', { date: formatIsoDate(r.invoice.paidDate, locale) })
+            : r.invoice.status === 'paid' && r.invoice.paidDate
+              ? t('invoice.paidOn', { date: formatIsoDate(r.invoice.paidDate, locale) })
+              : t('pay.due', { date: formatIsoDate(r.invoice.dueDate, locale) })}
         </p>
       </div>
       <div className="flex items-center gap-3">

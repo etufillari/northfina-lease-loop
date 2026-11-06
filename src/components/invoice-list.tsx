@@ -135,7 +135,11 @@ export function InvoiceList({ invoices, contractId, today, locale, t }: InvoiceL
                     <td className="py-1.5 pr-3 text-right font-medium">
                       {euro(invoice.totalCents)}
                     </td>
-                    <td className="py-1.5">{t(`invoices.state.${invoice.status}`)}</td>
+                    <td className="py-1.5">
+                      {invoice.paidAtSigning
+                        ? t('invoices.state.paidAtSigning')
+                        : t(`invoices.state.${invoice.status}`)}
+                    </td>
                   </tr>
                 );
               })}

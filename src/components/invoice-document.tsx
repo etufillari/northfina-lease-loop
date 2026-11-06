@@ -46,9 +46,11 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
                 : 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100')
             }
           >
-            {invoice.status === 'paid' && invoice.paidDate
-              ? t('invoice.paidOn', { date: date(invoice.paidDate) })
-              : t(`invoices.state.${invoice.status}`)}
+            {invoice.paidAtSigning && invoice.paidDate
+              ? t('invoice.paidAtSigning', { date: date(invoice.paidDate) })
+              : invoice.status === 'paid' && invoice.paidDate
+                ? t('invoice.paidOn', { date: date(invoice.paidDate) })
+                : t(`invoices.state.${invoice.status}`)}
           </p>
         </div>
       </header>

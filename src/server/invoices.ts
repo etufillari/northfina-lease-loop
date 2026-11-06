@@ -31,7 +31,7 @@ export async function contractInvoices(
 ): Promise<InvoiceWithStatus[] | null> {
   const [vatRates, payments] = await Promise.all([loadVatRates(), listPayments(db, contract.id)]);
   const schedule = invoiceSchedule(contract, vatRates);
-  return schedule.ok ? withStatus(schedule.invoices, payments, today) : null;
+  return schedule.ok ? withStatus(schedule.invoices, payments, today, contract.signedDate) : null;
 }
 
 export type ReceivedInvoice = { contract: Contract; invoice: InvoiceWithStatus };

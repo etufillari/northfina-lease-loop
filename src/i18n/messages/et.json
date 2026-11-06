@@ -286,5 +286,8 @@
   "pay.sending": "Maksan…",
   "pay.failed": "Makse ei õnnestunud. Palun proovi uuesti.",
   "pay.demoTitle": "See on esitlus",
-  "pay.demoText": "Raha ei liigu ja me ei küsi panga- ega kaardiandmeid. Päris maksete turvaline käsitlemine (pangaandmete kaitse, pettuste ennetamine, maksereeglite järgimine) jääb selle rakenduse ulatusest välja ja meil pole võimalust neid andmeid kaitsta. Nupp Maksa märgib arve lihtsalt tasutuks."
+  "pay.demoText": "Raha ei liigu ja me ei küsi panga- ega kaardiandmeid. Päris maksete turvaline käsitlemine (pangaandmete kaitse, pettuste ennetamine, maksereeglite järgimine) jääb selle rakenduse ulatusest välja ja meil pole võimalust neid andmeid kaitsta. Nupp Maksa märgib arve lihtsalt tasutuks.",
+  "invoice.paidAtSigning": "Tasutud lepingu allkirjastamisel {date}",
+  "invoices.state.paidAtSigning": "Tasutud allkirjastamisel",
+  "contract.firstMonth": "Esimese kuu rent tasutakse lepingu allkirjastamisel. Tasumisele kuuluvad arved algavad 2. kuust."
 }

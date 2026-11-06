@@ -61,17 +61,31 @@ describe('payInvoice', () => {
     const contract = await ainosContract();
     const result = await payInvoice(
       db,
-      { contractId: contract.id, invoiceNumber: 1, actor: 'Aino Virtanen' },
-      '2026-11-10'
+      { contractId: contract.id, invoiceNumber: 2, actor: 'Aino Virtanen' },
+      '2026-12-10'
     );
     // laptop-001: 119900 × 0.056022 = 6717 net, + 25.5 % VAT 1713 = 8430
-    expect(result).toEqual({ ok: true, paidDate: '2026-11-10', amountCents: 8_430 });
+    expect(result).toEqual({ ok: true, paidDate: '2026-12-10', amountCents: 8_430 });
 
-    const invoices = await contractInvoices(db, contract, '2026-11-10');
-    expect(invoices?.[0]).toMatchObject({ status: 'paid', paidDate: '2026-11-10' });
+    const invoices = await contractInvoices(db, contract, '2026-12-10');
+    expect(invoices?.[1]).toMatchObject({ status: 'paid', paidDate: '2026-12-10' });
     const audit = await db.auditLog.findMany({ where: { action: 'invoice.paid' } });
     expect(audit).toHaveLength(1);
-    expect(audit[0]?.entity_id).toBe(`${contract.id}#1`);
+    expect(audit[0]?.entity_id).toBe(`${contract.id}#2`);
+  });
+
+  it('treats the first month as paid by signing, so it cannot be paid again', async () => {
+    const contract = await ainosContract();
+    const [first] = (await contractInvoices(db, contract, '2026-11-05')) ?? [];
+    expect(first).toMatchObject({ status: 'paid', paidDate: '2026-11-05', paidAtSigning: true });
+    expect(
+      await payInvoice(
+        db,
+        { contractId: contract.id, invoiceNumber: 1, actor: 'Aino' },
+        '2026-11-05'
+      )
+    ).toEqual({ ok: false, reason: 'already_paid' });
+    expect(await db.invoicePayment.count()).toBe(0);
   });
 
   it('refuses an invoice that has not been issued yet', async () => {
@@ -88,7 +102,7 @@ describe('payInvoice', () => {
   it('refuses to pay the same invoice twice', async () => {
     const contract = await ainosContract();
     const pay = () =>
-      payInvoice(db, { contractId: contract.id, invoiceNumber: 1, actor: 'Aino' }, '2026-11-05');
+      payInvoice(db, { contractId: contract.id, invoiceNumber: 2, actor: 'Aino' }, '2026-12-05');
     await pay();
     expect(await pay()).toEqual({ ok: false, reason: 'already_paid' });
     expect(await db.invoicePayment.count()).toBe(1);

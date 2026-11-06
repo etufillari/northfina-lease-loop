@@ -286,5 +286,8 @@
   "pay.sending": "Maksetaan…",
   "pay.failed": "Maksu ei onnistunut. Yritä uudelleen.",
   "pay.demoTitle": "Tämä on esittely",
-  "pay.demoText": "Rahaa ei siirry, emmekä kysy pankki- tai korttitietoja. Oikeiden maksujen turvallinen käsittely (pankkitietojen suojaus, petosten esto, maksusääntely) ei kuulu tämän sovelluksen piiriin, eikä meillä ole keinoa suojata niitä tietoja. Maksa-painike vain merkitsee laskun maksetuksi."
+  "pay.demoText": "Rahaa ei siirry, emmekä kysy pankki- tai korttitietoja. Oikeiden maksujen turvallinen käsittely (pankkitietojen suojaus, petosten esto, maksusääntely) ei kuulu tämän sovelluksen piiriin, eikä meillä ole keinoa suojata niitä tietoja. Maksa-painike vain merkitsee laskun maksetuksi.",
+  "invoice.paidAtSigning": "Maksettu sopimuksen allekirjoituksen yhteydessä {date}",
+  "invoices.state.paidAtSigning": "Maksettu allekirjoitettaessa",
+  "contract.firstMonth": "Ensimmäisen kuukauden vuokra maksetaan, kun allekirjoitat sopimuksen. Maksettavat laskut alkavat kuukaudesta 2."
 }

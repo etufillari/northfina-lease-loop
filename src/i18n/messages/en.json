@@ -457,8 +457,6 @@
   "demo.plusDay": "+1 day",
   "demo.plusWeek": "+1 week",
   "demo.plusMonth": "+1 month",
-  "demo.jumpTo": "Jump to",
-  "demo.go": "Go",
   "demo.reset": "Reset demo",
   "demo.confirmReset": "Reset the demo? Every application, contract, invoice and waiting-list change is deleted, the data pack is loaded again and the date goes back to 1 January 2026.",
   "waitlist.join.budget": "Monthly budget (€, excl. VAT)",

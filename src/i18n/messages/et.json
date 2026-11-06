@@ -457,8 +457,6 @@
   "demo.plusDay": "+1 päev",
   "demo.plusWeek": "+1 nädal",
   "demo.plusMonth": "+1 kuu",
-  "demo.jumpTo": "Hüppa kuupäevale",
-  "demo.go": "Mine",
   "demo.reset": "Lähtesta demo",
   "demo.confirmReset": "Kas lähtestada demo? Kõik taotlused, lepingud, arved ja järjekorra muudatused kustutatakse, andmepakett laaditakse uuesti ja kuupäev läheb tagasi 1. jaanuarile 2026.",
   "waitlist.join.budget": "Kuueelarve (€, ilma käibemaksuta)",

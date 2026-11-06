@@ -1,4 +1,4 @@
-import { isoDateSchema, centsSchema } from '@/data/schemas';
+import { isoDateSchema, centsSchema, type Asset } from '@/data/schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { quoteFor, type QuoteInput, type QuoteResult } from '@/domain/quote';
 import { toAsset } from './assets';
@@ -13,12 +13,21 @@ export const quoteRequestSchema = z.strictObject({
 });
 
 export type QuoteRequest = z.infer<typeof quoteRequestSchema>;
-export type CreateQuoteResult = QuoteResult | { ok: false; reason: 'asset_not_found' };
+export type CreateQuoteFailure =
+  Extract<QuoteResult, { ok: false }> | { ok: false; reason: 'asset_not_found' };
+export type CreateQuoteResult = Extract<QuoteResult, { ok: true }> | CreateQuoteFailure;
+export type CreateQuoteWithAssetResult =
+  (Extract<QuoteResult, { ok: true }> & { asset: Asset }) | CreateQuoteFailure;
 
 /** Reads the current asset state and combines it with the immutable pricing data pack. */
-export async function createQuote(db: PrismaClient, input: QuoteInput): Promise<CreateQuoteResult> {
+export async function createQuoteWithAsset(
+  db: PrismaClient,
+  input: QuoteInput
+): Promise<CreateQuoteWithAssetResult> {
   const row = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!row) return { ok: false, reason: 'asset_not_found' };
+
+  const asset = toAsset(row);
 
   const [priceLists, coefficientTable, vatRates] = await Promise.all([
     loadPriceLists(),
@@ -26,5 +35,13 @@ export async function createQuote(db: PrismaClient, input: QuoteInput): Promise<
     loadVatRates(),
   ]);
 
-  return quoteFor(toAsset(row), priceLists, coefficientTable, vatRates, input);
+  const result = quoteFor(asset, priceLists, coefficientTable, vatRates, input);
+  if (!result.ok) return result;
+  return { ...result, asset };
+}
+
+export async function createQuote(db: PrismaClient, input: QuoteInput): Promise<CreateQuoteResult> {
+  const result = await createQuoteWithAsset(db, input);
+  if (!result.ok) return result;
+  return { ok: true, quote: result.quote };
 }

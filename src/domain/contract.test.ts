@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import type { CoefficientTable, PriceList } from '@/data/schemas';
 import { addDays } from './calendar';
-import { priceCheckAtSigning, signContract } from './contract';
+import { countersign, priceCheckAtSigning, signContract } from './contract';
 import { DOWN_PAYMENT_STEP_CENTS, QUOTE_VALID_DAYS } from './pricing-rules';
 import { makeQuote, type Quote } from './quote';
 
@@ -162,5 +162,48 @@ describe('signContract properties (random quotes, signed any day they are valid)
         expect(signed.contract).toMatchObject(locked);
       })
     );
+  });
+});
+
+describe('countersign (D-050: a contract waiting for the person who must sign)', () => {
+  // Card 6: Norvi's applicant sent ebike-004 to their signatory on 5 Nov.
+  function sent() {
+    const signed = signContract(quoteFor('ebike-004', '2026-11-05'), {
+      customerId: 'cust-norvi',
+      signDate: '2026-11-05',
+      startDate: '2026-11-05',
+    });
+    if (!signed.ok) throw new Error(`test setup: ${signed.reason}`);
+    return signed.contract;
+  }
+
+  it('starts the lease the day the signatory signs, at the price locked when it was sent', () => {
+    const waiting = sent();
+    const result = countersign(waiting, { sentOn: '2026-11-05', signDate: '2026-11-20' });
+    expect(result).toEqual({
+      ok: true,
+      contract: { ...waiting, signDate: '2026-11-20', startDate: '2026-11-20' },
+    });
+  });
+
+  it('can be signed the day it was sent', () => {
+    const result = countersign(sent(), { sentOn: '2026-11-05', signDate: '2026-11-05' });
+    expect(result).toMatchObject({ ok: true, contract: { startDate: '2026-11-05' } });
+  });
+
+  it('refuses a signature dated before the contract was sent', () => {
+    expect(countersign(sent(), { sentOn: '2026-11-05', signDate: '2026-11-04' })).toEqual({
+      ok: false,
+      reason: 'signed_before_sent',
+    });
+  });
+
+  it('even after the quote would have expired: the price locked when it was sent', () => {
+    // QUOTE_VALID_DAYS later and one more day; the applicant accepted it in time.
+    const late = addDays('2026-11-05', QUOTE_VALID_DAYS + 1);
+    expect(countersign(sent(), { sentOn: '2026-11-05', signDate: late })).toMatchObject({
+      ok: true,
+      contract: { signDate: late, monthlyNetRentCents: sent().monthlyNetRentCents },
+    });
   });
 });

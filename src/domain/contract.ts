@@ -40,6 +40,22 @@ export function signContract(quote: Quote, details: SignatureDetails): SignResul
 }
 
 /**
+ * The person who must sign signs a contract that was waiting for them (D-050). The price stays as
+ * it was locked when the contract was sent, even if the quote has since expired: the applicant
+ * accepted it in time. The lease starts the day they sign, so invoices run from that day.
+ */
+export function countersign(
+  contract: Contract,
+  dates: { sentOn: string; signDate: string }
+): { ok: true; contract: Contract } | { ok: false; reason: 'signed_before_sent' } {
+  if (dates.signDate < dates.sentOn) return { ok: false, reason: 'signed_before_sent' };
+  return {
+    ok: true,
+    contract: Object.freeze({ ...contract, signDate: dates.signDate, startDate: dates.signDate }),
+  };
+}
+
+/**
  * Re-quotes the same terms on the signing day. A valid quote is always honoured; if today's
  * rent is lower we offer the cheaper quote instead. Compares the monthly rent, not the list
  * price, because a cheaper price can land in a dearer band (D-013).

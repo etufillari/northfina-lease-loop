@@ -82,6 +82,7 @@ model Application {
   financed_amount_cents  Int?
   coefficient_band       String?
   coefficient_factor_ppm Int?
+  annual_interest_basis_points Int?
   monthly_net_rent_cents Int?
   buyout_cents           Int?
   pricing_snapshot_json  String?
@@ -114,12 +115,15 @@ model Contract {
   price_list_version     Int
   coefficient_band       String
   coefficient_factor_ppm Int
+  annual_interest_basis_points Int?
   monthly_net_rent_cents Int
   buyout_cents           Int
   pricing_snapshot_json  String?
   end_of_term_action     String? // bought | returned | passed_on
   buyout_paid_cents      Int? // net buyout settlement, only for bought contracts
   completed_on           String?
+  termination_action     String? // returned | bought
+  terminated_on          String?
   created_at             DateTime @default(now())
   updated_at             DateTime @updatedAt
 
@@ -127,9 +131,33 @@ model Contract {
   asset       Asset          @relation(fields: [asset_id], references: [id], onDelete: Restrict)
   invoices    Invoice[]
   history     AssetHistory[]
+  early_exit_request EarlyExitRequest?
 
   @@index([asset_id])
   @@index([status])
+}
+
+// A scheduled early-exit request and its locked settlement calculation.
+model EarlyExitRequest {
+  id                     String   @id
+  contract_id            String   @unique
+  action                 String // returned | bought
+  status                 String   @default("pending") // pending | completed | cancelled
+  requested_on           String
+  effective_on           String
+  settlement_net_cents   Int
+  vat_rate_basis_points  Int
+  vat_cents               Int
+  settlement_total_cents Int
+  settlement_paid_cents  Int?
+  quote_snapshot_json     String
+  completed_on            String?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  contract Contract @relation(fields: [contract_id], references: [id], onDelete: Restrict)
+
+  @@index([status, effective_on])
 }
 
 // One scheduled charge from a locked contract.

@@ -21,6 +21,7 @@ export type QuoteData = {
     financedCents: number;
     termMonths: number;
     coefficientBand: string;
+    annualInterestBasisPoints: number;
     monthlyFactor: number;
     monthlyNetRentCents: number;
     buyoutPercent: number;
@@ -96,6 +97,7 @@ export function quoteFor(
         financedCents: pricing.financedCents,
         termMonths: pricing.termMonths,
         coefficientBand: pricing.band.band,
+        annualInterestBasisPoints: Math.round(pricing.band.annual_interest_percent * 100),
         monthlyFactor: pricing.factor,
         monthlyNetRentCents: pricing.monthlyNetRentCents,
         buyoutPercent: pricing.buyoutPercent,

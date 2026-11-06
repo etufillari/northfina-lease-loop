@@ -26,7 +26,7 @@
   "status.sold": "Müüdud",
   "status.returned": "Tagastatud",
   "asset.modelYear": "Mudeliaasta",
-  "asset.usage": "Kasutus",
+  "asset.usage": "Kogukasutus",
   "asset.previousLives": "Varasemad liisinguperioodid",
   "asset.listPrice": "Hinnakirja hind käibemaksuta",
   "asset.priceListVersion": "Hinnakiri {version}",
@@ -474,5 +474,14 @@
   "exit.minimum": "Ennetähtaegne lõpetamine maksab alati vähemalt {months} kuu kasutuse eest.",
   "secondLife.outcome.nominee": "Hoia nimetatule",
   "secondLife.nomineeGetsIt": "Eelmine rentnik nimetas järgmiseks {name}, seega läheb see järjekorrast mööda: pärast tööd hoitakse seda talle selle hinnaga kuni nimetamise lõpuni.",
-  "passport.event.held_for_nominee": "Hoitud nimetatud järgmisele rentnikule"
+  "passport.event.held_for_nominee": "Hoitud nimetatud järgmisele rentnikule",
+  "usage.readingTitle": "Näit tagastamisel",
+  "usage.readingHelp": "Kogunäit läbisõidumõõdikult, akuraportist või tunnimõõdikult. See lisab selle rendi kasutuse eseme ajalukku.",
+  "usage.readingAtLeast": "Vähemalt {value}: senine kogukasutus",
+  "usage.unit.km": "km",
+  "usage.unit.battery_cycles": "akutsüklid",
+  "usage.unit.engine_hours": "mootoritunnid",
+  "usage.sinceBattery": "Pärast viimast akuvahetust",
+  "usage.sinceService": "Pärast viimast suurhooldust",
+  "passport.detail.reading": "näit {reading} (+{added} selle rendiga)"
 }

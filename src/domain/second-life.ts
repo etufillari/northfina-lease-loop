@@ -13,6 +13,7 @@ import type {
 } from '@/data/schemas';
 import { quoteFor } from './pricing';
 import { ageInMonths, marketValueCents } from './residual';
+import { serviceInterval, valueUsage } from './usage';
 
 // Worst to best; a waiter's min_condition is met by anything at or above it.
 const CONDITION_ORDER: readonly AssetCondition[] = ['poor', 'fair', 'good', 'like_new', 'new'];
@@ -30,9 +31,10 @@ export function nextConditionUp(condition: AssetCondition): AssetCondition | nul
 export type RefurbishmentItem = { id: string; costCents: number; resetsUsage: boolean };
 
 /**
- * The fixed refurbishment work a return needs: "always" items, and usage-triggered items
- * read from the data's `when` text (`usage.value >= N ...`). The farm machines'
- * "per started 1000 engine_hours" servicing is out of scope for v1 (docs/DECISIONS.md).
+ * The fixed refurbishment work a return needs: "always" items, usage-triggered items read
+ * from the data's `when` text (`usage.value >= N ...`, on usage since the last reset), and
+ * interval servicing (`per started N <unit> since last service`): one service per started
+ * interval since the last one, which resets that counter (src/domain/usage.ts).
  */
 export function requiredRefurbishments(
   asset: Pick<Asset, 'category' | 'usage'>,
@@ -40,6 +42,14 @@ export function requiredRefurbishments(
 ): { items: RefurbishmentItem[]; totalCents: number; resetsUsage: boolean } {
   const items: RefurbishmentItem[] = [];
   for (const fixed of costs[asset.category].fixed) {
+    const interval = serviceInterval(fixed.when);
+    if (interval !== null) {
+      const services = Math.ceil(asset.usage.value / interval);
+      if (services > 0) {
+        items.push({ id: fixed.id, costCents: fixed.cost_cents * services, resetsUsage: true });
+      }
+      continue;
+    }
     const threshold = /usage\.value >= (\d+)/.exec(fixed.when);
     const applies =
       fixed.when === 'always' || (threshold !== null && asset.usage.value >= Number(threshold[1]));
@@ -208,9 +218,16 @@ export function secondLifeDecision(
   const required = requiredRefurbishments(asset, data.costs);
   const usageAfterRefurb = required.resetsUsage ? 0 : asset.usage.value;
   const ageMonths = ageInMonths(asset.model_year, asOfDate);
-  const valueAt = (condition: AssetCondition, usageValue: number) =>
+  // Market value reads usage since the last battery, or the lifetime total (src/domain/usage.ts).
+  const valueAt = (condition: AssetCondition, sinceReset: number) =>
     marketValueCents(
-      { originalListPriceCents, category: asset.category, condition, usageValue, ageMonths },
+      {
+        originalListPriceCents,
+        category: asset.category,
+        condition,
+        usageValue: valueUsage(asset, data.costs, sinceReset),
+        ageMonths,
+      },
       data.curves
     );
   const match = (condition: AssetCondition, financedCents: number) =>

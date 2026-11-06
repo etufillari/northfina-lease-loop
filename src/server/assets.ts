@@ -1,7 +1,15 @@
 // Reading and changing assets in the database. Rows are converted to the same `Asset`
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, Prisma, PrismaClient } from '@/generated/prisma/client';
-import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
+import { loadRefurbishmentCosts } from '@/data/load';
+import {
+  assetSchema,
+  type Asset,
+  type AssetCategory,
+  type AssetStatus,
+  type RefurbishmentCosts,
+} from '@/data/schemas';
+import { initialUsage } from '@/domain/usage';
 import { withAudit } from './audit';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
@@ -14,14 +22,18 @@ export function toAsset(row: AssetRow): Asset {
     model_year: row.model_year,
     serial_number: row.serial_number,
     condition: row.condition,
-    usage: { unit: row.usage_unit, value: row.usage_value },
+    usage: { unit: row.usage_unit, value: row.usage_value, total: row.usage_total },
     previous_lives: row.previous_lives,
     status: row.status,
   });
 }
 
-/** Data-pack shape → columns for a new database row. */
-export function toAssetRowData(asset: Asset) {
+/**
+ * Data-pack shape → columns for a new database row. The pack's one usage number becomes the
+ * two counters (src/domain/usage.ts: lifetime total, and since the last reset).
+ */
+export function toAssetRowData(asset: Asset, costs: RefurbishmentCosts) {
+  const usage = initialUsage(asset, costs);
   return {
     id: asset.id,
     category: asset.category,
@@ -31,7 +43,8 @@ export function toAssetRowData(asset: Asset) {
     serial_number: asset.serial_number,
     condition: asset.condition,
     usage_unit: asset.usage.unit,
-    usage_value: asset.usage.value,
+    usage_value: usage.sinceReset,
+    usage_total: usage.total,
     previous_lives: asset.previous_lives,
     status: asset.status,
   };
@@ -82,7 +95,8 @@ export async function seedAssets(
   const existingIds = new Set(existing.map((row) => row.id));
   const missing = assets.filter((asset) => !existingIds.has(asset.id));
   if (missing.length > 0) {
-    await db.asset.createMany({ data: missing.map(toAssetRowData) });
+    const costs = await loadRefurbishmentCosts();
+    await db.asset.createMany({ data: missing.map((asset) => toAssetRowData(asset, costs)) });
   }
   return { created: missing.length, skipped: assets.length - missing.length };
 }

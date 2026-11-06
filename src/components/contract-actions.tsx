@@ -8,6 +8,7 @@ import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { BuyoutPurchase } from './buyout-purchase';
+import { parsedReadings, UsageReadingFields, type ReturnItem } from './usage-reading-fields';
 
 type ExitBreakdown = {
   usedMonths: number;
@@ -35,6 +36,7 @@ export function ContractActions({
   pricesInclVat,
   purchaseAtEnd,
   termMonthsTotal,
+  returnItems,
 }: {
   locale: Locale;
   contractId: string;
@@ -48,6 +50,8 @@ export function ContractActions({
   pricesInclVat: boolean;
   purchaseAtEnd: boolean;
   termMonthsTotal: number;
+  /** The items a return hands back, each needing its meter reading. */
+  returnItems: ReturnItem[];
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -59,6 +63,16 @@ export function ContractActions({
   const [nomineeEmail, setNomineeEmail] = useState('');
   const [nominated, setNominated] = useState(false);
   const termOver = today >= endsOn;
+  const [typedReadings, setTypedReadings] = useState<Record<string, string>>({});
+  const usageReadings = parsedReadings(returnItems, typedReadings);
+  const readingFields = (
+    <UsageReadingFields
+      locale={locale}
+      items={returnItems}
+      typed={typedReadings}
+      onChange={(assetId, value) => setTypedReadings((all) => ({ ...all, [assetId]: value }))}
+    />
+  );
 
   async function createLink() {
     setBusy(true);
@@ -145,16 +159,17 @@ export function ContractActions({
             {t('exit.button')}
           </button>
         ) : (
-          <>
+          <div className="w-full">
+            {readingFields}
             <button
               type="button"
-              disabled={busy}
-              onClick={() => post('end-of-term', { action: 'return' })}
+              disabled={busy || usageReadings === null}
+              onClick={() => post('end-of-term', { action: 'return', usageReadings })}
               className="rounded-xl px-4 py-2 font-medium ring-1 ring-stone-300 ring-inset hover:bg-stone-50 disabled:opacity-50 dark:ring-stone-700 dark:hover:bg-stone-800"
             >
               {t('endOfTerm.return')}
             </button>
-          </>
+          </div>
         )}
         {!termOver ? (
           <span className="text-xs text-stone-500">{t('endOfTerm.notYet', { date: endsOn })}</span>
@@ -247,11 +262,12 @@ export function ContractActions({
               bold
             />
           </dl>
+          {readingFields}
           <div className="mt-4 flex gap-3">
             <button
               type="button"
-              disabled={busy}
-              onClick={() => post('early-exit', {})}
+              disabled={busy || usageReadings === null}
+              onClick={() => post('early-exit', { usageReadings })}
               className="rounded-xl bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800 disabled:opacity-50"
             >
               {t('exit.confirm')}

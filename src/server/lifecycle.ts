@@ -6,6 +6,12 @@ import { BUYOUT_PAYMENT_DAYS } from '@/domain/buyout';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
 import { holdUntil } from '@/domain/holds';
 import { endNominations, NOMINATION_RESERVATION, startNominationClock } from './nominations';
+import {
+  applyReadings,
+  checkReadings,
+  readingDetails,
+  type ReadingFailure,
+} from './usage-readings';
 import { earlyExitQuote, type EarlyExitBreakdown } from '@/domain/early-exit';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -44,7 +50,8 @@ export type ExitPreviewResult =
         | 'term_already_over'
         | 'no_vat_rate_on_date'
         | 'unpriceable_amount'
-        | 'bad_used_months';
+        | 'bad_used_months'
+        | ReadingFailure;
     };
 
 /** The card-8 calculation, shown to the customer BEFORE they confirm anything. */
@@ -78,16 +85,30 @@ export async function earlyExitPreview(
   return { ok: true, preview: { breakdown: result.breakdown, termEndsOn: termEndsOn(contract) } };
 }
 
-/** Confirms the exit: ends the contract, issues the exit invoice, returns the asset. */
+/**
+ * Confirms the exit: ends the contract, issues the exit invoice, returns the asset with its
+ * meter reading (asset id → lifetime reading, one per item).
+ */
 export async function executeEarlyExit(
   db: Db,
-  input: { contractId: string; actor: string; asOf: string }
+  input: {
+    contractId: string;
+    actor: string;
+    asOf: string;
+    usageReadings?: Record<string, number>;
+  }
 ): Promise<ExitPreviewResult> {
   const previewed = await earlyExitPreview(db, input.contractId, input.asOf);
   if (!previewed.ok) return previewed;
   const { breakdown } = previewed.preview;
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
+  const readings = await checkReadings(
+    db,
+    loaded.contract.assets.map((link) => link.asset_id),
+    input.usageReadings
+  );
+  if (!readings.ok) return readings;
 
   await withAudit(
     db,
@@ -126,6 +147,7 @@ export async function executeEarlyExit(
         assetIds: row.assets.map((link) => link.asset_id),
         returnedOn: input.asOf,
       });
+      await applyReadings(tx, readings.updates);
       for (const link of row.assets) {
         await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'returned' } });
         await tx.assetEvent.create({
@@ -137,6 +159,7 @@ export async function executeEarlyExit(
             details_json: JSON.stringify({
               reason: 'early_exit',
               usedMonths: breakdown.usedMonths,
+              ...readingDetails(readings.updates, link.asset_id),
             }),
           },
         });
@@ -148,20 +171,37 @@ export async function executeEarlyExit(
 
 export type EndOfTermResult =
   | { ok: true }
-  | { ok: false; reason: 'not_found' | 'not_active' | 'term_not_ended' | 'no_vat_rate_on_date' };
+  | {
+      ok: false;
+      reason:
+        'not_found' | 'not_active' | 'term_not_ended' | 'no_vat_rate_on_date' | ReadingFailure;
+    };
 
 /**
  * At (or after) the term's end the customer buys the item or returns it. Buying issues the
  * buyout invoice with 30 days to pay; it never counts against the 30 % affordability rule.
+ * A return records each item's meter reading (asset id → lifetime reading).
  */
 export async function endOfTerm(
   db: Db,
-  input: { contractId: string; action: 'buy' | 'return'; actor: string; asOf: string }
+  input: {
+    contractId: string;
+    action: 'buy' | 'return';
+    actor: string;
+    asOf: string;
+    usageReadings?: Record<string, number>;
+  }
 ): Promise<EndOfTermResult> {
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
   const { contract } = loaded;
   if (input.asOf < termEndsOn(contract)) return { ok: false, reason: 'term_not_ended' };
+  const assetIds = contract.assets.map((link) => link.asset_id);
+  const readings =
+    input.action === 'return'
+      ? await checkReadings(db, assetIds, input.usageReadings)
+      : ({ ok: true, updates: [] } as const);
+  if (!readings.ok) return readings;
 
   const vatRates = await loadVatRates();
   const vat = vatRateOn(vatRates, input.asOf);
@@ -200,9 +240,9 @@ export async function endOfTerm(
           },
         });
       }
-      const assetIds = contract.assets.map((link) => link.asset_id);
       if (input.action === 'buy') await endNominations(tx, assetIds);
       else await startNominationClock(tx, { assetIds, returnedOn: input.asOf });
+      await applyReadings(tx, readings.updates);
       for (const link of contract.assets) {
         await tx.asset.update({
           where: { id: link.asset_id },
@@ -214,7 +254,10 @@ export async function endOfTerm(
             contract_id: input.contractId,
             type: input.action === 'buy' ? 'bought' : 'returned',
             on_date: input.asOf,
-            details_json: JSON.stringify({ reason: 'end_of_term' }),
+            details_json: JSON.stringify({
+              reason: 'end_of_term',
+              ...readingDetails(readings.updates, link.asset_id),
+            }),
           },
         });
       }

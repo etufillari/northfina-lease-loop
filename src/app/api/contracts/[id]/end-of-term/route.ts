@@ -1,4 +1,5 @@
-// POST /api/contracts/:id/end-of-term  body: { action: "buy" | "return", actor }  [?asOf=]
+// POST /api/contracts/:id/end-of-term  body: { action: "buy" | "return", actor,
+//   usageReadings?: { assetId: reading } }  [?asOf=] — a return needs every item's reading.
 // Buy it (buyout invoice, 30 days to pay, asset leaves the loop) or return it (the asset
 // becomes `returned` and feeds the second-life desk).
 import { z } from 'zod';
@@ -10,6 +11,8 @@ import { endOfTerm } from '@/server/lifecycle';
 const bodySchema = z.strictObject({
   action: z.enum(['buy', 'return']),
   actor: z.string().trim().min(1).max(100),
+  /** Asset id → the lifetime meter reading at the return (km, cycles or hours). */
+  usageReadings: z.record(z.string(), z.number().int().nonnegative()).optional(),
 });
 
 export const POST = handleRoute(
@@ -21,6 +24,7 @@ export const POST = handleRoute(
       action: body.action,
       actor: body.actor,
       asOf: asOfFrom(request),
+      usageReadings: body.usageReadings,
     });
     if (!result.ok) {
       if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
@@ -32,6 +36,12 @@ export const POST = handleRoute(
           'TERM_NOT_ENDED',
           'The term has not ended yet; use the early exit instead'
         );
+      }
+      if (result.reason === 'usage_reading_missing') {
+        return fail(422, 'USAGE_READING_MISSING', 'Enter the meter reading for every item');
+      }
+      if (result.reason === 'usage_reading_below_total') {
+        return fail(422, 'USAGE_READING_TOO_LOW', 'A reading cannot be below the lifetime total');
       }
       return fail(422, 'NO_VAT_RATE', 'No VAT rate is known for this date');
     }

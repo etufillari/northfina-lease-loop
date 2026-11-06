@@ -82,6 +82,7 @@ describe('nominated during the lease', () => {
       action: 'return',
       actor: 'cust-aino',
       asOf: RETURNED,
+      usageReadings: { 'ebike-003': 4800 },
     });
     expect(ended).toEqual({ ok: true });
     expect(await nomination(test.db)).toMatchObject({ until: '2027-11-17', active: true });
@@ -181,7 +182,13 @@ describe('nominated after the return', () => {
   beforeAll(async () => {
     test = await freshDb();
     const contractId = await ainoLease(test.db);
-    await endOfTerm(test.db, { contractId, action: 'return', actor: 'cust-aino', asOf: RETURNED });
+    await endOfTerm(test.db, {
+      contractId,
+      action: 'return',
+      actor: 'cust-aino',
+      asOf: RETURNED,
+      usageReadings: { 'ebike-003': 4800 },
+    });
     const nominated = await nominateSuccessor(test.db, {
       contractId,
       email: 'pekka@example.com',

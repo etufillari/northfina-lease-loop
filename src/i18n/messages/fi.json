@@ -26,7 +26,7 @@
   "status.sold": "Myyty",
   "status.returned": "Palautettu",
   "asset.modelYear": "Vuosimalli",
-  "asset.usage": "Käyttö",
+  "asset.usage": "Käyttö yhteensä",
   "asset.previousLives": "Aiemmat vuokrakaudet",
   "asset.listPrice": "Listahinta alv 0 %",
   "asset.priceListVersion": "Hinnasto {version}",
@@ -474,5 +474,14 @@
   "exit.minimum": "Ennenaikainen päättäminen maksaa aina vähintään {months} kuukauden käytön.",
   "secondLife.outcome.nominee": "Varaa nimetylle",
   "secondLife.nomineeGetsIt": "Edellinen vuokralainen nimesi seuraajaksi henkilön {name}, joten tuote ohittaa jonon: kunnostuksen jälkeen se on varattu hänelle tähän hintaan nimeämisen voimassaolon ajan.",
-  "passport.event.held_for_nominee": "Varattu nimetylle seuraajalle"
+  "passport.event.held_for_nominee": "Varattu nimetylle seuraajalle",
+  "usage.readingTitle": "Mittarilukema palautettaessa",
+  "usage.readingHelp": "Kokonaislukema matkamittarista, akkuraportista tai tuntimittarista. Se lisää tämän vuokrauksen käytön tuotteen historiaan.",
+  "usage.readingAtLeast": "Vähintään {value}: aiempi kokonaiskäyttö",
+  "usage.unit.km": "km",
+  "usage.unit.battery_cycles": "akun lataussyklit",
+  "usage.unit.engine_hours": "käyttötunnit",
+  "usage.sinceBattery": "Edellisen akun vaihdon jälkeen",
+  "usage.sinceService": "Edellisen huollon jälkeen",
+  "passport.detail.reading": "mittari {reading} (+{added} tällä vuokrauksella)"
 }

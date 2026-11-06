@@ -141,7 +141,8 @@ export function AssetCard({
           <Fact
             label={t('asset.usage')}
             value={t(`usage.${asset.usage.unit}`, {
-              value: formatNumber(asset.usage.value, locale),
+              // Lifetime usage: what the item has done in all its lives.
+              value: formatNumber(asset.usage.total ?? asset.usage.value, locale),
             })}
           />
           <Fact

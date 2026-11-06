@@ -64,6 +64,14 @@ export default async function AssetPage({
           <AssetFact
             label={t('asset.usage')}
             value={t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
+              value: formatNumber(asset.usage_total, locale),
+            })}
+          />
+          <AssetFact
+            label={t(
+              asset.usage_unit === 'engine_hours' ? 'usage.sinceService' : 'usage.sinceBattery'
+            )}
+            value={t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
               value: formatNumber(asset.usage_value, locale),
             })}
           />

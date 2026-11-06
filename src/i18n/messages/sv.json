@@ -26,7 +26,7 @@
   "status.sold": "Såld",
   "status.returned": "Returnerad",
   "asset.modelYear": "Årsmodell",
-  "asset.usage": "Användning",
+  "asset.usage": "Total användning",
   "asset.previousLives": "Tidigare leasingperioder",
   "asset.listPrice": "Listpris exkl. moms",
   "asset.priceListVersion": "Prislista {version}",
@@ -474,5 +474,14 @@
   "exit.minimum": "En förtida avslutning betalar alltid för minst {months} månaders användning.",
   "secondLife.outcome.nominee": "Reservera för den nominerade",
   "secondLife.nomineeGetsIt": "Den förra hyrestagaren nominerade {name}, så den går förbi kön: efter arbetet reserveras den för hen till det här priset tills nomineringen löper ut.",
-  "passport.event.held_for_nominee": "Reserverad för den nominerade nästa hyrestagaren"
+  "passport.event.held_for_nominee": "Reserverad för den nominerade nästa hyrestagaren",
+  "usage.readingTitle": "Mätarställning vid återlämning",
+  "usage.readingHelp": "Den totala siffran på vägmätaren, batterirapporten eller timmätaren. Den lägger till det här hyresavtalets användning i artikelns historik.",
+  "usage.readingAtLeast": "Minst {value}: det den redan hade gjort",
+  "usage.unit.km": "km",
+  "usage.unit.battery_cycles": "battericykler",
+  "usage.unit.engine_hours": "motortimmar",
+  "usage.sinceBattery": "Sedan senaste nya batteriet",
+  "usage.sinceService": "Sedan senaste stora service",
+  "passport.detail.reading": "mätare {reading} (+{added} under det här avtalet)"
 }

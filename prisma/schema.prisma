@@ -23,7 +23,11 @@ model Asset {
   serial_number           String   @unique
   condition               String // new | like_new | good | fair | poor
   usage_unit              String // km | battery_cycles | engine_hours
+  // Usage since the last reset: a new battery (e-bikes, laptops) or a major service (farm
+  // machines). Refurbishment thresholds read it (src/domain/usage.ts).
   usage_value             Int
+  // Lifetime usage, never reset; grows by the meter reading taken at each return.
+  usage_total             Int      @default(0)
   previous_lives          Int
   status                  String // available | reserved | returned
   // Set by the second-life desk: refurbished value + refurbishment, quoted instead of the

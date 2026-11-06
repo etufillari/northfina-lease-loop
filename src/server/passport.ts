@@ -2,10 +2,16 @@
 // plus the CO2 the current life avoids. CO2 per docs/DECISIONS.md:
 //   manufacturing_new_kg × (1 − refurbishment_share_of_new) × remaining-value fraction,
 // where the fraction is today's market value over the price-list v1 price.
-import { loadCo2Factors, loadPriceLists, loadResidualCurves } from '@/data/load';
+import {
+  loadCo2Factors,
+  loadPriceLists,
+  loadRefurbishmentCosts,
+  loadResidualCurves,
+} from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { listPriceOn } from '@/domain/price-list';
 import { ageInMonths, marketValueCents } from '@/domain/residual';
+import { valueUsage } from '@/domain/usage';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { toAsset } from './assets';
 import { lifeCo2Kg, ORIGINAL_PRICE_DATE } from './second-life';
@@ -54,7 +60,7 @@ export async function assetPassport(
   if (!row) return null;
   const asset = toAsset(row);
 
-  const [rows, priceLists, curves, factors] = await Promise.all([
+  const [rows, priceLists, curves, factors, costs] = await Promise.all([
     db.assetEvent.findMany({
       where: { asset_id: assetId },
       orderBy: [{ on_date: 'asc' }, { id: 'asc' }],
@@ -62,6 +68,7 @@ export async function assetPassport(
     loadPriceLists(),
     loadResidualCurves(),
     loadCo2Factors(),
+    loadRefurbishmentCosts(),
   ]);
   const events = rows.map((event) => ({
     id: event.id,
@@ -79,7 +86,7 @@ export async function assetPassport(
         originalListPriceCents: v1.priceCents,
         category: asset.category,
         condition: asset.condition,
-        usageValue: asset.usage.value,
+        usageValue: valueUsage(asset, costs),
         ageMonths: ageInMonths(asset.model_year, asOf),
       },
       curves

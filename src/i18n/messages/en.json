@@ -38,7 +38,7 @@
   "status.sold": "Sold",
   "status.returned": "Returned",
   "asset.modelYear": "Model year",
-  "asset.usage": "Usage",
+  "asset.usage": "Lifetime usage",
   "asset.previousLives": "Previous leases",
   "asset.listPrice": "List price excl. VAT",
   "asset.priceListVersion": "Price list {version}",
@@ -474,5 +474,14 @@
   "exit.minimum": "An early exit always pays for at least {months} months of use.",
   "secondLife.outcome.nominee": "Hold for the nominee",
   "secondLife.nomineeGetsIt": "The last lessee nominated {name}, so it skips the waiting list: after the work it is held for them at this price until their nomination runs out.",
-  "passport.event.held_for_nominee": "Held for the nominated next lessee"
+  "passport.event.held_for_nominee": "Held for the nominated next lessee",
+  "usage.readingTitle": "Meter reading at the return",
+  "usage.readingHelp": "The lifetime figure on the odometer, the battery report or the hour meter. It adds what this lease used to the item's history.",
+  "usage.readingAtLeast": "At least {value}: what it had already done",
+  "usage.unit.km": "km",
+  "usage.unit.battery_cycles": "battery cycles",
+  "usage.unit.engine_hours": "engine hours",
+  "usage.sinceBattery": "Since the last new battery",
+  "usage.sinceService": "Since the last major service",
+  "passport.detail.reading": "meter {reading} (+{added} on this lease)"
 }

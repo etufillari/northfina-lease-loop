@@ -210,8 +210,25 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
     });
     expect(tooEarly).toEqual({ ok: false, reason: 'term_not_ended' });
 
-    const exit = await executeEarlyExit(db, { contractId, actor: AINO, asOf: '2027-05-06' });
+    const exitInput = { contractId, actor: AINO, asOf: '2027-05-06' };
+    // Every returning item needs its meter reading, never below what it had already done.
+    expect(await executeEarlyExit(db, exitInput)).toEqual({
+      ok: false,
+      reason: 'usage_reading_missing',
+    });
+    const exit = await executeEarlyExit(db, { ...exitInput, usageReadings: { 'ebike-003': 2350 } });
     expect(exit.ok).toBe(true);
+    // Six months of riding: 2,350 km, added to both counters and noted on the passport.
+    const bike = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(bike).toMatchObject({ usage_total: 2350, usage_value: 2350 });
+    const returned = await db.assetEvent.findFirstOrThrow({
+      where: { asset_id: 'ebike-003', type: 'returned' },
+    });
+    expect(JSON.parse(returned.details_json!)).toMatchObject({
+      reason: 'early_exit',
+      usageReading: 2350,
+      usageAdded: 2350,
+    });
     const contract = await getContract(db, contractId);
     expect(contract?.status).toBe('ended_early_exit');
     // The exit invoice was issued with 30 days to pay.

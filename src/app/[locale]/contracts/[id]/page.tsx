@@ -42,7 +42,7 @@ export default async function ContractPage({
   const pricesInclVat = holder?.type === 'consumer';
   const leasedAssets = await db.asset.findMany({
     where: { id: { in: contract.assets.map((a) => a.asset_id) } },
-    select: { id: true, make: true, model: true },
+    select: { id: true, make: true, model: true, usage_unit: true, usage_total: true },
     orderBy: { id: 'asc' },
   });
   const vatRates = await loadVatRates();
@@ -119,6 +119,12 @@ export default async function ContractPage({
           pricesInclVat={pricesInclVat}
           purchaseAtEnd={contract.purchase_at_end}
           termMonthsTotal={contract.term_months}
+          returnItems={leasedAssets.map((a) => ({
+            id: a.id,
+            name: `${a.make} ${a.model}`,
+            unit: a.usage_unit,
+            total: a.usage_total,
+          }))}
         />
       ) : null}
 

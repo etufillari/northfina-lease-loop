@@ -241,6 +241,7 @@
   "contract.sign": "Allkirjasta leping",
   "contract.signing": "Allkirjastan…",
   "contract.error.invalidName": "Allkirjastamiseks kirjuta oma täisnimi: vähemalt kaks tähte, numbreid mitte.",
+  "contract.error.nameMismatch": "Nimi peab olema sama mis sinu taotluses: {name}.",
   "contract.error.expired": "See pakkumine on aegunud.",
   "contract.error.taken": "Kahjuks liisis keegi teine just selle toote.",
   "contract.error.notApproved": "Seda taotlust ei saa veebis allkirjastada.",

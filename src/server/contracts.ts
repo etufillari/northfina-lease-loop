@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { loadCoefficientTable } from '@/data/load';
 import { checkSignable, contractPeriod } from '@/domain/contract';
+import { signerMatchesApplicant } from '@/domain/names';
 import { contractOn } from '@/domain/state-on';
 import { hasLaterHistory } from './asset-state';
 import { percentOfCents } from '@/domain/money';
@@ -119,16 +120,21 @@ export type SignFailure =
   | 'signed_before_quote'
   | 'asset_not_available'
   | 'later_history'
-  | 'part_of_fleet';
+  | 'part_of_fleet'
+  | 'name_mismatch';
 
 export type SignContractResult =
   { ok: true; contract: Contract } | { ok: false; reason: SignFailure; contractId?: string };
 
-/** Whether `application` can be signed on `todayIso`: not yet signed, approved, quote valid. */
+/**
+ * Whether `application` can be signed on `todayIso` by `signerName`: not yet signed, approved,
+ * quote valid, and signed with the full name given in the application (see names.ts).
+ */
 export async function signingCheck(
   db: PrismaClient,
   application: StoredApplication,
-  todayIso: string
+  todayIso: string,
+  signerName: string
 ): Promise<{ ok: true } | { ok: false; reason: SignFailure; contractId?: string }> {
   const existing = await getContractForApplication(db, application.id);
   if (existing) return { ok: false, reason: 'already_signed', contractId: existing.id };
@@ -138,6 +144,9 @@ export async function signingCheck(
     signDate: todayIso,
   });
   if (!check.ok) return { ok: false, reason: check.reason };
+  if (!signerMatchesApplicant(signerName, application.answers.q_full_name)) {
+    return { ok: false, reason: 'name_mismatch' };
+  }
   if (await hasLaterHistory(db, application.assetId, todayIso)) {
     return { ok: false, reason: 'later_history' };
   }
@@ -225,7 +234,7 @@ export async function signContract(
   if (!application) return { ok: false, reason: 'application_not_found' };
   // A fleet is signed as a whole (see fleets.ts), never one item at a time.
   if (application.fleetId) return { ok: false, reason: 'part_of_fleet' };
-  const check = await signingCheck(db, application, todayIso);
+  const check = await signingCheck(db, application, todayIso, input.signerName);
   if (!check.ok) return check;
 
   const table = await loadCoefficientTable();

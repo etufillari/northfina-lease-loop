@@ -114,6 +114,7 @@ export default async function ApplicationPage({
           <SignContractForm
             target={{ applicationId: application.id }}
             defaultName={application.applicantName ?? ''}
+            applicantFullName={answers.q_full_name}
             locale={locale}
           />
         </>

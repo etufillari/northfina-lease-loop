@@ -150,6 +150,7 @@ export default async function FleetOverviewPage({ params }: PageProps<'/[locale]
           <SignContractForm
             target={{ fleetId: fleet.id }}
             defaultName={fleet.applicantName ?? ''}
+            applicantFullName={fleet.applications[0]?.answers.q_full_name}
             locale={locale}
           />
         </>

@@ -196,7 +196,7 @@ export async function signFleet(
   const applications = await listFleetApplications(db, input.fleetId);
   if (applications.length === 0) return { ok: false, reason: 'fleet_not_found' };
   for (const application of applications) {
-    const check = await signingCheck(db, application, todayIso);
+    const check = await signingCheck(db, application, todayIso, input.signerName);
     if (!check.ok) return { ok: false, reason: check.reason, assetId: application.assetId };
   }
 

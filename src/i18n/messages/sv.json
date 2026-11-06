@@ -241,6 +241,7 @@
   "contract.sign": "Skriv under avtalet",
   "contract.signing": "Skriver under…",
   "contract.error.invalidName": "Skriv ditt fullständiga namn för att underteckna: minst två bokstäver, inga siffror.",
+  "contract.error.nameMismatch": "Namnet måste vara detsamma som i din ansökan: {name}.",
   "contract.error.expired": "Den här offerten har gått ut.",
   "contract.error.taken": "Tyvärr har någon annan just leasat den här artikeln.",
   "contract.error.notApproved": "Den här ansökan kan inte skrivas under online.",

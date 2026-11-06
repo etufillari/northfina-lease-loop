@@ -51,6 +51,12 @@ export async function getAsset(db: PrismaClient, id: string): Promise<Asset | nu
   return row ? toAsset(row) : null;
 }
 
+/** An item in words, for a customer to read. Falls back to the id. */
+export async function assetName(db: PrismaClient, id: string): Promise<string> {
+  const row = await db.asset.findUnique({ where: { id }, select: { make: true, model: true } });
+  return row ? `${row.make} ${row.model}` : id;
+}
+
 export async function listAssets(
   db: PrismaClient,
   filter: { category?: AssetCategory } = {}

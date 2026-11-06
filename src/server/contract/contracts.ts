@@ -25,6 +25,7 @@ import {
   type UpcomingVatChange,
   type VatChange,
 } from '@/domain/invoicing/vat-change';
+import { customerAddress } from '@/domain/notifications';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { getApplication } from '../application/applications';
 import { toAsset } from '../assets/assets';
@@ -314,6 +315,16 @@ export async function signContract(
           life_number: life.life_number,
           invoice_count: invoices.length,
         },
+        notify:
+          signatoryId === undefined
+            ? []
+            : [
+                {
+                  to: customerAddress(customer.id),
+                  kind: 'contract_signed',
+                  item: `${assetRow.make} ${assetRow.model}`,
+                },
+              ],
       },
       async (tx) => {
         const taken = await tx.asset.updateMany({

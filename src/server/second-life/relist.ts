@@ -11,6 +11,7 @@ import {
   type MarketValue,
   type RelistProblem,
 } from '@/domain/second-life/second-life';
+import { customerAddress } from '@/domain/notifications';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { toAsset } from '../assets/assets';
 import { withAudit } from '../audit';
@@ -101,6 +102,11 @@ export async function relistAsset(
   if (!previewed.ok) return previewed;
   const { preview } = previewed;
 
+  const held = await db.asset.findUniqueOrThrow({
+    where: { id: assetId },
+    select: { reserved_for: true, make: true, model: true },
+  });
+
   try {
     const row = await withAudit(
       db,
@@ -115,6 +121,16 @@ export async function relistAsset(
           relist_price_cents: preview.market_value_cents,
           age_months: preview.age_months,
         },
+        notify:
+          held.reserved_for === null
+            ? []
+            : [
+                {
+                  to: customerAddress(held.reserved_for),
+                  kind: 'ready_for_you',
+                  item: `${held.make} ${held.model}`,
+                },
+              ],
       },
       async (tx) => {
         const latest = await tx.assetLife.findFirst({
@@ -166,7 +182,7 @@ export async function releaseAsset(
 
   const existing = await db.asset.findUnique({
     where: { id: assetId },
-    select: { reserved_for: true },
+    select: { reserved_for: true, make: true, model: true },
   });
   if (!existing) return { ok: false, reason: 'asset_not_found' };
 
@@ -179,6 +195,16 @@ export async function releaseAsset(
         entityType: 'asset',
         entityId: assetId,
         details: { held_for: existing.reserved_for },
+        notify:
+          existing.reserved_for === null
+            ? []
+            : [
+                {
+                  to: customerAddress(existing.reserved_for),
+                  kind: 'hold_ended',
+                  item: `${existing.make} ${existing.model}`,
+                },
+              ],
       },
       async (tx) => {
         const released = await tx.asset.updateMany({

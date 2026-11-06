@@ -1,7 +1,9 @@
 // Audit trail: every change to business data writes an AuditLog row in the SAME database
 // transaction as the change. If either write fails, both are rolled back, so the database
 // can never hold a change that nobody can explain.
+import { customerAddress, type AddressedNotification } from '@/domain/notifications';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { publish } from './notifications/bus';
 
 /** The actor on work nobody asked for, such as the scheduler's. */
 export const SYSTEM_ACTOR = 'system';
@@ -15,6 +17,8 @@ export type AuditEntry = {
   entityId: string;
   /** Anything useful for a later reader, e.g. `{ from: 'available', to: 'reserved' }`. Stored as JSON. */
   details?: unknown;
+  /** Who to tell once this has been saved. The actor is skipped: they can see the result. */
+  notify?: readonly AddressedNotification[];
 };
 
 export type TransactionClient = Prisma.TransactionClient;
@@ -26,14 +30,16 @@ export type TransactionClient = Prisma.TransactionClient;
  *
  *   const asset = await withAudit(db, { actor, action: 'asset.status_changed', ... },
  *     (tx) => tx.asset.update({ where: { id }, data: { status } }));
+ *
+ * Notifications go out after the commit, so a change that rolls back tells nobody.
  */
 export async function withAudit<T>(
   db: PrismaClient,
   entry: AuditEntry,
   work: (tx: TransactionClient) => Promise<T>
 ): Promise<T> {
-  return db.$transaction(async (tx) => {
-    const result = await work(tx);
+  const result = await db.$transaction(async (tx) => {
+    const saved = await work(tx);
     await tx.auditLog.create({
       data: {
         actor: entry.actor,
@@ -43,8 +49,13 @@ export async function withAudit<T>(
         details_json: entry.details === undefined ? null : JSON.stringify(entry.details),
       },
     });
-    return result;
+    return saved;
   });
+
+  for (const notification of entry.notify ?? []) {
+    if (notification.to !== customerAddress(entry.actor)) publish(notification);
+  }
+  return result;
 }
 
 export type AuditLogEntry = {

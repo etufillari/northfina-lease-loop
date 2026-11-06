@@ -12,7 +12,9 @@ import {
   passOnCandidates,
   type EndOutcome,
 } from '@/domain/end-of-term/end-of-term';
+import { customerAddress } from '@/domain/notifications';
 import type { PrismaClient } from '@/generated/prisma/client';
+import { assetName } from '../assets/assets';
 import { SYSTEM_ACTOR, withAudit } from '../audit';
 import { contractViews, getContract, toContract, type ContractView } from '../contract/contracts';
 import { currentDate } from '../date/app-date';
@@ -34,6 +36,8 @@ async function closeContract(
   const invoice =
     outcome === 'bought_out' ? buyoutInvoice(contract, await loadVatRates(), endDate) : null;
 
+  const item = await assetName(db, contract.asset_id);
+
   await withAudit(
     db,
     {
@@ -50,6 +54,14 @@ async function closeContract(
         passed_to: passedTo,
         buyout_invoice_cents: invoice?.total_cents ?? null,
       },
+      notify: [
+        ...(passedTo === null
+          ? []
+          : [{ to: customerAddress(passedTo), kind: 'passed_to_you' as const, item }]),
+        ...(actor === SYSTEM_ACTOR
+          ? [{ to: customerAddress(contract.customer_id), kind: 'lease_closed' as const, item }]
+          : []),
+      ],
     },
     async (tx) => {
       // The condition is in the update itself, so a contract can only be closed once.

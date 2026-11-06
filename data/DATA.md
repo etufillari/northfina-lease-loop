@@ -8,6 +8,8 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 
 **Added by this team:** the 9 used items in `assets.json` also have `first_leased_on` and `first_lease_price_cents`. These are made up, because the residual curve needs an age and a first-lease price, and the original data only has `model_year`.
 
+**Added by this team:** the `income_review` rule in `questions.json`, and all `why_we_ask` and hint translations. A consumer with no income on record is asked for one on any deal, and goes to a person if it is still unknown.
+
 ## Conventions
 
 - **Money is integer euro cents.** `389000` means €3,890.00. Prices are **net (VAT excluded)** unless a field says otherwise.

@@ -1,7 +1,9 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { customerAddress } from '@/domain/notifications';
 import { listAuditLog, withAudit, type AuditEntry } from './audit';
+import { subscribe } from './notifications/bus';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -113,5 +115,61 @@ describe('listAuditLog', () => {
     await withAudit(db, entry, reserve);
     await withAudit(db, entry, reserve);
     expect(await listAuditLog(db, 1)).toHaveLength(1);
+  });
+});
+
+describe('notifications from withAudit', () => {
+  const to = customerAddress('cust-a');
+  const notify = [{ to, kind: 'hold_ended', item: 'Bike' }] as const;
+  const entry = {
+    actor: 'staff-dealer',
+    action: 'test.done',
+    entityType: 'test',
+    entityId: '1',
+    notify,
+  };
+
+  function listen() {
+    const received: unknown[] = [];
+    const stop = subscribe([to], (notification) => received.push(notification));
+    return { received, stop };
+  }
+
+  it('tells the person once the change is saved', async () => {
+    const { received, stop } = listen();
+
+    await withAudit(db, entry, async () => undefined);
+    stop();
+
+    expect(received).toEqual([{ kind: 'hold_ended', item: 'Bike' }]);
+  });
+
+  it('tells nobody when the change rolls back', async () => {
+    const { received, stop } = listen();
+
+    await expect(
+      withAudit(db, entry, async () => {
+        throw new Error('nope');
+      })
+    ).rejects.toThrow('nope');
+    stop();
+
+    expect(received).toEqual([]);
+  });
+
+  it('skips the person who made the change', async () => {
+    const { received, stop } = listen();
+
+    await withAudit(db, { ...entry, actor: 'cust-a' }, async () => undefined);
+    stop();
+
+    expect(received).toEqual([]);
+  });
+
+  it('keeps the notification out of the audit details', async () => {
+    await withAudit(db, entry, async () => undefined);
+
+    const [row] = await listAuditLog(db);
+    expect(row?.details).toBeNull();
   });
 });

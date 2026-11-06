@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
-import type { Locale } from '@/i18n/locales';
+import { intlLocale, type Locale } from '@/i18n/locales';
 
 import { EmptyState } from '@/components/states/empty-state';
 import { ErrorState } from '@/components/states/error-state';
@@ -18,15 +18,18 @@ type ContractListItem = {
   application_id: string;
   customer_id: string;
   asset_id: string;
+  asset_name: string;
   signed_on: string;
   start_on: string;
   planned_end_on: string;
   actual_end_on: string | null;
   passed_to: string | null;
+  passed_to_name: string | null;
   status: 'active' | 'bought_out' | 'returned' | 'passed_on' | 'exited_early';
   term_months: number;
   monthly_net_rent_cents: number;
   buyout_cents: number;
+  total_cents: number;
   end_choice: 'not_due' | 'open' | 'expired' | 'closed';
   choice_deadline: string;
 };
@@ -243,8 +246,10 @@ export default function ContractsList({ locale }: ContractsListProps) {
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
-            <p className="text-xs text-stone-500">{t('account.contracts.assetId')}</p>
-            <p className="mt-1 break-all text-sm font-medium text-stone-200">{contract.asset_id}</p>
+            <p className="text-xs text-stone-500">{t('contract.asset')}</p>
+            <p className="mt-1 break-all text-sm font-medium text-stone-200">
+              {contract.asset_name}
+            </p>
           </div>
 
           <div>
@@ -264,7 +269,7 @@ export default function ContractsList({ locale }: ContractsListProps) {
           <div>
             <p className="text-xs text-stone-500">{t('account.contracts.monthlyRent')}</p>
             <p className="mt-1 text-sm font-medium text-stone-200">
-              {formatEuro(contract.monthly_net_rent_cents, locale)}
+              {formatEuro(contract.monthly_net_rent_cents, intlLocale[locale])}
             </p>
           </div>
 
@@ -272,6 +277,13 @@ export default function ContractsList({ locale }: ContractsListProps) {
             <p className="text-xs text-stone-500">{t('account.contracts.term')}</p>
             <p className="mt-1 text-sm font-medium text-stone-200">
               {contract.term_months} {t('account.contracts.months')}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-stone-500">{t('contract.totalCost')}</p>
+            <p className="mt-1 text-sm font-medium text-stone-200">
+              {formatEuro(contract.total_cents, intlLocale[locale])}
             </p>
           </div>
         </div>
@@ -332,7 +344,7 @@ export default function ContractsList({ locale }: ContractsListProps) {
                       id={`pass-on-${contract.id}`}
                       value={selectedCandidateId}
                       onChange={(event) => setSelectedCandidateId(event.target.value)}
-                      className="w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none focus:border-emerald-500"
+                      className="w-full appearance-none rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none focus:border-emerald-500"
                     >
                       <option value="">{t('account.contracts.selectCustomerPlaceholder')}</option>
                       {candidates.map((candidate) => (
@@ -389,18 +401,12 @@ export default function ContractsList({ locale }: ContractsListProps) {
               {contract.actual_end_on ? formatDate(contract.actual_end_on, locale) : '—'}
             </p>
 
-            {contract.status === 'passed_on' && contract.passed_to && (
+            {contract.status === 'passed_on' && contract.passed_to_name && (
               <p className="mt-3 text-sm text-stone-400">
-                {t('account.contracts.passedTo')}: {contract.passed_to}
+                {t('account.contracts.passedTo')}: {contract.passed_to_name}
               </p>
             )}
           </div>
-        )}
-
-        {actionError && (
-          <p className="mt-4 text-sm text-red-400" role="alert">
-            {actionError}
-          </p>
         )}
       </article>
     );

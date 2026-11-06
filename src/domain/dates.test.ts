@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addMonths, dateParts, isIsoDate } from './dates';
+import { addDays, addMonths, dateParts, isIsoDate, daysInMonth } from './dates';
 
 describe('addDays', () => {
   it('adds days within a month', () => {
@@ -86,5 +86,19 @@ describe('dateParts', () => {
 
   it('throws on another shape', () => {
     expect(() => dateParts('today')).toThrow(RangeError);
+  });
+});
+
+describe('daysInMonth', () => {
+  it('knows short and long months', () => {
+    expect(daysInMonth(2026, 1)).toBe(31);
+    expect(daysInMonth(2026, 4)).toBe(30);
+  });
+
+  it('knows leap years, including the century rule', () => {
+    expect(daysInMonth(2027, 2)).toBe(28);
+    expect(daysInMonth(2028, 2)).toBe(29);
+    expect(daysInMonth(1900, 2)).toBe(28);
+    expect(daysInMonth(2000, 2)).toBe(29);
   });
 });

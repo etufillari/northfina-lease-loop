@@ -1,25 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { formatEuro } from '@/domain/money';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
-import type { Locale } from '@/i18n/locales';
-
-type InvoiceListItem = {
-  id: string;
-  contract_id: string;
-  sequence: number;
-  kind: 'rent' | 'down_payment' | 'buyout';
-  invoice_date: string;
-  due_date: string;
-  total_cents: number;
-  status: 'issued' | 'paid' | 'cancelled';
-};
+import { intlLocale, type Locale } from '@/i18n/locales';
+import type { InvoiceView } from '@/server/invoicing/invoices';
 
 type ApiResponse = {
   success: boolean;
-  data?: InvoiceListItem[];
+  data?: InvoiceView[];
   error?: {
     message?: string;
   };
@@ -32,27 +23,13 @@ type InvoicesListProps = {
 export default function InvoicesList({ locale }: InvoicesListProps) {
   const t = useMemo(() => getT(locale), [locale]);
 
-  const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }),
-    [locale]
-  );
-
-  const formatDate = useCallback(
-    (value: string) => {
-      const date = new Date(`${value}T00:00:00`);
-      return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
-    },
-    [dateFormatter]
-  );
+  const formatMoney = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const formatDate = (isoDate: string) => formatIsoDate(isoDate, locale, 'medium');
+  const formatChange = (cents: number) => `${cents > 0 ? '+' : ''}${formatMoney(cents)}`;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,11 +95,16 @@ export default function InvoicesList({ locale }: InvoicesListProps) {
           className="flex flex-col gap-4 rounded-xl border border-stone-800 bg-stone-900/40 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0 space-y-2">
-            <h2 className="font-medium text-stone-100">
-              {t('account.invoices.number', {
-                number: invoice.sequence,
-              })}
-            </h2>
+            <div className="flex flex-wrap items-baseline gap-x-3">
+              <h2 className="font-medium text-stone-100">
+                {t('account.invoices.number', {
+                  number: invoice.sequence,
+                })}
+              </h2>
+              <span className="text-sm text-stone-400">
+                {t(`contract.invoiceKind.${invoice.kind}`)}
+              </span>
+            </div>
 
             <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-stone-400">
               <span>
@@ -132,11 +114,31 @@ export default function InvoicesList({ locale }: InvoicesListProps) {
                 {t('account.invoices.dueDate')}: {formatDate(invoice.due_date)}
               </span>
             </div>
+
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-stone-400">
+              <span>
+                {t('contract.net')}: {formatMoney(invoice.net_cents)}
+              </span>
+              <span>
+                {t('contract.vat')} ({formatNumber(invoice.vat_rate_percent, locale)} %):{' '}
+                {formatMoney(invoice.vat_cents)}
+              </span>
+            </div>
+
+            {invoice.vat_change && (
+              <p className="text-sm text-amber-300">
+                {t('contract.vatChangeNote', {
+                  change: formatChange(invoice.vat_change.total_change_cents),
+                  from: formatNumber(invoice.vat_change.from_percent, locale),
+                  to: formatNumber(invoice.vat_change.to_percent, locale),
+                })}
+              </p>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center justify-between gap-4 sm:flex-col sm:items-end">
             <span className="font-semibold tabular-nums text-stone-100">
-              {formatEuro(invoice.total_cents, locale)}
+              {formatMoney(invoice.total_cents)}
             </span>
 
             <span

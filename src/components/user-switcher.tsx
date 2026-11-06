@@ -8,10 +8,12 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { can, type IdentitySummary } from '@/domain/identity';
+import { notificationAddresses } from '@/domain/notifications';
 import { getT, type Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
 import { DemoDateControl } from './demo-date-control';
+import { NotificationToasts } from './notification-toasts';
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -139,7 +141,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   const currentUser = users.find((user) => user.id === currentId);
 
   const links: { href: string; label: string }[] = [];
-  if (currentUser?.kind === 'customer') {
+  if (currentUser?.kind === 'customer' || currentUser?.kind === 'signatory') {
     links.push({
       href: `/${locale}/account/applications`,
       label: t('account.applications.title'),
@@ -151,10 +153,17 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   if (currentUser && can(currentUser.role, 'second_life.refurbish')) {
     links.push({ href: `/${locale}/dealer`, label: t('dealer.title') });
   }
+  if (currentUser && can(currentUser.role, 'audit_log.view')) {
+    links.push({ href: `/${locale}/admin/audit-log`, label: t('audit.title') });
+  }
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       {currentUser?.role === 'admin' && <DemoDateControl locale={locale} />}
+
+      {currentUser && notificationAddresses(currentUser).length > 0 && (
+        <NotificationToasts key={currentUser.id} locale={locale} />
+      )}
 
       {links.map(({ href, label }) => (
         <Link

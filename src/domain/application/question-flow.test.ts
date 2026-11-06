@@ -337,3 +337,30 @@ describe('toBlocked', () => {
     });
   });
 });
+
+describe('questionsToAsk: income', () => {
+  const smallDeal: Deal = { ...consumerBike, financed_amount_cents: 129_900 };
+  const asked = (deal: Deal) => ids(questionsToAsk(questions, deal, {}).questions);
+
+  it('does not ask on a small deal when the record holds the income', () => {
+    expect(asked(smallDeal)).not.toContain('q_monthly_income');
+  });
+
+  it('asks on a small deal when no income is on record', () => {
+    expect(asked({ ...smallDeal, income_unknown: true })).toContain('q_monthly_income');
+  });
+
+  it('still asks on a big deal', () => {
+    expect(asked(consumerBike)).toContain('q_monthly_income');
+  });
+
+  it('does not ask a company, which has no income check', () => {
+    const company: Deal = { ...smallDeal, customer_type: 'company', income_unknown: true };
+    expect(asked(company)).not.toContain('q_monthly_income');
+  });
+
+  it('waits until the customer type is known', () => {
+    const unknown: Deal = { ...smallDeal, customer_type: undefined, income_unknown: true };
+    expect(asked(unknown)).not.toContain('q_monthly_income');
+  });
+});

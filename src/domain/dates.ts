@@ -40,6 +40,11 @@ export function addMonths(isoDate: string, months: number): string {
   const monthIndex = year * MONTHS_PER_YEAR + (month - 1) + months;
   const targetYear = Math.floor(monthIndex / MONTHS_PER_YEAR);
   const targetMonth = monthIndex - targetYear * MONTHS_PER_YEAR;
-  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const lastDay = daysInMonth(targetYear, targetMonth + 1);
   return toIso(Date.UTC(targetYear, targetMonth, Math.min(day, lastDay)));
+}
+
+/** How many days a month has. `month` counts from 1, so 2 is February. */
+export function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }

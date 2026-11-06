@@ -17,7 +17,9 @@ import {
   type Blocked,
   type Deal,
 } from '@/domain/application/question-flow';
+import { ADMIN_ADDRESS, customerAddress } from '@/domain/notifications';
 import type { Application as ApplicationRow, PrismaClient } from '@/generated/prisma/client';
+import { assetName } from '../assets/assets';
 import { currentDate } from '../date/app-date';
 import { withAudit } from '../audit';
 import { quoteAsset, type AssetQuote, type QuoteAssetFailureReason } from '../pricing/quotes';
@@ -96,6 +98,7 @@ async function prepare(
     category: assetCategorySchema.parse(asset.category),
     financed_amount_cents: financedCents,
     term_months: termMonths,
+    income_unknown: request.customer.type !== 'consumer',
   };
 
   const { questions: allQuestions } = await loadQuestions();
@@ -280,6 +283,7 @@ export async function submitApplication(
   });
 
   const id = `app-${randomUUID()}`;
+  const item = await assetName(db, request.assetId);
   const row = await withAudit(
     db,
     {
@@ -293,6 +297,10 @@ export async function submitApplication(
         decision: verdict.decision,
         reasons: verdict.reasons,
       },
+      notify:
+        verdict.decision === 'manual_review'
+          ? [{ to: ADMIN_ADDRESS, kind: 'review_waiting', item }]
+          : [],
     },
     (tx) =>
       tx.application.create({
@@ -334,10 +342,13 @@ export async function reviewApplication(
   input: { id: string; decision: 'approved' | 'rejected'; actor: string }
 ): Promise<ReviewResult> {
   const { id, decision, actor } = input;
-  if (!(await db.application.findUnique({ where: { id }, select: { id: true } }))) {
-    return { ok: false, reason: 'not_found' };
-  }
-  const reviewedOn = await currentDate(db);
+  const found = await db.application.findUnique({
+    where: { id },
+    select: { customer_id: true, asset_id: true },
+  });
+  if (!found) return { ok: false, reason: 'not_found' };
+
+  const [reviewedOn, item] = await Promise.all([currentDate(db), assetName(db, found.asset_id)]);
 
   try {
     await withAudit(
@@ -348,6 +359,13 @@ export async function reviewApplication(
         entityType: 'application',
         entityId: id,
         details: { from: 'manual_review', to: decision },
+        notify: [
+          {
+            to: customerAddress(found.customer_id),
+            kind: decision === 'approved' ? 'application_approved' : 'application_rejected',
+            item,
+          },
+        ],
       },
       async (tx) => {
         // The condition is in the update itself, so two reviewers cannot both settle it.

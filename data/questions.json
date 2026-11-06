@@ -22,6 +22,10 @@
       "text": "A politically exposed person is never auto-approved: the case goes to manual review by a person."
     },
     {
+      "id": "income_review",
+      "text": "A consumer with no known income cannot pass the affordability check: the case goes to manual review by a person."
+    },
+    {
       "id": "financed_limits",
       "text": "Financed amount must fit a coefficient-table band (300 EUR to 250,000 EUR)."
     }

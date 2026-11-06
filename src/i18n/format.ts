@@ -12,6 +12,15 @@ export function formatIsoDate(
   );
 }
 
+/** A moment as it reads in Finland, wherever the server runs: "6 Nov 2026, 12:30". */
+export function formatDateTime(isoDateTime: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(intlLocale[locale], {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Europe/Helsinki',
+  }).format(new Date(isoDateTime));
+}
+
 /** 18400 → "18,400" (en) / "18 400" (fi). */
 export function formatNumber(
   value: number,

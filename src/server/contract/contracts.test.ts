@@ -497,6 +497,22 @@ describe('a signed contract never changes with the price list', () => {
     expect(await getContract(db, signed.id)).toMatchObject(locked);
   });
 
+  it('names the item, and says what the contract costs in total', async () => {
+    const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
+    const [view] = await contractViews(db, [signed]);
+
+    expect(view?.asset_name).toBe('Nordvolt Trail 500');
+    expect(view?.passed_to_name).toBeNull();
+    expect(view?.total_cents).toBe(486_612);
+  });
+
+  it('names who an item was passed on to', async () => {
+    const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
+    const [view] = await contractViews(db, [{ ...signed, passed_to: 'cust-wait-02' }]);
+
+    expect(view?.passed_to_name).toBe('Jonas Lind');
+  });
+
   it('compares with the list on the signing date, not today', async () => {
     const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
     await setDemoDate(db, { date: '2026-11-06', actor: 'test' });

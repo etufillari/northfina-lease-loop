@@ -8,9 +8,11 @@ import type { Locale } from '@/i18n/locales';
 
 type AccountSidebarProps = {
   locale: Locale;
+  /** A signatory signs for a company, but cannot read its contracts or invoices. */
+  applicationsOnly?: boolean;
 };
 
-export default function AccountSidebar({ locale }: AccountSidebarProps) {
+export default function AccountSidebar({ locale, applicationsOnly = false }: AccountSidebarProps) {
   const pathname = usePathname();
   const t = getT(locale);
 
@@ -19,14 +21,12 @@ export default function AccountSidebar({ locale }: AccountSidebarProps) {
       label: t('account.applications.title'),
       href: `/${locale}/account/applications`,
     },
-    {
-      label: t('account.invoices.title'),
-      href: `/${locale}/account/invoices`,
-    },
-    {
-      label: t('account.contracts.title'),
-      href: `/${locale}/account/contracts`,
-    },
+    ...(applicationsOnly
+      ? []
+      : [
+          { label: t('account.invoices.title'), href: `/${locale}/account/invoices` },
+          { label: t('account.contracts.title'), href: `/${locale}/account/contracts` },
+        ]),
   ];
 
   return (

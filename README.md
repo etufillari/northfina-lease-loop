@@ -18,7 +18,7 @@ Everything in the app is rules, data and algorithms: no AI, ML or LLM inside the
 | Smart Problem                     | Where to see it                                                                     | Decisions                         |
 | --------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------- |
 | 🧾 1. Lock the price, not the tax | Quote and contract pages: VAT steps before signing, VAT per invoice date            | D-011, D-014, D-034, D-037        |
-| 🚪 2. Fair early exit             | Contract page, _Leave early_: a month slider and every line of the price            | D-033                             |
+| 🚪 2. Fair early exit             | Contract page, _Leave early_: a month slider and every line of the price            | D-033, D-039                      |
 | ♻️ 3. Second-life matchmaking     | A returned item's page: valuation, refurbishment plan, ranked waiting list          | D-032, D-035                      |
 | 🧠 4. The smart question flow     | Quote page, _Apply_: only the questions that apply, "why we ask", answers set aside | D-022 to D-025, D-028, D-031      |
 | 💶 5. Money that adds up          | Contract invoices; property-based tests over random contracts                       | D-005, D-015 to D-017, D-037      |
@@ -103,7 +103,7 @@ Quote ebike-004 and fill in as **Norvi Logistics Oy**. The applicant can't sign 
 
 ### 8. Early exit: Aino leaves in month 7
 
-On the contract from card 1, _Leave early_ has a month slider. At **month 7** the page shows every line: the rents left, valued today at the band's interest rate, the buyout, and what the bike is worth now. **Buy it now: 4 166.39 €** with VAT; **hand it back now: 245.27 €**. Any month is a what-if; a choice can be confirmed only in the lease's current month, so move the demo date forward to confirm. Why this is fair: D-033.
+On the contract from card 1, _Leave early_ has a month slider. At **month 7** the page shows every line: the rents left, valued today at the band's interest rate, the buyout, and what the bike is worth now. **Buy it now: 4 189.82 €** with VAT; **hand it back now: 268.70 €**. Any month is a what-if; a choice can be confirmed only in the lease's current month, so move the demo date forward to confirm. Why this is fair: D-033; each rent is discounted from its own due date (D-039).
 
 ### 9. Second life: ebike-007 and the waiting list
 

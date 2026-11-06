@@ -7,7 +7,8 @@ import { connection } from 'next/server';
 import { AssetHistoryPanel } from '@/components/asset-history-panel';
 import { PriceCalculator } from '@/components/price-calculator';
 import { StatusBadge } from '@/components/status-badge';
-import { loadCoefficientTable, loadCustomers, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadCustomers } from '@/data/load';
+import { effectivePriceLists } from '@/server/second-life';
 import { effectiveVatRates } from '@/server/vat';
 import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
@@ -53,7 +54,7 @@ export default async function AssetPage({
 
   const [asset, priceLists, table, vatRates] = await Promise.all([
     getAsset(db, id),
-    loadPriceLists(),
+    effectivePriceLists(db),
     loadCoefficientTable(),
     effectiveVatRates(db),
   ]);
@@ -163,7 +164,12 @@ export default async function AssetPage({
               {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
             </time>
             {price.ok ? (
-              <> · {t('asset.priceListVersion', { version: price.priceListVersion })}</>
+              <>
+                {' · '}
+                {extras?.secondLifePriceCents
+                  ? t('asset.secondLifePrice')
+                  : t('asset.priceListVersion', { version: price.priceListVersion })}
+              </>
             ) : null}
           </p>
           {change ? (

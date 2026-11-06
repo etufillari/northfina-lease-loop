@@ -147,14 +147,22 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
         aria-invalid={error || undefined}
         className="min-w-0 flex-1 appearance-none rounded-none border-0 bg-transparent px-2 py-2 text-sm text-stone-800 shadow-none outline-none ring-0 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 dark:text-stone-100"
       >
-        <option value="" disabled>
+        <option
+          value=""
+          disabled
+          className="bg-stone-50 text-stone-800 dark:bg-stone-900 dark:text-stone-100"
+        >
           {loading ? t('session.loading') : t('session.guest')}
         </option>
 
         {customers.length > 0 && (
           <optgroup label={t('session.customers')}>
             {customers.map((user) => (
-              <option key={user.id} value={user.id}>
+              <option
+                key={user.id}
+                value={user.id}
+                className="bg-stone-50 text-stone-800 dark:bg-stone-900 dark:text-stone-100"
+              >
                 {optionLabel(user, t)}
               </option>
             ))}

@@ -35,3 +35,14 @@ export function listPriceOn(
 
   return { ok: true, priceCents, priceListVersion: priceList.version };
 }
+
+/**
+ * The list price a signed contract is priced from: the price locked in a longer-term offer
+ * when it was signed under one, otherwise the catalogue price on the signing day.
+ */
+export function contractListPrice(input: {
+  offer: { priceCents: number; priceListVersion: number } | null;
+  catalogue: ListPriceResult;
+}): ListPriceResult {
+  return input.offer ? { ok: true, ...input.offer } : input.catalogue;
+}

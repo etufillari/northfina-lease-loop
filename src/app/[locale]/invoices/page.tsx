@@ -13,13 +13,19 @@ import {
   loadCo2Factors,
   loadCoefficientTable,
   loadPriceLists,
+  loadRefurbishmentCosts,
   loadResidualCurves,
   loadSecondLifeDemand,
   loadVatRates,
 } from '@/data/load';
 import { assetConditionSchema, isoDateSchema } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
-import { earlyExitForContract } from '@/domain/early-exit';
+import {
+  checkReturnInspection,
+  earlyExitForContract,
+  type ReturnInspection,
+  worseCondition,
+} from '@/domain/early-exit';
 import {
   calculateAvoidedCo2,
   calculateBuyoutSettlement,
@@ -28,7 +34,7 @@ import {
 } from '@/domain/end-of-term';
 import { addMonthsClamped } from '@/domain/invoice-schedule';
 import { formatEuro } from '@/domain/money';
-import { listPriceOn } from '@/domain/price-list';
+import { loadContractPrice } from '@/server/contract-price';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
@@ -41,10 +47,13 @@ const querySchema = z.object({
   term: z.coerce.number().int().positive(),
   down: z.coerce.number().int().min(0).default(0),
   signedOn: isoDateSchema.optional(),
-  // Early exit: the month of the term to leave in (1 = the first rent) and the condition the
-  // item is returned in. Both are only inputs to the calculation, nothing is stored.
+  // Early exit: the month of the term to leave in (1 = the first rent) and the return
+  // inspection (condition, usage reading, inspector). Only inputs to the calculation; the
+  // early-exit route stores them when a return is confirmed.
   exitMonth: z.coerce.number().int().min(1).optional(),
   condition: assetConditionSchema.optional(),
+  usage: z.coerce.number().optional(),
+  inspectedBy: z.string().trim().max(100).optional(),
   token: z.string().optional(),
 });
 
@@ -64,15 +73,6 @@ export default async function InvoicesPage({
   const { asset: assetId, term, down, token } = query.data;
   const signedOn = query.data.signedOn ?? todayIso();
 
-  const offerReservation = token
-    ? await db.assetReservation.findFirst({
-        where: {
-          token,
-          asset_id: assetId,
-          reservation_type: 'offer',
-        },
-      })
-    : null;
   const [
     assets,
     priceLists,
@@ -81,6 +81,7 @@ export default async function InvoicesPage({
     residualCurves,
     secondLifeDemand,
     co2Factors,
+    refurbishmentCosts,
   ] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
@@ -89,25 +90,26 @@ export default async function InvoicesPage({
     loadResidualCurves(),
     loadSecondLifeDemand(),
     loadCo2Factors(),
+    loadRefurbishmentCosts(),
   ]);
 
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message locale={locale} text={t('apply.notFound')} />;
 
-  const effectiveOfferedOn = offerReservation?.offered_on ?? null;
-  const offerPrice =
-    offerReservation &&
-    offerReservation.list_price_cents !== null &&
-    offerReservation.price_list_version !== null
-      ? {
-          ok: true as const,
-          priceCents: offerReservation.list_price_cents,
-          priceListVersion: offerReservation.price_list_version,
-        }
-      : null;
-  const cataloguePriceOnSigned = listPriceOn(priceLists, asset.id, signedOn);
+  // The same price the early-exit route charges from: the offer's locked price, if any.
+  const contractPrice = await loadContractPrice(db, {
+    assetId: asset.id,
+    signedOn,
+    termMonths: term,
+    downPaymentCents: down,
+    token,
+    priceLists,
+  });
+  const effectiveOfferedOn = contractPrice.offeredOn;
+  const offerPrice = contractPrice.offer;
+  const cataloguePriceOnSigned = contractPrice.catalogue;
 
-  const price = offerPrice ?? cataloguePriceOnSigned;
+  const { price } = contractPrice;
   if (!price.ok) return <Message locale={locale} text={t('asset.noPrice')} />;
 
   const hasOfferPriceProtection = Boolean(
@@ -169,13 +171,28 @@ export default async function InvoicesPage({
 
   // Early exit: leave in the chosen month (the date of that month's rent row), default month 1.
   const exitMonth = Math.min(query.data.exitMonth ?? 1, quote.termMonths);
-  const exitCondition = query.data.condition ?? 'good';
+  // The return inspection starts from the asset's record (condition and usage at the start of
+  // the lease). An impossible inspection is shown as a problem and priced at the record instead.
+  const recorded: ReturnInspection = {
+    condition: worseCondition('good', asset.condition),
+    usageValue: asset.usage.value,
+  };
+  const requested: ReturnInspection = {
+    condition: query.data.condition ?? recorded.condition,
+    usageValue: query.data.usage ?? recorded.usageValue,
+  };
+  const inspectionCheck = checkReturnInspection(
+    { condition: asset.condition, usageValue: asset.usage.value },
+    requested
+  );
+  const inspection = inspectionCheck.ok ? requested : recorded;
   const earlyExit = earlyExitForContract({
     quote,
     signedOn,
     exitMonth,
-    condition: exitCondition,
+    inspection,
     asset,
+    refurbishmentCosts,
     residualCurves,
     vatRates,
   });
@@ -329,9 +346,11 @@ export default async function InvoicesPage({
         <EarlyExitOptions
           locale={locale}
           quote={earlyExit}
-          contract={{ asset: asset.id, term: quote.termMonths, down, signedOn }}
+          contract={{ asset: asset.id, term: quote.termMonths, down, signedOn, token }}
           exitMonth={exitMonth}
-          condition={exitCondition}
+          inspection={{ ...inspection, inspectedBy: query.data.inspectedBy ?? '' }}
+          inspectionProblem={inspectionCheck.ok ? undefined : inspectionCheck.problem}
+          recorded={{ condition: asset.condition, usage: asset.usage }}
           monthChoices={exitMonthChoices}
           firstListPriceCents={quote.listPriceCents}
           leaseEnded={asset.status === 'sold' || asset.status === 'returned'}

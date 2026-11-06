@@ -205,8 +205,8 @@ export async function markReturnReceived(
  * Dealer records the inspection after physical receipt.
  *
  * The inspection is saved on the ReturnRequest, and in the same transaction the lease ends:
- * the asset takes the inspected condition and usage and becomes `returned` (so it can enter
- * second-life matching), and the contract is marked `ended`. Refurbishment later changes the
+ * the asset takes the inspected condition and usage, becomes `returned` (so it can enter
+ * second-life matching) and counts one more previous life, and the contract is marked `ended`. Refurbishment later changes the
  * asset again (see return-completion.ts).
  *
  * Transition: received -> inspected
@@ -263,6 +263,10 @@ export async function inspectReturn(
           condition: { from: existing.asset.condition, to: inspection.condition },
           usageValue: { from: existing.asset.usage_value, to: inspection.usageValue },
           status: { from: existing.asset.status, to: 'returned' },
+          previousLives: {
+            from: existing.asset.previous_lives,
+            to: existing.asset.previous_lives + 1,
+          },
         },
         contract: { id: existing.contract_id, status: { from: 'active', to: 'ended' } },
       },
@@ -300,6 +304,8 @@ export async function inspectReturn(
           status: 'returned',
           condition: inspection.condition,
           usage_value: inspection.usageValue,
+          // This lease is over, so the item has been through one more life.
+          previous_lives: { increment: 1 },
         },
       });
 

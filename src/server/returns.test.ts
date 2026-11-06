@@ -401,6 +401,7 @@ describe('inspectReturn', () => {
       status: 'returned',
       condition: 'fair',
       usage_value: 18_400,
+      previous_lives: assetBefore.previous_lives + 1,
     });
 
     const endedContract = await db.contract.findUniqueOrThrow({ where: { id: contract.id } });
@@ -425,6 +426,10 @@ describe('inspectReturn', () => {
         condition: { from: assetBefore.condition, to: 'fair' },
         usageValue: { from: assetBefore.usage_value, to: 18_400 },
         status: { from: 'reserved', to: 'returned' },
+        previousLives: {
+          from: assetBefore.previous_lives,
+          to: assetBefore.previous_lives + 1,
+        },
       },
       contract: { id: contract.id, status: { from: 'active', to: 'ended' } },
     });
@@ -448,6 +453,7 @@ describe('inspectReturn', () => {
     expect(unchanged.status).toBe('received');
     expect(unchanged.inspected_at).toBeNull();
     expect(asset.status).toBe('reserved');
+    expect(asset.previous_lives).toBe(0);
   });
 
   it('rolls the inspection back when the asset is not on an active lease', async () => {

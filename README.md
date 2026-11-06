@@ -74,6 +74,14 @@ The same cards run as automated tests in
 traps (band boundary, minimum and maximum, broken business ID, reserved item) in
 [src/server/edge-cases.test.ts](src/server/edge-cases.test.ts).
 
+Money that adds up (Smart Problem 5) has its own suite,
+[src/domain/money-adds-up.test.ts](src/domain/money-adds-up.test.ts): 6,000 random contracts
+per run (fast-check) prove that every amount is whole cents rounded half-up once, that the
+invoices sum exactly to the contract total, and that due dates stay anchored (31 Jan → 28 Feb
+→ 31 Mar, 29 Feb 2028) with full, gap-free months. Money is checked against exact `BigInt`
+maths and dates against a separate calendar, so a bug cannot hide in the code and its test at
+once. Named tests cover each trap, including card 1 to the cent.
+
 ## How it is built
 
 | Where         | What                                                                                                                                                                             |

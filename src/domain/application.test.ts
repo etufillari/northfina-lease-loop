@@ -126,6 +126,34 @@ describe('decideApplication with the scenario cards', () => {
     expect(answers).toEqual({ q_customer_type: 'consumer' });
   });
 
+  it('ignores answers to hidden questions, and uses them again when the questions come back', () => {
+    // The form keeps a draft of everything typed; switching to company and back must not
+    // lose Aino's private-person answers, and while she is a company they must not count.
+    const context = contextFor('ebike-003', 'e_bike', 36);
+    const aino = {
+      q_customer_type: 'consumer',
+      q_full_name: 'Aino Virtanen',
+      q_birth_date: '1997-04-12',
+      q_email: 'aino.virtanen@example.com',
+      q_country: 'FI',
+      q_employment: 'employed',
+      q_monthly_income: '3200',
+      q_usage_purpose: 'commuting',
+    };
+    const asCompany = decideApplication(
+      questions,
+      { ...aino, q_customer_type: 'company' },
+      context
+    );
+    expect(asCompany.answers).not.toHaveProperty('q_birth_date');
+    expect(asCompany.answers).not.toHaveProperty('q_monthly_income');
+    expect(asCompany.evaluation.status).toBe('incomplete');
+
+    const backToConsumer = decideApplication(questions, aino, context);
+    expect(backToConsumer.answers).toEqual(aino);
+    expect(backToConsumer.evaluation.status).toBe('approved');
+  });
+
   it('is incomplete, not approved, while questions are unanswered', () => {
     const context = contextFor('ebike-003', 'e_bike', 36);
     expect(

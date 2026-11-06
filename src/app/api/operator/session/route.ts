@@ -1,6 +1,7 @@
+import { requireSameOrigin } from '@/server/request-origin';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
-import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import {
   createOperatorSession,
   OPERATOR_COOKIE,
@@ -8,10 +9,7 @@ import {
 } from '@/server/circular/operator-session';
 
 export const POST = handleRoute(async (request) => {
-  const target = new URL(request.url);
-  target.host = request.headers.get('host') ?? target.host;
-  if (request.headers.get('origin') !== target.origin)
-    throw new ApiError(403, 'FORBIDDEN', 'Same-origin request required');
+  requireSameOrigin(request);
   const { password } = await readJsonBody(
     request,
     z.strictObject({ password: z.string().min(1).max(200) })
@@ -21,10 +19,7 @@ export const POST = handleRoute(async (request) => {
   return ok({ signedIn: true });
 });
 export const DELETE = handleRoute(async (request) => {
-  const target = new URL(request.url);
-  target.host = request.headers.get('host') ?? target.host;
-  if (request.headers.get('origin') !== target.origin)
-    throw new ApiError(403, 'FORBIDDEN', 'Same-origin request required');
+  requireSameOrigin(request);
   (await cookies()).delete(OPERATOR_COOKIE);
   return ok({ signedIn: false });
 });

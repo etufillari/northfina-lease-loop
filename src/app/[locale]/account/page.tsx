@@ -13,6 +13,8 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getActiveUser } from '@/server/active-user';
+import { db } from '@/server/db';
+import { listContractsForCustomer } from '@/server/applications';
 import { todayIso } from '@/server/today';
 
 export default async function AccountPage({ params }: PageProps<'/[locale]/account'>) {
@@ -23,9 +25,15 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
   const t = getT(locale);
   const today = todayIso();
   const [customer, assets] = await Promise.all([getActiveUser(), loadAssets()]);
-  const leases = customer
-    ? mockLeaseRecords.filter((lease) => lease.terms.customerId === customer.id)
-    : [];
+  const persistedLeases = customer ? await listContractsForCustomer(db, customer.id) : [];
+  const leases =
+    persistedLeases.length > 0
+      ? persistedLeases.map((lease) => ({ ...lease, isMock: false }))
+      : customer
+        ? mockLeaseRecords
+            .filter((lease) => lease.terms.customerId === customer.id)
+            .map((lease) => ({ ...lease, isMock: true }))
+        : [];
   const leaseStatusLabels: Record<LeaseStatus, string> = {
     ACTIVE: t('account.leaseStatus.active'),
     COMPLETED: t('account.leaseStatus.completed'),
@@ -109,7 +117,7 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
                           </span>
                         </span>
                         <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
-                          {t('account.mockLease')}
+                          {lease.isMock ? t('account.mockLease') : t('account.savedLease')}
                         </span>
                         <svg
                           aria-hidden="true"

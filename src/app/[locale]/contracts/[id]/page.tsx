@@ -179,7 +179,7 @@ export default async function ContractPage({
         </p>
       ) : null}
       {isHolder && someoneElsesInvoice ? (
-        <p className="mt-6 rounded-xl bg-stone-100 p-4 text-sm text-stone-700 ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700">
+        <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-base text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
           {t('contract.takenOverNote')}
         </p>
       ) : null}

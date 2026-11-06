@@ -29,6 +29,9 @@ export const PUT = handleRoute(
         return fail(404, 'APPLICATION_NOT_FOUND', 'No such application');
       if (result.reason === 'not_a_draft')
         return fail(409, 'NOT_A_DRAFT', 'This application was already submitted');
+      if (result.reason === 'invalid_answer') {
+        return fail(422, 'INVALID_ANSWER', 'That answer does not fit this question');
+      }
       return fail(422, 'QUESTION_NOT_APPLICABLE', 'This question does not apply right now');
     }
     return ok({ ...result.state, warning: result.warning ?? null });

@@ -82,7 +82,7 @@
   "apply.confirmAll": "Vahvista nämä",
   "apply.confirm": "Vahvista",
   "apply.businessIdWarning": "Tarkistusmerkki ei täsmää. Voit korjata sen tai lähettää silti.",
-  "apply.blockedAge": "Emme voi vielä tehdä sopimusta kanssasi. Tervetuloa hakemaan {date} alkaen.",
+  "apply.blockedAge": "Vuokrasopimuksen voi tehdä vain henkilö, joka on täyttänyt 18 vuotta sopimuksen alkamispäivänä. Täytät 18 vuotta {date}, joten emme voi vielä tehdä sopimusta kanssasi – olet lämpimästi tervetullut hakemaan siitä päivästä alkaen.",
   "apply.blockedCountry": "Voimme tällä hetkellä tehdä sopimuksia vain Suomessa, Ruotsissa ja Virossa asuville.",
   "decision.approved.title": "Hyväksytty!",
   "decision.approved.text": "Voit allekirjoittaa nyt. Pidämme tuotteen varattuna sinulle {date} asti.",

@@ -82,7 +82,7 @@
   "apply.confirmAll": "Bekräfta dessa",
   "apply.confirm": "Bekräfta",
   "apply.businessIdWarning": "Kontrollsiffran stämmer inte. Du kan rätta den eller skicka ändå.",
-  "apply.blockedAge": "Vi kan inte teckna avtal med dig ännu. Välkommen att ansöka från {date}.",
+  "apply.blockedAge": "Ett leasingavtal kan bara tecknas med den som har fyllt 18 år den dag avtalet börjar. Du fyller 18 den {date}, så vi kan inte teckna något med dig ännu – du är varmt välkommen att ansöka från den dagen.",
   "apply.blockedCountry": "Vi kan för närvarande endast teckna avtal med boende i Finland, Sverige och Estland.",
   "decision.approved.title": "Godkänd!",
   "decision.approved.text": "Du kan signera nu. Vi håller varan reserverad åt dig till {date}.",

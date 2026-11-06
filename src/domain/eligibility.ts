@@ -4,7 +4,7 @@
 import type { CoefficientTable } from '@/data/schemas';
 import { checkAffordability } from './affordability';
 import { validateFinnishBusinessId } from './business-id';
-import { yearsOld } from './calendar';
+import { birthdayAt, yearsOld } from './calendar';
 import { monthlyFactorFor } from './coefficient';
 
 export type CustomerType = 'consumer' | 'sole_trader' | 'company';
@@ -67,7 +67,7 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityDecisio
             outcome: 'failed',
             params: {
               age,
-              eligibleFrom: `${Number(input.birthDate.slice(0, 4)) + MIN_AGE}${input.birthDate.slice(4)}`,
+              eligibleFrom: birthdayAt(input.birthDate, MIN_AGE),
             },
           }
     );

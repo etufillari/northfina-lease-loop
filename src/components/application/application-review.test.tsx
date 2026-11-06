@@ -39,4 +39,23 @@ describe('ApplicationReview', () => {
     expect(screen.getByText(messages.fi['application.reason.min_age'])).toBeTruthy();
     expect(screen.getByText('Kyllä')).toBeTruthy();
   });
+
+  it('shows a money answer in euros, not cents', () => {
+    render(
+      <ApplicationReview
+        locale="en"
+        termMonths={36}
+        downPaymentCents={0}
+        questions={[{ id: 'q_monthly_income', type: 'money', text: 'Income', why_we_ask: '' }]}
+        answers={{ q_monthly_income: 320_000 }}
+        blocked={null}
+        onBack={noop}
+        onSubmit={noop}
+        submitting={false}
+      />
+    );
+
+    expect(screen.getByText('€3,200.00')).toBeTruthy();
+    expect(screen.queryByText('320000')).toBeNull();
+  });
 });

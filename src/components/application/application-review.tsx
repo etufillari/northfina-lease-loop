@@ -44,7 +44,7 @@ export default function ApplicationReview({
       return value.filter(Boolean).map(formatOption).join(', ') || '—';
     }
 
-    return typeof value === 'string' ? formatOption(value) : String(value);
+    return typeof value === 'string' ? formatOption(value) : formatEuro(value, locale);
   }
 
   return (

@@ -49,6 +49,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-039 | 2026-11-05 | Contract    | Early exit discounts rent k + n by n − 1 months: rents are billed in advance       |
 | D-040 | 2026-11-05 | Application | An empty form with a customer's email or business ID is held to their record       |
 | D-041 | 2026-11-06 | UI          | A typed down payment snaps to the slider; band edges show a cheaper band           |
+| D-042 | 2026-11-06 | Valuation   | One age rule for every valuation: a new item’s clock starts at its first lease     |
 
 ---
 

@@ -232,6 +232,12 @@
   }
 }
 
+/* The thin, theme-coloured scrollbar of the swipe rows, for any other scroll box. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
 /* Horizontal swipe rows: native scrolling with snap points. */
 @utility rail {
   display: grid;

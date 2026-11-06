@@ -20,6 +20,8 @@ export type EndOfTermSectionProps = {
   /** The item as delivered; null when the asset row is missing. */
   asset: { condition: AssetCondition; usageValue: number; unit: UsageUnit } | null;
   customers: Customer[];
+  /** True when Leave early is not beside it, so the section has the whole width. */
+  standalone: boolean;
 };
 
 export function EndOfTermSection(props: EndOfTermSectionProps) {
@@ -28,32 +30,47 @@ export function EndOfTermSection(props: EndOfTermSectionProps) {
   const date = (iso: string) => formatIsoDate(iso, locale);
   const dates = endOfTermDates(contract);
 
+  const content = ending ? (
+    <EndingSummary {...props} ending={ending} />
+  ) : asset ? (
+    <EndOfTermForm
+      locale={locale}
+      contractId={props.contractId}
+      contract={contract}
+      vatRates={props.vatRates}
+      today={props.today}
+      delivered={asset}
+      personas={props.customers
+        .filter((c) => c.id !== contract.customerId)
+        .map((c) => ({ id: c.id, name: c.name }))}
+    />
+  ) : null;
+
+  // Beside Leave early it is one card of a pair. On its own it spans the page, so on a wide screen
+  // the heading and dates take a column and the form or the recorded ending the rest.
   return (
-    <section aria-labelledby="end-of-term" className="mt-10">
-      <h2 id="end-of-term" className="font-display text-lg font-bold tracking-tight uppercase">
-        {t('end.title')}
-      </h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">
-        {t('end.dates', {
-          lastDay: date(dates.lastDay),
-          opensOn: date(dates.opensOn),
-          handover: date(dates.handoverDate),
-        })}
-      </p>
-      {ending ? (
-        <EndingSummary {...props} ending={ending} />
-      ) : asset ? (
-        <EndOfTermForm
-          locale={locale}
-          contractId={props.contractId}
-          contract={contract}
-          vatRates={props.vatRates}
-          today={props.today}
-          delivered={asset}
-          personas={props.customers
-            .filter((c) => c.id !== contract.customerId)
-            .map((c) => ({ id: c.id, name: c.name }))}
-        />
+    <section
+      aria-labelledby="end-of-term"
+      className={`panel p-5 sm:p-6 ${props.standalone ? 'lg:col-span-2 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-x-10' : ''}`}
+    >
+      <div>
+        <h2 id="end-of-term" className="font-display text-lg font-bold tracking-tight uppercase">
+          {t('end.title')}
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          {t('end.dates', {
+            lastDay: date(dates.lastDay),
+            opensOn: date(dates.opensOn),
+            handover: date(dates.handoverDate),
+          })}
+        </p>
+      </div>
+      {content ? (
+        <div
+          className={`mt-5 border-t border-line pt-5 ${props.standalone ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10' : ''}`}
+        >
+          {content}
+        </div>
       ) : null}
     </section>
   );
@@ -74,7 +91,7 @@ function EndingSummary(props: EndOfTermSectionProps & { ending: Ending }) {
       : undefined);
 
   return (
-    <div role="status" className="panel mt-4 max-w-2xl p-5 sm:p-6">
+    <div role="status">
       <p className="font-semibold">
         {t(`end.done.${ending.kind}`, {
           date: date(ending.effectiveDate),

@@ -160,7 +160,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         {schedule.ok ? (
           // A scroll box, so a 48-month schedule doesn't push the endings off the page; the
           // header stays put while the rows scroll.
-          <div className="panel mt-4 max-h-[32rem] overflow-auto overscroll-contain">
+          <div className="panel scrollbar-thin mt-4 max-h-[32rem] overflow-auto overscroll-contain">
             <table className="w-full text-sm tabular-nums">
               <thead className="sticky top-0 z-10 bg-surface text-left text-xs tracking-wide text-muted uppercase">
                 <tr className="border-b border-line">
@@ -233,45 +233,49 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         ) : null}
       </section>
 
-      {canLeaveEarly && exitContext && assetRow ? (
-        <section aria-labelledby="early-exit" className="mt-10">
-          <h2 id="early-exit" className="font-display text-lg font-bold tracking-tight uppercase">
-            {t('early.title')}
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            {t('early.intro', { rate: formatNumber(exitContext.annualInterestPercent, locale) })}
-          </p>
-          {/* The panel moves its slider to the new current month when the demo date changes. */}
-          <EarlyExitPanel
-            locale={locale}
-            contractId={found.id}
-            contract={contract}
-            context={exitContext}
-            unit={usageUnitSchema.parse(assetRow.usage_unit)}
-            today={today}
-          />
-        </section>
-      ) : null}
+      {/* Leave early and End of term as a pair of cards, or End of term alone across the page. */}
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        {canLeaveEarly && exitContext && assetRow ? (
+          <section aria-labelledby="early-exit" className="panel p-5 sm:p-6">
+            <h2 id="early-exit" className="font-display text-lg font-bold tracking-tight uppercase">
+              {t('early.title')}
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {t('early.intro', { rate: formatNumber(exitContext.annualInterestPercent, locale) })}
+            </p>
+            {/* The panel moves its slider to the new current month when the demo date changes. */}
+            <EarlyExitPanel
+              locale={locale}
+              contractId={found.id}
+              contract={contract}
+              context={exitContext}
+              unit={usageUnitSchema.parse(assetRow.usage_unit)}
+              today={today}
+            />
+          </section>
+        ) : null}
 
-      <EndOfTermSection
-        locale={locale}
-        contractId={found.id}
-        assetId={contract.assetId}
-        contract={contract}
-        ending={ending}
-        vatRates={vatRates}
-        today={today}
-        asset={
-          assetRow
-            ? {
-                condition: assetConditionSchema.parse(assetRow.condition),
-                usageValue: assetRow.usage_value,
-                unit: usageUnitSchema.parse(assetRow.usage_unit),
-              }
-            : null
-        }
-        customers={data.customers}
-      />
+        <EndOfTermSection
+          locale={locale}
+          contractId={found.id}
+          assetId={contract.assetId}
+          contract={contract}
+          ending={ending}
+          vatRates={vatRates}
+          today={today}
+          asset={
+            assetRow
+              ? {
+                  condition: assetConditionSchema.parse(assetRow.condition),
+                  usageValue: assetRow.usage_value,
+                  unit: usageUnitSchema.parse(assetRow.usage_unit),
+                }
+              : null
+          }
+          customers={data.customers}
+          standalone={!(canLeaveEarly && exitContext && assetRow)}
+        />
+      </div>
     </div>
   );
 }

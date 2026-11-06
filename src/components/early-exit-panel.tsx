@@ -103,7 +103,7 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
   }
 
   return (
-    <div className="panel mt-4 max-w-2xl p-5 sm:p-6">
+    <div className="mt-5 border-t border-line pt-5">
       <label htmlFor={ids.month} className="eyebrow">
         {t('early.month')}
       </label>

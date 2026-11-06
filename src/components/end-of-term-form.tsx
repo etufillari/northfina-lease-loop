@@ -95,13 +95,33 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
   }
 
   if (props.today < dates.opensOn) {
+    // Until the choice opens, the key dates in order, so the card shows what lies ahead.
+    const keyDates = [
+      ['end.key.opensOn', dates.opensOn],
+      ['end.key.lastDay', dates.lastDay],
+      ['end.key.handover', dates.handoverDate],
+    ] as const;
     return (
-      <p className="mt-4 text-sm text-muted">{t('end.notYet', { date: date(dates.opensOn) })}</p>
+      <div>
+        <ol className="border-l border-line">
+          {keyDates.map(([key, iso], i) => (
+            <li key={key} className="relative pb-5 pl-6 last:pb-0">
+              <span
+                aria-hidden="true"
+                className={`absolute top-1.5 -left-[5px] size-2.5 rounded-full ring-4 ring-surface ${i === 0 ? 'bg-accent' : 'bg-line'}`}
+              />
+              <p className="eyebrow">{t(key)}</p>
+              <p className="mt-0.5 font-semibold tabular-nums">{date(iso)}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-5 text-sm text-muted">{t('end.notYet', { date: date(dates.opensOn) })}</p>
+      </div>
     );
   }
 
   return (
-    <div className="panel mt-4 max-w-2xl p-5 sm:p-6">
+    <div>
       <fieldset>
         <legend className="eyebrow">{t('end.choose')}</legend>
         <div className="mt-3 space-y-3">

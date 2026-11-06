@@ -29,15 +29,15 @@ The **Admin** link in the footer opens totals, VAT changes, the fleet's CO₂ sa
 
 ## A four-minute demo
 
-| #   | Do this                                                            | What it shows                                                                                                                     |
-| --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Act as **Aino**, open **ebike-003** and move the sliders           | Live price with a plain-language breakdown (card 1, Smart Problem 6)                                                              |
-| 2   | Apply, then sign                                                   | Questions appear only when they apply, each with "why we ask"; the price is locked at signing                                     |
-| 3   | Travel to **20 Jan 2027** and open the invoices                    | December at 25.5 % VAT and January at 26 %: the rent is locked, the tax is not, and the invoice says so (card 3, Smart Problem 1) |
-| 4   | Travel to **20 May 2027**, then contract → **End the lease early** | The exit price, worked out line by line, with the first month free (card 8, Smart Problem 2)                                      |
-| 5   | Admin → Second life → **ebike-007**                                | Refurbish or not, a new price, and who on the waiting list gets it and why (card 9, Smart Problem 3)                              |
-| 6   | Open **ebike-008**                                                 | Its passport across three lives and the CO₂ it saved, weighted by how worn it is (card 10, Smart Problem 7)                       |
-| 7   | Act as **Norvi**, then catalogue → **Lease several items at once** | One application and one signature for a whole fleet; "can't sign for the company" goes to a person (card 6)                       |
+| #   | Do this                                                            | What it shows                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Act as **Aino**, open **ebike-003** and move the sliders           | Live price with a plain-language breakdown (card 1, Smart Problem 6)                                                                                                            |
+| 2   | Apply, then sign                                                   | Questions appear only when they apply, each with "why we ask"; the price is locked at signing                                                                                   |
+| 3   | Travel to **20 Jan 2027** and open the invoices                    | December at 25.5 % VAT and January at 26 %: the rent is locked, the tax is not, and the invoice says so (card 3, Smart Problem 1)                                               |
+| 4   | Travel to **20 May 2027**, then contract → **End the lease early** | The exit price, worked out line by line, with the first month free (card 8, Smart Problem 2)                                                                                    |
+| 5   | Admin → Second life → **ebike-007**                                | Refurbish or not, a new price, and who on the waiting list gets it and why (card 9, Smart Problem 3)                                                                            |
+| 6   | Open **ebike-008**                                                 | Its passport across three lives and the CO₂ it saved, weighted by how worn it is (card 10, Smart Problem 7)                                                                     |
+| 7   | Act as **Norvi**, open **ebike-004** and apply                     | "Can't sign for the company" goes to a person, kindly explained (card 6). Then catalogue → **Lease several items at once**: one application and one signature for a whole fleet |
 
 ---
 
@@ -52,7 +52,7 @@ All ten work. Each one is covered by unit or database tests, and most also by th
 | 3 Tax is not price | ebike-001 invoices                                  | December 25.5 %, January 26 %. The bill warns ahead of the change and stops warning once it has happened                                                                            |
 | 4 Calendar traps   | laptop-001 from 31 Jan 2026                         | Due 28 Feb 2026 and 29 Feb 2028 (a leap year). Months are clamped, never skipped                                                                                                    |
 | 5 Too young        | Act as Mikko → laptop-008                           | A kind "no": under 18, with what a parent or guardian could do instead. He can't send the form                                                                                      |
-| 6 Who can sign?    | Act as Norvi → fleet                                | Manual review, and we ask the signatory (the email they gave) to sign for the whole fleet                                                                                           |
+| 6 Who can sign?    | Act as Norvi → ebike-004 → apply                    | Manual review: the applicant can't sign for the company, so we ask the person who can. The same rule holds for a whole fleet, where the signatory signs for every item at once      |
 | 7 Big ticket       | Act as Haapala → farm-002, 48 months, 20,000 € down | 125,000 € financed brings in the big-deal questions (annual revenue, beneficial owners, farm registry, PEP). One owner is a politically exposed person, so a person must review it  |
 | 8 Early exit       | Aino, month 7 of 36                                 | 29 rents left. Still owed 3,306.66 €, the bike is worth 2,878.60 €, so returning it costs 539.36 € incl. VAT                                                                        |
 | 9 Second life      | ebike-007, fair, 18,400 km                          | Refurbish to good. **wait-13** gets it: its 24-month rent fits the 90 € budget, while wait-02's 12-month rent doesn't                                                               |
@@ -129,7 +129,7 @@ data/          the synthetic data pack (unchanged)
 
 ## Team
 
-| Name          | GitHub                                           | Main focus                                                                                                     |
-| ------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Armin Kuburas | [@ArminKuburas](https://github.com/ArminKuburas) | Catalogue, pricing, contracts, invoices, time travel, end of term, second life, early exit, CO₂, fleets, tests |
-| Johnny Varila | jvarila                                          | The smart question flow and the application                                                                    |
+| Name          | GitHub                                                 | Main focus                                                                                                     |
+| ------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Armin Kuburas | [@ArminKuburas](https://github.com/ArminKuburas)       | Catalogue, pricing, contracts, invoices, time travel, end of term, second life, early exit, CO₂, fleets, tests |
+| Johnny Varila | [@zoni527](https://github.com/zoni527) (Hive: jvarila) | The smart question flow and the application                                                                    |

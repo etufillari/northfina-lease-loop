@@ -1,6 +1,7 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { AssetCardLink } from '@/components/asset-card-link';
+import { SaveAssetButton } from '@/components/save-asset-button';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { MonthlyRate } from '@/components/catalogue-pricing';
@@ -31,9 +32,22 @@ type AssetCardProps = {
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  userId?: string | null;
+  saved?: boolean;
+  saveLabel?: string;
+  removeSavedLabel?: string;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  price,
+  locale,
+  t,
+  userId = null,
+  saved = false,
+  saveLabel = 'Save item',
+  removeSavedLabel = 'Remove from saved items',
+}: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
 
@@ -41,8 +55,21 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
     <AssetCardLink href={`/${locale}/assets/${asset.id}`}>
       <article
         aria-labelledby={headingId}
-        className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:-translate-y-0.5 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+        className="relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#101d46] hover:shadow-lg"
       >
+        {userId ? (
+          <SaveAssetButton
+            assetId={asset.id}
+            userId={userId}
+            saved={saved}
+            label={saved ? removeSavedLabel : saveLabel}
+          />
+        ) : null}
+        <div className="mb-5 flex h-32 items-center justify-center rounded-xl bg-slate-100">
+          <span className="text-7xl" aria-hidden="true">
+            {asset.category === 'e_bike' ? '🚲' : asset.category === 'laptop' ? '💻' : '🚜'}
+          </span>
+        </div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
@@ -74,7 +101,7 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           />
         </dl>
 
-        <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
+        <div className="mt-auto border-t border-slate-100 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.monthlyRate')}</p>

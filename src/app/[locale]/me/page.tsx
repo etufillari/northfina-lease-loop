@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
@@ -23,7 +23,7 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const suffix = asOfParam ? `?asOf=${asOfParam}` : '';
 
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
   const customer = persona ? await getCustomer(db, persona) : null;
 
   if (!customer) {

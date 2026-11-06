@@ -262,5 +262,7 @@
   "passport.co2Formula": "{manufacturing} kg uuden valmistukseen × (1 − {share} kunnostukseen) × {fraction} jäljellä oleva arvo ({value} / {original}).",
   "passport.co2Lives": "Kirjattu kunkin elämän alussa",
   "passport.co2Life": "Elämä {life}, {date} alkaen: {kg} kg",
-  "passport.noCo2": "Hinnastossa v1 ei ole hintaa, joten jäljellä olevaa arvoa ei voi mitata."
+  "passport.noCo2": "Hinnastossa v1 ei ole hintaa, joten jäljellä olevaa arvoa ei voi mitata.",
+  "persona.staff": "Henkilökunta",
+  "persona.staffDesk": "Työjono"
 }

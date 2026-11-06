@@ -262,5 +262,7 @@
   "passport.co2Formula": "{manufacturing} kg för att tillverka en ny × (1 − {share} för renovering) × {fraction} kvarvarande värde ({value} av {original}).",
   "passport.co2Lives": "Registrerat vid början av varje liv",
   "passport.co2Life": "Liv {life}, från {date}: {kg} kg",
-  "passport.noCo2": "Inget pris i prislista v1, så det kvarvarande värdet kan inte mätas."
+  "passport.noCo2": "Inget pris i prislista v1, så det kvarvarande värdet kan inte mätas.",
+  "persona.staff": "Personal",
+  "persona.staffDesk": "Personaldisk"
 }

@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { FleetBuilder } from '@/components/fleet-builder';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadPriceLists } from '@/data/load';
 import { listPriceOn } from '@/domain/price-list';
 import { getT } from '@/i18n/get-t';
@@ -22,7 +22,7 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
 
   const t = getT(locale);
   const { asOf } = await asOfFromPage(await searchParams);
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
   const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
 
   const leasable = assets

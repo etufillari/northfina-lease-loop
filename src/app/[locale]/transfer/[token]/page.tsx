@@ -3,7 +3,7 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { TransferApply } from '@/components/transfer-apply';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -25,7 +25,7 @@ export default async function TransferPage({
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const { asOf } = await asOfFromPage(await searchParams);
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
   const offer = await getTransferOffer(db, token);
 
   if (!offer) {

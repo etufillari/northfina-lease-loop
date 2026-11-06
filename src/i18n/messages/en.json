@@ -262,5 +262,7 @@
   "passport.co2Formula": "{manufacturing} kg to make a new one × (1 − {share} for refurbishing) × {fraction} remaining value ({value} of {original}).",
   "passport.co2Lives": "Recorded at the start of each life",
   "passport.co2Life": "Life {life}, from {date}: {kg} kg",
-  "passport.noCo2": "No price in price list v1, so the remaining value cannot be measured."
+  "passport.noCo2": "No price in price list v1, so the remaining value cannot be measured.",
+  "persona.staff": "Staff",
+  "persona.staffDesk": "Staff desk"
 }

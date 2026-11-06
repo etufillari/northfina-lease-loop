@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { PriceConfigurator } from '@/components/price-configurator';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -24,7 +24,7 @@ export default async function AssetPage({
   if (!asset) notFound();
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">

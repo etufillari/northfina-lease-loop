@@ -419,5 +419,12 @@
   "me.holdUntil": "Varattuna sinulle {date} asti.",
   "me.action.continue": "Jatka hakemusta",
   "me.action.sign": "Allekirjoita nyt",
-  "me.action.view": "Näytä hakemus"
+  "me.action.view": "Näytä hakemus",
+  "staff.expired.title": "Päättyneet varaukset",
+  "staff.expired.noSignature": "Hyväksytty, mutta kukaan ei allekirjoittanut {date} mennessä.",
+  "staff.expired.noSignatory": "Allekirjoittaja ei allekirjoittanut {date} mennessä.",
+  "staff.expired.explain": "Vapauttaminen päättää nämä hakemukset ja palauttaa tuotteet luetteloon seuraavalle asiakkaalle. Jokainen vapautus kirjataan muutoslokiin.",
+  "staff.expired.release": "Vapauta {count} päättynyttä varausta",
+  "staff.done.released": "Vapautettiin {applications} hakemusta. {items} tuotetta on taas saatavilla.",
+  "staff.audit.action.application.hold_expired": "Vapautti päättyneen varauksen"
 }

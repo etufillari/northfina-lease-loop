@@ -11,7 +11,8 @@ import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { listStaffQueue, type StaffQueueItem } from '@/server/staff';
-import { ReviewActions, SignAsSignatory } from './staff-actions';
+import { isHoldExpired, listExpiredHolds } from '@/server/staff-holds';
+import { ReleaseExpiredHolds, ReviewActions, SignAsSignatory } from './staff-actions';
 
 type Reason = { rule: string; outcome: string };
 
@@ -25,9 +26,12 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
   // Staff decisions are always logged as staff, never as the customer persona picked in the
   // header (the server also refuses a customer deciding on their own application).
   const actor = STAFF_PERSONA;
-  const queue = await listStaffQueue(db);
+  const [queue, expired] = await Promise.all([listStaffQueue(db), listExpiredHolds(db, asOf)]);
   const reviews = queue.filter((item) => item.status === 'manual_review');
-  const signatures = queue.filter((item) => item.status === 'awaiting_signature');
+  // A signatory whose hold ran out can no longer sign: those wait under "Holds that ran out".
+  const signatures = queue.filter(
+    (item) => item.status === 'awaiting_signature' && !isHoldExpired(item.holdUntil, asOf)
+  );
   const suffix = asOfParam ? `?asOf=${asOfParam}` : '';
 
   return (
@@ -80,6 +84,32 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
           </QueueCard>
         ))}
       </Section>
+
+      {expired.length > 0 ? (
+        <Section title={t('staff.expired.title')} empty="" count={expired.length}>
+          {expired.map((item) => (
+            <QueueCard
+              key={item.applicationId}
+              item={item}
+              locale={locale}
+              t={t}
+              showReasons={false}
+            >
+              <p className="text-sm text-stone-700 dark:text-stone-300">
+                {t(
+                  item.status === 'awaiting_signature'
+                    ? 'staff.expired.noSignatory'
+                    : 'staff.expired.noSignature',
+                  { date: formatIsoDate(item.holdUntil!, locale) }
+                )}
+              </p>
+            </QueueCard>
+          ))}
+        </Section>
+      ) : null}
+      {expired.length > 0 ? (
+        <ReleaseExpiredHolds locale={locale} actor={actor} count={expired.length} asOf={asOf} />
+      ) : null}
     </div>
   );
 }
@@ -116,11 +146,14 @@ function QueueCard({
   locale,
   t,
   children,
+  showReasons = true,
 }: {
-  item: StaffQueueItem;
+  item: StaffQueueItem<string>;
   locale: Locale;
   t: Translate;
   children: React.ReactNode;
+  /** Off for expired holds: why it was approved no longer matters there. */
+  showReasons?: boolean;
 }) {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const reasons = Array.isArray(item.decisionReasons)
@@ -154,7 +187,7 @@ function QueueCard({
         ) : null}
       </dl>
 
-      {reasons.length > 0 ? (
+      {showReasons && reasons.length > 0 ? (
         <div className="mt-4">
           <h3 className="text-sm font-semibold">{t('staff.item.reasons')}</h3>
           <ul className="mt-2 space-y-1 text-sm">
@@ -176,7 +209,7 @@ function QueueCard({
 }
 
 /** A fleet as "Nordvolt Cargo Duo × 2, Nordvolt Urban 1 × 1", grouped by model. */
-function assetSummary(assets: StaffQueueItem['assets'], t: Translate): string {
+function assetSummary(assets: StaffQueueItem<string>['assets'], t: Translate): string {
   const counts = new Map<string, number>();
   for (const asset of assets) {
     const name = asset.name ?? asset.id;

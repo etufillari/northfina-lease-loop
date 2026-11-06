@@ -419,5 +419,12 @@
   "me.holdUntil": "Broneeritud sinule kuni {date}.",
   "me.action.continue": "Jätka taotlust",
   "me.action.sign": "Allkirjasta kohe",
-  "me.action.view": "Vaata taotlust"
+  "me.action.view": "Vaata taotlust",
+  "staff.expired.title": "Lõppenud broneeringud",
+  "staff.expired.noSignature": "Kinnitatud, kuid keegi ei allkirjastanud {date} jooksul.",
+  "staff.expired.noSignatory": "Allkirjastaja ei allkirjastanud {date} jooksul.",
+  "staff.expired.explain": "Vabastamine lõpetab need taotlused ja tagastab tooted kataloogi järgmisele kliendile. Iga vabastamine kirjutatakse auditilogisse.",
+  "staff.expired.release": "Vabasta {count} lõppenud broneeringut",
+  "staff.done.released": "Vabastati {applications} taotlust. {items} toodet on taas saadaval.",
+  "staff.audit.action.application.hold_expired": "Vabastas lõppenud broneeringu"
 }

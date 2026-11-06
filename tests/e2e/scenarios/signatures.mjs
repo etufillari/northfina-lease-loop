@@ -6,8 +6,8 @@ const SIGNATORY = 'ceo@norvi.example.com';
 /** Norvi applies for `assetId` through the form, naming the signatory; returns the application id. */
 async function applyAsNorvi(page, assetId) {
   await page.open(`/en/apply?asset=${assetId}&term=36&down=0`);
-  await page.waitFor(`!!document.querySelector('input[name=q_signatory_email]')`, 5000);
-  await page.set('input[name=q_signatory_email]', SIGNATORY, 'input');
+  await page.waitFor(`!!document.querySelector('#field-q_signatory_email')`, 5000);
+  await page.set('#field-q_signatory_email', SIGNATORY, 'input');
   await page.js(`document.querySelector('input[name=q_usage_purpose][value=business]')?.click()`);
   await page.waitFor(
     `document.querySelector('form [aria-live=polite]').innerText.includes('person will check')`,

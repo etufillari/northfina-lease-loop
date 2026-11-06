@@ -9,7 +9,6 @@ import {
 import type { PriceList } from '@/data/schemas';
 import { listPriceOn } from './price-list';
 import {
-  ageMonthsOn,
   firstLeasePrice,
   relistTargets,
   secondLifeRentFor,
@@ -38,6 +37,7 @@ beforeAll(async () => {
 const ebike007: SecondLifeItem = {
   category: 'e_bike',
   modelYear: 2023,
+  firstLeasedNewOn: null, // used in the data pack: age from 1 Jan 2023 (D-042)
   condition: 'fair',
   usage: { unit: 'km', value: 18_400 },
   firstLeasePriceCents: 549_000,
@@ -47,23 +47,11 @@ const ebike007: SecondLifeItem = {
 const ebike008: SecondLifeItem = {
   category: 'e_bike',
   modelYear: 2022,
+  firstLeasedNewOn: null,
   condition: 'good',
   usage: { unit: 'km', value: 9_800 },
   firstLeasePriceCents: 179_900,
 };
-
-describe('ageMonthsOn', () => {
-  it('counts whole months from 1 January of the model year', () => {
-    expect(ageMonthsOn(2023, '2026-11-06')).toBe(46); // 3 × 12 + 10
-    expect(ageMonthsOn(2023, '2023-01-01')).toBe(0);
-    expect(ageMonthsOn(2023, '2023-12-31')).toBe(11);
-    expect(ageMonthsOn(2023, '2024-01-01')).toBe(12);
-  });
-
-  it('never goes below zero for a date before the model year', () => {
-    expect(ageMonthsOn(2027, '2026-11-06')).toBe(0);
-  });
-});
 
 describe('firstLeasePrice', () => {
   it('uses the earliest price list, so the value does not jump with v2 (+5 %)', () => {

@@ -87,20 +87,6 @@ export function bandInterestPercent(table: CoefficientTable, band: string): numb
   return table.bands.find((b) => b.band === band)?.annual_interest_percent ?? null;
 }
 
-/**
- * The item's age when the lease started. A new item is 0; a used one counts whole months from
- * 1 January of its model year, as the data pack has no first-use date.
- */
-export function itemAgeAtStart(
-  condition: AssetCondition,
-  modelYear: number,
-  startDate: string
-): number {
-  if (condition === 'new') return 0;
-  const [year, month] = startDate.split('-').map(Number) as [number, number];
-  return Math.max(0, (year - modelYear) * 12 + month - 1);
-}
-
 /** The invoice month `date` falls in, counted from the start like the schedule (D-016). */
 export function exitMonthOn(contract: BilledContract, date: string): ExitMonthResult {
   // ISO dates compare as strings (D-015).

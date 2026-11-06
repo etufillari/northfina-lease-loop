@@ -27,6 +27,7 @@ import { inSignupOrder, matchWaitingList, type MatchResult } from '@/domain/wait
 import { toAsset } from './assets';
 import { withAudit } from './audit';
 import { getContractEnding } from './contract-endings';
+import { ageClockFor } from './item-age';
 import type { PrismaClient } from './prisma-client';
 
 export interface SecondLifeDataPack extends SecondLifeData {
@@ -57,10 +58,15 @@ export interface SecondLifeView {
   suggested: AssetCondition;
 }
 
-function returnedItem(asset: Asset, priceCents: number): SecondLifeItem {
+function returnedItem(
+  asset: Asset,
+  priceCents: number,
+  firstLeasedNewOn: string | null
+): SecondLifeItem {
   return {
     category: asset.category,
     modelYear: asset.model_year,
+    firstLeasedNewOn,
     condition: asset.condition,
     usage: asset.usage,
     firstLeasePriceCents: priceCents,
@@ -95,7 +101,8 @@ export async function secondLifeView(
   const asset = toAsset(row);
   const first = firstLeasePrice(data.priceLists, asset.id);
   if (!first) return null;
-  const item = returnedItem(asset, first.priceCents);
+  const clock = await ageClockFor(db, asset.id);
+  const item = returnedItem(asset, first.priceCents, clock?.firstLeasedNewOn ?? null);
   const rentFor = secondLifeRentFor(data, item, today);
 
   // No refurbishment duration in the data: the item is ready the day it is re-listed (D-035).

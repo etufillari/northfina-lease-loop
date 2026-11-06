@@ -13,7 +13,7 @@ import type {
 } from '@/data/schemas';
 import { avoidedByExtraLife, sumAvoidedKg, type AvoidedCo2 } from './co2';
 import type { EndingKind } from './end-of-term';
-import { ageMonthsOn } from './second-life';
+import { firstLeasedNewOn, itemAgeOn, type AgeClock } from './item-age';
 
 export interface Readings {
   condition: AssetCondition;
@@ -125,6 +125,17 @@ export function buildPassport(
     })),
   ].sort(byRecordOrder);
 
+  // One age rule with early exit and second life (D-042): an item we received new and unleased
+  // is 0 months old on its first lease start.
+  const firstLease = events.find((e) => e.type === 'contract');
+  const clock: AgeClock = {
+    modelYear: asset.modelYear,
+    firstLeasedNewOn: firstLeasedNewOn(
+      { condition: receivedReadings.condition, previousLives: earlierCount },
+      firstLease?.type === 'contract' ? firstLease.contract.startDate : null
+    ),
+  };
+
   const lives: LeaseLoopLife[] = [];
   let pending: PassportListing | null = null;
   let current: Readings = receivedReadings;
@@ -136,7 +147,7 @@ export function buildPassport(
     }
     const { contract } = event;
     const number = earlierCount + lives.length + 1;
-    const ageMonths = ageMonthsOn(asset.modelYear, contract.startDate);
+    const ageMonths = itemAgeOn(clock, contract.startDate);
     const co2 =
       number >= 2
         ? avoidedByExtraLife(data.factors, data.curves, {

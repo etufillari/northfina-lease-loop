@@ -15,6 +15,7 @@ import { getContractEnding } from '@/server/contract-endings';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { earlyExitContext } from '@/server/early-exit';
+import { ageClockFor } from '@/server/item-age';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
 
@@ -30,12 +31,13 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
 
-  const [data, vatRates, curves, assetRow, ending] = await Promise.all([
+  const [data, vatRates, curves, assetRow, ending, clock] = await Promise.all([
     loadLeaseDataPack(),
     loadVatRates(),
     loadResidualCurves(),
     db.asset.findUnique({ where: { id: contract.assetId } }),
     getContractEnding(db, found.id),
+    ageClockFor(db, contract.assetId),
   ]);
   const customer = data.customers.find((c) => c.id === contract.customerId);
   const fullSchedule = invoiceSchedule(contract, vatRates);
@@ -46,11 +48,12 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const today = await asOfDate();
   // Leaving early is offered until the lease ends, unless it has already been ended (D-033).
   const exitContext =
-    assetRow && !ending
+    assetRow && clock && !ending
       ? earlyExitContext(
           { vatRates, curves, coefficientTable: data.coefficientTable },
           contract,
-          assetRow
+          assetRow,
+          clock
         )
       : null;
   const exitMonth = exitMonthOn(contract, today);

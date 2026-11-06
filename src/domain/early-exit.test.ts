@@ -9,7 +9,6 @@ import {
   earlyExitQuote,
   endEarly,
   exitMonthOn,
-  itemAgeAtStart,
   type ExitContext,
   type ExitContract,
 } from './early-exit';
@@ -218,17 +217,6 @@ describe('bandInterestPercent', () => {
   it('reads the band’s annual interest from the coefficient table', () => {
     expect(bandInterestPercent(table, 'B')).toBe(7.9);
     expect(bandInterestPercent(table, 'Z')).toBeNull();
-  });
-});
-
-describe('itemAgeAtStart', () => {
-  it('is 0 for a new item', () => {
-    expect(itemAgeAtStart('new', 2026, '2026-11-05')).toBe(0);
-  });
-
-  it('counts whole months from 1 January of the model year for a used item', () => {
-    // ebike-007 (2023) on 6 Nov 2026: 3 years + 10 months = 46 (data-traps note).
-    expect(itemAgeAtStart('fair', 2023, '2026-11-06')).toBe(46);
   });
 });
 

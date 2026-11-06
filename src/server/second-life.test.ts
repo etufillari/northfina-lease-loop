@@ -173,6 +173,10 @@ describe('relistAsset', () => {
 
     const view = await secondLifeView(db, data, 'ebike-003', '2027-11-05');
     expect(view?.passedOnTo).toBe('cust-sanna');
+    // Leased new on 5 Nov 2026, so 12 months old a year later, the age early exit used too.
+    // Counting from January of the 2026 model year would make it 22 (B1).
+    expect(view?.options.map((o) => o.valuation.ageMonths)).toEqual(view?.options.map(() => 12));
+    expect(view?.options.length).toBeGreaterThan(0);
     const relisted = await relistAsset(db, data, {
       assetId: 'ebike-003',
       target: 'good',

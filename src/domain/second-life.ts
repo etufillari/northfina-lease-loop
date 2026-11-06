@@ -12,6 +12,7 @@ import type {
   ResidualCurves,
   UsageUnit,
 } from '@/data/schemas';
+import { itemAgeOn } from './item-age';
 import { curvePercent as curvePercentAt, usageAdjustmentPercent } from './market-value';
 import { roundHalfUp } from './money';
 import { quoteLease } from './pricing';
@@ -27,6 +28,8 @@ export interface SecondLifeData {
 export interface SecondLifeItem {
   category: AssetCategory;
   modelYear: number;
+  /** When it was first leased new, which starts its age clock (D-042); null for a used item. */
+  firstLeasedNewOn: string | null;
   /** As returned (the inspection at the end of the last lease). */
   condition: AssetCondition;
   usage: { unit: UsageUnit; value: number };
@@ -66,15 +69,6 @@ export interface SecondLifeOption {
   valuation: Extract<SecondLifeValuation, { ok: true }>;
   /** Rent with no down payment per term in the coefficient table; null when it can't be priced. */
   rents: { termMonths: number; monthlyNetRentCents: number | null }[];
-}
-
-/**
- * Whole months from 1 January of the model year to `isoDate`, never below zero. The data has
- * only a model year, no first-use date (same convention as early exit, D-033).
- */
-export function ageMonthsOn(modelYear: number, isoDate: string): number {
-  const [year, month] = isoDate.split('-').map(Number) as [number, number];
-  return Math.max(0, (year - modelYear) * 12 + month - 1);
 }
 
 /**
@@ -123,7 +117,7 @@ export function valueSecondLife(
   const plan = refurbishPlan(data.costs, item, target);
   if (!plan.ok) return plan;
 
-  const ageMonths = ageMonthsOn(item.modelYear, valuedOn);
+  const ageMonths = itemAgeOn(item, valuedOn);
   const percent = curvePercentAt(data.curves.curves[item.category], ageMonths);
   const asReturned = valueLine(data, item, percent, item.condition, item.usage.value);
   const after = valueLine(data, item, percent, plan.conditionAfter, plan.usageAfter.value);

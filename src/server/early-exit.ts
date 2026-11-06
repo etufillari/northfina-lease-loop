@@ -8,16 +8,17 @@ import {
   type VatRates,
 } from '@/data/schemas';
 import type { Contract } from '@/domain/contract';
+import { itemAgeOn, type AgeClock } from '@/domain/item-age';
 import {
   bandInterestPercent,
   endEarly,
-  itemAgeAtStart,
   type EarlyExitChoice,
   type EndEarlyResult,
   type ExitContext,
 } from '@/domain/early-exit';
 import { getContract } from './contracts';
 import { recordEnding, type EndLeaseResult } from './contract-endings';
+import { ageClockFor } from './item-age';
 import type { PrismaClient } from './prisma-client';
 import { parseStoredValue } from './stored-row';
 
@@ -42,7 +43,8 @@ export interface ExitAssetRow {
 export function earlyExitContext(
   data: EarlyExitData,
   contract: Contract,
-  asset: ExitAssetRow
+  asset: ExitAssetRow,
+  clock: AgeClock
 ): ExitContext | null {
   const annualInterestPercent = bandInterestPercent(data.coefficientTable, contract.band);
   if (annualInterestPercent === null) return null;
@@ -54,7 +56,8 @@ export function earlyExitContext(
     annualInterestPercent,
     item: {
       category: parseStoredValue(assetCategorySchema, asset.category, where),
-      ageAtStartMonths: itemAgeAtStart(condition, asset.model_year, contract.startDate),
+      // The same age rule as second life and the passport (D-042).
+      ageAtStartMonths: itemAgeOn(clock, contract.startDate),
       condition,
       usageValue: asset.usage_value,
     },
@@ -89,7 +92,9 @@ export async function endLeaseEarly(
   }
   const asset = await db.asset.findUnique({ where: { id: contract.assetId } });
   if (!asset || asset.status !== 'reserved') return { ok: false, reason: 'asset_not_leased' };
-  const context = earlyExitContext(data, contract, asset);
+  const clock = await ageClockFor(db, contract.assetId);
+  if (!clock) return { ok: false, reason: 'asset_not_leased' };
+  const context = earlyExitContext(data, contract, asset, clock);
   if (!context) return { ok: false, reason: 'unknown_band' };
 
   const decided = endEarly(

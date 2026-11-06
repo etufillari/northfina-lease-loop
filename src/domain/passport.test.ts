@@ -110,8 +110,9 @@ describe('buildPassport', () => {
 
   it('a new item: its first life avoids nothing, the second counts from the re-listing', () => {
     // A 2026 e-bike leased new, returned fair with 5 000 km, re-listed at good (5 000 km kept).
-    // Life 2 starts 12 Nov 2027: 22 months → 70 − 18 × 10/12 = 55 %; good 0.85; 5 steps −10 %.
-    // 145.2 × 0.55 × 0.85 × 0.90 = 61.093 → 61 kg
+    // Its age counts from life 1's start, 5 Nov 2026 (D-042), not from January 2026.
+    // Life 2 starts 12 Nov 2027: 12 months → 70 %; good 0.85; 5 steps −10 %.
+    // 145.2 × 0.70 × 0.85 × 0.90 = 77.755 → 78 kg
     const asset: PassportAsset = {
       category: 'e_bike',
       modelYear: 2026,
@@ -149,8 +150,9 @@ describe('buildPassport', () => {
     expect(passport.lives[0]!.co2).toBeNull();
     expect(passport.lives[0]!.delivered).toEqual({ condition: 'new', usageValue: 0 });
     expect(passport.lives[1]!.refurbishment).toEqual(relisted);
-    expect(passport.lives[1]!.co2?.avoidedKg).toBe(61);
-    expect(passport.avoidedKg).toBe(61);
+    expect(passport.lives.map((life) => life.ageMonths)).toEqual([0, 12]);
+    expect(passport.lives[1]!.co2?.avoidedKg).toBe(78);
+    expect(passport.avoidedKg).toBe(78);
   });
 
   it('a used item leased without a re-listing counts from the data-pack readings', () => {

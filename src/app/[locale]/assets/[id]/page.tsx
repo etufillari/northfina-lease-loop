@@ -1,6 +1,5 @@
 import { assetBusinessDate } from '@/server/circular/queries';
 import { loadCataloguePriceLists } from '@/server/circular/prices';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetPricingControls } from '@/components/asset-pricing-controls';
@@ -64,13 +63,6 @@ export default async function AssetDetailsPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <Link
-        href={`/${locale}`}
-        className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-      >
-        {t('assetDetails.backToCatalogue')}
-      </Link>
-
       <LeaseApplication
         assetId={asset.id}
         category={asset.category}

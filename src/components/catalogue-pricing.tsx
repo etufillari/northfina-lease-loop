@@ -36,6 +36,7 @@ export function CataloguePricing({
   termOptions,
   initialDownPayment,
   initialTermMonths,
+  showControls = true,
   children,
 }: {
   table: CoefficientTable;
@@ -44,6 +45,7 @@ export function CataloguePricing({
   termOptions: { value: number; label: string }[];
   initialDownPayment: string;
   initialTermMonths: number;
+  showControls?: boolean;
   children: ReactNode;
 }) {
   const [downPaymentInput, setDownPaymentInput] = useState(initialDownPayment);
@@ -68,91 +70,95 @@ export function CataloguePricing({
         quoteUnavailable: labels.quoteUnavailable,
       }}
     >
-      <section
-        aria-labelledby="pricing-controls-heading"
-        className="mt-6 rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
-      >
-        <h2 id="pricing-controls-heading" className="sr-only">
-          {labels.controls}
-        </h2>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="down-payment"
-              className="block text-sm font-medium text-stone-700 dark:text-stone-300"
-            >
-              {labels.downPayment}
-            </label>
-            <input
-              id="down-payment"
-              type="number"
-              min="0"
-              max={MAX_DOWN_PAYMENT_CENTS / 100}
-              step="0.01"
-              className="no-number-spinner mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-              value={downPaymentInput}
-              aria-invalid={downPaymentCents === undefined}
-              aria-describedby={
-                downPaymentCents === undefined ? 'down-payment-error' : 'down-payment-help'
-              }
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                setDownPaymentInput(value);
-                updateQueryParameter('downPayment', value === '0' ? undefined : value);
-              }}
-            />
-            <p
-              id={downPaymentCents === undefined ? 'down-payment-error' : 'down-payment-help'}
-              role={downPaymentCents === undefined ? 'alert' : undefined}
-              className={`mt-1 text-xs ${
-                downPaymentCents === undefined
-                  ? 'text-red-700 dark:text-red-300'
-                  : 'text-stone-600 dark:text-stone-400'
-              }`}
-            >
-              {downPaymentCents === undefined ? labels.invalidDownPayment : labels.downPaymentHelp}
-            </p>
-          </div>
-          <div>
-            <label
-              htmlFor="lease-term"
-              className="block text-sm font-medium text-stone-700 dark:text-stone-300"
-            >
-              {labels.term}
-            </label>
-            <div className="mt-2 max-w-sm">
-              <div className="mb-1 flex justify-end">
-                <output htmlFor="lease-term" className="text-sm font-medium">
-                  {selectedTerm?.label}
-                </output>
-              </div>
-              <input
-                id="lease-term"
-                type="range"
-                min="0"
-                max="48"
-                step="12"
-                value={termMonths}
-                onChange={(event) => {
-                  const value = Number(event.currentTarget.value);
-                  setTermMonths(value);
-                  updateQueryParameter('term', value === 0 ? undefined : String(value));
-                }}
-                className="lease-term-slider block w-full"
-                aria-valuetext={selectedTerm?.label}
-              />
-              <div
-                aria-hidden="true"
-                className="mt-1 flex justify-between px-2 text-xs text-stone-500"
+      {showControls ? (
+        <section
+          aria-labelledby="pricing-controls-heading"
+          className="mt-0 rounded-b-2xl border border-t border-slate-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+        >
+          <h2 id="pricing-controls-heading" className="sr-only">
+            {labels.controls}
+          </h2>
+          <div className="grid gap-5 border-t border-slate-100 pt-4 sm:grid-cols-2 dark:border-stone-800">
+            <div>
+              <label
+                htmlFor="down-payment"
+                className="block text-sm font-medium text-stone-700 dark:text-stone-300"
               >
-                {termOptions.map((option) => (
-                  <span key={option.value}>{option.value}</span>
-                ))}
+                {labels.downPayment}
+              </label>
+              <input
+                id="down-payment"
+                type="number"
+                min="0"
+                max={MAX_DOWN_PAYMENT_CENTS / 100}
+                step="0.01"
+                className="no-number-spinner mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                value={downPaymentInput}
+                aria-invalid={downPaymentCents === undefined}
+                aria-describedby={
+                  downPaymentCents === undefined ? 'down-payment-error' : 'down-payment-help'
+                }
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  setDownPaymentInput(value);
+                  updateQueryParameter('downPayment', value === '0' ? undefined : value);
+                }}
+              />
+              <p
+                id={downPaymentCents === undefined ? 'down-payment-error' : 'down-payment-help'}
+                role={downPaymentCents === undefined ? 'alert' : undefined}
+                className={`mt-1 text-xs ${
+                  downPaymentCents === undefined
+                    ? 'text-red-700 dark:text-red-300'
+                    : 'text-stone-600 dark:text-stone-400'
+                }`}
+              >
+                {downPaymentCents === undefined
+                  ? labels.invalidDownPayment
+                  : labels.downPaymentHelp}
+              </p>
+            </div>
+            <div>
+              <label
+                htmlFor="lease-term"
+                className="block text-sm font-medium text-stone-700 dark:text-stone-300"
+              >
+                {labels.term}
+              </label>
+              <div className="mt-2 w-full">
+                <div className="mb-1 flex justify-end">
+                  <output htmlFor="lease-term" className="text-sm font-medium">
+                    {selectedTerm?.label}
+                  </output>
+                </div>
+                <input
+                  id="lease-term"
+                  type="range"
+                  min="0"
+                  max="48"
+                  step="12"
+                  value={termMonths}
+                  onChange={(event) => {
+                    const value = Number(event.currentTarget.value);
+                    setTermMonths(value);
+                    updateQueryParameter('term', value === 0 ? undefined : String(value));
+                  }}
+                  className="lease-term-slider block w-full"
+                  aria-valuetext={selectedTerm?.label}
+                />
+                <div
+                  aria-hidden="true"
+                  className="mt-1 flex justify-between px-2 text-xs text-stone-500"
+                >
+                  {termOptions.map((option) => (
+                    <span key={option.value}>{option.value}</span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
       {children}
     </PricingContext.Provider>
   );

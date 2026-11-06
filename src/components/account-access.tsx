@@ -18,7 +18,7 @@ type AccountAccessProps = {
 export function AccountAccess({ locale, devMode, labels }: AccountAccessProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const buttonClass =
-    'h-10 w-72 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:hover:bg-stone-800';
+    'h-10 w-full rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:hover:bg-stone-800';
 
   if (devMode) {
     return (

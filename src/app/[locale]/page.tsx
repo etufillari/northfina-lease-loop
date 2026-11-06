@@ -1,14 +1,12 @@
 import { assetBusinessDate } from '@/server/circular/queries';
 import { loadCataloguePriceLists } from '@/server/circular/prices';
 // The catalogue: every asset, grouped by category, with today's net list price.
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import type { ZodType } from 'zod';
 import { AssetCard } from '@/components/asset-card';
-import { AccountAccess } from '@/components/account-access';
+import { CatalogueFilterControls } from '@/components/catalogue-filter-controls';
 import { CataloguePricing } from '@/components/catalogue-pricing';
-import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { loadCoefficientTable } from '@/data/load';
 import { assetCategorySchema, assetConditionSchema, assetStatusSchema } from '@/data/schemas';
 import { filterAssets } from '@/domain/asset-filter';
@@ -19,7 +17,8 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
-import { getActiveUser, listActiveUserOptions } from '@/server/active-user';
+import { getActiveUser } from '@/server/active-user';
+import { getSavedAssetIds } from '@/server/saved-assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
@@ -41,14 +40,13 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists, coefficientTable, activeUserData] = await Promise.all([
+  const [assets, priceLists, coefficientTable, customer] = await Promise.all([
     listAssets(db),
     loadCataloguePriceLists(db),
     loadCoefficientTable(),
-    process.env.NODE_ENV === 'development'
-      ? Promise.all([listActiveUserOptions(), getActiveUser()])
-      : Promise.resolve(null),
+    getActiveUser(),
   ]);
+  const savedIds = new Set(await getSavedAssetIds(customer?.id ?? null));
   const filteredAssets = filterAssets(assets, filters);
   const termOptions = LEASE_TERM_MONTHS.map((value) => ({
     value,
@@ -77,102 +75,48 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-[1320px] px-4 py-6 sm:px-8 sm:py-7">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t('catalogue.title')}
-        </h1>
-        <div className="flex flex-col items-end gap-2">
-          {activeUserData ? (
-            <DevUserSwitcher
-              users={activeUserData[0]}
-              activeUserId={activeUserData[1]?.id ?? null}
-              buttonLabel={t('dev.mode')}
-              label={t('dev.activeUser')}
-              resetLabel={t('dev.noActiveUser')}
-              customerTypeLabels={{
-                consumer: t('customerType.consumer'),
-                sole_trader: t('customerType.sole_trader'),
-                company: t('customerType.company'),
-              }}
-            />
-          ) : null}
-          <AccountAccess
-            locale={locale}
-            devMode={process.env.NODE_ENV === 'development'}
-            labels={{
-              account: t('account.access'),
-              login: t('account.login'),
-              loginTitle: t('account.loginTitle'),
-              loginMessage: t('account.loginMessage'),
-              close: t('account.close'),
-            }}
-          />
-          {process.env.NODE_ENV === 'development' ? (
-            <Link href={`/${locale}/circular`} className="text-sm font-semibold underline">
-              {t('circular.title')}
-            </Link>
-          ) : null}
-        </div>
-      </div>
-      <div className="max-w-2xl">
-        <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
-        <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t('catalogue.title')}</h1>
+        <p className="inline-flex shrink-0 rounded-full bg-[#101d46] px-3 py-1 text-sm font-medium text-white shadow-sm">
           <time dateTime={today}>
             {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
           </time>
         </p>
       </div>
+      <div className="max-w-2xl">
+        <p className="mt-3 text-lg text-slate-600">{t('catalogue.intro')}</p>
+      </div>
 
-      <form
-        action={`/${locale}`}
-        method="get"
-        className="mt-8 rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
-      >
-        <h2 className="sr-only">{t('catalogue.filters')}</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <FilterSelect
-            id="category"
-            label={t('category.label')}
-            value={filters.category}
-            options={assetCategorySchema.options.map((value) => ({
-              value,
-              label: t(`category.${value}`),
-            }))}
-            allLabel={t('catalogue.all')}
-          />
-          <FilterSelect
-            id="status"
-            label={t('status.label')}
-            value={filters.status}
-            options={assetStatusSchema.options.map((value) => ({
-              value,
-              label: t(`status.${value}`),
-            }))}
-            allLabel={t('catalogue.all')}
-          />
-          <FilterSelect
-            id="condition"
-            label={t('condition.label')}
-            value={filters.condition}
-            options={assetConditionSchema.options.map((value) => ({
-              value,
-              label: t(`condition.${value}`),
-            }))}
-            allLabel={t('catalogue.all')}
-          />
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
-            >
-              {t('catalogue.applyFilters')}
-            </button>
-          </div>
-        </div>
-      </form>
+      <CatalogueFilterControls
+        locale={locale}
+        values={filters}
+        labels={{
+          title: t('catalogue.filters'),
+          category: t('category.label'),
+          status: t('status.label'),
+          condition: t('condition.label'),
+          all: t('catalogue.all'),
+          reset: t('catalogue.resetFilters'),
+        }}
+        options={{
+          categories: assetCategorySchema.options.map((value) => ({
+            value,
+            label: t(`category.${value}`),
+          })),
+          statuses: assetStatusSchema.options.map((value) => ({
+            value,
+            label: t(`status.${value}`),
+          })),
+          conditions: assetConditionSchema.options.map((value) => ({
+            value,
+            label: t(`condition.${value}`),
+          })),
+        }}
+      />
 
       <CataloguePricing
+        key={`${initialDownPayment}-${initialTermMonths}`}
         table={coefficientTable}
         locale={locale}
         labels={pricingLabels}
@@ -211,7 +155,16 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
                 const price = listPriceOn(priceLists, asset.id, assetDates.get(asset.id) ?? today);
                 return (
                   <li key={asset.id}>
-                    <AssetCard asset={asset} price={price} locale={locale} t={t} />
+                    <AssetCard
+                      asset={asset}
+                      price={price}
+                      locale={locale}
+                      t={t}
+                      userId={customer?.id ?? null}
+                      saved={savedIds.has(asset.id)}
+                      saveLabel={t('saved.save')}
+                      removeSavedLabel={t('saved.remove')}
+                    />
                   </li>
                 );
               })}
@@ -247,51 +200,4 @@ function readTerm(value: string | string[] | undefined): number {
     notFound();
   }
   return Number(value);
-}
-
-function FilterSelect<T extends string>({
-  id,
-  label,
-  value,
-  options,
-  allLabel,
-}: {
-  id: string;
-  label: string;
-  value: T | undefined;
-  options: { value: T; label: string }[];
-  allLabel: string;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-        {label}
-      </label>
-      <div className="relative">
-        <select
-          id={id}
-          name={id}
-          defaultValue={value ?? ''}
-          className="mt-1 block w-full appearance-none rounded-lg border border-stone-300 bg-white py-2 pr-10 pl-3 text-sm text-stone-900 shadow-sm focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-        >
-          <option value="">{allLabel}</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          className="pointer-events-none absolute top-1/2 right-[18px] size-4 -translate-y-1/2 text-stone-600 dark:text-stone-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        >
-          <path d="m4 6 4 4 4-4" />
-        </svg>
-      </div>
-    </div>
-  );
 }

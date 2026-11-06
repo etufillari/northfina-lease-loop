@@ -75,6 +75,29 @@ describe('changeAssetStatus', () => {
     expect(result).toEqual({ ok: false, reason: 'not_found' });
     expect(await db.auditLog.count()).toBe(0);
   });
+
+  it('refuses to change a leased asset, and writes nothing', async () => {
+    await seedAssets(db, dataPack);
+    await db.asset.update({ where: { id: 'ebike-001' }, data: { status: 'leased' } });
+
+    const result = await changeAssetStatus(db, {
+      id: 'ebike-001',
+      status: 'available',
+      actor: 'staff-dealer',
+    });
+    expect(result).toEqual({ ok: false, reason: 'status_locked' });
+    const row = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } });
+    expect(row.status).toBe('leased');
+    expect(await db.auditLog.count()).toBe(0);
+  });
+
+  it('refuses to set leased or sold by hand', async () => {
+    await seedAssets(db, dataPack);
+    for (const status of ['leased', 'sold'] as const) {
+      const result = await changeAssetStatus(db, { id: 'ebike-001', status, actor: 'x' });
+      expect(result).toEqual({ ok: false, reason: 'status_locked' });
+    }
+  });
 });
 
 describe('toAsset', () => {

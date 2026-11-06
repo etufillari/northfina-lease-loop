@@ -2,8 +2,8 @@
 // and card 6 (Norvi, the applicant cannot sign), end to end through the audit log.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
+import { applyAndSubmit as apply } from '../../tests/helpers/apply-and-submit';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { answerQuestion, startApplication, submitApplication } from './applications';
 import { seedAssets } from './assets';
 import { listAuditLog } from './audit';
 import { signApplication } from './contracts';
@@ -24,39 +24,8 @@ afterAll(async () => {
 const AS_OF = '2026-11-05';
 const STAFF = 'staff';
 
-/** Answers whatever the flow asks next from `script`, until nothing is left to ask. */
-async function applyAndSubmit(input: {
-  customerId: string;
-  assetIds: string[];
-  downPaymentCents: number;
-  termMonths: number;
-  script: Record<string, unknown>;
-}) {
-  const started = await startApplication(db, { ...input, actor: input.customerId, asOf: AS_OF });
-  if (!started.ok) throw new Error(`start: ${started.reason}`);
-  const applicationId = started.state.application.id;
-  let next = started.state.nextQuestionId;
-  while (next !== null) {
-    if (!(next in input.script)) throw new Error(`no scripted answer for ${next}`);
-    const result = await answerQuestion(db, {
-      applicationId,
-      questionId: next,
-      answer: input.script[next] as never,
-      actor: input.customerId,
-      asOf: AS_OF,
-    });
-    if (!result.ok) throw new Error(`answer ${next}: ${result.reason}`);
-    next = result.state.nextQuestionId;
-  }
-  const submitted = await submitApplication(db, {
-    applicationId,
-    startDate: AS_OF,
-    actor: input.customerId,
-    asOf: AS_OF,
-  });
-  if (!submitted.ok) throw new Error(`submit: ${submitted.reason}`);
-  return submitted.state;
-}
+const applyAndSubmit = (input: Omit<Parameters<typeof apply>[1], 'asOf'>) =>
+  apply(db, { ...input, asOf: AS_OF });
 
 const companyScript = {
   q_customer_type: 'company',

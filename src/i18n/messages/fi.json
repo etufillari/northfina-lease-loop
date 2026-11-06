@@ -405,5 +405,6 @@
   "passport.detail.accepted": "{who} hyväksyi ja haki",
   "passport.detail.declined": "{who} kieltäytyi; siirretty seuraavalle",
   "passport.detail.offerExpired": "{who} ei vastannut 7 päivässä; siirretty seuraavalle",
-  "passport.detail.listed": "Kukaan jonossa ei sovi, joten se on kaikkien saatavilla"
+  "passport.detail.listed": "Kukaan jonossa ei sovi, joten se on kaikkien saatavilla",
+  "secondLife.expiredLineAccepted": "{id} ({who}) hyväksyi tarjouksen ({assets}), mutta ei viimeistellyt hakemusta; varaus päättyi {date}."
 }

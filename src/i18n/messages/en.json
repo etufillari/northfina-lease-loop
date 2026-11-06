@@ -405,5 +405,6 @@
   "passport.detail.accepted": "{who} accepted and applied",
   "passport.detail.declined": "{who} declined; passed to the next person",
   "passport.detail.offerExpired": "{who} did not answer within 7 days; passed to the next person",
-  "passport.detail.listed": "Nobody on the waiting list fits, so it is open to anyone"
+  "passport.detail.listed": "Nobody on the waiting list fits, so it is open to anyone",
+  "secondLife.expiredLineAccepted": "{id} ({who}) accepted {assets} but did not finish the application; the hold ended on {date}."
 }

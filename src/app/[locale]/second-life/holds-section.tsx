@@ -37,12 +37,17 @@ export function HoldsSection({
                 className="flex flex-wrap items-center justify-between gap-3 text-sm"
               >
                 <p>
-                  {t('secondLife.expiredLine', {
-                    id: entry.id,
-                    who: entry.who,
-                    assets: assetIds.join(', '),
-                    date: formatIsoDate(until, locale),
-                  })}
+                  {t(
+                    entry.status === 'accepted'
+                      ? 'secondLife.expiredLineAccepted'
+                      : 'secondLife.expiredLine',
+                    {
+                      id: entry.id,
+                      who: entry.who,
+                      assets: assetIds.join(', '),
+                      date: formatIsoDate(until, locale),
+                    }
+                  )}
                 </p>
                 <DeskActionButton
                   locale={locale}

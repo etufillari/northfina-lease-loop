@@ -405,5 +405,6 @@
   "passport.detail.accepted": "{who} accepterade och ansökte",
   "passport.detail.declined": "{who} tackade nej; gick vidare till nästa",
   "passport.detail.offerExpired": "{who} svarade inte inom 7 dagar; gick vidare till nästa",
-  "passport.detail.listed": "Ingen i kön passar, så den är öppen för alla"
+  "passport.detail.listed": "Ingen i kön passar, så den är öppen för alla",
+  "secondLife.expiredLineAccepted": "{id} ({who}) accepterade {assets} men slutförde inte ansökan; reservationen tog slut {date}."
 }

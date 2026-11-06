@@ -405,5 +405,6 @@
   "passport.detail.accepted": "{who} nõustus ja taotles",
   "passport.detail.declined": "{who} loobus; anti järgmisele",
   "passport.detail.offerExpired": "{who} ei vastanud 7 päeva jooksul; anti järgmisele",
-  "passport.detail.listed": "Keegi järjekorras ei sobi, seega on see kõigile avatud"
+  "passport.detail.listed": "Keegi järjekorras ei sobi, seega on see kõigile avatud",
+  "secondLife.expiredLineAccepted": "{id} ({who}) nõustus ({assets}), kuid ei lõpetanud taotlust; hoid lõppes {date}."
 }

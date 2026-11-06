@@ -11,6 +11,15 @@ export type MonthlyRentResult =
       reason: 'no_list_price' | 'below_minimum' | 'above_maximum' | 'unknown_term';
     };
 
+export function canStartLease(
+  listPriceCents: number | undefined,
+  downPaymentCents: number | undefined,
+  termMonths: number
+): boolean {
+  if (listPriceCents === undefined || downPaymentCents === undefined) return false;
+  return termMonths > 0 || downPaymentCents >= listPriceCents;
+}
+
 export function parseDownPaymentCents(value: string): number | undefined {
   if (!/^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(value)) return undefined;
 

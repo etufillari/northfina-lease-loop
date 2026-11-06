@@ -29,6 +29,7 @@
   "account.leases": "Liisingulepingud",
   "account.noLeases": "Sellel kliendil pole liisingulepinguid.",
   "account.mockLease": "Demoleping — näidisandmed",
+  "account.savedLease": "Salvestatud allkirjastatud liising",
   "account.monthsRemaining": "{count} kuud jäänud",
   "account.viewAsset": "Vaata toote üksikasju",
   "account.contractId": "Lepingu viide",
@@ -114,5 +115,16 @@
   "lease.why": "Miks me küsime",
   "lease.continue": "Jätka",
   "lease.complete": "Sinu vastused on valmis. Saame nüüd liisingutaotlust läbi vaadata.",
-  "lease.validationError": "See vastus ei vasta liisingunõuetele. Taotlust ei saa jätkata."
+  "lease.validationError": "See vastus ei vasta liisingunõuetele. Taotlust ei saa jätkata.",
+  "lease.leaveWarning": "Lehelt lahkumine tühistab liisinguprotsessi ja vabastab eseme kohe. Kas soovid lahkuda?",
+  "lease.finish": "Lõpeta",
+  "lease.bindingWarning": "See on siduv liisinguleping. Valides Lõpeta kinnitad, et soovid selle esitada ja allkirjastada.",
+  "lease.finishing": "Allkirjastamine...",
+  "lease.signingError": "Taotlust ei saanud heaks kiita ega allkirjastada. Kontrolli andmeid ja proovi uuesti.",
+  "lease.checkoutTitle": "Vaata üle liisinguleping",
+  "lease.checkoutMonthlyRent": "Kuu netorent",
+  "lease.checkoutTerm": "Liisinguperiood",
+  "lease.checkoutPaymentDue": "Makse tähtaeg",
+  "lease.checkoutPriceList": "Hinnakirja versioon",
+  "lease.days": "{count} päeva"
 }

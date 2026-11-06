@@ -66,6 +66,9 @@ export type ReserveAssetResult =
 
 const RESERVATION_MINUTES = 15;
 
+export type ReleaseAssetResult =
+  { ok: true; asset: Asset } | { ok: false; reason: 'not_found' | 'not_reserved_by_actor' };
+
 export async function reserveAsset(
   db: PrismaClient,
   input: { id: string; actor: string; now: Date }
@@ -110,6 +113,34 @@ export async function reserveAsset(
     }
     throw error;
   }
+}
+
+export async function releaseAsset(
+  db: PrismaClient,
+  input: { id: string; actor: string }
+): Promise<ReleaseAssetResult> {
+  const existing = await db.asset.findUnique({ where: { id: input.id } });
+  if (!existing) return { ok: false, reason: 'not_found' };
+  if (existing.status !== 'reserved' || existing.reserved_by !== input.actor) {
+    return { ok: false, reason: 'not_reserved_by_actor' };
+  }
+
+  const updated = await withAudit(
+    db,
+    {
+      actor: input.actor,
+      action: 'asset.reservation_released',
+      entityType: 'asset',
+      entityId: input.id,
+      details: { from: 'reserved', to: 'available' },
+    },
+    (tx) =>
+      tx.asset.update({
+        where: { id: input.id },
+        data: { status: 'available', reserved_until: null, reserved_by: null },
+      })
+  );
+  return { ok: true, asset: toAsset(updated) };
 }
 
 class ReservationUnavailableError extends Error {}

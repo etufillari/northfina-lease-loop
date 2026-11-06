@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetPricingControls } from '@/components/asset-pricing-controls';
-import { LeaseApplication, LeaseQuestions, LeaseStartButton } from '@/components/lease-application';
+import { LeaseApplication, LeaseQuestions } from '@/components/lease-application';
 import { loadCoefficientTable, loadPriceLists, loadQuestions } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { LEASE_TERM_MONTHS, parseDownPaymentCents } from '@/domain/monthly-rent';
+import { monthlyRentFor } from '@/domain/monthly-rent';
 import { listPriceOn } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -49,6 +50,10 @@ export default async function AssetDetailsPage({
   if (!asset) notFound();
 
   const price = listPriceOn(priceLists, asset.id, today);
+  const initialQuote =
+    price.ok && downPaymentCents !== undefined
+      ? monthlyRentFor(coefficientTable, price.priceCents, downPaymentCents, termMonths)
+      : { ok: false as const };
   const termOptions = LEASE_TERM_MONTHS.map((value) => ({
     value,
     label: t('pricing.months', { count: value }),
@@ -80,8 +85,27 @@ export default async function AssetDetailsPage({
           questionStep: t('lease.questionStep'),
           why: t('lease.why'),
           continue: t('lease.continue'),
+          finish: t('lease.finish'),
           complete: t('lease.complete'),
           validationError: t('lease.validationError'),
+          leaveWarning: t('lease.leaveWarning'),
+          bindingWarning: t('lease.bindingWarning'),
+          finishing: t('lease.finishing'),
+          signingError: t('lease.signingError'),
+          checkoutTitle: t('lease.checkoutTitle'),
+          checkoutMonthlyRent: t('lease.checkoutMonthlyRent'),
+          checkoutTerm: t('lease.checkoutTerm'),
+          checkoutPaymentDue: t('lease.checkoutPaymentDue'),
+          checkoutPriceList: t('lease.checkoutPriceList'),
+          months: t('pricing.months'),
+          days: t('lease.days'),
+        }}
+        initialOffer={{
+          downPaymentCents: downPaymentCents ?? 0,
+          termMonths,
+          monthlyNetCents: initialQuote.ok ? initialQuote.monthlyRentCents : 0,
+          priceListVersion: price.ok ? price.priceListVersion : 0,
+          paymentDueDays: 14,
         }}
       >
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
@@ -136,8 +160,8 @@ export default async function AssetDetailsPage({
                 term: t('pricing.term'),
                 quoteUnavailable: t('pricing.quoteUnavailable'),
               }}
+              available={asset.status === 'available'}
             />
-            <LeaseStartButton available={asset.status === 'available'} />
           </aside>
         </div>
         <LeaseQuestions locale={locale} />

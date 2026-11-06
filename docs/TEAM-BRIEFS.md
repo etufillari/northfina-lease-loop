@@ -7,7 +7,12 @@ to reset the database to seed state first.
 
 Ground rules for every session:
 
-- Work on `main`; `git pull --rebase` before every commit; small conventional commits.
+- Work on a short-lived feature branch (`staff-desk`, `second-life`), cut from fresh `main`.
+  Push early and open a PR against this fork's `main` (`gh pr create --base main` — NOT the
+  upstream repo; that PR is Friday's submission and happens once, at the end). Keep the PR
+  small, rebase on `main` often (`git fetch && git rebase origin/main`), and merge as soon
+  as `check:all` is green — don't let branches live longer than a few hours.
+- Small conventional commits.
 - Touch only your own area's files. `prisma/schema.prisma` is laptop 1's — ask that session
   for schema changes. In `src/i18n/messages/*` add only your own keys (same keys in all
   four files; a test enforces it).

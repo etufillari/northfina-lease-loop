@@ -1,8 +1,8 @@
 'use client';
-// The demo's time machine, in the demo bar. It only moves forward, a day, a week or a month at
-// a time (no date picker: a picked date is too easy to aim backwards). Contracts, invoices
-// and offers are written on the day they happen, so going back would show a world that
-// contradicts its own records. To replay a demo, "Reset"
+// The demo's time machine, in the demo bar. It only moves forward: +1 day, +1 week, +1 month,
+// or a jump to a LATER date (the picker's minimum is tomorrow and travel() refuses anything
+// earlier). Contracts, invoices and offers are written on the day they happen, so going back
+// would show a world that contradicts its own records. To replay a demo, "Reset"
 // rebuilds the database from the data pack and starts again on the demo start date. The date
 // lives in a cookie that every page and API route treats as "today" (?asOf= still wins).
 import { useRouter } from 'next/navigation';
@@ -41,10 +41,29 @@ export function TimeTravel({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
-  function travel(iso: string) {
-    if (iso <= current) return;
-    setCookie(AS_OF_COOKIE, iso);
-    router.refresh();
+  // Moving the clock runs the overnight job for the days passed (holds that lapse end, offers
+  // pass on), then the whole app re-renders on the new date.
+  async function travel(iso: string) {
+    if (iso <= current || busy) return;
+    setBusy(true);
+    try {
+      const response = await fetch('/api/demo/advance', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ from: current, to: iso, actor: actor ?? 'demo' }),
+      });
+      const body = await response.json();
+      if (!body.success) {
+        window.alert(body.error?.message ?? t('common.error'));
+        return;
+      }
+      setCookie(AS_OF_COOKIE, iso);
+      router.refresh();
+    } catch {
+      window.alert(t('common.error'));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function reset() {
@@ -108,6 +127,30 @@ export function TimeTravel({
           {t('demo.plusMonth')}
         </button>
       </div>
+      <form
+        className="flex items-center gap-1.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = new FormData(event.currentTarget).get('date');
+          if (typeof value === 'string' && value) travel(value);
+        }}
+      >
+        <label className="flex items-center gap-1.5 text-sm">
+          <span className="text-amber-900 dark:text-amber-200">{t('demo.jumpTo')}</span>
+          <input
+            key={current}
+            name="date"
+            type="date"
+            min={addDays(current, 1)}
+            required
+            disabled={busy}
+            className="rounded-md border border-amber-300 bg-white px-1.5 py-0.5 text-sm tabular-nums dark:border-amber-700 dark:bg-stone-900"
+          />
+        </label>
+        <button type="submit" className={step} disabled={busy}>
+          {t('demo.go')}
+        </button>
+      </form>
       <button
         type="button"
         disabled={busy}

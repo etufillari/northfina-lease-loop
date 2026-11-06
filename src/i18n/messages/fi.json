@@ -471,5 +471,7 @@
   "staff.audit.newer": "Uudemmat",
   "staff.audit.older": "Vanhemmat",
   "staff.audit.type.waitlist_entry": "Jonotuslista",
-  "staff.audit.action.demo.reset": "Nollasi demon"
+  "staff.audit.action.demo.reset": "Nollasi demon",
+  "demo.jumpTo": "Siirry päivään",
+  "demo.go": "Siirry"
 }

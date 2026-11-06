@@ -471,5 +471,7 @@
   "staff.audit.newer": "Nyare",
   "staff.audit.older": "Äldre",
   "staff.audit.type.waitlist_entry": "Väntelista",
-  "staff.audit.action.demo.reset": "Återställde demon"
+  "staff.audit.action.demo.reset": "Återställde demon",
+  "demo.jumpTo": "Hoppa till",
+  "demo.go": "Gå"
 }

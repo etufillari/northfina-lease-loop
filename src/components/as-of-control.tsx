@@ -93,10 +93,12 @@ export function AsOfControl({ locale, date }: { locale: Locale; date: string }) 
       if (menu.current?.open && !menu.current.contains(event.target as Node)) close();
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && menu.current?.open) {
-        close();
-        menu.current.querySelector('summary')?.focus();
-      }
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+      if (!menu.current?.open) return;
+      // Only take focus back when it was inside the menu, not from a field elsewhere on the page.
+      const focusWasInside = menu.current.contains(document.activeElement);
+      close();
+      if (focusWasInside) menu.current.querySelector('summary')?.focus();
     };
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);

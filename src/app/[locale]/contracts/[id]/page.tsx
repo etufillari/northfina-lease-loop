@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { ContractActions } from '@/components/contract-actions';
+import { InvoiceTable } from '@/components/invoice-table';
 import { loadRefurbishmentCosts, loadVatRates } from '@/data/load';
 import type { AssetCategory } from '@/data/schemas';
 import { buyoutInvoicePreview } from '@/domain/buyout';
@@ -77,6 +78,18 @@ export default async function ContractPage({
     select: { type: true },
   });
   const pricesInclVat = pricesIncludeVat(holder?.type);
+  // The person each invoice is billed to (after a take-over not every row is the holder's).
+  const billedIds = [
+    ...new Set(visibleInvoices.map((invoice) => invoice.customer_id ?? contract.customer_id)),
+  ];
+  const billedCustomers = await db.customer.findMany({
+    where: { id: { in: billedIds } },
+    select: { id: true, name: true, email: true },
+  });
+  const billedTo = (customerId: string | null) => {
+    const row = billedCustomers.find((c) => c.id === (customerId ?? contract.customer_id));
+    return { name: row?.name ?? '', email: row?.email ?? '' };
+  };
   const leasedAssets = await db.asset.findMany({
     where: { id: { in: contract.assets.map((a) => a.asset_id) } },
     select: {
@@ -221,68 +234,24 @@ export default async function ContractPage({
             })}
           </p>
         ) : null}
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-          <table className="w-full text-sm tabular-nums">
-            <thead className="border-b border-stone-200 text-left text-xs text-stone-600 uppercase dark:border-stone-800 dark:text-stone-400">
-              <tr>
-                <th className="px-4 py-2.5">{t('invoice.number')}</th>
-                <th className="px-4 py-2.5">{t('invoice.dueDate')}</th>
-                <th className="px-4 py-2.5">{t('invoice.period')}</th>
-                <th className="px-4 py-2.5 text-right">{t('invoice.net')}</th>
-                <th className="px-4 py-2.5 text-right">{t('price.vat')} %</th>
-                <th className="px-4 py-2.5 text-right">{t('price.vat')}</th>
-                <th className="px-4 py-2.5 text-right">{t('invoice.total')}</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-              {visibleInvoices.map((invoice) => {
-                const state = invoiceState(invoice.due_date);
-                const changedHere = change?.id === invoice.id;
-                return (
-                  <tr
-                    key={invoice.id}
-                    className={changedHere ? 'bg-sky-50/60 dark:bg-sky-950/40' : ''}
-                  >
-                    <td className="px-4 py-2">
-                      {invoice.number}
-                      {invoice.type !== 'lease' ? (
-                        <span className="ml-1 text-xs text-stone-500">
-                          {t(`invoice.type.${invoice.type}` as MessageKey)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-2">{formatIsoDate(invoice.due_date, locale)}</td>
-                    <td className="px-4 py-2 text-stone-600 dark:text-stone-400">
-                      {invoice.period_start && invoice.period_end
-                        ? `${formatIsoDate(invoice.period_start, locale)} – ${formatIsoDate(invoice.period_end, locale)}`
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-2 text-right">{euro(invoice.net_cents)}</td>
-                    <td className="px-4 py-2 text-right">{invoice.vat_rate_bp / 100}</td>
-                    <td className="px-4 py-2 text-right">{euro(invoice.vat_cents)}</td>
-                    <td className="px-4 py-2 text-right font-medium">
-                      {euro(invoice.total_cents)}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ring-1 ring-inset ${
-                          state === 'open'
-                            ? 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800'
-                            : state === 'paid'
-                              ? 'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800'
-                              : 'bg-stone-100 text-stone-600 ring-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:ring-stone-700'
-                        }`}
-                      >
-                        {t(`invoice.state.${state}` as MessageKey)}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <InvoiceTable
+          locale={locale}
+          changedId={change?.id ?? null}
+          invoices={visibleInvoices.map((invoice) => ({
+            id: invoice.id,
+            number: invoice.number,
+            type: invoice.type,
+            due_date: invoice.due_date,
+            period_start: invoice.period_start,
+            period_end: invoice.period_end,
+            net_cents: invoice.net_cents,
+            vat_rate_bp: invoice.vat_rate_bp,
+            vat_cents: invoice.vat_cents,
+            total_cents: invoice.total_cents,
+            state: invoiceState(invoice.due_date),
+            billedTo: billedTo(invoice.customer_id),
+          }))}
+        />
       </section>
     </div>
   );

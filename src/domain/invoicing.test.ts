@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import type { CoefficientTable, PriceList, VatRates } from '@/data/schemas';
 import { addMonthsClamped, daysInMonth } from './calendar';
-import { scheduleInvoices } from './invoicing';
+import { scheduleInvoices, invoiceIssueDate, paymentReference } from './invoicing';
 import { listPriceOn } from './price-list';
 import { quoteFor } from './pricing';
 import { vatRateOn } from './vat';
@@ -127,4 +127,27 @@ describe('scheduleInvoices', () => {
       );
     }
   );
+});
+
+describe('invoiceIssueDate', () => {
+  it('a lease month is billed on its due date, the first day of its period', () => {
+    expect(invoiceIssueDate({ type: 'lease', due_date: '2026-11-05' })).toBe('2026-11-05');
+  });
+
+  it('one-off invoices give 30 days to pay, so they were issued 30 days earlier', () => {
+    expect(invoiceIssueDate({ type: 'buyout', due_date: '2026-12-05' })).toBe('2026-11-05');
+    expect(invoiceIssueDate({ type: 'early_exit', due_date: '2027-01-30' })).toBe('2026-12-31');
+  });
+});
+
+describe('paymentReference', () => {
+  it('appends the 7-3-1 check digit', () => {
+    // 1234: 4×7 + 3×3 + 2×1 + 1×7 = 46 → check (10 − 6) % 10 = 4.
+    expect(paymentReference(1234)).toBe('12344');
+  });
+
+  it('a sum ending in zero gets check digit zero', () => {
+    // 10: 0×7 + 1×3 = 3 → 7; pick a base whose sum % 10 === 0 instead: 13 → 3×7+1×3=24 → 6.
+    expect(paymentReference(13)).toBe('136');
+  });
 });

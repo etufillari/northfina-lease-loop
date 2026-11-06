@@ -543,5 +543,13 @@
   "secondLife.inspection.save": "Tallenna tarkastus",
   "passport.event.inspected": "Palautustarkastus",
   "passport.detail.inspected": "Kunto {condition} (ehdotus {suggested})",
-  "staff.audit.action.asset.inspected": "Tarkasti palautuksen"
+  "staff.audit.action.asset.inspected": "Tarkasti palautuksen",
+  "invoice.title": "Lasku",
+  "invoice.billedTo": "Laskutettava",
+  "invoice.email": "Sähköposti",
+  "invoice.issued": "Laskun päiväys",
+  "invoice.payment": "Maksutiedot",
+  "invoice.reference": "Viitenumero",
+  "invoice.demoNote": "Demolasku — maksutiedot eivät ole oikeita.",
+  "invoice.close": "Sulje"
 }

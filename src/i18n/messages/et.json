@@ -543,5 +543,13 @@
   "secondLife.inspection.save": "Salvesta ülevaatus",
   "passport.event.inspected": "Tagastuse ülevaatus",
   "passport.detail.inspected": "Hinnatud {condition} (soovitus {suggested})",
-  "staff.audit.action.asset.inspected": "Vaatas tagastuse üle"
+  "staff.audit.action.asset.inspected": "Vaatas tagastuse üle",
+  "invoice.title": "Arve",
+  "invoice.billedTo": "Arve saaja",
+  "invoice.email": "E-post",
+  "invoice.issued": "Arve kuupäev",
+  "invoice.payment": "Makseandmed",
+  "invoice.reference": "Viitenumber",
+  "invoice.demoNote": "Demoarve — makseandmed ei ole päris.",
+  "invoice.close": "Sulge"
 }

@@ -543,5 +543,13 @@
   "secondLife.inspection.save": "Save inspection",
   "passport.event.inspected": "Return inspection",
   "passport.detail.inspected": "Graded {condition} (suggested {suggested})",
-  "staff.audit.action.asset.inspected": "Inspected a return"
+  "staff.audit.action.asset.inspected": "Inspected a return",
+  "invoice.title": "Invoice",
+  "invoice.billedTo": "Billed to",
+  "invoice.email": "Email",
+  "invoice.issued": "Issue date",
+  "invoice.payment": "Payment details",
+  "invoice.reference": "Reference",
+  "invoice.demoNote": "Demo invoice — the payment details are not real.",
+  "invoice.close": "Close"
 }

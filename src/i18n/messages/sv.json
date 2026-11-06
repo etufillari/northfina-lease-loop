@@ -543,5 +543,13 @@
   "secondLife.inspection.save": "Spara besiktning",
   "passport.event.inspected": "Returbesiktning",
   "passport.detail.inspected": "Bedömd {condition} (förslag {suggested})",
-  "staff.audit.action.asset.inspected": "Besiktigade en retur"
+  "staff.audit.action.asset.inspected": "Besiktigade en retur",
+  "invoice.title": "Faktura",
+  "invoice.billedTo": "Faktureras till",
+  "invoice.email": "E-post",
+  "invoice.issued": "Fakturadatum",
+  "invoice.payment": "Betalningsuppgifter",
+  "invoice.reference": "Referensnummer",
+  "invoice.demoNote": "Demofaktura — betalningsuppgifterna är inte riktiga.",
+  "invoice.close": "Stäng"
 }

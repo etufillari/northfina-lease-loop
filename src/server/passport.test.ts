@@ -77,7 +77,8 @@ describe('assetPassport', () => {
 
     const passport = await assetPassport(db, 'ebike-008', AS_OF);
     if (!passport) throw new Error('missing passport');
-    expect(passport.currentLife).toBe(4);
+    // Still its third life: the data pack had already counted the two it came back from.
+    expect(passport.currentLife).toBe(3);
     expect(passport.events[0]).toMatchObject({ type: 'refurbished', onDate: AS_OF });
     expect(passport.recordedLives).toEqual([
       { life: 3, onDate: AS_OF, co2AvoidedKg: executed.co2AvoidedKg },

@@ -114,7 +114,8 @@ describe('scenario card 9: ebike-007', () => {
       status: 'reserved',
       condition: 'fair',
       usage_value: 0,
-      previous_lives: 2,
+      // The data pack already counts the life it came back from: this is its second life.
+      previous_lives: 1,
     });
 
     const events = await db.assetEvent.findMany({
@@ -161,6 +162,27 @@ describe('scenario card 9: ebike-007', () => {
     const result = await previewSecondLife(db, 'ebike-008', AS_OF);
     if (!result.ok) throw new Error(result.reason);
     expect(result.preview.decision.considered.map((v) => v.id)).not.toContain('wait-02');
+  });
+});
+
+describe('counting lives', () => {
+  it('counts a life that ended in the app (a returned event) exactly once', async () => {
+    const before = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-011' } });
+    await db.assetEvent.create({
+      data: { asset_id: 'ebike-011', type: 'returned', on_date: '2026-11-01' },
+    });
+    const result = await executeSecondLife(db, {
+      assetId: 'ebike-011',
+      actor: 'staff-desk',
+      asOf: AS_OF,
+    });
+    if (!result.ok) throw new Error(result.reason);
+    const after = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-011' } });
+    expect(after.previous_lives).toBe(before.previous_lives + 1);
+    const refurbished = await db.assetEvent.findFirstOrThrow({
+      where: { asset_id: 'ebike-011', type: 'refurbished' },
+    });
+    expect(JSON.parse(refurbished.details_json!).life).toBe(before.previous_lives + 2);
   });
 });
 

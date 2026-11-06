@@ -152,6 +152,21 @@ export async function listReturnedDecisions(
   return rows.map((row) => ({ assetId: row.id, result: decide(toAsset(row), asOf, inputs) }));
 }
 
+/**
+ * `previous_lives` counts completed lives. The data pack's returned items already count the
+ * life they came back from (ebike-008 "already had 2 lives" has previous_lives 2, and its next
+ * lease is its third life), but a return made in the app only writes a `returned` event. So
+ * the desk counts the ended life exactly when a `returned` event came after the last
+ * refurbishment — never twice.
+ */
+async function endedLifeUncounted(db: Db, assetId: string): Promise<boolean> {
+  const last = await db.assetEvent.findFirst({
+    where: { asset_id: assetId, type: { in: ['returned', 'refurbished'] } },
+    orderBy: [{ on_date: 'desc' }, { id: 'desc' }],
+  });
+  return last?.type === 'returned';
+}
+
 export type ExecuteSecondLifeResult =
   | { ok: true; preview: SecondLifePreview; co2AvoidedKg: number | null }
   | { ok: false; reason: SecondLifeFailure };
@@ -169,6 +184,7 @@ export async function executeSecondLife(
   if (!previewed.ok) return previewed;
   const { preview } = previewed;
   const { asset, decision, asOf } = preview;
+  const previousLives = asset.previous_lives + ((await endedLifeUncounted(db, asset.id)) ? 1 : 0);
 
   const co2 =
     decision.action === 'parts_bin'
@@ -221,7 +237,7 @@ export async function executeSecondLife(
         usageBefore: asset.usage.value,
         valueCents: decision.valueFinalCents,
         financedCents: decision.financedCents,
-        life: asset.previous_lives + 1,
+        life: previousLives + 1,
         co2AvoidedKg: co2?.kg ?? null,
       });
       if (decision.upgrade) await event('upgraded', decision.upgrade);
@@ -232,7 +248,7 @@ export async function executeSecondLife(
         data: {
           condition: decision.upgrade?.to ?? asset.condition,
           usage_value: decision.usageAfterRefurb,
-          previous_lives: asset.previous_lives + 1,
+          previous_lives: previousLives,
           status: winner ? 'reserved' : 'available',
         },
       });

@@ -162,6 +162,8 @@
   "apply.submitError": "Saatmine ei õnnestunud. Palun proovi uuesti.",
   "apply.successNext.approved": "Järgmisena allkirjastad lepingu. Ülal näidatud kuumakse lukustatakse.",
   "apply.successNext.manual_review": "Meie meeskond vaatab selle üle ja võtab sinuga e-posti teel ühendust.",
+  "apply.successNext.signatory": "Sa ei tohi ettevõtte nimel allkirjastada, seega palusime allkirja aadressilt {email}. Enne seda ei allkirjastata ega arveldata midagi.",
+  "apply.followApplication": "Jälgi oma taotlust",
   "answer.consumer": "Eraisik",
   "answer.sole_trader": "FIE",
   "answer.company": "Ettevõte",

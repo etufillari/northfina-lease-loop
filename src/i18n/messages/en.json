@@ -162,6 +162,8 @@
   "apply.submitError": "Sending didn’t work. Please try again.",
   "apply.successNext.approved": "Next you’ll sign the contract. The monthly price above is the one that will be locked in.",
   "apply.successNext.manual_review": "Someone from our team will check it and contact you by email.",
+  "apply.successNext.signatory": "You may not sign for the company, so we’ve asked {email} to sign. Nothing is signed or invoiced until they do.",
+  "apply.followApplication": "Follow your application",
   "answer.consumer": "Private person",
   "answer.sole_trader": "Sole trader",
   "answer.company": "Company",

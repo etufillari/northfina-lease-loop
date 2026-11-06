@@ -162,6 +162,8 @@
   "apply.submitError": "Det gick inte att skicka. Försök igen.",
   "apply.successNext.approved": "Nästa steg är att skriva under avtalet. Månadspriset ovan är det som låses.",
   "apply.successNext.manual_review": "Någon i vårt team går igenom den och kontaktar dig per e-post.",
+  "apply.successNext.signatory": "Du får inte teckna för företaget, så vi har bett {email} att skriva under. Inget skrivs under eller faktureras innan dess.",
+  "apply.followApplication": "Följ din ansökan",
   "answer.consumer": "Privatperson",
   "answer.sole_trader": "Enskild näringsidkare",
   "answer.company": "Företag",

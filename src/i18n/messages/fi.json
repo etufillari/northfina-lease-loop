@@ -162,6 +162,8 @@
   "apply.submitError": "Lähetys epäonnistui. Yritä uudelleen.",
   "apply.successNext.approved": "Seuraavaksi allekirjoitat sopimuksen. Yllä näkyvä kuukausihinta lukitaan.",
   "apply.successNext.manual_review": "Tiimistämme tarkistetaan hakemus, ja sinuun otetaan yhteyttä sähköpostitse.",
+  "apply.successNext.signatory": "Et voi allekirjoittaa yrityksen puolesta, joten pyysimme allekirjoitusta osoitteesta {email}. Mitään ei allekirjoiteta eikä laskuteta ennen sitä.",
+  "apply.followApplication": "Seuraa hakemustasi",
   "answer.consumer": "Yksityishenkilö",
   "answer.sole_trader": "Toiminimi",
   "answer.company": "Yritys",

@@ -45,7 +45,7 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
   return (
     <article
       aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-ink-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-ink-800 dark:bg-ink-900"
+      className="group relative flex h-full flex-col rounded-2xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md motion-reduce:transform-none dark:border-ink-800 dark:bg-ink-900 dark:hover:border-brand-700"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -85,10 +85,12 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
         </p>
       </div>
 
+      {/* The ::after overlay stretches this link across the card, so the whole card is
+          clickable while screen readers and the keyboard still get one short link. */}
       <Link
         href={`/${locale}/catalogue/${asset.category}/${asset.id}`}
         aria-describedby={headingId}
-        className="mt-4 font-medium text-brand-800 underline-offset-4 hover:underline dark:text-brand-300"
+        className="mt-4 font-medium text-brand-800 underline-offset-4 group-hover:underline after:absolute after:inset-0 after:rounded-2xl dark:text-brand-300"
       >
         {t('asset.chooseLease')}
       </Link>

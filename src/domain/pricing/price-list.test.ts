@@ -63,5 +63,14 @@ describe('listPriceOn', () => {
 
   it('throws on a date that is not YYYY-MM-DD, because that is a bug in the caller', () => {
     expect(() => listPriceOn(priceLists, 'ebike-001', '6.11.2026')).toThrow(RangeError);
+    expect(() => listPriceOn(priceLists, 'ebike-001', '2026-02-30')).toThrow(RangeError);
+    expect(() => listPriceOn(priceLists, 'ebike-001', '2026-13-01')).toThrow(RangeError);
+  });
+
+  it('accepts a valid leap-day date', () => {
+    expect(listPriceOn(priceLists, 'ebike-001', '2028-02-29')).toMatchObject({
+      ok: true,
+      priceListVersion: 2,
+    });
   });
 });

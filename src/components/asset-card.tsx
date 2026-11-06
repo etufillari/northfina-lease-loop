@@ -1,7 +1,8 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
+import Link from 'next/link';
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/price-list';
+import type { ItemPriceResult } from '@/domain/pricing/item-price';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -9,8 +10,8 @@ import { intlLocale, type Locale } from '@/i18n/locales';
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
   available: {
     badge:
-      'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
-    dot: 'bg-emerald-600 dark:bg-emerald-400',
+      'bg-green-50 text-green-900 ring-green-200 dark:bg-green-950 dark:text-green-200 dark:ring-green-800',
+    dot: 'bg-green-600 dark:bg-green-400',
   },
   reserved: {
     badge:
@@ -22,11 +23,16 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
       'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
     dot: 'bg-sky-600 dark:bg-sky-400',
   },
+  sold: {
+    badge:
+      'bg-ink-100 text-ink-800 ring-ink-300 dark:bg-ink-800 dark:text-ink-200 dark:ring-ink-600',
+    dot: 'bg-ink-600 dark:bg-ink-400',
+  },
 };
 
 type AssetCardProps = {
   asset: Asset;
-  price: ListPriceResult;
+  price: ItemPriceResult;
   locale: Locale;
   t: Translate;
 };
@@ -34,15 +40,21 @@ type AssetCardProps = {
 export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
+  const usedPrice = price.ok && price.basis === 'market_value';
+  const leasable = asset.status === 'available';
 
   return (
     <article
       aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      className={`group relative flex h-full flex-col rounded-2xl border border-ink-200 bg-white p-5 shadow-sm dark:border-ink-800 dark:bg-ink-900 ${
+        leasable
+          ? 'transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md motion-reduce:transform-none dark:hover:border-brand-700'
+          : ''
+      }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
+          <p className="text-sm text-ink-600 dark:text-ink-400">{asset.make}</p>
           <h3 id={headingId} className="text-lg leading-snug font-semibold">
             {asset.model}
           </h3>
@@ -66,10 +78,10 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
         <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
       </dl>
 
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-        <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
+      <div className="mt-auto flex items-end justify-between gap-3 border-t border-ink-100 pt-4 dark:border-ink-800">
+        <div className="text-xs text-ink-600 dark:text-ink-400">
+          <p>{t(usedPrice ? 'asset.marketValue' : 'asset.listPrice')}</p>
+          {price.ok && !usedPrice ? (
             <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
           ) : null}
         </div>
@@ -77,6 +89,20 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
       </div>
+
+      {leasable ? (
+        <>
+          {/* The ::after overlay stretches this link across the card, so the whole card is
+              clickable while screen readers and the keyboard still get one short link. */}
+          <Link
+            href={`/${locale}/catalogue/${asset.category}/${asset.id}`}
+            aria-describedby={headingId}
+            className="mt-4 font-medium text-brand-800 underline-offset-4 group-hover:underline after:absolute after:inset-0 after:rounded-2xl dark:text-brand-300"
+          >
+            {t('asset.chooseLease')}
+          </Link>
+        </>
+      ) : null}
     </article>
   );
 }
@@ -84,7 +110,7 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+      <dt className="text-ink-600 dark:text-ink-400">{label}</dt>
       <dd className="font-medium">{value}</dd>
     </div>
   );

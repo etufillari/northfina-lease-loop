@@ -25,11 +25,226 @@ model Asset {
   usage_unit     String // km | battery_cycles | engine_hours
   usage_value    Int
   previous_lives Int
-  status         String // available | reserved | returned
+  status         String // available | reserved | returned | sold
+  first_leased_on           String?
+  original_list_price_cents Int?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
+  applications Application[]
+  contracts    Contract[]
+  history      AssetHistory[]
+  second_life_matches SecondLifeMatch[]
+
   @@index([category])
+}
+
+// A customer profile used by applications and contracts. Type-specific fields
+// are nullable because SQLite has no model inheritance or union types.
+model Customer {
+  id                       String   @id
+  type                     String // consumer | sole_trader | company
+  name                     String
+  country                  String
+  city                     String
+  email                    String
+  is_pep                   Boolean
+  story                    String
+  birth_date               String?
+  employment               String?
+  monthly_net_income_cents Int?
+  business_id              String?  @unique
+  vat_registered           Boolean?
+  annual_revenue_cents     Int?
+  applicant_can_sign       Boolean?
+  beneficial_owners_json   String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  applications Application[]
+
+  @@index([country])
+}
+
+// A lease request and its decision. Quote fields are a snapshot of the offer
+// shown to the applicant, so later price-list changes cannot rewrite history.
+model Application {
+  id                     String    @id
+  customer_id            String
+  asset_id               String
+  status                 String    @default("pending") // pending | approved | rejected | manual_review
+  requested_term_months  Int
+  down_payment_cents     Int
+  start_date             String
+  answers_json           String
+  decision_reasons_json  String?
+  decision_at            DateTime?
+  quote_date             String?
+  price_list_version     Int?
+  list_price_cents       Int?
+  financed_amount_cents  Int?
+  coefficient_band       String?
+  coefficient_factor_ppm Int?
+  annual_interest_basis_points Int?
+  monthly_net_rent_cents Int?
+  buyout_cents           Int?
+  pricing_snapshot_json  String?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+
+  customer Customer  @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  asset    Asset     @relation(fields: [asset_id], references: [id], onDelete: Restrict)
+  contract Contract?
+
+  @@index([customer_id])
+  @@index([asset_id])
+  @@index([status])
+}
+
+// The agreed lease. An asset may have many contracts over its lifetime, but
+// each application can produce at most one contract.
+model Contract {
+  id                     String   @id
+  application_id         String   @unique
+  asset_id               String
+  status                 String   @default("draft") // draft | active | completed | terminated
+  signed_on              String?
+  starts_on              String
+  ends_on                String
+  term_months            Int
+  down_payment_cents     Int
+  list_price_cents       Int
+  financed_amount_cents  Int
+  price_list_version     Int
+  coefficient_band       String
+  coefficient_factor_ppm Int
+  annual_interest_basis_points Int?
+  monthly_net_rent_cents Int
+  buyout_cents           Int
+  pricing_snapshot_json  String?
+  end_of_term_action     String? // bought | returned | passed_on
+  buyout_paid_cents      Int? // net buyout settlement, only for bought contracts
+  completed_on           String?
+  termination_action     String? // returned | bought
+  terminated_on          String?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  application Application    @relation(fields: [application_id], references: [id], onDelete: Restrict)
+  asset       Asset          @relation(fields: [asset_id], references: [id], onDelete: Restrict)
+  invoices    Invoice[]
+  history     AssetHistory[]
+  early_exit_request EarlyExitRequest?
+
+  @@index([asset_id])
+  @@index([status])
+}
+
+// A scheduled early-exit request and its locked settlement calculation.
+model EarlyExitRequest {
+  id                     String   @id
+  contract_id            String   @unique
+  action                 String // returned | bought
+  status                 String   @default("pending") // pending | completed | cancelled
+  requested_on           String
+  effective_on           String
+  settlement_net_cents   Int
+  vat_rate_basis_points  Int
+  vat_cents               Int
+  settlement_total_cents Int
+  settlement_paid_cents  Int?
+  quote_snapshot_json     String
+  completed_on            String?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  contract Contract @relation(fields: [contract_id], references: [id], onDelete: Restrict)
+
+  @@index([status, effective_on])
+}
+
+// One scheduled charge from a locked contract.
+model Invoice {
+  id                    String    @id
+  contract_id           String
+  sequence              Int
+  status                String    @default("issued") // issued | paid | overdue | cancelled
+  period_start          String
+  period_end            String
+  due_on                String
+  net_rent_cents        Int
+  vat_rate_basis_points Int
+  vat_cents             Int
+  total_cents           Int
+  issued_at             DateTime  @default(now())
+  paid_at               DateTime?
+
+  contract Contract  @relation(fields: [contract_id], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  @@unique([contract_id, sequence])
+  @@index([due_on, status])
+}
+
+// A payment received against exactly one invoice. Multiple rows support partial payments.
+model Payment {
+  id           String   @id
+  invoice_id   String
+  amount_cents Int
+  paid_on      String
+  reference    String?
+  created_at   DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Restrict)
+
+  @@index([invoice_id, paid_on])
+}
+
+// Append-only customer-facing passport for a physical asset. AuditLog remains
+// the technical audit trail; this records the asset's business lifecycle.
+model AssetHistory {
+  id           Int      @id @default(autoincrement())
+  asset_id     String
+  contract_id  String?
+  event_type   String // lease_started | returned | passed_on | condition_assessed | refurbished | made_available | matched | bought_out
+  occurred_on  String
+  from_status  String?
+  to_status    String?
+  condition    String?
+  usage_unit   String?
+  usage_value  Int?
+  actor        String
+  details_json String?
+  created_at   DateTime @default(now())
+
+  asset    Asset     @relation(fields: [asset_id], references: [id], onDelete: Restrict)
+  contract Contract? @relation(fields: [contract_id], references: [id], onDelete: Restrict)
+
+  @@index([asset_id, occurred_on])
+  @@index([contract_id])
+}
+
+// A deterministic waiting-list match reserved for the next lease flow.
+model SecondLifeMatch {
+  id                       String   @id
+  asset_id                 String
+  request_id               String   @unique
+  status                   String   @default("accepted") // accepted
+  matched_on               String
+  actor                    String
+  market_value_cents       Int
+  term_months              Int
+  monthly_net_rent_cents   Int
+  pricing_snapshot_json    String
+  request_snapshot_json    String
+  from_contract_id         String?  @unique // the lease this item was passed on from
+  recipient_name           String? // only when the customer named the next person
+  recipient_email          String?
+  created_at               DateTime @default(now())
+
+  asset Asset @relation(fields: [asset_id], references: [id], onDelete: Restrict)
+
+  @@index([asset_id, matched_on])
 }
 
 // Who changed what, and when. Written in the same transaction as the change

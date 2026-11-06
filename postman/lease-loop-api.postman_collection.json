@@ -1,0 +1,899 @@
+{
+  "info": {
+    "name": "Lease Loop API",
+    "description": "Run requests in order for the complete happy path. Start the app with a seeded database and set baseUrl if needed. The final asset-status requests return the asset to available for another run.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "assetId",
+      "value": "ebike-003"
+    },
+    {
+      "key": "customerId",
+      "value": "cust-aino"
+    },
+    {
+      "key": "applicationId",
+      "value": "application-id-from-previous-response"
+    },
+    {
+      "key": "contractId",
+      "value": "contract-id-from-previous-response"
+    },
+    {
+      "key": "invoiceId",
+      "value": "invoice-id-from-previous-response"
+    },
+    {
+      "key": "invoiceTotalCents",
+      "value": "0"
+    },
+    {
+      "key": "buyoutCents",
+      "value": "0"
+    },
+    {
+      "key": "earlyExitRequestId",
+      "value": "early-exit-request-from-previous-response"
+    },
+    {
+      "key": "earlyExitEffectiveOn",
+      "value": "2026-12-05"
+    },
+    {
+      "key": "earlyExitSettlementCents",
+      "value": "0"
+    },
+    {
+      "key": "refurbishmentAssetId",
+      "value": "ebike-007"
+    },
+    {
+      "key": "refurbishmentCompletedOn",
+      "value": "2026-11-06"
+    },
+    {
+      "key": "matchAssetId",
+      "value": "ebike-007"
+    },
+    {
+      "key": "matchAvailableOn",
+      "value": "2026-11-06"
+    },
+    {
+      "key": "matchRequestId",
+      "value": "wait-13"
+    },
+    {
+      "key": "impactAsOf",
+      "value": "2026-11-06"
+    },
+    {
+      "key": "actor",
+      "value": "postman"
+    }
+  ],
+  "item": [
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "List all assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets"
+          }
+        },
+        {
+          "name": "Filter assets by category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets?category=e_bike"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quotes",
+      "item": [
+        {
+          "name": "Create quote - price list v1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/quotes"
+          }
+        },
+        {
+          "name": "Create quote - price list v2 and VAT preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2027-01-01\",\n  \"downPaymentCents\": 10000,\n  \"termMonths\": 36\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/quotes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "Preview application - initial questions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36,\n  \"answers\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/applications/preview"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('application preview succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preview application - complete consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36,\n  \"answers\": {\n    \"q_customer_type\": \"consumer\",\n    \"q_full_name\": \"Aino Virtanen\",\n    \"q_birth_date\": \"1997-04-12\",\n    \"q_email\": \"aino@example.com\",\n    \"q_country\": \"FI\",\n    \"q_employment\": \"employed\",\n    \"q_monthly_income\": 320000,\n    \"q_usage_purpose\": \"commuting\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/applications/preview"
+          }
+        },
+        {
+          "name": "Submit application - approved consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"assetId\": \"{{assetId}}\",\n  \"date\": \"2026-11-05\",\n  \"downPaymentCents\": 0,\n  \"termMonths\": 36,\n  \"answers\": {\n    \"q_customer_type\": \"consumer\",\n    \"q_full_name\": \"Aino Virtanen\",\n    \"q_birth_date\": \"1997-04-12\",\n    \"q_email\": \"aino.virtanen@example.com\",\n    \"q_country\": \"FI\",\n    \"q_employment\": \"employed\",\n    \"q_monthly_income\": 320000,\n    \"q_usage_purpose\": \"commuting\"\n  },\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/applications"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('application is approved', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.application.decision).to.eql('approved');",
+                  "});",
+                  "pm.collectionVariables.set('applicationId', body.data.application.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign approved application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\",\n  \"signedOn\": \"2026-11-06\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('contract is active', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.contract.status).to.eql('active');",
+                  "});",
+                  "pm.collectionVariables.set('contractId', body.data.contract.id);",
+                  "pm.collectionVariables.set('buyoutCents', String(body.data.contract.buyoutCents));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "description": "Invoice schedules use the contract's locked net rent and invoice-date VAT.",
+      "item": [
+        {
+          "name": "Generate invoice schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('invoice schedule is generated', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.invoices.length).to.eql(36);",
+                  "});",
+                  "pm.collectionVariables.set('invoiceId', body.data.invoices[0].id);",
+                  "pm.collectionVariables.set('invoiceTotalCents', String(body.data.invoices[0].totalCents));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List contract invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices"
+          }
+        },
+        {
+          "name": "Record invoice payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountCents\": {{invoiceTotalCents}},\n  \"paidOn\": \"2026-11-05\",\n  \"reference\": \"bank-001\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices/{{invoiceId}}/payments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('invoice is fully paid', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.invoice.paymentStatus).to.eql('paid');",
+                  "    pm.expect(body.data.invoice.remainingCents).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List invoice payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices/{{invoiceId}}/payments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('payment history shows a paid invoice', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.invoice.paymentStatus).to.eql('paid');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Early exit",
+      "description": "Quotes a return on the next invoice anniversary, records the pending request, and processes it after the first invoice has been paid.",
+      "item": [
+        {
+          "name": "Quote early return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"returned\",\n  \"requestedOn\": \"2026-11-06\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/early-exit/quote"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('early-exit quote is available', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.quote.quote.effectiveOn).to.eql('2026-12-05');",
+                  "});",
+                  "pm.collectionVariables.set('earlyExitEffectiveOn', body.data.quote.quote.effectiveOn);",
+                  "pm.collectionVariables.set('earlyExitSettlementCents', String(body.data.quote.settlementTotalCents));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request early return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"returned\",\n  \"requestedOn\": \"2026-11-06\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/early-exit"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('early-exit request is pending', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.request.status).to.eql('pending');",
+                  "});",
+                  "pm.collectionVariables.set('earlyExitRequestId', body.data.request.id);",
+                  "pm.collectionVariables.set('earlyExitSettlementCents', String(body.data.request.settlementTotalCents));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Process early return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processedOn\": \"{{earlyExitEffectiveOn}}\",\n  \"settlementPaidCents\": {{earlyExitSettlementCents}},\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/early-exit/process"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('early exit is completed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.termination.status).to.eql('completed');",
+                  "    pm.expect(body.data.termination.action).to.eql('returned');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Second life refurbishment",
+      "description": "Quotes and accepts refurbishment for a returned asset. This uses ebike-007 from the seeded data pack and can be run independently of the contract flow.",
+      "item": [
+        {
+          "name": "Quote refurbishment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetCondition\": \"good\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{refurbishmentAssetId}}/refurbishment/quote"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('refurbishment quote is available', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.asset.status).to.eql('returned');",
+                  "    pm.expect(body.data.quote.targetCondition).to.eql('good');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept refurbishment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetCondition\": \"good\",\n  \"completedOn\": \"{{refurbishmentCompletedOn}}\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{refurbishmentAssetId}}/refurbishment"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returned asset is available again', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.asset.status).to.eql('available');",
+                  "    pm.expect(body.data.asset.condition).to.eql('good');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Second life matchmaking",
+      "description": "Ranks the waiting list for the refurbished ebike-007, then accepts wait-13 and reserves the asset.",
+      "item": [
+        {
+          "name": "Preview matches",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availableOn\": \"{{matchAvailableOn}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{matchAssetId}}/matches/preview"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('match preview is ranked', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.matches.length).to.be.greaterThan(0);",
+                  "    pm.expect(body.data.matches[0].request.id).to.eql('wait-13');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept match",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestId\": \"{{matchRequestId}}\",\n  \"availableOn\": \"{{matchAvailableOn}}\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{matchAssetId}}/matches"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('match reserves the asset', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.asset.status).to.eql('reserved');",
+                  "    pm.expect(body.data.match.requestId).to.eql('wait-13');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Circular impact",
+      "description": "Read-only CO₂ and indicative money savings for one asset and the whole fleet.",
+      "item": [
+        {
+          "name": "Asset impact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/ebike-008/impact?asOf={{impactAsOf}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('asset impact succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.impact.co2.reuseLives).to.eql(2);",
+                  "    pm.expect(body.data.impact.co2.savedByLife.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fleet impact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/impact/fleet?asOf={{impactAsOf}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('fleet impact succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.totals.assetCount).to.be.greaterThan(0);",
+                  "    pm.expect(body.data.excluded).to.eql([]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "End of term examples",
+      "description": "These examples are disabled in the full runner because the current flow only pays the first invoice. Settle the complete invoice schedule, enable exactly one action, and run it.",
+      "item": [
+        {
+          "name": "Return asset",
+          "disabled": true,
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"returned\",\n  \"completedOn\": \"2029-11-05\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/end-of-term"
+          }
+        },
+        {
+          "name": "Pass asset on",
+          "disabled": true,
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"passed_on\",\n  \"completedOn\": \"2029-11-05\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/end-of-term"
+          }
+        },
+        {
+          "name": "Buy out asset",
+          "disabled": true,
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"bought\",\n  \"completedOn\": \"2029-11-05\",\n  \"buyoutPaidCents\": {{buyoutCents}},\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/end-of-term"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Asset status",
+      "description": "These requests change database state and write audit records.",
+      "item": [
+        {
+          "name": "Reserve asset",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"reserved\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{assetId}}/status"
+          }
+        },
+        {
+          "name": "Make asset available again",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"available\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{assetId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit log",
+      "item": [
+        {
+          "name": "List recent audit entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/audit-log"
+          }
+        }
+      ]
+    }
+  ]
+}

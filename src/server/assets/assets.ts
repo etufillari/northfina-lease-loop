@@ -2,7 +2,7 @@
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
 import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
-import { withAudit } from './audit';
+import { withAudit } from '../audit';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
 export function toAsset(row: AssetRow): Asset {
@@ -17,6 +17,10 @@ export function toAsset(row: AssetRow): Asset {
     usage: { unit: row.usage_unit, value: row.usage_value },
     previous_lives: row.previous_lives,
     status: row.status,
+    ...(row.first_leased_on === null ? {} : { first_leased_on: row.first_leased_on }),
+    ...(row.original_list_price_cents === null
+      ? {}
+      : { original_list_price_cents: row.original_list_price_cents }),
   });
 }
 
@@ -34,6 +38,8 @@ export function toAssetRowData(asset: Asset) {
     usage_value: asset.usage.value,
     previous_lives: asset.previous_lives,
     status: asset.status,
+    first_leased_on: asset.first_leased_on ?? null,
+    original_list_price_cents: asset.original_list_price_cents ?? null,
   };
 }
 
@@ -46,6 +52,11 @@ export async function listAssets(
     orderBy: { id: 'asc' },
   });
   return rows.map(toAsset);
+}
+
+export async function getAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
 }
 
 export type ChangeAssetStatusResult =

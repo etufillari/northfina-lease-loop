@@ -42,20 +42,14 @@ For a task spanning domains, split the work by owner and agree the connection. D
 
 ## Where we are now
 
-Use [PROGRESS.md](PROGRESS.md) for detailed evidence and local demo steps.
+The lead has taken over Dev3's remaining work. The complete single-asset return-and-re-lease spine now works locally, including account/workshop screens, saved invoices, inspection, mandatory work, second-life pricing and a new customer's lease. **258 tests and the full check:all production build pass.**
 
-- Pulled Dev2's merged PR12 from team main (`b04cd0e`). Applications and signed contracts are real persisted records.
-- Local integration now connects signing → active lease/allocation → saved VAT-correct invoices → completion, including the account UI. No fake paid status or mock lease fallback is used there.
-- **225 tests pass.** Actual HTTP/account-render smoke passed on isolated SQLite. Webpack production build passes; default Turbopack remains blocked by this runner's worker-port restriction.
-- Return, inspection, refurbishment, readiness/repricing and second-life re-leasing remain to be integrated. Buyout/pass-on/payment settlement are not implemented.
-- New UI/API controls are development-only, with ownership/origin checks; production authentication is still missing.
-- Integration changes are local on `feat/engine-persistence`, not pushed/merged. Stash backups preserve pre-pull work.
+Use [PROGRESS.md](PROGRESS.md) for status and [SCENARIO-CARD-RESULTS.md](SCENARIO-CARD-RESULTS.md) for verified cards/demo steps. New circular work is on `feat/circular-lease-loop`, not yet pushed/merged. Payments and production authentication are not implemented; controls are development-only.
 
-## Next steps
+## What to do next
 
-1. **Developer 1:** review/publish the real contract/engine/UI integration; coordinate the physical allocation release with Developer3.
-2. **Developer 3:** persist return → inspection → mandatory work/readiness, consuming the real completed lease.
-3. **Developer 2 + Developer3:** publish the ready asset's new offer and sign a second customer's contract without changing physical identity.
-4. **Together:** activate/invoice that second lease; verify end options, language/accessibility and the full demo.
+1. Review/publish the circular integration and repeat the full demo manually.
+2. Pitch the selected VAT/price-lock and money/calendar smart problems with their tested examples.
+3. Verify four languages/keyboard flow and two4-minute rehearsals; keep CI green before submission.
 
-Advanced matching, CO₂ and early-exit fees wait until the full loop works. See [TEAM-AI-RULES.md](TEAM-AI-RULES.md) for boundaries and [NEXT-TEAM-PRS.md](NEXT-TEAM-PRS.md) for teammate deliverables.
+Run `npm run dev -- --webpack`. Choose Aino and lease an available asset, generate invoices, complete and return through the workshop, confirm work, then choose Lena and lease the same asset again. See the scenario report for dates and policies.

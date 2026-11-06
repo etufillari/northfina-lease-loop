@@ -1,3 +1,4 @@
+import { multiplyCents } from './circular/money';
 import type { CoefficientTable } from '@/data/schemas';
 import { monthlyFactorFor } from './coefficient';
 
@@ -60,5 +61,5 @@ export function monthlyRentFor(
   if (!result.ok) return result;
 
   // Round the calculated net monthly rent once to the nearest euro cent.
-  return { ok: true, monthlyRentCents: Math.round(financedCents * result.factor) };
+  return { ok: true, monthlyRentCents: multiplyCents(financedCents, result.factor) };
 }

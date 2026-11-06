@@ -1,9 +1,11 @@
+import { assetBusinessDate } from '@/server/circular/queries';
+import { loadCataloguePriceLists } from '@/server/circular/prices';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetPricingControls } from '@/components/asset-pricing-controls';
 import { LeaseApplication, LeaseQuestions } from '@/components/lease-application';
-import { loadCoefficientTable, loadPriceLists, loadQuestions } from '@/data/load';
+import { loadCoefficientTable, loadQuestions } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { LEASE_TERM_MONTHS, parseDownPaymentCents } from '@/domain/monthly-rent';
 import { monthlyRentFor } from '@/domain/monthly-rent';
@@ -17,6 +19,7 @@ import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
 const statusStyles = {
+  retired: 'bg-stone-100 text-stone-700',
   available:
     'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
   reserved:
@@ -34,14 +37,14 @@ export default async function AssetDetailsPage({
 
   await connection();
   const t = getT(locale);
-  const today = todayIso();
+  const today = await assetBusinessDate(db, id, todayIso());
   const query = await searchParams;
   const downPaymentInput = readOptionalText(query.downPayment) ?? '0';
   const downPaymentCents = parseDownPaymentCents(downPaymentInput);
   const termMonths = readTerm(query.term);
   const [assets, priceLists, coefficientTable, questionsFile, activeUser] = await Promise.all([
     listAssets(db),
-    loadPriceLists(),
+    loadCataloguePriceLists(db),
     loadCoefficientTable(),
     loadQuestions(),
     getActiveUser(),
@@ -71,10 +74,7 @@ export default async function AssetDetailsPage({
       <LeaseApplication
         assetId={asset.id}
         category={asset.category}
-        financedAmountCents={Math.max(
-          0,
-          (price.ok ? price.priceCents : 0) - (downPaymentCents ?? 0)
-        )}
+        listPriceCents={price.ok ? price.priceCents : 0}
         questions={questionsFile.questions}
         customer={activeUser}
         today={today}
@@ -93,6 +93,10 @@ export default async function AssetDetailsPage({
           finishing: t('lease.finishing'),
           signingError: t('lease.signingError'),
           checkoutTitle: t('lease.checkoutTitle'),
+          exitPolicy: t('end.policy'),
+          underage: t('lease.underage'),
+          manualReview: t('lease.manualReview'),
+          rejected: t('lease.rejected'),
           checkoutMonthlyRent: t('lease.checkoutMonthlyRent'),
           checkoutTerm: t('lease.checkoutTerm'),
           checkoutPaymentDue: t('lease.checkoutPaymentDue'),

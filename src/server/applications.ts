@@ -4,10 +4,14 @@ import type {
   Contract as ContractRow,
   PrismaClient,
 } from '@/generated/prisma/client';
-import { loadCoefficientTable, loadCustomers, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadCustomers, loadVatRates, loadQuestions } from '@/data/load';
+import { resolveVat } from '@/domain/lease-engine/invoice';
+import { prepareApplicationAnswers } from '@/domain/application-answers';
 import { decideApplication } from '@/domain/application';
 import { toLeaseDTO } from '@/server/lease-engine/contracts';
 import { toLeaseTerms } from '@/domain/contract';
+import { multiplyCents } from '@/domain/circular/money';
+import { loadCataloguePriceLists } from '@/server/circular/prices';
 import { monthlyRentFor } from '@/domain/monthly-rent';
 import { listPriceOn } from '@/domain/price-list';
 import { withAudit, type TransactionClient } from './audit';
@@ -25,6 +29,7 @@ export type SubmitApplicationInput = Readonly<{
   priceListVersion?: number;
   offerExpiresOn: string;
   actor: string;
+  answers?: Record<string, string>;
 }>;
 
 export type SubmitApplicationResult =
@@ -106,7 +111,7 @@ export async function submitApplication(
 ): Promise<SubmitApplicationResult> {
   const [customers, priceLists, coefficientTable, assetRow] = await Promise.all([
     loadCustomers(),
-    loadPriceLists(),
+    loadCataloguePriceLists(db),
     loadCoefficientTable(),
     db.asset.findUnique({ where: { id: input.assetId } }),
   ]);
@@ -151,11 +156,26 @@ export async function submitApplication(
   if (!monthlyRent.ok || monthlyRent.monthlyRentCents <= 0) {
     return { ok: false, reason: 'invalid_offer' };
   }
-  const decision = decideApplication({
+  const prepared = prepareApplicationAnswers(
     customer,
+    (await loadQuestions()).questions,
+    {
+      customerType: customer.type,
+      category: asset.category,
+      financedCents: price.priceCents - input.downPaymentCents,
+      termMonths: input.termMonths,
+    },
+    input.answers ?? {}
+  );
+  if (!prepared.ok) return { ok: false, reason: 'invalid_offer' };
+  const vat = resolveVat((await loadVatRates()).rates, input.startDate);
+  if (!vat.ok) return { ok: false, reason: 'invalid_offer' };
+  const decision = decideApplication({
+    customer: prepared.customer,
     asset: decisionAsset,
     monthlyNetCents: monthlyRent.monthlyRentCents,
-    asOf: now.toISOString().slice(0, 10),
+    asOf: input.startDate,
+    vatRateBps: vat.value.rateBps,
   });
   const applicationId = input.applicationId ?? randomUUID();
   const application = await withAudit(
@@ -167,7 +187,7 @@ export async function submitApplication(
       entityId: applicationId,
       details: { status: decision.status, reason: decision.reason },
     },
-    (tx) =>
+    async (tx) =>
       tx.application.create({
         data: {
           id: applicationId,
@@ -179,8 +199,24 @@ export async function submitApplication(
           payment_due_days: DEFAULT_PAYMENT_DUE_DAYS,
           price_list_version: price.priceListVersion,
           offer_expires_on: input.offerExpiresOn,
+          termination_policy: 'EXIT_CAP_BUYOUT_V1',
+          down_payment_cents: input.downPaymentCents,
+          financed_cents: price.priceCents - input.downPaymentCents,
+          buyout_net_cents: multiplyCents(
+            price.priceCents - input.downPaymentCents,
+            (coefficientTable.end_of_term_buyout_percent_of_financed[String(input.termMonths)] ??
+              0) / 100
+          ),
+          circular_offer_id:
+            (
+              await tx.circularOffer.findFirst({
+                where: { assetId: input.assetId, publishedOn: { lte: input.startDate } },
+                orderBy: [{ publishedOn: 'desc' }, { id: 'desc' }],
+              })
+            )?.id ?? null,
           status: decision.status,
           decision_reason: decision.reason,
+          answers_json: JSON.stringify(prepared.answers),
           signing_authority: decision.signingAuthority,
         },
       })
@@ -242,6 +278,11 @@ export async function signContract(
             monthly_net_cents: application.monthly_net_cents,
             payment_due_days: application.payment_due_days,
             price_list_version: application.price_list_version,
+            termination_policy: application.termination_policy,
+            down_payment_cents: application.down_payment_cents,
+            financed_cents: application.financed_cents,
+            buyout_net_cents: application.buyout_net_cents,
+            circular_offer_id: application.circular_offer_id,
             signer_id: input.signerId,
             signed_at: input.signedAt,
           },

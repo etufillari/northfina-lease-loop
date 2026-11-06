@@ -6,6 +6,7 @@ import { db } from '@/server/db';
 import { getActiveUser } from '@/server/active-user';
 
 const bodySchema = z.strictObject({
+  answers: z.record(z.string(), z.string().max(5000)).optional(),
   applicationId: z.string().trim().min(1).max(100).optional(),
   customerId: z.string().trim().min(1).max(100),
   assetId: z.string().trim().min(1).max(100),

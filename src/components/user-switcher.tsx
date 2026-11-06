@@ -171,9 +171,9 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
           onChange={(event) => void onChange(event.target.value)}
           aria-busy={loading || busy}
           aria-invalid={error || undefined}
-          className="min-w-0 flex-1 appearance-none border-0 bg-transparent [color-scheme:dark] px-2 py-2 text-sm text-stone-100 shadow-none outline-none ring-0 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0"
+          className="min-w-0 flex-1 appearance-none rounded-lg border-0 bg-stone-900 px-2 py-2 text-sm text-stone-100 [color-scheme:dark] shadow-none outline-none focus:border-0 focus:outline-none focus:ring-0 disabled:opacity-50"
         >
-          <option value="" disabled className="bg-stone-900 text-stone-100">
+          <option value="" disabled className="bg-stone-900 text-stone-400">
             {loading ? t('session.loading') : t('session.guest')}
           </option>
 
@@ -188,7 +188,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
           )}
 
           {staff.length > 0 && (
-            <optgroup label={t('session.staff')} className="bg-stone-900 text-stone-400">
+            <optgroup label={t('session.staff')} className="bg-stone-900 text-stone400">
               {staff.map((user) => (
                 <option key={user.id} value={user.id} className="bg-stone-900 text-stone-100">
                   {optionLabel(user, t)}

@@ -60,6 +60,14 @@ export function addMonthsClamped(
   return formatDate({ year: targetYear, month: targetMonth, day: targetDay });
 }
 
+/** Counts the whole calendar months from `start` to `end`. */
+export function wholeMonthsBetween(start: string, end: string): number {
+  const from = parseDate(start);
+  const to = parseDate(end);
+  const months = (to.year - from.year) * 12 + to.month - from.month;
+  return months - (to.day < from.day ? 1 : 0);
+}
+
 /** Adds whole calendar days without using Date or timezone conversion. */
 export function addDays(date: string, dayOffset: number): string {
   const parsed = parseDate(date);

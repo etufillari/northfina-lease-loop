@@ -137,7 +137,6 @@ function contractInput(contract: NonNullable<ContractGraph>) {
     monthlyNetRentCents: contract.monthly_net_rent_cents,
     buyoutCents: contract.buyout_cents,
     annualInterestBasisPoints: contract.annual_interest_basis_points,
-    listPriceCents: contract.list_price_cents,
   };
 }
 
@@ -191,6 +190,8 @@ async function calculateQuote(
       category: contract.asset.category as AssetCategory,
       condition: contract.asset.condition as AssetCondition,
       usageValue: contract.asset.usage_value,
+      firstLeasedOn: contract.asset.first_leased_on ?? contract.starts_on,
+      originalListPriceCents: contract.asset.original_list_price_cents ?? contract.list_price_cents,
     },
     residualCurves,
   });

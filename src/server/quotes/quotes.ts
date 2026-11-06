@@ -1,5 +1,10 @@
 import { isoDateSchema, centsSchema, type Asset } from '@/data/schemas';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import {
+  loadCoefficientTable,
+  loadPriceLists,
+  loadResidualCurves,
+  loadVatRates,
+} from '@/data/load';
 import { quoteFor, type QuoteInput, type QuoteResult } from '@/domain/pricing/quote';
 import { toAsset } from '../assets/assets';
 import type { PrismaClient } from '../prisma-client';
@@ -29,13 +34,14 @@ export async function createQuoteWithAsset(
 
   const asset = toAsset(row);
 
-  const [priceLists, coefficientTable, vatRates] = await Promise.all([
+  const [priceLists, residualCurves, coefficientTable, vatRates] = await Promise.all([
     loadPriceLists(),
+    loadResidualCurves(),
     loadCoefficientTable(),
     loadVatRates(),
   ]);
 
-  const result = quoteFor(asset, priceLists, coefficientTable, vatRates, input);
+  const result = quoteFor(asset, priceLists, residualCurves, coefficientTable, vatRates, input);
   if (!result.ok) return result;
   return { ...result, asset };
 }

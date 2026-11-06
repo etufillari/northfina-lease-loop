@@ -18,10 +18,15 @@ const contract = {
   monthlyNetRentCents: 10_000,
   buyoutCents: 50_000,
   annualInterestBasisPoints: 0,
-  listPriceCents: 300_000,
 };
 
-const asset = { category: 'e_bike' as const, condition: 'good' as const, usageValue: 0 };
+const asset = {
+  category: 'e_bike' as const,
+  condition: 'good' as const,
+  usageValue: 0,
+  firstLeasedOn: '2026-01-31',
+  originalListPriceCents: 300_000,
+};
 
 describe('nextInvoiceDateAfter', () => {
   it('clamps the next anniversary for a January 31 start', () => {
@@ -31,6 +36,38 @@ describe('nextInvoiceDateAfter', () => {
 });
 
 describe('earlyExitQuoteFor', () => {
+  it('values a used item by its age since the first lease, not since this contract', () => {
+    const quoteFor = (firstLeasedOn: string) =>
+      earlyExitQuoteFor({
+        action: 'returned',
+        effectiveOn: '2026-02-28',
+        contract,
+        asset: { ...asset, firstLeasedOn },
+        residualCurves: curves,
+      });
+
+    expect(quoteFor('2023-01-31')).toMatchObject({
+      ok: true,
+      quote: { completedMonths: 1, marketValueCents: 100_088 },
+    });
+  });
+
+  it('refuses a first lease after the contract start', () => {
+    expect(
+      earlyExitQuoteFor({
+        action: 'returned',
+        effectiveOn: '2026-02-28',
+        contract,
+        asset: { ...asset, firstLeasedOn: '2026-02-01' },
+        residualCurves: curves,
+      })
+    ).toEqual({
+      ok: false,
+      reason: 'residual_value_unavailable',
+      detail: 'first_lease_after_start',
+    });
+  });
+
   it('includes month seven through the end and the locked buyout', () => {
     const result = earlyExitQuoteFor({
       action: 'returned',

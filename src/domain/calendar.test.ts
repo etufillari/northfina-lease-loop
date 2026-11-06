@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addMonthsClamped, isMonthEnd } from './calendar';
+import { addDays, addMonthsClamped, isMonthEnd, wholeMonthsBetween } from './calendar';
 
 describe('calendar helpers', () => {
   it('preserves a month-end anchor across short and long months', () => {
@@ -27,5 +27,17 @@ describe('calendar helpers', () => {
     expect(isMonthEnd('2028-02-28')).toBe(false);
     expect(isMonthEnd('2028-02-29')).toBe(true);
     expect(isMonthEnd('2026-02-17')).toBe(false);
+  });
+});
+
+describe('wholeMonthsBetween', () => {
+  it('counts completed months only', () => {
+    expect(wholeMonthsBetween('2023-01-01', '2026-11-06')).toBe(46);
+    expect(wholeMonthsBetween('2026-01-15', '2026-02-14')).toBe(0);
+    expect(wholeMonthsBetween('2026-01-15', '2026-02-15')).toBe(1);
+  });
+
+  it('is zero for the same day', () => {
+    expect(wholeMonthsBetween('2026-11-06', '2026-11-06')).toBe(0);
   });
 });

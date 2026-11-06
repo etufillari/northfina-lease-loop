@@ -7,8 +7,10 @@ import type {
   SecondLifeRequest,
 } from '@/data/schemas';
 import { isoDateSchema } from '@/data/schemas';
+import { wholeMonthsBetween } from '../calendar';
 import { leasePriceFor, type LeasePriceResult } from '../pricing/pricing';
 import { residualValueFor, type ResidualValueResult } from './residual-value';
+import { lifecycleMetadataFor, type LifecyclePricingMetadata } from './used-item-value';
 
 const conditionRank: Record<AssetCondition, number> = {
   poor: 0,
@@ -16,15 +18,6 @@ const conditionRank: Record<AssetCondition, number> = {
   good: 2,
   like_new: 3,
   new: 4,
-};
-
-export type LifecycleMetadataSource = 'stored' | 'demo_fallback';
-
-export type LifecyclePricingMetadata = {
-  firstLeasedOn: string;
-  originalListPriceCents: number;
-  source: LifecycleMetadataSource;
-  originalPriceListVersion: number | null;
 };
 
 export type MatchPricing = {
@@ -75,46 +68,6 @@ function assertDate(value: string, name: string): void {
   if (!isoDateSchema.safeParse(value).success) {
     throw new RangeError(`${name} must be a valid ISO date, got "${value}"`);
   }
-}
-
-function firstPriceListFor(priceLists: readonly PriceList[], assetId: string) {
-  const sorted = [...priceLists].sort((left, right) =>
-    left.valid_from.localeCompare(right.valid_from)
-  );
-  const first = sorted[0];
-  const priceCents = first?.prices[assetId];
-  if (!first || priceCents === undefined) return null;
-  return { priceCents, version: first.version };
-}
-
-function lifecycleMetadataFor(
-  asset: Asset,
-  priceLists: readonly PriceList[]
-): LifecyclePricingMetadata | null {
-  const originalPrice =
-    asset.original_list_price_cents === undefined
-      ? firstPriceListFor(priceLists, asset.id)
-      : { priceCents: asset.original_list_price_cents, version: null };
-  if (!originalPrice) return null;
-
-  return {
-    firstLeasedOn: asset.first_leased_on ?? `${asset.model_year}-01-01`,
-    originalListPriceCents: originalPrice.priceCents,
-    source:
-      asset.first_leased_on !== undefined && asset.original_list_price_cents !== undefined
-        ? 'stored'
-        : 'demo_fallback',
-    originalPriceListVersion: originalPrice.version,
-  };
-}
-
-function monthNumber(date: string): number {
-  return Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7));
-}
-
-function wholeMonthsBetween(start: string, end: string): number {
-  const monthDifference = monthNumber(end) - monthNumber(start);
-  return monthDifference - (end.slice(8, 10) < start.slice(8, 10) ? 1 : 0);
 }
 
 function reasonForPricing(result: LeasePriceResult): MatchCandidateReason | null {

@@ -38,6 +38,7 @@ const quote: QuoteData = {
     endOfTermBuyoutCents: 58_350,
     totalCostWithBuyoutCents: 444_630,
   },
+  valuation: null,
   vatPreview: {
     invoiceDate: '2026-11-05',
     ratePercent: 25.5,
@@ -46,6 +47,7 @@ const quote: QuoteData = {
     monthlyGrossRentCents: 13_466,
   },
   sources: {
+    priceBasis: 'list_price',
     priceListVersion: 1,
     coefficientTableId: 'ct-2026-1',
     coefficientTableVersion: 1,

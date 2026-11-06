@@ -15,6 +15,7 @@ import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getContractEnding } from '@/server/contract-endings';
+import { latestContractId } from '@/server/hand-over';
 import { getContract, issuedInvoices } from '@/server/contracts';
 import { db } from '@/server/db';
 import { earlyExitContext } from '@/server/early-exit';
@@ -73,6 +74,12 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const exitContext = exitPriced?.ok ? exitPriced.context : null;
   const exitMonth = exitMonthOn(contract, today);
   const canLeaveEarly = exitContext !== null && (exitMonth.ok || exitMonth.reason !== 'term_over');
+  // Passed on and back with us: hand it to the next person in one click (#65). Only this
+  // contract's ending decides, so not once the item has been leased again.
+  const canHandOver =
+    ending?.kind === 'pass_on' &&
+    assetRow?.status === 'returned' &&
+    (await latestContractId(db, contract.assetId)) === found.id;
   // The headline: the next invoice still to come, or (once ended or all billed) the total.
   const next = schedule?.ok ? schedule.invoices.find((i) => i.invoiceDate >= today) : undefined;
 
@@ -338,6 +345,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
               }
               demand={secondLife.demand}
               standalone={!(canLeaveEarly && exitContext && assetRow)}
+              canHandOver={canHandOver}
             />
           </div>
         </>

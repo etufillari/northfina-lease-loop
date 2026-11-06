@@ -59,6 +59,10 @@ const fromRoutes = [
   // POST /api/assets/:id/relist
   'ASSET_NOT_RETURNED',
   'TARGET_NOT_ALLOWED',
+  // POST /api/contracts/:id/hand-over (#65)
+  'NOT_PASSED_ON',
+  'ALREADY_HANDED_OVER',
+  'NO_PRICE',
 ];
 
 describe('refusal messages (D-038)', () => {

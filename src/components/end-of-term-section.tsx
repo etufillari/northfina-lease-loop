@@ -13,6 +13,7 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { EndOfTermForm, type EndOfTermFormProps } from './end-of-term-form';
+import { HandOverButton } from './hand-over-button';
 
 export type EndOfTermSectionProps = {
   locale: Locale;
@@ -32,6 +33,8 @@ export type EndOfTermSectionProps = {
   demand: SecondLifeRequest[];
   /** True when Leave early is not beside it, so the section has the whole width. */
   standalone: boolean;
+  /** Passed on, the item is back and this is its latest contract: one click hands it over (#65). */
+  canHandOver: boolean;
 };
 
 export function EndOfTermSection(props: EndOfTermSectionProps) {
@@ -149,6 +152,16 @@ function EndingSummary(props: EndOfTermSectionProps & { ending: Ending }) {
             {euro(invoice.grossCents)}
           </dd>
         </dl>
+      ) : null}
+      {props.canHandOver && ending.nextLessee ? (
+        <HandOverButton
+          locale={locale}
+          contractId={props.contractId}
+          assetId={props.assetId}
+          name={lessee ?? t('handOver.someone')}
+          handoverDate={ending.effectiveDate}
+          today={props.today}
+        />
       ) : null}
       <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
         {/* The loop goes on: a handed-back item gets a second life on its own page (D-035). */}

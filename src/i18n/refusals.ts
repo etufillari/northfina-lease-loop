@@ -5,6 +5,7 @@
 import type { CreateQuoteRefusal } from '@/server/quotes';
 import type { EndLeaseRefusal } from '@/server/contract-endings';
 import type { EndEarlyRefusal } from '@/server/early-exit';
+import type { HandOverRefusal } from '@/server/hand-over';
 import type { RelistRefusal } from '@/server/second-life';
 import type { SignLeaseRefusal } from '@/server/contracts';
 import type { CountersignRefusal } from '@/server/awaiting-signature';
@@ -26,7 +27,8 @@ export type RefusalCode =
   | CountersignRefusal
   | EndLeaseRefusal
   | EndEarlyRefusal
-  | RelistRefusal;
+  | RelistRefusal
+  | HandOverRefusal;
 
 const messageKeys = {
   validation_error: 'refusal.validation_error',
@@ -81,6 +83,10 @@ const messageKeys = {
   // re-listing
   asset_not_returned: 'refusal.asset_not_returned',
   target_not_allowed: 'refusal.target_not_allowed',
+  // handing a passed-on item over (#65)
+  not_passed_on: 'refusal.not_passed_on',
+  already_handed_over: 'refusal.already_handed_over',
+  no_price: 'refusal.no_price',
 } as const satisfies Record<RefusalCode, MessageKey>;
 
 /** Every refusal code, in lower case. */

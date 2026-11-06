@@ -2,7 +2,7 @@
 // (?term=24&down=50000), so a reload or a language switch keeps what the customer picked.
 import type { CoefficientTable } from '@/data/schemas';
 import type { SearchParamsInput } from './catalogue';
-import { downPaymentRange, leaseTerms } from './pricing';
+import { downPaymentRange, leaseTerms, type DownPaymentRange } from './pricing';
 
 export const DEFAULT_TERM_MONTHS = 36;
 
@@ -38,7 +38,39 @@ export function parsePriceSelection(
   if (raw === undefined || raw.trim() === '' || !Number.isFinite(down)) {
     return { termMonths, downPaymentCents: range.minCents };
   }
-  const snapped = Math.round(down / range.stepCents) * range.stepCents;
-  const downPaymentCents = Math.min(range.maxCents, Math.max(range.minCents, snapped));
-  return { termMonths, downPaymentCents };
+  return { termMonths, downPaymentCents: snapDownPayment(down, range) };
+}
+
+/** A down payment snapped to the slider step and clamped into the item's allowed range. */
+export function snapDownPayment(
+  cents: number,
+  range: Extract<DownPaymentRange, { ok: true }>
+): number {
+  const snapped = Math.round(cents / range.stepCents) * range.stepCents;
+  return Math.min(range.maxCents, Math.max(range.minCents, snapped));
+}
+
+/** The offered term closest to `months`; a tie goes to the shorter term. */
+export function nearestTerm(terms: readonly number[], months: number): number | null {
+  let best: number | null = null;
+  for (const term of terms) {
+    if (best === null || Math.abs(term - months) < Math.abs(best - months)) best = term;
+  }
+  return best;
+}
+
+const EURO_INPUT = /^(\d+)(?:[.,](\d{1,2}))?$/;
+
+/**
+ * Euros typed by a person, as whole cents: "20000", "20 000", "1234,5" (Finnish comma) or
+ * "1234.50". Parsed from the text, never through a float, so 0.1 + 0.2 problems can't appear.
+ * Returns null for anything else: empty, negative, letters or more than two decimals.
+ */
+export function parseEuroInput(text: string): number | null {
+  const match = EURO_INPUT.exec(text.replace(/[\s\u00a0\u202f]/g, '').replace(/€$/, ''));
+  if (!match) return null;
+  const euros = Number(match[1]);
+  const cents = Number((match[2] ?? '').padEnd(2, '0'));
+  const total = euros * 100 + cents;
+  return Number.isSafeInteger(total) ? total : null;
 }

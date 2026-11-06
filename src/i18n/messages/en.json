@@ -62,6 +62,7 @@
   "price.exclVat": "{amount} excl. VAT",
   "price.term": "Lease term",
   "price.months": "{months} months",
+  "price.monthsUnit": "months",
   "price.downPayment": "Down payment",
   "price.minDownPayment": "This item needs at least {amount} down, because we can finance at most {max}.",
   "price.noDownPayment": "The price is so close to our minimum that no down payment is possible.",

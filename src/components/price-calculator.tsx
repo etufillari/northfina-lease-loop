@@ -1,6 +1,6 @@
 'use client';
 
-// Spine step 2: pick a term and a down payment with sliders and watch the monthly price update.
+// Spine step 2: pick a term and a down payment (slider or typed, see price-inputs.tsx) and watch the monthly price update.
 // All maths is in src/domain/pricing.ts; this component only holds the two slider values.
 // They are mirrored into the URL (?term=&down=), so a reload or a language switch keeps them.
 import Link from 'next/link';
@@ -12,6 +12,7 @@ import { downPaymentRange, leaseTerms, quoteLease, type LeaseQuote } from '@/dom
 import { formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { DownPaymentInput, TermInput } from './price-inputs';
 
 type PriceCalculatorProps = {
   assetId: string;
@@ -39,17 +40,19 @@ export function PriceCalculator(props: PriceCalculatorProps) {
 
   const terms = leaseTerms(table);
   const range = downPaymentRange(listPriceCents, table);
-  const [termIndex, setTermIndex] = useState(() => Math.max(0, terms.indexOf(initial.termMonths)));
+  const [termMonths, setTermMonths] = useState(() =>
+    terms.includes(initial.termMonths) ? initial.termMonths : (terms[0] ?? DEFAULT_TERM_MONTHS)
+  );
   const [downPaymentCents, setDownPaymentCents] = useState(initial.downPaymentCents);
 
-  function changeTerm(index: number) {
-    setTermIndex(index);
-    rememberInUrl({ termMonths: terms[index] ?? DEFAULT_TERM_MONTHS, downPaymentCents });
+  function changeTerm(months: number) {
+    setTermMonths(months);
+    rememberInUrl({ termMonths: months, downPaymentCents });
   }
 
   function changeDownPayment(cents: number) {
     setDownPaymentCents(cents);
-    rememberInUrl({ termMonths: terms[termIndex] ?? DEFAULT_TERM_MONTHS, downPaymentCents: cents });
+    rememberInUrl({ termMonths, downPaymentCents: cents });
   }
 
   if (!range.ok) {
@@ -63,7 +66,6 @@ export function PriceCalculator(props: PriceCalculatorProps) {
     );
   }
 
-  const termMonths = terms[termIndex] ?? DEFAULT_TERM_MONTHS;
   const result = quoteLease({ listPriceCents, downPaymentCents, termMonths, vatPercent }, table);
   const fixedDownPayment = range.minCents === range.maxCents;
 
@@ -83,55 +85,14 @@ export function PriceCalculator(props: PriceCalculatorProps) {
             ) : null}
           </p>
 
-          <label className="mt-8 block">
-            <span className="flex justify-between text-sm font-medium">
-              {t('price.term')}
-              <span className="tabular-nums">{t('price.months', { months: termMonths })}</span>
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={terms.length - 1}
-              step={1}
-              value={termIndex}
-              onChange={(event) => changeTerm(Number(event.target.value))}
-              aria-valuetext={t('price.months', { months: termMonths })}
-              className="mt-3 w-full accent-emerald-700"
-            />
-            <span
-              aria-hidden="true"
-              className="mt-1 flex justify-between text-xs text-stone-600 dark:text-stone-400"
-            >
-              {terms.map((months) => (
-                <span key={months}>{months}</span>
-              ))}
-            </span>
-          </label>
-
-          <label className="mt-6 block">
-            <span className="flex justify-between text-sm font-medium">
-              {t('price.downPayment')}
-              <span className="tabular-nums">{euro(downPaymentCents)}</span>
-            </span>
-            <input
-              type="range"
-              min={range.minCents}
-              max={range.maxCents}
-              step={range.stepCents}
-              value={downPaymentCents}
-              disabled={fixedDownPayment}
-              onChange={(event) => changeDownPayment(Number(event.target.value))}
-              aria-valuetext={euro(downPaymentCents)}
-              className="mt-3 w-full accent-emerald-700 disabled:opacity-50"
-            />
-            <span
-              aria-hidden="true"
-              className="mt-1 flex justify-between text-xs text-stone-600 dark:text-stone-400"
-            >
-              <span>{euro(range.minCents)}</span>
-              <span>{euro(range.maxCents)}</span>
-            </span>
-          </label>
+          <TermInput terms={terms} termMonths={termMonths} onChange={changeTerm} t={t} />
+          <DownPaymentInput
+            range={range}
+            downPaymentCents={downPaymentCents}
+            onChange={changeDownPayment}
+            locale={locale}
+            t={t}
+          />
           {range.minCents > 0 ? (
             <p className="mt-3 text-sm text-amber-900 dark:text-amber-200">
               {t('price.minDownPayment', {

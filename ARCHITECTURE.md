@@ -77,8 +77,8 @@ The app is one Next.js 16 monolith (App Router, TypeScript, React 19, Prisma 7 +
 | `src/i18n`                                     | `i18n`   | Four-locale dictionaries, interpolation, locale-aware date and number formatting         | none (leaf)                                        |
 | `src/app` (+ `src/components`, `src/proxy.ts`) | `app`    | Pages, UI components, locale routing proxy, `/api/*` route handlers                      | `data`, `domain`, `server`, `i18n`                 |
 
-- **Functional core, imperative shell.** Side effects happen only in `server` and `app`: reading the clock (`todayIso()` / `resolveAsOf()`), loading JSON (`src/data/load.ts`) and reading or writing SQLite.
-- **Hybrid storage.** Mutable entities (`Asset`, `AuditLog`, `Quote`, `Application`, `Contract`, `InvoiceRow`, `AssetEvent`) live in SQLite. Immutable reference tables (price lists, coefficient table, VAT rates, questions, residual curves, refurbishment costs, waiting list, CO₂ factors, customers) are read from `data/` and validated by `src/data`.
+- **Functional core, imperative shell.** Side effects happen only in `server` and `app`: reading the clock (`todayIso()` / `resolveAsOf()`), seeding from JSON (`src/data/load.ts`), and reading or writing SQLite.
+- **Full SQLite storage with data-pack fallback.** `prisma/schema.prisma` defines both the mutable lifecycle entities (`Asset`, `AssetReservation`, `Quote`, `Application`, `Contract`, `InvoiceRow`, `AssetEvent`, `AuditLog`) and the full set of reference tables (`PriceList`, `PriceListEntry`, `CoefficientTable`, `CoefficientBand`, `CoefficientFactor`, `BuyoutPercent`, `VatRate`, `ResidualCurvePoint`, `ConditionMultiplier`, `UsageAdjustment`, `RefurbishmentUpgrade`, `RefurbishmentFixedCost`, `SecondLifeRequest`, `Question`, `EligibilityRule`, `Customer`, `Co2ManufacturingFactor`, `Co2Settings`), which `prisma/seed.ts` populates via `src/server/reference-seed.ts` using integer basis points (`*_bp`) and parts per million (`*_ppm`). Runtime pages, routes, and server actions read reference data from SQLite via `src/server/reference-read.ts` (falling back to `src/data/load.ts` only when a table is empty in unseeded unit tests) and persist `Quote`, `Application`, `Contract`, `InvoiceRow`, and `AssetEvent` rows via `src/server/contracts.ts`, `src/server/early-exit.ts`, and `src/server/assets.ts`.
 
 ### 4.1 Layers (each calls only the one below)
 
@@ -89,24 +89,21 @@ The app is one Next.js 16 monolith (App Router, TypeScript, React 19, Prisma 7 +
 
 ### 4.2 Domain modules
 
-Existing code is kept and built on. `contract-pricing.ts` already does the quote (worked example passes). It moves into `pricing/` and switches to the integer arithmetic in §6.1. Its tests must keep passing. The question flow and eligibility are **built** as single files (PR #4).
+Domain modules live as flat, single-responsibility files in `src/domain/` with co-located Vitest suites (`*.test.ts`):
 
-| Module                                                                       | Owner                        | Covers        | Status                                                             |
-| ---------------------------------------------------------------------------- | ---------------------------- | ------------- | ------------------------------------------------------------------ |
-| `money/` (rounding, rates, calendar, schedule generator, allocation)         | C                            | #5 foundation | new                                                                |
-| `pricing/` (quote from list price + term + down payment, VAT lookup, buyout) | C                            | Spine         | exists as `contract-pricing.ts`, `coefficient.ts`, `price-list.ts` |
-| `question-flow.ts` (visible questions, pruning)                              | B                            | #4            | **built**                                                          |
-| `eligibility.ts` (decision with reasons, `ageOn`)                            | B                            | #4 + Spine    | **built**                                                          |
-| `business-id.ts` (Y-tunnus check digit)                                      | B                            | #4            | **built**                                                          |
-| `date-input.ts` (day/month/year ↔ ISO at the UI edge)                        | A                            | #4 UX         | **built**                                                          |
-| `contract/` (snapshot at signing + generated schedule)                       | B, using C's generator       | Spine         | new                                                                |
-| `early-exit/` (balance, exit quotes with breakdown)                          | C                            | #2            | new                                                                |
-| `end-of-term/` (return / buy out / extend)                                   | B, buyout from C             | Spine         | new                                                                |
-| `second-life/` (market value, relist price, waiting-list matchmaking)        | C pricing + matching, B flow | Spine + #3    | new                                                                |
-| `lifecycle/` (allowed status transitions)                                    | B                            | safeguards    | new                                                                |
-| `impact/` (CO₂ and money saved per life and fleet)                           | C                            | #7            | new                                                                |
-
-A small module is a single file (as the built ones are). It becomes a folder with an `index.ts` when it grows. Every file stays under 600 lines, and every function is tested next to it.
+| Module                                                                                                                   | Owner | Covers              | Status    |
+| ------------------------------------------------------------------------------------------------------------------------ | ----- | ------------------- | --------- |
+| `money.ts`, `invoice-schedule.ts` (formatting, parsing, calendar clamping, Finnish reference number, schedule generator) | C     | #1 + #5             | **built** |
+| `catalogue-filter.ts` (category, text, status, min/max price filtering)                                                  | A     | Spine #1            | **built** |
+| `contract-pricing.ts`, `coefficient.ts`, `price-list.ts` (list price, band/factor lookup, quote, VAT lookup, buyout)     | C     | Spine #2 + #6       | **built** |
+| `reservation.ts`, `offer.ts` (15-min application reservation, 14-day binding offer & price protection)                   | B / C | Spine #2–#4         | **built** |
+| `question-flow.ts` (visible questions, pruning)                                                                          | B     | #4                  | **built** |
+| `eligibility.ts` (decision with reasons, `ageOn`)                                                                        | B     | #4 + Spine          | **built** |
+| `business-id.ts` (Y-tunnus check digit)                                                                                  | B     | #4                  | **built** |
+| `date-input.ts` (day/month/year ↔ ISO at the UI edge)                                                                    | A     | #4 UX               | **built** |
+| `early-exit.ts` (exact BigInt PV balance, buyout & return exit quotes with breakdown)                                    | C     | #2                  | **built** |
+| `end-of-term.ts` (buyout settlement, residual curve & market value, waiting-list matchmaking, avoided CO₂)               | B / C | Spine #6–#7, #3, #7 | **built** |
+| `lifecycle/` (explicit `leased` status transition & `Contract`/`AssetEvent` persistence guards)                          | B     | safeguards          | planned   |
 
 ### 4.3 Storage approach: snapshot + stored schedule
 
@@ -176,9 +173,9 @@ Card 2: the quote saved on 5 Nov locks v1 (349000). Signing on 6 Nov, when v2 (3
 
 **Card 1 reference numbers (ebike-003, 36 months, start 5 Nov 2026):** rent 10730 net. Invoices on 5 Nov and 5 Dec 2026 are 10730 + 2736 = **13466**. 5 Jan 2027 is 10730 + 2790 = **13520** (26 %). Net total 386280, gross total **486612**. Buyout 58350 net.
 
-### 6.4 Property tests (fast-check, thousands of random contracts)
+### 6.4 Property tests (hegel-js, randomized contracts)
 
-Add `fast-check` as a dev dependency. It is not AI, and `check:no-ai` allows it.
+`hegel-js` is installed as a dev dependency (`src/domain/money.test.ts`, `src/domain/contract-pricing.test.ts`, `src/domain/invoice-schedule.test.ts`). It is not AI, and `check:no-ai` allows it.
 
 - Schedule net sum = `monthly × term (+ down payment)`. Gross sum = stored contract gross total, to the cent.
 - No negative amounts. Every row date is a valid ISO date. Dates are strictly increasing. Each row's day equals `min(startDay, daysInMonth)`.
@@ -200,7 +197,7 @@ balance(asOf) = Σ_{i=1..m} rent / (1 + r)^i  +  buyout / (1 + r)^m
 
 - The coefficient factor is an annuity at the band rate with the buyout as a balloon. For ebike-003 the annuity gives 10722 against the table's 10730. So `balance` is the true remaining financed amount. At signing it is ≈ the financed amount: 388992 vs 389000. That is a good sanity check to show in the demo.
 - When `m = 0` (term over), `balance = buyout`. **Consistency with the end-of-term buyout holds by construction.**
-- The present value is computed in double precision and rounded **once** with `Math.round` at the end. This is the only non-integer step in the money core. It is documented and tested.
+- The present value is computed without floating point in `src/domain/early-exit.ts` (`outstandingBalanceCents`): the annual rate is converted to whole basis points (`1 + r = (120_000 + bp) / 120_000`) and evaluated as a single exact `BigInt` fraction, rounded half up **once** at the end. Every breakdown line is an integer, and `interestNotCharged` is derived so the lines always sum to `balance`.
 
 **The customer chooses one of two exit options:**
 
@@ -303,29 +300,45 @@ Totals are shown per item and for the whole fleet. Card 10 (`ebike-008`, 2 lives
 
 ## 10. Persistence, config and lifecycle
 
-### 10.1 New Prisma models (C)
+### 10.1 Prisma models (`prisma/schema.prisma`)
+
+- **Reference tables (seeded by `prisma/seed.ts` via `src/server/reference-rows.ts` & `src/server/reference-seed.ts`):**
+  - `Asset` (+ `relist_price_cents?`, `first_lease_date?`, `first_list_price_cents?`)
+  - `PriceList`, `PriceListEntry`
+  - `CoefficientTable`, `CoefficientBand` (`annual_interest_bp`), `CoefficientFactor` (`factor_ppm`), `BuyoutPercent` (`percent_bp`)
+  - `VatRate` (`rate_bp`)
+  - `ResidualCurvePoint` (`percent_bp`), `ConditionMultiplier` (`multiplier_bp`), `UsageAdjustment` (`percent_per_step_bp`, `max_total_percent_bp`)
+  - `RefurbishmentUpgrade`, `RefurbishmentFixedCost`
+  - `SecondLifeRequest`
+  - `Question`, `EligibilityRule`
+  - `Customer`
+  - `Co2ManufacturingFactor`, `Co2Settings` (`refurbishment_share_of_new_bp`, `e_bike_avoided_car_g_per_km`)
+- **Lifecycle and audit tables:**
 
 ```text
-Quote        id (uuid), asset_id, created_on (asOf), price_list_version (null if relisted),
-             list_price_cents, down_payment_cents, financed_cents, band, factor_ppm,
-             annual_interest_bp, term_months, monthly_net_rent_cents, buyout_net_cents
-Application  id (uuid), quote_id, created_on (asOf), answers_json (pruned),
-             decision (yes|manual_review), reasons_json, status
-Contract     id (uuid), application_id @unique, quote_id, asset_id, status,
-             start_date, price_list_version, list_price_cents, down_payment_cents,
-             financed_cents, band, factor_ppm, annual_interest_bp, term_months,
-             monthly_net_rent_cents, buyout_net_cents, total_net_cents, total_gross_cents,
-             signed_on, closed_on?
-InvoiceRow   id, contract_id, seq, kind (down_payment|rent|exit_return|exit_buyout|buyout),
-             invoice_date, period_start, period_end, net_cents, vat_rate_bp, vat_cents,
-             gross_cents, cancelled_by_exit (bool)    @@unique([contract_id, seq])
-AssetEvent   id, asset_id, on_date, from_status, to_status, contract_id?, condition?,
-             usage_value?, amount_cents?, note_key?    (append-only)
-Asset        + relist_price_cents?, first_lease_date?, first_list_price_cents?
+AssetReservation id (uuid), asset_id, token @unique, actor, status (active|released|expired|completed),
+                 expires_at, reservation_type (standard|offer), offered_on?, list_price_cents?,
+                 price_list_version?, term_months?, down_payment_cents?, monthly_net_rent_cents?,
+                 monthly_gross_rent_cents?, buyout_net_cents?, quote_json?
+Quote            id (uuid), asset_id, created_on (asOf), price_list_version (null if relisted),
+                 list_price_cents, down_payment_cents, financed_cents, band, factor_ppm,
+                 annual_interest_bp, term_months, monthly_net_rent_cents, buyout_net_cents
+Application      id (uuid), quote_id, customer_id?, created_on (asOf), answers_json (pruned),
+                 decision (yes|manual_review), reasons_json, status (submitted|signed)
+Contract         id (uuid), application_id @unique, quote_id, asset_id, customer_id?, status,
+                 start_date, price_list_version, list_price_cents, down_payment_cents,
+                 financed_cents, band, factor_ppm, annual_interest_bp, term_months,
+                 monthly_net_rent_cents, buyout_net_cents, total_net_cents, total_gross_cents,
+                 signed_on, closed_on?
+InvoiceRow       id, contract_id, seq, kind (down_payment|rent|exit_return|exit_buyout|buyout),
+                 invoice_date, period_start, period_end, net_cents, vat_rate_bp, vat_cents,
+                 gross_cents, cancelled_by_exit (bool)    @@unique([contract_id, seq])
+AssetEvent       id, asset_id, on_date, from_status, to_status, contract_id?, condition?,
+                 usage_value?, amount_cents?, note_key?    (append-only)
+AuditLog         id, created_at, actor, action, entity_type, entity_id, details_json?
 ```
 
-- Asset statuses are extended: `available | reserved | leased | returned | sold`.
-- The database stores the **customer's answers only as needed for the decision**. Data from `customers.json` is never copied in.
+- Asset statuses across schema and `src/data/schemas.ts`: `available | reserved | leased | returned | sold`.
 
 ### 10.2 Lifecycle guards
 
@@ -353,18 +366,18 @@ Every route checks the table. Sign, exit, end-of-term and relist each run inside
 
 ## 12. Scenario card acceptance
 
-| Card               | Expected result in our app                                                                                                                                                                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 Happy path       | Rent 10730 net / 13466 gross. Invoices on 5 Nov, 5 Dec, 5 Jan (the 3rd at 26 %: 13520). Total 486612 gross                                                                                                                                                      |
-| 2 Price lock       | The quote saved on 5 Nov locks v1 (349000). Signing on 6 Nov keeps v1, not v2 (321100), and the contract page says "locked by your quote of 5 Nov (price list v1)"                                                                                              |
-| 3 Tax is not price | ebike-001: net 6957 every month. Dec 2026 VAT 1774 (25.5 %), Jan 2027 VAT 1809 (26 %). The UI explains "rent locked, VAT follows the law on the invoice date"                                                                                                   |
-| 4 Calendar traps   | laptop-001 from 31 Jan 2026: invoices on **28 Feb 2026** and **29 Feb 2028**, rent 3432                                                                                                                                                                         |
-| 5 Too young        | Flow stops after the birth date. Outcome `no`, reason `min_age`, kind message with alternatives                                                                                                                                                                 |
-| 6 Who can sign?    | 4 × 549000 = 2,196,000 financed (band C) → PEP question shown. `q_can_sign = no` → signatory email asked → `manual_review` (`signatory_required`): a person contacts the signatory. Quantity affects pricing and questions only (fleet signing is out of scope) |
-| 7 Big ticket       | financed 12,500,000 (band D): annual revenue, beneficial owners, PEP and PEP details all appear, each with its "why". PEP yes → `manual_review` (`pep_manual_review`)                                                                                           |
-| 8 Early exit       | §7 numbers, both options with a breakdown                                                                                                                                                                                                                       |
-| 9 Second life      | §9: no refurbishment, relist at 92781, `wait-13` excluded (needs good), `wait-02` wins at 5198 net a month for 12 months                                                                                                                                        |
-| 10 Third life      | Passport shows 2 earlier lives + the new lease, with CO₂ and money saved per life and in total                                                                                                                                                                  |
+| Card               | Expected result in our app                                                                                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Happy path       | Rent 10730 net / 13466 gross. Invoices on 5 Nov, 5 Dec, 5 Jan (the 3rd at 26 %: 13520). Total 486612 gross                                                            |
+| 2 Price lock       | The quote saved on 5 Nov locks v1 (349000). Signing on 6 Nov keeps v1, not v2 (321100), and the contract page says "locked by your quote of 5 Nov (price list v1)"    |
+| 3 Tax is not price | ebike-001: net 6957 every month. Dec 2026 VAT 1774 (25.5 %), Jan 2027 VAT 1809 (26 %). The UI explains "rent locked, VAT follows the law on the invoice date"         |
+| 4 Calendar traps   | laptop-001 from 31 Jan 2026: invoices on **28 Feb 2026** and **29 Feb 2028**, rent 3432                                                                               |
+| 5 Too young        | Flow stops after the birth date. Outcome `no`, reason `min_age`, kind message with alternatives                                                                       |
+| 6 Who can sign?    | 1 × `ebike-004` (549000 financed, band B). `q_can_sign = no` → signatory email asked → `manual_review` (`signatory_required`): a person contacts the signatory        |
+| 7 Big ticket       | financed 12,500,000 (band D): annual revenue, beneficial owners, PEP and PEP details all appear, each with its "why". PEP yes → `manual_review` (`pep_manual_review`) |
+| 8 Early exit       | §7 numbers, both options with a breakdown                                                                                                                             |
+| 9 Second life      | §9: no refurbishment, relist at 92781, `wait-13` excluded (needs good), `wait-02` wins at 5198 net a month for 12 months                                              |
+| 10 Third life      | Passport shows 2 earlier lives + the new lease, with CO₂ and money saved per life and in total                                                                        |
 
 These become the full-loop integration test and the demo script.
 

@@ -105,9 +105,18 @@ export default function ApplicationResult({ application, locale }: ApplicationRe
         </p>
       </div>
 
+      {application.decision === 'approved' && (
+        <Link
+          href={`/${locale}/account/contracts/${application.id}`}
+          className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+        >
+          {t('account.applications.continueToContract')}
+        </Link>
+      )}
+
       <Link
         href={`/${locale}/account/applications`}
-        className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+        className="inline-flex w-full items-center justify-center rounded-xl border border-stone-700 px-4 py-3 text-sm font-semibold text-stone-200 transition hover:bg-stone-800"
       >
         {t('application.result.viewApplications')}
       </Link>

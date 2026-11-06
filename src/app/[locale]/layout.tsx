@@ -13,8 +13,8 @@ import { isLocale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
 import { currentViewer } from '@/server/current-viewer';
 import { db } from '@/server/db';
-import { receivedInvoices } from '@/server/invoices';
-import { STAFF, viewerCustomerId } from '@/server/viewer';
+import { notificationsFor } from '@/server/notifications';
+import { STAFF } from '@/server/viewer';
 import '../globals.css';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
@@ -33,14 +33,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
     currentViewer(),
     loadCustomers(),
   ]);
-  // The bell: invoices that have reached this viewer by the app's date and aren't paid yet.
-  const invoicesToPay = (
-    await receivedInvoices(
-      db,
-      viewer.kind === 'staff' ? null : { customerId: viewerCustomerId(viewer) },
-      date.today
-    )
-  ).filter((received) => received.invoice.status === 'due').length;
+  // The bell: ended leases waiting for a choice, items passed on to this viewer, and unpaid
+  // invoices, on the app's date.
+  const { count: notificationCount } = await notificationsFor(db, viewer, date.today);
 
   return (
     <html lang={locale}>
@@ -84,9 +79,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 {t('nav.contracts')}
               </Link>
               <InvoiceBell
-                count={invoicesToPay}
-                href={`/${locale}/invoices`}
-                label={t('nav.invoicesToPay', { count: invoicesToPay })}
+                count={notificationCount}
+                href={`/${locale}/notifications`}
+                label={t('nav.notifications', { count: notificationCount })}
               />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>

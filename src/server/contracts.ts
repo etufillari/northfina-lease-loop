@@ -32,6 +32,8 @@ export type Contract = {
   buyoutCents: number;
   status: string;
   returnedDate: string | null;
+  boughtDate: string | null;
+  buyoutPaidCents: number | null;
 };
 
 function toContract(row: ContractRow): Contract {
@@ -58,6 +60,8 @@ function toContract(row: ContractRow): Contract {
     buyoutCents: row.buyout_cents,
     status: row.status,
     returnedDate: row.returned_date,
+    boughtDate: row.bought_date,
+    buyoutPaidCents: row.buyout_paid_cents,
   };
 }
 
@@ -213,7 +217,8 @@ export async function returnContract(
 ): Promise<ReturnContractResult> {
   const contract = await getContract(db, input.contractId);
   if (!contract) return { ok: false, reason: 'not_found' };
-  if (contract.status === 'returned') return { ok: false, reason: 'already_returned' };
+  // Already returned, bought or passed on: the end of term is decided once.
+  if (contract.status !== 'active') return { ok: false, reason: 'already_returned' };
   if (contractStage(contract, todayIso) !== 'ended') return { ok: false, reason: 'not_ended' };
 
   const row = await withAudit(

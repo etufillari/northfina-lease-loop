@@ -1,5 +1,6 @@
-// The bell in the header: how many invoices have arrived and are waiting to be paid. It links
-// to the invoices page. The count is worked out on the server for the current viewer and date.
+// The bell in the header: how many things need the viewer (ended leases, items passed on to
+// them, unpaid invoices). It links to the notifications page. The count is worked out on the
+// server for the viewer and the app's date.
 import Link from 'next/link';
 
 type InvoiceBellProps = { count: number; href: string; label: string };

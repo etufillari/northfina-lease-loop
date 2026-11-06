@@ -47,3 +47,9 @@ describe('assetHistory', () => {
     expect(() => assetHistory(asset({}), 'yesterday')).toThrow(RangeError);
   });
 });
+
+describe('assetHistory for a bought item', () => {
+  it('says the item has left the loop', () => {
+    expect(assetHistory(asset({ status: 'sold' }), '2026-11-05').stage).toBe('sold');
+  });
+});

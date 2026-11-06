@@ -72,6 +72,7 @@ export function DecisionCard({
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <section>
           <h3 className="text-sm font-semibold">{t('secondLife.refurbTitle')}</h3>
+          {/* Mandatory work, a line, the improvements chosen on top (same format), the total. */}
           <ul className="mt-2 space-y-1 text-sm">
             {decision.requiredItems.map((item) => (
               <li key={item.id} className="flex justify-between gap-3">
@@ -79,9 +80,20 @@ export function DecisionCard({
                 <span className="tabular-nums">{euro(item.costCents)}</span>
               </li>
             ))}
+            {decision.upgrade ? (
+              <li className="flex justify-between gap-3 border-t border-stone-200 pt-1 dark:border-stone-700">
+                <span>
+                  {t('secondLife.upgradeRow', {
+                    from: condition(decision.upgrade.from),
+                    to: condition(decision.upgrade.to),
+                  })}
+                </span>
+                <span className="tabular-nums">{euro(decision.upgrade.costCents)}</span>
+              </li>
+            ) : null}
             <li className="flex justify-between gap-3 border-t border-stone-200 pt-1 font-medium dark:border-stone-700">
               <span>{t('secondLife.refurbTotal')}</span>
-              <span className="tabular-nums">{euro(decision.requiredTotalCents)}</span>
+              <span className="tabular-nums">{euro(decision.workTotalCents)}</span>
             </li>
           </ul>
           {decision.usageAfterRefurb !== asset.usage.value && (
@@ -92,17 +104,7 @@ export function DecisionCard({
 
           <h3 className="mt-4 text-sm font-semibold">{t('secondLife.upgradeTitle')}</h3>
           <p className="mt-1 text-sm">
-            {decision.upgrade === null
-              ? t('secondLife.upgrade.none')
-              : t(`secondLife.upgrade.${decision.upgrade.reason}`, {
-                  from: condition(decision.upgrade.from),
-                  to: condition(decision.upgrade.to),
-                  cost: euro(decision.upgrade.costCents),
-                  gain: euro(decision.valueFinalCents - decision.valueAsIsCents),
-                  value: euro(decision.valueFinalCents),
-                  work: euro(decision.workTotalCents),
-                  mandatory: euro(decision.requiredTotalCents),
-                })}
+            <UpgradeWhy locale={locale} preview={preview} />
           </p>
         </section>
 
@@ -238,6 +240,60 @@ function WhoGetsIt({ locale, preview }: { locale: Locale; preview: SecondLifePre
       )}
     </div>
   );
+}
+
+/** Why the condition upgrade was taken, or why not — with the numbers that decided it. */
+function UpgradeWhy({ locale, preview }: { locale: Locale; preview: SecondLifePreview }) {
+  const t = getT(locale);
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const condition = (c: string) => t(`condition.${c}` as MessageKey);
+  const { decision, asset } = preview;
+  if (decision.upgrade) {
+    return t(`secondLife.upgrade.${decision.upgrade.reason}`, {
+      from: condition(decision.upgrade.from),
+      to: condition(decision.upgrade.to),
+      cost: euro(decision.upgrade.costCents),
+      gain: euro(decision.valueFinalCents - decision.valueAsIsCents),
+      value: euro(decision.valueFinalCents),
+      work: euro(decision.workTotalCents),
+    });
+  }
+  const skipped = decision.upgradeSkipped;
+  if (!skipped) return null;
+  const from = condition(asset.condition);
+  switch (skipped.why) {
+    case 'waiter_takes_as_is':
+      return t('secondLife.skipped.waiter_takes_as_is', {
+        who: preview.winner?.id ?? '',
+        condition: from,
+      });
+    case 'top_condition':
+      return t('secondLife.skipped.top_condition', { condition: from });
+    case 'not_priced':
+      return t('secondLife.skipped.not_priced', { from, to: condition(skipped.to) });
+    case 'gain_below_cost':
+      return t('secondLife.skipped.gain_below_cost', {
+        from,
+        to: condition(skipped.to),
+        cost: euro(skipped.costCents),
+        gain: euro(skipped.gainCents),
+      });
+    case 'not_worth_work':
+      return t('secondLife.skipped.not_worth_work', {
+        from,
+        to: condition(skipped.to),
+        cost: euro(skipped.costCents),
+        value: euro(skipped.valueCents),
+        work: euro(skipped.workTotalCents),
+      });
+    case 'below_minimum':
+      return t('secondLife.skipped.below_minimum', {
+        to: condition(skipped.to),
+        value: euro(skipped.valueCents),
+      });
+    case 'still_not_listable':
+      return t('secondLife.skipped.still_not_listable', { from, to: condition(skipped.to) });
+  }
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

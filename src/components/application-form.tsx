@@ -1,7 +1,7 @@
 'use client';
 
 // Spine step 3: the application. Shows only the questions that apply to this customer and
-// this deal, drops answers that stop applying when an earlier answer changes, and shows the
+// this deal, ignores answers that stop applying when an earlier answer changes, and shows the
 // decision (yes, no, or "a person will check") live as the customer answers. The server
 // makes the same decision again when the application is sent. A fleet deal (several items
 // for a business, see src/domain/fleet.ts) uses the same form and goes to /api/fleets.
@@ -49,13 +49,16 @@ export function ApplicationForm(props: ApplicationFormProps) {
     'assetIds' in deal
       ? `fleet:${viewerKey}:${deal.assetIds.join(',')}:${deal.termMonths}`
       : `apply:${viewerKey}:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
-  const [answers, setAnswers] = useSessionState(`${storageKey}:answers`, initialAnswers);
+  // The draft keeps everything typed, including answers to questions that are hidden now, so
+  // switching company → private person → company gives the answers back. Only `answers` (the
+  // ones that still apply) decide what is shown, what is judged and what is sent.
+  const [draft, setDraft] = useSessionState(`${storageKey}:answers`, initialAnswers);
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
   const [submitted, setSubmitted] = useSessionState(`${storageKey}:submitted`, NOT_SUBMITTED);
 
+  const { answers, evaluation } = decideApplication(questions, draft, context);
   const visible = getVisibleQuestions(questions, answers, context);
-  const { evaluation } = decideApplication(questions, answers, context);
   const answered = visible.filter((q) => answers[q.id]?.trim()).length;
   // A fleet is for businesses: a private person leases one item at a time.
   const wrongCustomerType =
@@ -65,12 +68,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
     (evaluation.status === 'approved' || evaluation.status === 'manual_review');
 
   function answer(questionId: string, value: string) {
-    // Keep only answers that still apply, so going back and changing an earlier answer
-    // (e.g. company → private person) forgets the company questions.
-    setAnswers(
-      (current) =>
-        decideApplication(questions, { ...current, [questionId]: value }, context).answers
-    );
+    setDraft((current) => ({ ...current, [questionId]: value }));
   }
 
   async function send(event: FormEvent) {

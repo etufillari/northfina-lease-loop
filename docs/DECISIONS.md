@@ -60,8 +60,10 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   7 2 4 8 5 10 9); a submitted invalid ID declines the application.
 - **Can't sign:** the application is approved-pending-signature, the contract goes to the
   signatory's e-mail, and staff can "sign as signatory" (audit-logged). 7-day hold.
-- **Multi-item:** quantity on the quote; the financed amount is the total (that is what band
-  and question thresholds see). One contract listing all units.
+- **Fleets:** assets are unique physical items, so a fleet is a group of DISTINCT assets of
+  one category, picked on the fleet page and priced as ONE contract banded on the total
+  (that total is what band and question thresholds see). Duplicates and mixed categories
+  are refused.
 - **Profiles:** persona picker in the header (data customers + staff + "new customer"); the
   selected id is the audit actor. Answers can be saved as defaults; prefill is confirmed in
   groups — basics in one batch, income/employment and PEP each separately.

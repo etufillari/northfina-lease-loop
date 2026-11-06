@@ -6,6 +6,7 @@ import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { ContractActions } from '@/components/contract-actions';
 import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { loadVatRates } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
@@ -32,13 +33,20 @@ export default async function ContractPage({
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
   const endsOn = termEndsOn(contract);
 
-  // The first invoice whose VAT rate differs from the previous one gets the banner.
+  // The first invoice whose VAT rate differs from the previous one gets the banner. The
+  // banner names the STATUTORY change date from the rate table, not the invoice's due date.
   const leaseInvoices = contract.invoices.filter((invoice) => invoice.type === 'lease');
   const changeIndex = leaseInvoices.findIndex(
     (invoice, index) => index > 0 && invoice.vat_rate_bp !== leaseInvoices[index - 1]!.vat_rate_bp
   );
   const change = changeIndex > 0 ? leaseInvoices[changeIndex]! : null;
   const before = changeIndex > 0 ? leaseInvoices[changeIndex - 1]! : null;
+  const vatRates = change ? await loadVatRates() : null;
+  const changeLawDate =
+    change &&
+    (vatRates?.rates.find((rate) => Math.round(rate.rate_percent * 100) === change.vat_rate_bp)
+      ?.valid_from ??
+      change.due_date);
 
   const invoiceState = (dueDate: string): 'paid' | 'open' | 'scheduled' => {
     if (dueDate > asOf) return 'scheduled';
@@ -108,7 +116,7 @@ export default async function ContractPage({
               net: euro(contract.monthly_net_rent_cents),
               from: before.vat_rate_bp / 100,
               to: change.vat_rate_bp / 100,
-              date: formatIsoDate(change.due_date, locale),
+              date: formatIsoDate(changeLawDate || change.due_date, locale),
               diff: euro(change.total_cents - before.total_cents),
             })}
           </p>

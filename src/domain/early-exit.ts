@@ -34,6 +34,7 @@ import {
   calculateResidualMarketValue,
   interpolateResidualCurve,
 } from './end-of-term';
+import type { ContractQuote } from './contract-pricing';
 import { addMonthsClamped } from './invoice-schedule';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -276,4 +277,39 @@ export function calculateEarlyExit(input: EarlyExitInput): EarlyExitQuote {
     buyout: asOption(balanceCents, baseLines),
     returnItem: asOption(returnNetCents, returnLines),
   };
+}
+
+/**
+ * Prices an early exit for a signed contract: leave on the due date of rent row `exitMonth`
+ * (1 = the first rent, clamped to the term), with the item in `condition`. The page that shows
+ * the price and the route that executes the exit both call this, so they always agree.
+ */
+export function earlyExitForContract(input: {
+  quote: ContractQuote;
+  signedOn: string;
+  exitMonth: number;
+  condition: AssetCondition;
+  asset: { category: AssetCategory; usage: { unit: UsageUnit; value: number } };
+  residualCurves: ResidualCurves;
+  vatRates: VatRates;
+}): EarlyExitQuote {
+  const { quote, signedOn } = input;
+  if (!Number.isInteger(input.exitMonth) || input.exitMonth < 1) {
+    throw new RangeError(`exitMonth must be a positive integer, got ${input.exitMonth}`);
+  }
+  const exitMonth = Math.min(input.exitMonth, quote.termMonths);
+  return calculateEarlyExit({
+    signedOn,
+    asOf: addMonthsClamped(signedOn, exitMonth - 1),
+    termMonths: quote.termMonths,
+    monthlyNetRentCents: quote.monthlyNetRentCents,
+    buyoutNetCents: quote.buyoutNetCents,
+    annualInterestPercent: quote.band.annual_interest_percent,
+    firstListPriceCents: quote.listPriceCents,
+    category: input.asset.category,
+    condition: input.condition,
+    usage: input.asset.usage,
+    residualCurves: input.residualCurves,
+    vatRates: input.vatRates,
+  });
 }

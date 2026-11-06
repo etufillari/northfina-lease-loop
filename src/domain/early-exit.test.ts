@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { loadResidualCurves, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadResidualCurves, loadVatRates } from '@/data/load';
 import type { AssetCondition } from '@/data/schemas';
 import {
   billedMonthsAsOf,
   calculateEarlyExit,
+  earlyExitForContract,
   type EarlyExitInput,
   outstandingBalanceCents,
 } from './early-exit';
+import { calculateContractQuote } from './contract-pricing';
 
 // Scenario card 1 / card 8: ebike-003, 36 months, no down payment, signed 5 Nov 2026.
 // Net list price 389 000, band B (7.9 %), rent 10 730, buyout 58 350 (data/DATA.md).
@@ -320,3 +322,51 @@ function billedDate(month: number): string {
   const monthOfYear = (index % 12) + 1;
   return `${year}-${String(monthOfYear).padStart(2, '0')}-05`;
 }
+
+describe('earlyExitForContract', () => {
+  async function card1(exitMonth: number) {
+    const [coefficientTable, residualCurves, vatRates] = await Promise.all([
+      loadCoefficientTable(),
+      loadResidualCurves(),
+      loadVatRates(),
+    ]);
+    const result = calculateContractQuote({
+      listPriceCents: 389_000,
+      priceListVersion: 1,
+      downPaymentCents: 0,
+      termMonths: 36,
+      isoDate: '2026-11-05',
+      coefficientTable,
+      vatRates,
+    });
+    if (!result.ok) throw new Error('card 1 quote failed');
+    return earlyExitForContract({
+      quote: result.quote,
+      signedOn: '2026-11-05',
+      exitMonth,
+      condition: 'good',
+      asset: { category: 'e_bike', usage: { unit: 'km', value: 0 } },
+      residualCurves,
+      vatRates,
+    });
+  }
+
+  it('prices card 8 from the signed contract: month 7 is the rent row of 5 May 2027', async () => {
+    const quote = await card1(7);
+    expect(quote.asOf).toBe('2027-05-05');
+    expect(quote.remainingMonths).toBe(29);
+    expect(quote.buyout.netCents).toBe(330_666);
+    expect(quote.returnItem.netCents).toBe(66_146);
+  });
+
+  it('clamps a month past the term to the last rent row: the end-of-term buyout', async () => {
+    const quote = await card1(99);
+    expect(quote.asOf).toBe('2029-10-05');
+    expect(quote.buyout.netCents).toBe(58_350);
+  });
+
+  it('rejects month 0 and fractional months', async () => {
+    await expect(card1(0)).rejects.toThrow(RangeError);
+    await expect(card1(1.5)).rejects.toThrow(RangeError);
+  });
+});

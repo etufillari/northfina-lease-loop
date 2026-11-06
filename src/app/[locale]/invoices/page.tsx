@@ -19,7 +19,7 @@ import {
 } from '@/data/load';
 import { assetConditionSchema, isoDateSchema } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
-import { calculateEarlyExit } from '@/domain/early-exit';
+import { earlyExitForContract } from '@/domain/early-exit';
 import {
   calculateAvoidedCo2,
   calculateBuyoutSettlement,
@@ -138,17 +138,12 @@ export default async function InvoicesPage({
   // Early exit: leave in the chosen month (the date of that month's rent row), default month 1.
   const exitMonth = Math.min(query.data.exitMonth ?? 1, quote.termMonths);
   const exitCondition = query.data.condition ?? 'good';
-  const earlyExit = calculateEarlyExit({
+  const earlyExit = earlyExitForContract({
+    quote,
     signedOn,
-    asOf: addMonthsClamped(signedOn, exitMonth - 1),
-    termMonths: quote.termMonths,
-    monthlyNetRentCents: quote.monthlyNetRentCents,
-    buyoutNetCents: quote.buyoutNetCents,
-    annualInterestPercent: quote.band.annual_interest_percent,
-    firstListPriceCents: quote.listPriceCents,
-    category: asset.category,
+    exitMonth,
     condition: exitCondition,
-    usage: asset.usage,
+    asset,
     residualCurves,
     vatRates,
   });

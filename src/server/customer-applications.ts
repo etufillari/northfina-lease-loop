@@ -1,6 +1,7 @@
 // A customer's open applications: everything not yet a contract and not finished, so "My
 // page" can lead them back, above all to sign after staff approves a manual review.
 import type { PrismaClient } from '@/generated/prisma/client';
+import { quoteAssetIds } from '@/server/quotes';
 
 type Db = PrismaClient;
 
@@ -26,9 +27,8 @@ export type CustomerApplication = {
   applicationId: string;
   status: OpenApplicationStatus;
   nextStep: NextStep;
-  assetId: string;
-  assetName: string | null;
-  quantity: number;
+  /** Every item in the application: one, or a fleet of distinct items. */
+  assets: Array<{ id: string; name: string | null }>;
   termMonths: number;
   monthlyNetRentCents: number;
   holdUntil: string | null;
@@ -67,7 +67,7 @@ export async function listCustomerOpenApplications(
     include: { quote: true },
     orderBy: [{ updated_at: 'desc' }, { id: 'asc' }],
   });
-  const assetIds = [...new Set(applications.map((a) => a.quote.asset_id))];
+  const assetIds = [...new Set(applications.flatMap((a) => quoteAssetIds(a.quote)))];
   const assets = await db.asset.findMany({ where: { id: { in: assetIds } } });
   const assetName = new Map(assets.map((a) => [a.id, `${a.make} ${a.model}`]));
 
@@ -77,9 +77,7 @@ export async function listCustomerOpenApplications(
       applicationId: a.id,
       status,
       nextStep: nextStepFor(status, a.hold_until, asOf),
-      assetId: a.quote.asset_id,
-      assetName: assetName.get(a.quote.asset_id) ?? null,
-      quantity: a.quote.quantity,
+      assets: quoteAssetIds(a.quote).map((id) => ({ id, name: assetName.get(id) ?? null })),
       termMonths: a.quote.term_months,
       monthlyNetRentCents: a.quote.monthly_net_rent_cents,
       holdUntil: a.hold_until,

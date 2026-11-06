@@ -27,8 +27,7 @@ const STAFF = 'staff';
 /** Answers whatever the flow asks next from `script`, until nothing is left to ask. */
 async function applyAndSubmit(input: {
   customerId: string;
-  assetId: string;
-  quantity: number;
+  assetIds: string[];
   downPaymentCents: number;
   termMonths: number;
   script: Record<string, unknown>;
@@ -69,8 +68,7 @@ const companyScript = {
 const haapala = () =>
   applyAndSubmit({
     customerId: 'cust-haapala',
-    assetId: 'farm-002',
-    quantity: 1,
+    assetIds: ['farm-002'],
     downPaymentCents: 2_000_000,
     termMonths: 48,
     script: {
@@ -99,7 +97,7 @@ describe('scenario card 7: Haapala is approved from the manual-review queue', ()
     expect(item).toMatchObject({
       status: 'manual_review',
       customerName: 'Haapalan Tila Oy',
-      assetId: 'farm-002',
+      assets: [{ id: 'farm-002', name: expect.any(String) }],
       termMonths: 48,
     });
     expect(Array.isArray(item!.decisionReasons)).toBe(true);
@@ -185,26 +183,74 @@ describe('declining a manual review releases the asset', () => {
   });
 });
 
-describe('scenario card 6: the Norvi signatory signs from the staff desk', () => {
-  const SIGNATORY = 'ceo@norvi.example.com';
+const NORVI_FLEET = ['ebike-004', 'ebike-005', 'ebike-006', 'ebike-010'];
+const SIGNATORY = 'ceo@norvi.example.com';
+const norviScript = {
+  ...companyScript,
+  q_business_id: '3299871-7',
+  q_company_name: 'Norvi Logistics Oy',
+  q_can_sign: 'no',
+  q_signatory_email: SIGNATORY,
+  q_usage_purpose: 'delivery',
+};
 
+describe('a fleet in manual review: every item is held, and released on decline', () => {
+  // Over €10,000 financed, so the PEP question is asked; "yes" sends it to a person.
+  const FLEET = ['ebike-001', 'ebike-002', 'ebike-003', 'ebike-012'];
+  const review = () =>
+    applyAndSubmit({
+      customerId: 'cust-norvi',
+      assetIds: FLEET,
+      downPaymentCents: 0,
+      termMonths: 36,
+      script: { ...norviScript, q_pep: 'yes', q_pep_details: 'A board member is a PEP' },
+    });
+
+  it('approval goes to the signatory and holds all four items for 7 days', async () => {
+    const state = await review();
+    expect(state.application.status).toBe('manual_review');
+    const item = (await listStaffQueue(db)).find((q) => q.applicationId === state.application.id);
+    expect(item?.assets.map((a) => a.id)).toEqual(FLEET);
+
+    const result = await approveApplication(db, {
+      applicationId: state.application.id,
+      actor: STAFF,
+      asOf: AS_OF,
+    });
+    // The applicant may not sign for Norvi, so approval hands over to the signatory.
+    expect(result).toEqual({ ok: true, status: 'awaiting_signature', holdUntil: '2026-11-12' });
+    const holds = await db.reservation.findMany({
+      where: { asset_id: { in: FLEET }, active: true },
+    });
+    expect(holds.map((h) => h.asset_id).sort()).toEqual([...FLEET].sort());
+    expect(holds.every((h) => h.kind === 'awaiting_signatory')).toBe(true);
+  });
+
+  it('declining releases every item in the fleet', async () => {
+    const waiting = (await listStaffQueue(db)).find(
+      (q) => q.status === 'awaiting_signature' && q.assets[0]?.id === FLEET[0]
+    );
+    const result = await declineApplication(db, {
+      applicationId: waiting!.applicationId,
+      actor: STAFF,
+    });
+    expect(result.ok).toBe(true);
+    const assets = await db.asset.findMany({ where: { id: { in: FLEET } } });
+    expect(assets.every((a) => a.status === 'available')).toBe(true);
+    expect(await db.reservation.count({ where: { asset_id: { in: FLEET }, active: true } })).toBe(
+      0
+    );
+  });
+});
+
+describe('scenario card 6: the Norvi signatory signs from the staff desk', () => {
   it('waits for the signatory, then the signature is audited under their e-mail', async () => {
     const state = await applyAndSubmit({
       customerId: 'cust-norvi',
-      assetId: 'ebike-004',
-      quantity: 4,
+      assetIds: NORVI_FLEET,
       downPaymentCents: 0,
       termMonths: 36,
-      script: {
-        ...companyScript,
-        q_business_id: '3299871-7',
-        q_company_name: 'Norvi Logistics Oy',
-        q_can_sign: 'no',
-        q_signatory_email: SIGNATORY,
-        q_usage_purpose: 'delivery',
-        q_annual_revenue: 410_000_000,
-        q_beneficial_owners: ['Norvi Holding Oy (100 %)'],
-      },
+      script: norviScript,
     });
     expect(state.application.status).toBe('awaiting_signature');
 

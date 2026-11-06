@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { STAFF_PERSONA } from '@/components/persona-cookie';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
@@ -23,7 +24,7 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   // Staff decisions are always logged as staff, never as the customer persona picked in the
   // header (the server also refuses a customer deciding on their own application).
-  const actor = 'staff';
+  const actor = STAFF_PERSONA;
   const queue = await listStaffQueue(db);
   const reviews = queue.filter((item) => item.status === 'manual_review');
   const signatures = queue.filter((item) => item.status === 'awaiting_signature');
@@ -132,12 +133,7 @@ function QueueCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-lg font-semibold">{item.customerName ?? item.customerId}</p>
-          <p className="text-stone-600 dark:text-stone-400">
-            {t('staff.item.asset', {
-              name: item.assetName ?? item.assetId,
-              count: item.quantity,
-            })}
-          </p>
+          <p className="text-stone-600 dark:text-stone-400">{assetSummary(item.assets, t)}</p>
         </div>
         {item.holdUntil ? (
           <span className="rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
@@ -177,6 +173,16 @@ function QueueCard({
       <div className="mt-5 border-t border-stone-200 pt-4 dark:border-stone-800">{children}</div>
     </li>
   );
+}
+
+/** A fleet as "Nordvolt Cargo Duo × 2, Nordvolt Urban 1 × 1", grouped by model. */
+function assetSummary(assets: StaffQueueItem['assets'], t: Translate): string {
+  const counts = new Map<string, number>();
+  for (const asset of assets) {
+    const name = asset.name ?? asset.id;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return [...counts].map(([name, count]) => t('staff.item.asset', { name, count })).join(', ');
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

@@ -4,6 +4,7 @@
 import { addDays } from '@/domain/calendar';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
+import { quoteAssetIds } from '@/server/quotes';
 
 type Db = PrismaClient;
 
@@ -16,9 +17,8 @@ export type StaffQueueItem = {
   status: StaffQueueStatus;
   customerId: string;
   customerName: string | null;
-  assetId: string;
-  assetName: string | null;
-  quantity: number;
+  /** Every item in the application: one, or a fleet of distinct items. */
+  assets: Array<{ id: string; name: string | null }>;
   financedCents: number;
   termMonths: number;
   monthlyNetRentCents: number;
@@ -37,7 +37,7 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
     orderBy: [{ updated_at: 'asc' }, { id: 'asc' }],
   });
   const customerIds = [...new Set(applications.map((a) => a.customer_id))];
-  const assetIds = [...new Set(applications.map((a) => a.quote.asset_id))];
+  const assetIds = [...new Set(applications.flatMap((a) => quoteAssetIds(a.quote)))];
   const [customers, assets] = await Promise.all([
     db.customer.findMany({ where: { id: { in: customerIds } } }),
     db.asset.findMany({ where: { id: { in: assetIds } } }),
@@ -50,9 +50,7 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
     status: a.status as StaffQueueStatus,
     customerId: a.customer_id,
     customerName: customerName.get(a.customer_id) ?? null,
-    assetId: a.quote.asset_id,
-    assetName: assetName.get(a.quote.asset_id) ?? null,
-    quantity: a.quote.quantity,
+    assets: quoteAssetIds(a.quote).map((id) => ({ id, name: assetName.get(id) ?? null })),
     financedCents: a.quote.financed_cents,
     termMonths: a.quote.term_months,
     monthlyNetRentCents: a.quote.monthly_net_rent_cents,
@@ -89,7 +87,7 @@ export async function approveApplication(
   const cannotSign = answers['q_customer_type'] === 'company' && answers['q_can_sign'] === 'no';
   const status = cannotSign ? 'awaiting_signature' : 'approved';
   const holdUntil = addDays(input.asOf, 7);
-  const assetId = application.quote.asset_id;
+  const assetIds = quoteAssetIds(application.quote);
 
   await withAudit(
     db,
@@ -105,26 +103,28 @@ export async function approveApplication(
         where: { id: application.id },
         data: { status, hold_until: holdUntil },
       });
-      // Replace this customer's hold on the asset with a fresh 7-day one.
-      await tx.reservation.updateMany({
-        where: { asset_id: assetId, customer_id: application.customer_id, active: true },
-        data: { active: false },
-      });
-      await tx.reservation.create({
-        data: {
-          asset_id: assetId,
-          customer_id: application.customer_id,
-          kind: cannotSign ? 'awaiting_signatory' : 'approval_hold',
-          until: holdUntil,
-        },
-      });
-      await tx.asset.update({ where: { id: assetId }, data: { status: 'reserved' } });
+      // Replace this customer's hold on every item with a fresh 7-day one.
+      for (const assetId of assetIds) {
+        await tx.reservation.updateMany({
+          where: { asset_id: assetId, customer_id: application.customer_id, active: true },
+          data: { active: false },
+        });
+        await tx.reservation.create({
+          data: {
+            asset_id: assetId,
+            customer_id: application.customer_id,
+            kind: cannotSign ? 'awaiting_signatory' : 'approval_hold',
+            until: holdUntil,
+          },
+        });
+        await tx.asset.update({ where: { id: assetId }, data: { status: 'reserved' } });
+      }
     }
   );
   return { ok: true, status, holdUntil };
 }
 
-/** A person declines: the application ends and the asset is free for the next customer. */
+/** A person declines: the application ends and its items are free for the next customer. */
 export async function declineApplication(
   db: Db,
   input: { applicationId: string; actor: string; note?: string }
@@ -138,7 +138,7 @@ export async function declineApplication(
     return { ok: false, reason: 'not_reviewable' };
   }
   if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
-  const assetId = application.quote.asset_id;
+  const assetIds = quoteAssetIds(application.quote);
 
   await withAudit(
     db,
@@ -154,15 +154,19 @@ export async function declineApplication(
         where: { id: application.id },
         data: { status: 'declined', hold_until: null },
       });
-      await tx.reservation.updateMany({
-        where: { asset_id: assetId, customer_id: application.customer_id, active: true },
-        data: { active: false },
-      });
-      // Only release the asset if no one else still holds it.
-      const otherHolds = await tx.reservation.count({ where: { asset_id: assetId, active: true } });
-      const asset = await tx.asset.findUnique({ where: { id: assetId } });
-      if (otherHolds === 0 && asset?.status === 'reserved') {
-        await tx.asset.update({ where: { id: assetId }, data: { status: 'available' } });
+      for (const assetId of assetIds) {
+        await tx.reservation.updateMany({
+          where: { asset_id: assetId, customer_id: application.customer_id, active: true },
+          data: { active: false },
+        });
+        // Only release an item if no one else still holds it.
+        const otherHolds = await tx.reservation.count({
+          where: { asset_id: assetId, active: true },
+        });
+        const asset = await tx.asset.findUnique({ where: { id: assetId } });
+        if (otherHolds === 0 && asset?.status === 'reserved') {
+          await tx.asset.update({ where: { id: assetId }, data: { status: 'available' } });
+        }
       }
     }
   );

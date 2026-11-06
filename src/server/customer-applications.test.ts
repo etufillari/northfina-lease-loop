@@ -45,8 +45,7 @@ describe('listCustomerOpenApplications', () => {
 
   async function start(assetId: string, customerId = 'cust-aino') {
     const result = await startApplication(db, {
-      assetId,
-      quantity: 1,
+      assetIds: [assetId],
       downPaymentCents: 0,
       termMonths: 36,
       customerId,
@@ -88,9 +87,7 @@ describe('listCustomerOpenApplications', () => {
       status: 'approved',
       nextStep: 'sign',
       holdUntil: '2026-11-12',
-      assetId: 'ebike-003',
-      assetName: expect.any(String),
-      quantity: 1,
+      assets: [{ id: 'ebike-003', name: expect.any(String) }],
       termMonths: 36,
       isTransfer: false,
     });

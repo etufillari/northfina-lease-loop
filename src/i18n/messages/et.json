@@ -39,7 +39,6 @@
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
   "nav.catalogue": "Kataloog",
-  "nav.audit": "Muudatuste logi",
   "asset.lease": "Vaata liisinguhinda",
   "lease.back": "Tagasi kataloogi",
   "lease.title": "Liisi {name}",
@@ -557,7 +556,7 @@
   "demo.rules.affordabilityValue": "Suurim kuumakse võib olla kuni {percent} % tarbija netosissetulekust",
   "demo.rules.downStep": "Sissemakse samm",
   "demo.rules.billing": "Arveldus",
-  "demo.rules.billingValue": "Igal kuul alguskuupäeval, täiskuudena; lühikestel kuudel kuu viimasel päeval",
+  "demo.rules.billingValue": "Igal kuul alguskuupäeval, täiskuudena",
   "demo.rules.manualReview": "Käsitsi läbivaatus",
   "demo.rules.manualReviewValue": "Riikliku taustaga isiku taotluse vaatab alati üle inimene",
   "demo.office": "Taustakontor",
@@ -574,6 +573,6 @@
   "demo.contracts.item": "Toode",
   "demo.contracts.start": "Algus",
   "demo.audit": "Muudatuste logi",
-  "demo.audit.count": "{count} salvestatud muudatust",
+  "demo.audit.count": "Salvestatud muudatusi: {count}",
   "demo.audit.open": "Ava muudatuste logi"
 }

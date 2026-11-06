@@ -39,7 +39,6 @@
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
   "nav.catalogue": "Katalog",
-  "nav.audit": "Ändringslogg",
   "asset.lease": "Se leasingpris",
   "lease.back": "Tillbaka till katalogen",
   "lease.title": "Leasa {name}",
@@ -557,7 +556,7 @@
   "demo.rules.affordabilityValue": "Den högsta månadssumman får vara högst {percent} % av en konsuments nettoinkomst",
   "demo.rules.downStep": "Steg för handpenning",
   "demo.rules.billing": "Fakturering",
-  "demo.rules.billingValue": "På startdagen varje månad, i hela månader; korta månader på sista dagen",
+  "demo.rules.billingValue": "På startdagen varje månad, i hela månader",
   "demo.rules.manualReview": "Manuell granskning",
   "demo.rules.manualReviewValue": "En politiskt exponerad person granskas alltid av en människa",
   "demo.office": "Backoffice",
@@ -574,6 +573,6 @@
   "demo.contracts.item": "Vara",
   "demo.contracts.start": "Start",
   "demo.audit": "Ändringslogg",
-  "demo.audit.count": "{count} registrerade ändringar",
+  "demo.audit.count": "Registrerade ändringar: {count}",
   "demo.audit.open": "Öppna ändringsloggen"
 }

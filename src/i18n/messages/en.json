@@ -39,7 +39,6 @@
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
   "nav.catalogue": "Catalogue",
-  "nav.audit": "Audit trail",
   "asset.lease": "See lease price",
   "lease.back": "Back to catalogue",
   "lease.title": "Lease the {name}",
@@ -557,7 +556,7 @@
   "demo.rules.affordabilityValue": "The highest monthly total may be at most {percent} % of a consumer's net income",
   "demo.rules.downStep": "Down payment step",
   "demo.rules.billing": "Billing",
-  "demo.rules.billingValue": "On the start day each month, in full months; short months fall on their last day",
+  "demo.rules.billingValue": "On the start day each month, in full months",
   "demo.rules.manualReview": "Manual review",
   "demo.rules.manualReviewValue": "A politically exposed person is always checked by a person",
   "demo.office": "Back office",
@@ -574,6 +573,6 @@
   "demo.contracts.item": "Item",
   "demo.contracts.start": "Start",
   "demo.audit": "Audit trail",
-  "demo.audit.count": "{count} changes recorded",
+  "demo.audit.count": "Changes recorded: {count}",
   "demo.audit.open": "Open the audit trail"
 }

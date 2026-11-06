@@ -27,9 +27,13 @@ export function useAsOf(then?: () => void) {
       error?: { code: string };
     } | null;
     if (body?.success) {
+      // When `then` navigates away, stay busy so a second click can't send the date again.
+      if (then) {
+        then();
+        return;
+      }
       setStatus('idle');
-      if (then) then();
-      else router.refresh();
+      router.refresh();
       return;
     }
     setStatus(body?.error?.code === 'INVALID_AS_OF_DATE' ? 'invalid' : 'error');

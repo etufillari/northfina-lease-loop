@@ -39,7 +39,6 @@
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
   "nav.catalogue": "Valikoima",
-  "nav.audit": "Muutosloki",
   "asset.lease": "Katso leasinghinta",
   "lease.back": "Takaisin valikoimaan",
   "lease.title": "Leasaa {name}",
@@ -557,7 +556,7 @@
   "demo.rules.affordabilityValue": "Suurin kuukausierä saa olla enintään {percent} % kuluttajan nettotuloista",
   "demo.rules.downStep": "Käsirahan askel",
   "demo.rules.billing": "Laskutus",
-  "demo.rules.billingValue": "Alkamispäivänä joka kuukausi, täysinä kuukausina; lyhyinä kuukausina kuun viimeisenä päivänä",
+  "demo.rules.billingValue": "Alkamispäivänä joka kuukausi, täysinä kuukausina",
   "demo.rules.manualReview": "Käsittely ihmisellä",
   "demo.rules.manualReviewValue": "Poliittisesti vaikutusvaltaisen henkilön hakemuksen tarkistaa aina ihminen",
   "demo.office": "Taustatoimisto",
@@ -574,6 +573,6 @@
   "demo.contracts.item": "Tuote",
   "demo.contracts.start": "Alkaa",
   "demo.audit": "Muutosloki",
-  "demo.audit.count": "{count} kirjattua muutosta",
+  "demo.audit.count": "Kirjattuja muutoksia: {count}",
   "demo.audit.open": "Avaa muutosloki"
 }

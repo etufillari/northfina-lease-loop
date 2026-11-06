@@ -40,7 +40,7 @@ export const POST = handleRoute(async (request) => {
       text: text[locale],
       why_we_ask: why_we_ask[locale] ?? why_we_ask.en,
       ...(options ? { options } : {}),
-      ...(validation ? { hint: validation.hint } : {}),
+      ...(validation ? { hint: validation.hint[locale] ?? validation.hint.en } : {}),
     })),
   });
 });

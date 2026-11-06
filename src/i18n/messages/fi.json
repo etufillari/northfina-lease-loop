@@ -33,7 +33,6 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
-  "footer.skeleton": "Aloituspohja — korvaa minut",
   "persona.label": "Olen",
   "persona.none": "Valitse kuka olet",
   "persona.new": "+ Uusi asiakas",

@@ -44,7 +44,6 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
-  "footer.skeleton": "Starter skeleton — replace me",
   "persona.label": "I am",
   "persona.none": "Choose who you are",
   "persona.new": "+ New customer",

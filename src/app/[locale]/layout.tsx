@@ -112,12 +112,6 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         <main id="main" className="flex-1">
           {children}
         </main>
-
-        <footer className="border-t border-stone-200 dark:border-stone-800">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
-          </div>
-        </footer>
       </body>
     </html>
   );

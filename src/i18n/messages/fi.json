@@ -43,6 +43,8 @@
   "application.whyLabel": "Miksi kysymme tätä?",
   "application.completeTitle": "Hakemuskysymykset ovat valmiit",
   "application.thankYou": "Kiitos vastauksistasi.",
+  "application.submitting": "Tallennetaan hakemustasi...",
+  "application.submissionError": "Hakemusta ei voitu tallentaa. Yritä uudelleen.",
   "application.continueToContract": "Jatka sopimuksen allekirjoittamiseen",
   "application.decision.approved": "Hakemus hyväksytty",
   "application.decision.declined": "Hakemus hylätty",

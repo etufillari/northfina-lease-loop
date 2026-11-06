@@ -95,6 +95,25 @@ model Contract {
   @@index([end_date])
 }
 
+// A submitted application and the decision made from its answers.
+// Answers and reasons are immutable JSON snapshots for explainability and audit history.
+model Application {
+  id                  String   @id
+  created_at          DateTime @default(now())
+  quote_id            String?
+  customer_id         String?
+  category            String
+  financed_cents      Int
+  contract_start_date String
+  decision            String // approved | declined | manual_review
+  reasons_json        String
+  answers_json        String
+
+  @@index([quote_id])
+  @@index([customer_id])
+  @@index([created_at])
+}
+
 // An issued invoice. The VAT rate and amounts are stored, so history never changes even if
 // the VAT data does. Invoices not issued yet are computed and shown as a forecast.
 model Invoice {

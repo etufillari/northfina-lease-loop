@@ -43,6 +43,8 @@
   "application.whyLabel": "Varför frågar vi detta?",
   "application.completeTitle": "Ansökningsfrågorna är klara",
   "application.thankYou": "Tack för dina svar.",
+  "application.submitting": "Sparar din ansökan...",
+  "application.submissionError": "Ansökan kunde inte sparas. Försök igen.",
   "application.continueToContract": "Fortsätt till avtalssignering",
   "application.decision.approved": "Ansökan godkänd",
   "application.decision.declined": "Ansökan avslagen",

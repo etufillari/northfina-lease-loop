@@ -43,6 +43,8 @@
   "application.whyLabel": "Miks me seda küsime?",
   "application.completeTitle": "Taotluse küsimused on tehtud",
   "application.thankYou": "Täname vastuste eest.",
+  "application.submitting": "Taotluse salvestamine...",
+  "application.submissionError": "Taotlust ei õnnestunud salvestada. Proovi uuesti.",
   "application.continueToContract": "Jätka lepingu allkirjastamisega",
   "application.decision.approved": "Taotlus on heaks kiidetud",
   "application.decision.declined": "Taotlus on tagasi lükatud",

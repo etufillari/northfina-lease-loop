@@ -3,10 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { AssetCategory, Question, QuestionsFile } from '@/data/schemas';
-import {
-  evaluateCollectedApplication,
-  type ApplicationEvaluationContext,
-} from '@/domain/application-result';
 import type { ApplicationDecision, ApplicationReason } from '@/domain/application';
 import {
   resolveQuestionFlow,
@@ -44,6 +40,8 @@ export function ApplicationQuestion({
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockingReason, setBlockingReason] = useState<BlockingReason>();
   const [decision, setDecision] = useState<ApplicationDecision>();
+  const [submissionError, setSubmissionError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const answerControlRef = useRef<HTMLInputElement>(null);
   const t = getT(locale);
   const currentQuestion =
@@ -57,7 +55,7 @@ export function ApplicationQuestion({
     answerControlRef.current?.focus();
   }, [currentQuestion.id]);
 
-  function continueFlow() {
+  async function continueFlow() {
     if (answer === undefined || answer === '') return;
     const nextAnswers = { ...answers, [currentQuestion.id]: answer };
     const customerType =
@@ -87,16 +85,38 @@ export function ApplicationQuestion({
     setAnswers(flow.answers);
     setIsBlocked(false);
     setBlockingReason(undefined);
+    setSubmissionError(false);
     if (nextQuestion) {
       setCurrentQuestionId(nextQuestion.id);
       setQuestionHistory((current) => [...current, nextQuestion.id]);
     } else {
-      const evaluationContext: ApplicationEvaluationContext = {
-        contractStartDate,
-        financedAmountCents,
-      };
-      setDecision(evaluateCollectedApplication(flow.answers, evaluationContext));
-      setIsComplete(true);
+      setIsSubmitting(true);
+      try {
+        const response = await fetch('/api/applications', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            answers: flow.answers,
+            category,
+            financedAmountCents,
+            contractStartDate,
+            quoteId,
+            customerId,
+            actor: customerId ?? quoteId ?? 'applicant',
+          }),
+        });
+        const body = (await response.json()) as ApplicationResponse;
+        if (!response.ok || !body.success) {
+          setSubmissionError(true);
+          return;
+        }
+        setDecision(body.data.decisionResult);
+        setIsComplete(true);
+      } catch {
+        setSubmissionError(true);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -258,6 +278,14 @@ export function ApplicationQuestion({
           />
         )}
       </fieldset>
+      {submissionError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+        >
+          {t('application.submissionError')}
+        </p>
+      )}
       <div className="mt-6 flex flex-wrap gap-3">
         {questionHistory.length > 1 && (
           <button
@@ -270,15 +298,22 @@ export function ApplicationQuestion({
         )}
         <button
           type="submit"
-          disabled={answer === undefined || answer === ''}
+          disabled={answer === undefined || answer === '' || isSubmitting}
           className="rounded-xl bg-emerald-700 px-5 py-3 font-medium text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {t('application.continue')}
+          {isSubmitting ? t('application.submitting') : t('application.continue')}
         </button>
       </div>
     </form>
   );
 }
+
+type ApplicationResponse =
+  | {
+      success: true;
+      data: { decisionResult: ApplicationDecision };
+    }
+  | { success: false; error: { message: string } };
 
 const reasonLabelKey: Record<ApplicationReason, MessageKey> = {
   under_minimum_age: 'application.reason.underMinimumAge',

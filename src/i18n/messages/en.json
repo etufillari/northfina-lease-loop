@@ -43,6 +43,8 @@
   "application.whyLabel": "Why do we ask this?",
   "application.completeTitle": "Application questions complete",
   "application.thankYou": "Thank you for answering.",
+  "application.submitting": "Saving your application...",
+  "application.submissionError": "We could not save your application. Please try again.",
   "application.continueToContract": "Continue to contract signing",
   "application.decision.approved": "Application approved",
   "application.decision.declined": "Application declined",

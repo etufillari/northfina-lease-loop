@@ -3,8 +3,22 @@
 // STARTED the life — the first `leased` event after the `refurbished` one. A mid-life
 // take-over is not a new life, so the credit stays with the first lessee, and a first life
 // (no refurbishment before it) avoids nothing (see the passport page).
+// An item the data pack lists as already used (previous_lives >= 1) but with no recorded
+// earlier life has no refurbishment event: the lease that first takes it gets a stand-in
+// credit, priced as if that earlier life lasted UNRECORDED_PRIOR_LIFE_MONTHS (domain/co2.ts).
+import {
+  loadAssets,
+  loadCo2Factors,
+  loadPriceLists,
+  loadRefurbishmentCosts,
+  loadResidualCurves,
+} from '@/data/load';
+import { unrecordedLifeCo2Kg } from '@/domain/co2';
+import { listPriceOn } from '@/domain/price-list';
+import { valueUsage } from '@/domain/usage';
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { TransactionClient } from './audit';
+import { ORIGINAL_PRICE_DATE } from './second-life';
 
 type Reader = PrismaClient | TransactionClient;
 
@@ -59,7 +73,54 @@ export async function co2SavedFor(db: Reader, customerId: string): Promise<Co2Sa
       kg: info.co2AvoidedKg,
     });
   }
+  credits.push(...(await unrecordedLifeCredits(customerId, leased, refurbished, after)));
+  credits.sort((a, b) => (a.onDate < b.onDate ? -1 : a.onDate > b.onDate ? 1 : 0));
   return { totalKg: credits.reduce((sum, credit) => sum + credit.kg, 0), credits };
+}
+
+type EventRow = { asset_id: string; on_date: string; id: number; details_json: string | null };
+
+/**
+ * Stand-in credits for items that arrived used without history: the customer's lease must be
+ * the item's first lease in the app, with no refurbishment before it. The starting state
+ * comes from the data pack, so later returns and refurbishments do not change the figure.
+ */
+async function unrecordedLifeCredits(
+  customerId: string,
+  leased: EventRow[],
+  refurbished: EventRow[],
+  after: (a: EventRow, b: EventRow) => boolean
+): Promise<Co2Credit[]> {
+  const [assets, priceLists, curves, factors, costs] = await Promise.all([
+    loadAssets(),
+    loadPriceLists(),
+    loadResidualCurves(),
+    loadCo2Factors(),
+    loadRefurbishmentCosts(),
+  ]);
+  const credits: Co2Credit[] = [];
+  for (const asset of assets) {
+    if (asset.previous_lives < 1) continue;
+    const first = leased.find((event) => event.asset_id === asset.id);
+    if (!first || details(first.details_json).customerId !== customerId) continue;
+    if (refurbished.some((e) => e.asset_id === asset.id && after(first, e))) continue;
+    const price = listPriceOn(priceLists, asset.id, ORIGINAL_PRICE_DATE);
+    if (!price.ok) continue;
+    const kg = unrecordedLifeCo2Kg(
+      {
+        category: asset.category,
+        condition: asset.condition,
+        usageValue: valueUsage(asset, costs),
+        previousLives: asset.previous_lives,
+        originalListPriceCents: price.priceCents,
+      },
+      curves,
+      factors
+    );
+    if (kg <= 0) continue;
+    credits.push({ assetId: asset.id, life: asset.previous_lives + 1, onDate: first.on_date, kg });
+  }
+  return credits;
 }
 
 function details(json: string | null): Record<string, unknown> {

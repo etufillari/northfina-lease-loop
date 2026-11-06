@@ -146,4 +146,16 @@ describe('co2SavedFor', () => {
     expect((await co2SavedFor(db, 'cust-olavi')).totalKg).toBe(0);
     expect((await co2SavedFor(db, 'cust-lena')).totalKg).toBeGreaterThan(0);
   });
+
+  it('an item that arrived used with no history credits its first lessee, as 6 months of use', async () => {
+    // laptop-009: like_new, previous_lives 1 in the data pack, no refurbishment recorded.
+    await lease('laptop-009', 'cust-aino', ainoScript, SIGNED);
+    const aino = await co2SavedFor(db, 'cust-aino');
+    expect(aino.credits).toHaveLength(1);
+    expect(aino.credits[0]).toMatchObject({ assetId: 'laptop-009', life: 2, onDate: SIGNED });
+    expect(aino.totalKg).toBeGreaterThan(0);
+    // Nothing is stored on the asset.
+    const row = await db.asset.findUniqueOrThrow({ where: { id: 'laptop-009' } });
+    expect(row.previous_lives).toBe(1);
+  });
 });

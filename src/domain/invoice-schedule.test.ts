@@ -1,3 +1,5 @@
+import * as hegel from '@hegeldev/hegel';
+import * as gs from '@hegeldev/hegel/generators';
 import { describe, expect, it } from 'vitest';
 import type { VatRates } from '@/data/schemas';
 import {
@@ -232,4 +234,169 @@ describe('formatInvoiceNumber & generateFinnishReferenceNumber', () => {
     expect(() => generateFinnishReferenceNumber('bad', 1)).toThrow(RangeError);
     expect(() => generateFinnishReferenceNumber('2026-11-05', 0)).toThrow(RangeError);
   });
+});
+
+describe('invoice-schedule property tests (Hegel: Money that adds up)', () => {
+  // Generator for valid ISO dates from 2024-09-01 through 2030-12-31 (within testVatRates)
+  const validIsoDateGen = gs.composite<string>((tc) => {
+    const year = tc.draw(gs.integers({ minValue: 2025, maxValue: 2030 }));
+    const month = tc.draw(gs.integers({ minValue: 1, maxValue: 12 }));
+    const maxDay = daysInMonth(year, month);
+    const day = tc.draw(gs.integers({ minValue: 1, maxValue: maxDay }));
+    const mStr = String(month).padStart(2, '0');
+    const dStr = String(day).padStart(2, '0');
+    return `${year}-${mStr}-${dStr}`;
+  });
+
+  it('property: isLeapYear matches the Gregorian century rule for all years', () =>
+    hegel.test((tc) => {
+      const year = tc.draw(gs.integers({ minValue: 1, maxValue: 9999 }));
+      const expected = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+      expect(isLeapYear(year)).toBe(expected);
+    }));
+
+  it('property: daysInMonth returns 29 for Feb if and only if leap year, and matches standard lengths', () =>
+    hegel.test((tc) => {
+      const year = tc.draw(gs.integers({ minValue: 1, maxValue: 9999 }));
+      const month = tc.draw(gs.integers({ minValue: 1, maxValue: 12 }));
+      const days = daysInMonth(year, month);
+
+      if (month === 2) {
+        expect(days).toBe(isLeapYear(year) ? 29 : 28);
+      } else if ([4, 6, 9, 11].includes(month)) {
+        expect(days).toBe(30);
+      } else {
+        expect(days).toBe(31);
+      }
+    }));
+
+  it('property: addMonthsClamped preserves start day up to month length, strictly increases, and never drifts', () =>
+    hegel.test((tc) => {
+      const date = tc.draw(validIsoDateGen);
+      const monthsToAdd = tc.draw(gs.integers({ minValue: 0, maxValue: 120 }));
+
+      const result = addMonthsClamped(date, monthsToAdd);
+      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      const [origY, origM, origD] = date.split('-').map(Number) as [number, number, number];
+      const [resY, resM, resD] = result.split('-').map(Number) as [number, number, number];
+
+      const expectedTotalMonths = origY * 12 + (origM - 1) + monthsToAdd;
+      expect(resY * 12 + (resM - 1)).toBe(expectedTotalMonths);
+
+      const maxDaysInTarget = daysInMonth(resY, resM);
+      expect(resD).toBe(Math.min(origD, maxDaysInTarget));
+
+      // Monotonicity: adding more months produces a strictly later date
+      if (monthsToAdd > 0) {
+        const nextMonth = addMonthsClamped(date, monthsToAdd + 1);
+        expect(result < nextMonth).toBe(true);
+      }
+    }));
+
+  it('property: Finnish reference number always has valid 7-3-1 check digit and 5-digit grouping', () =>
+    hegel.test((tc) => {
+      const date = tc.draw(validIsoDateGen);
+      const invoiceNumber = tc.draw(gs.integers({ minValue: 1, maxValue: 999 }));
+      const ref = generateFinnishReferenceNumber(date, invoiceNumber);
+
+      // Verify grouping: groups of at most 5 digits, separated by single space
+      const groups = ref.split(' ');
+      for (const group of groups) {
+        expect(group.length).toBeGreaterThanOrEqual(1);
+        expect(group.length).toBeLessThanOrEqual(5);
+        expect(/^\d+$/.test(group)).toBe(true);
+      }
+
+      // Verify checksum
+      const digits = ref.replaceAll(' ', '');
+      const body = digits.slice(0, -1);
+      const check = Number(digits.slice(-1));
+      const weights = [7, 3, 1];
+      let sum = 0;
+      for (let i = 0; i < body.length; i += 1) {
+        sum += Number(body[body.length - 1 - i]) * weights[i % 3]!;
+      }
+      expect((10 - (sum % 10)) % 10).toBe(check);
+    }));
+
+  it('property: Money that adds up — every invoice row adds up and schedule totals equal row sums to the cent', () =>
+    hegel.test(
+      (tc) => {
+        const signedOn = tc.draw(validIsoDateGen);
+        const termMonths = tc.draw(gs.integers({ minValue: 1, maxValue: 84 }));
+        const monthlyNetRentCents = tc.draw(
+          gs.integers({ minValue: 0, maxValue: 50_000_000 }) // €0 to €500,000 / month
+        );
+
+        const schedule = generateInvoiceSchedule({
+          signedOn,
+          termMonths,
+          monthlyNetRentCents,
+          vatRates: testVatRates,
+        });
+
+        // 1. Correct number of installments
+        expect(schedule.invoices).toHaveLength(termMonths);
+
+        // 2. Schedule metadata matches inputs
+        expect(schedule.signedOn).toBe(signedOn);
+        expect(schedule.termMonths).toBe(termMonths);
+        expect(schedule.monthlyNetRentCents).toBe(monthlyNetRentCents);
+
+        let sumRowNet = 0;
+        let sumRowVat = 0;
+        let sumRowGross = 0;
+        let prevDueDate = '';
+
+        for (let i = 0; i < schedule.invoices.length; i += 1) {
+          const inv = schedule.invoices[i]!;
+
+          // Installment index is 1-indexed sequential
+          expect(inv.invoiceNumber).toBe(i + 1);
+
+          // All monetary amounts are non-negative safe integers
+          expect(Number.isSafeInteger(inv.netRentCents)).toBe(true);
+          expect(Number.isSafeInteger(inv.vatCents)).toBe(true);
+          expect(Number.isSafeInteger(inv.grossTotalCents)).toBe(true);
+          expect(inv.netRentCents).toBeGreaterThanOrEqual(0);
+          expect(inv.vatCents).toBeGreaterThanOrEqual(0);
+          expect(inv.grossTotalCents).toBeGreaterThanOrEqual(0);
+
+          // "Locked price": every row net rent is identical to monthlyNetRentCents
+          expect(inv.netRentCents).toBe(monthlyNetRentCents);
+
+          // Row VAT arithmetic: vatCents is rounded half-up
+          const expectedVat = Math.round((inv.netRentCents * inv.vatRatePercent) / 100);
+          expect(inv.vatCents).toBe(expectedVat);
+
+          // Row gross arithmetic: gross = net + vat to the exact cent
+          expect(inv.grossTotalCents).toBe(inv.netRentCents + inv.vatCents);
+
+          // Calendar dates are strictly monotonic and clamp to month-end
+          if (i > 0) {
+            expect(inv.dueDate > prevDueDate).toBe(true);
+          }
+          expect(inv.dueDate).toBe(addMonthsClamped(signedOn, i));
+          prevDueDate = inv.dueDate;
+
+          // VAT transition tracking
+          expect(inv.isVatChangedFromSigning).toBe(
+            inv.vatRatePercent !== schedule.signingVatRatePercent
+          );
+
+          sumRowNet += inv.netRentCents;
+          sumRowVat += inv.vatCents;
+          sumRowGross += inv.grossTotalCents;
+        }
+
+        // 3. Contract totals equal the sum of rows exactly (no missing cents, no drift)
+        expect(schedule.totalNetRentCents).toBe(monthlyNetRentCents * termMonths);
+        expect(schedule.totalNetRentCents).toBe(sumRowNet);
+        expect(schedule.totalVatCents).toBe(sumRowVat);
+        expect(schedule.totalGrossCents).toBe(sumRowGross);
+        expect(schedule.totalGrossCents).toBe(schedule.totalNetRentCents + schedule.totalVatCents);
+      },
+      { testCases: 250 }
+    ));
 });

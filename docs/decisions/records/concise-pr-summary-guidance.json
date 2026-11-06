@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Process",
+      "decision": "Require a brief plain-language summary before the detailed team PR template and share the commit and PR workflow through CONTRIBUTING.md so teammates and coding agents can quickly understand and review changes."
+    }
+  ]
+}

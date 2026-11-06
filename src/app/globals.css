@@ -1,12 +1,58 @@
 @import 'tailwindcss';
+@import './theme.css';
 
-@theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+@layer base {
+  html {
+    /* Dark tiles are explicit surfaces, rather than a system-wide palette inversion. */
+    color-scheme: light;
+    scroll-padding-top: 140px;
+  }
+
+  body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-on-dark);
+  }
 }
 
-/* A visible keyboard focus everywhere, in both color schemes. */
-:focus-visible {
-  outline: 2px solid var(--color-emerald-600);
-  outline-offset: 2px;
+/* Keep the original select UI. On narrow screens, supported browsers render
+   the picker in the page's top layer, anchored to its own select field. */
+@supports (appearance: base-select) {
+  @media (max-width: 640px) {
+    .application-select,
+    .application-select::picker(select) {
+      appearance: base-select;
+    }
+
+    .application-select::picker(select) {
+      margin: 0;
+      inset: auto;
+      position-area: block-end span-inline-end;
+      position-try-order: normal;
+      position-try-fallbacks: flip-block;
+      inline-size: anchor-size(inline);
+      max-inline-size: calc(100vw - 32px);
+      max-block-size: min(18rem, 50dvh);
+      overflow-y: auto;
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-sm);
+      background: var(--color-canvas);
+      color: var(--color-ink);
+    }
+
+    .application-select option {
+      padding: 8px 16px;
+      overflow-wrap: anywhere;
+    }
+
+    .application-select option:checked {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+  }
 }

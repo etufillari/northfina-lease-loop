@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Charge a return as the cost of ending early plus a falling share of real part-based repair costs, judging battery health against age, so the amount follows what the company must spend and how much of the lease is left."
+    },
+    {
+      "category": "UI",
+      "decision": "Lead lease screens with what the customer still pays, show return and buyout amounts as real euro lines instead of a symbolic formula, and move agreed contract terms to a printable agreement page."
+    },
+    {
+      "category": "UI",
+      "decision": "Show staff only the figures for the decision at hand: what the customer pays while a quote is open, and the price and work cost once the item can be relisted."
+    },
+    {
+      "category": "Contract",
+      "decision": "Keep the ending-early and repair amounts from the customer's return form through inspection and payment, so the customer is not given a second price, accepting that damage they did not report is our cost."
+    },
+    {
+      "category": "UI",
+      "decision": "Make accepting a return quote a simulated payment with the same line-by-line breakdown as the return form, because a customer who has agreed a price only has paying left to do."
+    },
+    {
+      "category": "Process",
+      "decision": "Remove the refurbishment sign-off and its data wipe record, moving a received item straight to ready to relist, because a second assessment page and NIST fields made the demo tedious without changing any decision."
+    }
+  ]
+}

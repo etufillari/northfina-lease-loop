@@ -15,19 +15,27 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                    String     @id
+  category              String // e_bike | laptop | farm_machine
+  make                  String
+  model                 String
+  model_year            Int
+  serial_number         String     @unique
+  condition             String // new | like_new | good | fair | poor
+  usage_unit            String // km | battery_cycles | engine_hours
+  usage_value           Int
+  previous_lives        Int
+  status                String // available | reserved | returned
+  originalPriceCents    Int?
+  firstLeaseDate        String?
+  secondLifePriceCents  Int?
+  maintenanceUsageValue Int        @default(0)
+  priceRevision         Int        @default(1)
+  // Simulated fleet rows that only give the admin charts a history. Never offered for lease.
+  isFleetHistory        Boolean    @default(false)
+  created_at            DateTime   @default(now())
+  updated_at            DateTime   @updatedAt
+  contracts             Contract[]
 
   @@index([category])
 }
@@ -45,4 +53,241 @@ model AuditLog {
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// Authentication identity is separate from the party owning future leases.
+model User {
+  id            String         @id
+  name          String
+  email         String         @unique
+  emailVerified Boolean        @default(false)
+  image         String?
+  role          String         @default("customer")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sessions      AuthSession[]
+  identities    AuthIdentity[]
+  customer      Customer?
+  coLeaseShares CoLeaseShare[]
+}
+
+model Customer {
+  id           String             @id
+  ownerUserId  String             @unique
+  owner        User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  contracts    Contract[]
+  applications LeaseApplication[]
+}
+
+// Contract amounts are the agreed net price snapshot, in whole euro cents.
+// startDate is the first invoice date (YYYY-MM-DD); future invoices are forecasts.
+model Contract {
+  id                    String               @id @default(cuid())
+  customerId            String
+  customer              Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  assetId               String
+  asset                 Asset                @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  startDate             String
+  termMonths            Int
+  listPriceCents        Int
+  downPaymentCents      Int
+  monthlyNetCents       Int
+  buyoutCents           Int
+  priceListVersion      Int
+  status                String               @default("active")
+  isDemo                Boolean              @default(false)
+  annualRateBasisPoints Int?
+  startCondition        String?
+  startUsageValue       Int?
+  // The date the lease stopped running, for month-by-month reporting. Null while active.
+  endedOn               String?
+  // A company applicant who can't sign names the person who can. The contract waits for them
+  // (status "awaiting_signature") and becomes active on the day they sign.
+  signatoryEmail        String?
+  signedOn              String?
+  // The quote the customer applied with, when signing used a newer price list (card 2).
+  // The contract's own price fields are what signing locked; these explain the difference.
+  quotedOn              String?
+  quotedPriceCents      Int?
+  quotedPriceListVersion Int?
+  createdAt             DateTime             @default(now())
+  invoices              Invoice[]
+  requests              LeaseRequest[]
+  events                LeaseEvent[]
+  actionPayments        LeaseActionPayment[]
+  coLeaseShares         CoLeaseShare[]
+
+  @@index([customerId, status])
+  @@index([assetId])
+}
+
+// How a lease's invoices are divided from a date onwards. Rows are never rewritten by a later
+// change, so invoices already due keep the split that applied to them.
+model CoLeaseShare {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  percent       Int
+  isHolder      Boolean  @default(false)
+  effectiveFrom String
+  createdAt     DateTime @default(now())
+
+  @@unique([contractId, userId, effectiveFrom])
+  @@index([contractId, effectiveFrom])
+}
+
+// Separate simulated settlement receipts from monthly rent invoice payments.
+model LeaseActionPayment {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  reference     String   @unique
+  kind          String
+  amountCents   Int
+  paymentMethod String
+  quoteJson     String
+  isSimulated   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([contractId])
+}
+
+// Issued invoices retain their net and VAT snapshot even if the tax table changes.
+model Invoice {
+  id             String    @id @default(cuid())
+  contractId     String
+  contract       Contract  @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  dueDate        String
+  issuedDate     String
+  netCents       Int
+  vatBasisPoints Int
+  vatCents       Int
+  status         String    @default("issued")
+  payments       Payment[]
+
+  @@unique([contractId, dueDate])
+}
+
+// A payment is a recorded event; generating an invoice does not imply payment.
+model Payment {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  amountCents Int
+  paidDate    String
+  isSimulated Boolean @default(false)
+
+  @@index([invoiceId])
+}
+
+model LeaseRequest {
+  id                 String            @id @default(cuid())
+  contractId         String
+  contract           Contract          @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  kind               String // return | buyout | exchange
+  status             String            @default("pending")
+  createdAt          DateTime          @default(now())
+  customerReportJson String?
+  assessment         ReturnAssessment?
+
+  @@index([contractId, status])
+}
+
+// An immutable quote snapshot followed by explicit customer/staff lifecycle transitions.
+model ReturnAssessment {
+  id                  String       @id @default(cuid())
+  requestId           String       @unique
+  request             LeaseRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  assessedBy          String
+  inspectionJson      String
+  calculationJson     String
+  status              String       @default("quoted") // quoted | accepted | received | ready | published | retired | bought
+  // Who finished what after receipt: completed work, re-tests and any data-wipe record.
+  workRecordJson      String?
+  // The price actually published. It can be lower than the quote if the item aged meanwhile.
+  publishedPriceCents Int?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+}
+
+// Only customer-safe events are displayed. Never store previous customers' details.
+model LeaseEvent {
+  id         String   @id @default(cuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  kind       String // signed | payment | returned | refurbished
+  eventDate  String
+  createdAt  DateTime @default(now())
+
+  @@index([contractId, eventDate])
+}
+
+model AuthSession {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+
+  @@index([userId])
+}
+
+model AuthIdentity {
+  id                    String    @id
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  password              String?
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model AuthVerification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model AuthRateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+// An application is an eligibility result, not a signed contract or an asset reservation.
+model LeaseApplication {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  startDate   String
+  status      String
+  answersJson String
+  reasonsJson String
+  itemsJson   String
+  createdAt   DateTime @default(now())
+
+  @@index([customerId, createdAt])
 }

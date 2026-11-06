@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "originalPrNumber": 16,
+  "evidenceFiles": [
+    {
+      "path": "src/app/api/checkout/route.ts",
+      "sha256": "bd7783ecfc6a16ca73a23ea5903a905067ab4c5172a6dc137417662d1e6199fd"
+    },
+    {
+      "path": "src/domain/forecast-changes.ts",
+      "sha256": "9c4290f69f89a2ffb4c853981e2828ea1752fdfb5f1350da20fa39925bb32bc9"
+    }
+  ],
+  "decisions": [
+    {
+      "category": "API",
+      "decision": "Recalculate checkout amounts from server-loaded pricing data and reject changed quotes so client-supplied totals are not authoritative."
+    },
+    {
+      "category": "UI",
+      "decision": "Group future payment forecasts into periods of identical amounts so the dashboard shows the next forecast and each price change instead of repeating every month."
+    }
+  ]
+}

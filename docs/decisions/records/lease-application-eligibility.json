@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "API",
+      "decision": "Require a server-evaluated application approval for the same customer, cart and quote date before simulated checkout so clients cannot bypass eligibility with a flag or another customer's result."
+    },
+    {
+      "category": "Contract",
+      "decision": "Evaluate consumer affordability and due-diligence thresholds across the entire cart so splitting items cannot hide the applicant's combined monthly commitment."
+    },
+    {
+      "category": "Process",
+      "decision": "Route applications to manual review when the question bank omits the income answer needed for affordability rather than silently assuming the applicant can afford the lease."
+    }
+  ]
+}

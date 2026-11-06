@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Use versioned age, condition and usage valuations plus separately itemized refurbishment work so the second-life price and recovery cost remain explainable without counting repairs twice."
+    },
+    {
+      "category": "Contract",
+      "decision": "Discount remaining locked rents and buyout for self-service settlement, keep normal end-of-term returns free, and use an incremental damage floor rather than adding the same repair loss twice."
+    },
+    {
+      "category": "Database",
+      "decision": "Persist inspection and quote snapshots and require customer acceptance, physical receipt and confirmed completed work as separate audited transitions before a second-life offer becomes available."
+    },
+    {
+      "category": "Auth",
+      "decision": "Restrict recovery operations to staff roles checked on the server and provision local staff with an audited CLI rather than exposing self-promotion in the customer application."
+    },
+    {
+      "category": "UI",
+      "decision": "Show VAT-inclusive customer amounts, compact lease imagery and a payment-focused detail panel while hiding unavailable products from catalogue browsing."
+    },
+    {
+      "category": "UI",
+      "decision": "Use a guided category-specific condition check against the recorded starting condition, route buyout directly to simulated payment, and start exchange with replacement selection so the three actions reflect different customer decisions."
+    },
+    {
+      "category": "Database",
+      "decision": "Generate the admin dashboard's history as ordinary audited contracts, invoices, payments and real recovery-service transitions marked as simulated, so the charts read recorded rows and can never disagree with the system."
+    },
+    {
+      "category": "Database",
+      "decision": "Keep simulated fleet items in the asset table behind an explicit flag so reporting has enough volume without adding unleasable items to the catalogue, checkout or public API."
+    },
+    {
+      "category": "Contract",
+      "decision": "Define revenue as net issued invoices, down payments and recorded buyouts, excluding forecasts, so the figure only moves on something the system recorded."
+    },
+    {
+      "category": "Contract",
+      "decision": "Replace the single repair field with an itemized inspection drawn from dealer, lease-return, machinery and data-sanitization practice, where the worst finding limits the grade and damage logged as the customer's raises the damage floor without being added twice."
+    },
+    {
+      "category": "API",
+      "decision": "Recalculate the second-life price on the relist date and refuse publication unless it equals the price staff reviewed, so an aged quote can never be published unseen."
+    },
+    {
+      "category": "UI",
+      "decision": "Draw the dashboard chart as a small hand-written SVG with a table of the same numbers instead of adding a charting dependency, because four line views need no more."
+    }
+  ]
+}

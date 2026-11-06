@@ -23,7 +23,10 @@ export default async function setup(project: TestProject) {
     'build/index.js'
   );
   execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
-    env: { ...process.env, DATABASE_URL: `file:${templateDatabasePath}` },
+    // SQLite migration setup depends on info-level engine output in affected Prisma versions.
+    // Scope the upstream workaround to this subprocess, including when a shell sets RUST_LOG=error.
+    // https://github.com/prisma/prisma/issues/29355
+    env: { ...process.env, DATABASE_URL: `file:${templateDatabasePath}`, RUST_LOG: 'info' },
     stdio: 'pipe',
   });
 

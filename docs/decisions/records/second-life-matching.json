@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Refurbish a returned item only when it can be leased again and its price after the work is more than the work costs; otherwise retire it rather than refurbish at a loss."
+    },
+    {
+      "category": "Contract",
+      "decision": "Match a second-life item to waiting-list entries whose minimum condition, deadline, financeable preferred term and net budget at that term all fit, using the condition after refurbishment; the earliest needed-by date wins and, on the same date, whoever signed up first wins, so the result is deterministic and explainable."
+    },
+    {
+      "category": "UI",
+      "decision": "Show an item passport on used items' product pages with every life's dates, term, starting condition and outcome but never who leased it, and count CO₂ avoided per reuse life as manufacturing CO₂ minus the refurbishment share, scaled by the condition the life started in."
+    }
+  ]
+}

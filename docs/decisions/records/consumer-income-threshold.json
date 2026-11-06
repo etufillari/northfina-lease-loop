@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Supersede D-37-03: skip the consumer affordability check when the question bank does not ask for income (financed amount below its threshold) and approve on the remaining rules, because the bank deliberately omits income there and routing every such case to manual review made low-value items unleasable for consumers."
+    }
+  ]
+}

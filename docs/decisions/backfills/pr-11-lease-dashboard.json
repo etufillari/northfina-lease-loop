@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "originalPrNumber": 11,
+  "evidenceFiles": [
+    {
+      "path": "LEASE_DASHBOARD.md",
+      "sha256": "68fcd678928fe29d5ae74ab68be5bc0c5e145c92451825436ddeb295675d5a2b"
+    }
+  ],
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Display stored VAT snapshots for issued invoices and treat future bills as forecasts so tax changes do not recalculate invoices already issued."
+    },
+    {
+      "category": "Contract",
+      "decision": "Treat return, buyout and exchange actions as requests for review so submission alone leaves the current contract and asset unchanged."
+    }
+  ]
+}

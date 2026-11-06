@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Issue each monthly invoice of an active contract on its due date from the locked net rent, with the VAT rate of that due date stored on the invoice, so later price lists or VAT changes never rewrite an issued invoice; contracts waiting for a signatory or already ended are not billed."
+    },
+    {
+      "category": "Infrastructure",
+      "decision": "Run billing idempotently when the customer opens their account, lease or buyout page instead of on a scheduler, because the demo clock moves in jumps; one audit row records each run that issued something, and the contract and due date uniqueness prevents duplicates."
+    },
+    {
+      "category": "Contract",
+      "decision": "On demo leases only, record a simulated payment for invoices already past their due date, matching the persona scenarios, so moving the demo clock forward doesn't show months of overdue rent; real leases are never paid by the billing run."
+    }
+  ]
+}

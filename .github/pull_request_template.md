@@ -1,59 +1,54 @@
-<!-- Title: "Team <name>: <your product name>" -->
+## Summary
 
-## Team
+<!-- In 1–2 short sentences (at most 50 words), explain what changed and why it
+matters to the person using or maintaining it. Use plain language. Keep file lists,
+implementation details and test results in the sections below. Update this summary
+when the scope changes so it describes the final diff.
+Example: Teammates can now set up and run Lease Loop with short Make commands.
+The README explains configuration and everyday workflows. -->
 
-| Name | GitHub | Main focus |
-| ---- | ------ | ---------- |
-|      |        |            |
-|      |        |            |
-|      |        |            |
+<!--
+PR title: type(scope): short summary [optional ticket/issue ID]
+Example: fix(auth): prevent registration crash [T1038]
+Keep the title specific to the final change. Do not invent an issue ID.
+Follow CONTRIBUTING.md for the commit and PR workflow.
 
-## What we built
+Complete the first four sections below. Replace prompts with concrete information.
+Use "N/A — <reason>" where a section does not apply. Screenshots are optional.
+CI reports automated checks; no manual checklist or checkbox attestations are required.
+For the final judging PR, use .github/hackathon_submission.md instead.
+-->
 
-<!-- Two or three sentences: what it is and who it's for. -->
+## Context
 
-## The Spine
+<!-- Explain the customer need, business rule or bug. Why does this change matter?
+Include the relevant issue/ticket link, or say "No linked issue". -->
 
-- [ ] Catalogue with today's price
-- [ ] Price with sliders (term, down payment)
-- [ ] Application with the question flow
-- [ ] Contract that locks the price
-- [ ] Monthly invoices from the contract
-- [ ] End of term: buy, return or pass on
-- [ ] Second life: re-price and re-lease
+**Problem:**
 
-## Smart Problems we picked (at least 2)
+**Related issue:**
 
-- [ ] 1. Lock the price, not the tax
-- [ ] 2. Fair early exit
-- [ ] 3. Second-life matchmaking
-- [ ] 4. The smart question flow
-- [ ] 5. Money that adds up
-- [ ] 6. Explain my price
-- [ ] 7. Circular impact
-- [ ] Wildcard:
+## Description
 
-**What's smart about our solution?** <!-- The decisions you're proud of, and the trade-offs you made. -->
+<!-- Describe the final behavior and the implementation that enables it.
+Mention important decisions, trade-offs, migrations or configuration changes.
+For a bug fix, explain what happens before and after the change. -->
 
-## Scenario cards that work
+-
 
-<!-- List the numbers from CHALLENGE.md §4, for example: 1, 2, 3, 5, 9 -->
+<!-- Optional: if this PR introduces a meaningful project choice, link its one
+reviewed JSON decision record here. Otherwise omit this note; no record is required.
+See docs/decisions/README.md. Do not duplicate the record or invent a decision. -->
 
-## How to run the demo
+## Testing Instructions
 
-```bash
-npm ci
-npm run db:setup
-npm run dev
-```
+<!-- Give useful setup, actions and expected results, or explain why manual steps are N/A.
+CI is the source of automated check status; there is no need to copy its results here.
+Include local observations, failures or validation gaps when relevant. Report only
+commands actually run. Do not include secrets or real credentials. -->
 
-<!-- Anything extra: seed data, a user to log in as, the page to open first. -->
+## Screenshots / Recordings
 
-## Engineering
-
-- [ ] `npm run check:all` passes locally
-- [ ] CI is green on our last commit (Actions enabled in our fork)
-- [ ] No `--no-verify` was used
-- [ ] No AI, ML or LLM features inside the app
-
-## Anything else the judges should know?
+<!-- Optional: attach available images or recordings, labelled by viewport and state.
+Remove this section when there is no visual evidence to share; no visual signoff
+or N/A checkbox is required. Mention material visual-review gaps in Testing Instructions. -->

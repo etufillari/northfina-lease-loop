@@ -21,8 +21,8 @@ describe('isLocale', () => {
 
 describe('getT', () => {
   it('returns the message for the locale', () => {
-    expect(getT('en')('catalogue.title')).toBe('Catalogue');
-    expect(getT('fi')('catalogue.title')).toBe('Valikoima');
+    expect(getT('en')('catalogue.title')).toBe('The tech you want. No strings attached.');
+    expect(getT('fi')('catalogue.title')).toBe('Haluamaasi teknologiaa. Ilman sitoumuksia.');
   });
 
   it('fills in {placeholders}', () => {

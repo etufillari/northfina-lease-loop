@@ -1,0 +1,464 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "source": "docs/decisions/backfills/pr-7-authentication.json",
+      "sha256": "34ce66d19e946c4cd5ecf9ff842dc1d6f44fa18bf47ad60c019cde76f83ae8ba",
+      "prNumber": 7,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/7",
+      "mergedAt": "2026-11-05T16:48:32.000Z",
+      "decisions": [
+        {
+          "id": "D-7-01",
+          "category": "Auth",
+          "decision": "Derive customer ownership and audit actors from verified server sessions so browser-supplied identifiers cannot authorize access."
+        },
+        {
+          "id": "D-7-02",
+          "category": "Database",
+          "decision": "Commit authentication writes and their audit entry in one transaction so an audit failure rolls back the identity change."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/backfills/pr-11-lease-dashboard.json",
+      "sha256": "7a8a599b735f3286968ebe104f26a92e0b21ea48d67be9cb5cc82b5a520ccfcc",
+      "prNumber": 11,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/11",
+      "mergedAt": "2026-11-05T18:55:23.000Z",
+      "decisions": [
+        {
+          "id": "D-11-01",
+          "category": "Contract",
+          "decision": "Display stored VAT snapshots for issued invoices and treat future bills as forecasts so tax changes do not recalculate invoices already issued."
+        },
+        {
+          "id": "D-11-02",
+          "category": "Contract",
+          "decision": "Treat return, buyout and exchange actions as requests for review so submission alone leaves the current contract and asset unchanged."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/backfills/pr-16-checkout.json",
+      "sha256": "3cfa36e11c1dfdfb0fe990d8f633a22ee28e264a8a9a36f03c0d558dcad636d5",
+      "prNumber": 16,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/16",
+      "mergedAt": "2026-11-05T20:54:56.000Z",
+      "decisions": [
+        {
+          "id": "D-16-01",
+          "category": "API",
+          "decision": "Recalculate checkout amounts from server-loaded pricing data and reject changed quotes so client-supplied totals are not authoritative."
+        },
+        {
+          "id": "D-16-02",
+          "category": "UI",
+          "decision": "Group future payment forecasts into periods of identical amounts so the dashboard shows the next forecast and each price change instead of repeating every month."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/reviewed-decision-log.json",
+      "sha256": "3510ea4f8cc62cafa6947f6992ade30623d4856ceb475f4156aa2b8699d75fbf",
+      "prNumber": 26,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/26",
+      "mergedAt": "2026-11-06T01:10:30.000Z",
+      "decisions": [
+        {
+          "id": "D-26-01",
+          "category": "Process",
+          "decision": "Review one structured decision record alongside each implementation so the accepted wording is preserved without parallel PRs editing a shared table."
+        },
+        {
+          "id": "D-26-02",
+          "category": "Infrastructure",
+          "decision": "Publish generated decision history through one rolling documentation PR because main requires PRs and prohibits direct bot writes."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/lease-application-eligibility.json",
+      "sha256": "23ce2ed17de48e5972af6f8257c051b044f67ee4eab1b030d14e605cc4dd3fa7",
+      "prNumber": 37,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/37",
+      "mergedAt": "2026-11-06T03:25:47.000Z",
+      "decisions": [
+        {
+          "id": "D-37-01",
+          "category": "API",
+          "decision": "Require a server-evaluated application approval for the same customer, cart and quote date before simulated checkout so clients cannot bypass eligibility with a flag or another customer's result."
+        },
+        {
+          "id": "D-37-02",
+          "category": "Contract",
+          "decision": "Evaluate consumer affordability and due-diligence thresholds across the entire cart so splitting items cannot hide the applicant's combined monthly commitment."
+        },
+        {
+          "id": "D-37-03",
+          "category": "Process",
+          "decision": "Route applications to manual review when the question bank omits the income answer needed for affordability rather than silently assuming the applicant can afford the lease."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/concise-pr-summary-guidance.json",
+      "sha256": "22fe1ab4684bd8bcbcf658b4f8a2f3e7ab83491117bea800b9ba1995da7f755b",
+      "prNumber": 42,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/42",
+      "mergedAt": "2026-11-06T07:58:33.000Z",
+      "decisions": [
+        {
+          "id": "D-42-01",
+          "category": "Process",
+          "decision": "Require a brief plain-language summary before the detailed team PR template and share the commit and PR workflow through CONTRIBUTING.md so teammates and coding agents can quickly understand and review changes."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/automated-pr-checks.json",
+      "sha256": "ea55561d91afee11e2750e271ccabe54c094353a307254dafec88e5613f6e6b2",
+      "prNumber": 58,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/58",
+      "mergedAt": "2026-11-06T09:00:06.000Z",
+      "decisions": [
+        {
+          "id": "D-58-01",
+          "category": "Process",
+          "decision": "Validate objective team PR metadata and repository checks in CI and remove manual attestation checklists so authors provide useful context without duplicating automated results."
+        },
+        {
+          "id": "D-58-02",
+          "category": "Infrastructure",
+          "decision": "Run the existing secret scanner over tracked files in both CI and the full local check suite so detection does not depend only on a local pre-commit hook."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/consumer-income-threshold.json",
+      "sha256": "469d9592bd5b4a64ea0b0a55aa2c8ae712e52c4bb9f85323a49daae7d64e7928",
+      "prNumber": 57,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/57",
+      "mergedAt": "2026-11-06T09:02:41.000Z",
+      "decisions": [
+        {
+          "id": "D-57-01",
+          "category": "Contract",
+          "decision": "Supersede D-37-03: skip the consumer affordability check when the question bank does not ask for income (financed amount below its threshold) and approve on the remaining rules, because the bank deliberately omits income there and routing every such case to manual review made low-value items unleasable for consumers."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/isolate-test-git-env.json",
+      "sha256": "e0250e2afdcf21d225b85014a78c983f79124f64af432f5a9ef57200637b60f7",
+      "prNumber": 60,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/60",
+      "mergedAt": "2026-11-06T09:31:45.000Z",
+      "decisions": [
+        {
+          "id": "D-60-01",
+          "category": "Testing",
+          "decision": "Strip inherited GIT_* variables in every test worker and run fixture repositories with an explicit clean environment, because Git hooks export GIT_DIR, which overrides git -C and let a fixture test re-initialise, reconfigure and commit to the real repository."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/asset-recovery-pricing.json",
+      "sha256": "a0d2a33d7ea005744a1a9d2e44b449615a92bbead8f6537153ec053e664c064c",
+      "prNumber": 63,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/63",
+      "mergedAt": "2026-11-06T09:43:22.000Z",
+      "decisions": [
+        {
+          "id": "D-63-01",
+          "category": "Contract",
+          "decision": "Use versioned age, condition and usage valuations plus separately itemized refurbishment work so the second-life price and recovery cost remain explainable without counting repairs twice."
+        },
+        {
+          "id": "D-63-02",
+          "category": "Contract",
+          "decision": "Discount remaining locked rents and buyout for self-service settlement, keep normal end-of-term returns free, and use an incremental damage floor rather than adding the same repair loss twice."
+        },
+        {
+          "id": "D-63-03",
+          "category": "Database",
+          "decision": "Persist inspection and quote snapshots and require customer acceptance, physical receipt and confirmed completed work as separate audited transitions before a second-life offer becomes available."
+        },
+        {
+          "id": "D-63-04",
+          "category": "Auth",
+          "decision": "Restrict recovery operations to staff roles checked on the server and provision local staff with an audited CLI rather than exposing self-promotion in the customer application."
+        },
+        {
+          "id": "D-63-05",
+          "category": "UI",
+          "decision": "Show VAT-inclusive customer amounts, compact lease imagery and a payment-focused detail panel while hiding unavailable products from catalogue browsing."
+        },
+        {
+          "id": "D-63-06",
+          "category": "UI",
+          "decision": "Use a guided category-specific condition check against the recorded starting condition, route buyout directly to simulated payment, and start exchange with replacement selection so the three actions reflect different customer decisions."
+        },
+        {
+          "id": "D-63-07",
+          "category": "Database",
+          "decision": "Generate the admin dashboard's history as ordinary audited contracts, invoices, payments and real recovery-service transitions marked as simulated, so the charts read recorded rows and can never disagree with the system."
+        },
+        {
+          "id": "D-63-08",
+          "category": "Database",
+          "decision": "Keep simulated fleet items in the asset table behind an explicit flag so reporting has enough volume without adding unleasable items to the catalogue, checkout or public API."
+        },
+        {
+          "id": "D-63-09",
+          "category": "Contract",
+          "decision": "Define revenue as net issued invoices, down payments and recorded buyouts, excluding forecasts, so the figure only moves on something the system recorded."
+        },
+        {
+          "id": "D-63-10",
+          "category": "Contract",
+          "decision": "Replace the single repair field with an itemized inspection drawn from dealer, lease-return, machinery and data-sanitization practice, where the worst finding limits the grade and damage logged as the customer's raises the damage floor without being added twice."
+        },
+        {
+          "id": "D-63-11",
+          "category": "API",
+          "decision": "Recalculate the second-life price on the relist date and refuse publication unless it equals the price staff reviewed, so an aged quote can never be published unseen."
+        },
+        {
+          "id": "D-63-12",
+          "category": "UI",
+          "decision": "Draw the dashboard chart as a small hand-written SVG with a table of the same numbers instead of adding a charting dependency, because four line views need no more."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/demo-clock-and-personas.json",
+      "sha256": "45fcae2b4ddfc122428561ef6903eb115adcd1c27e2a0d4b90c86c19c73b78f3",
+      "prNumber": 65,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/65",
+      "mergedAt": "2026-11-06T10:15:16.000Z",
+      "decisions": [
+        {
+          "id": "D-65-01",
+          "category": "Infrastructure",
+          "decision": "Resolve the app's today through one appToday function that honours a validated demo-date cookie only in demo mode, on by default outside production, so scenario cards can be replayed on their own dates while domain code still receives dates as arguments."
+        },
+        {
+          "id": "D-65-02",
+          "category": "Auth",
+          "decision": "Sign demo personas in through the library's normal sign-up and sign-in with a password derived from the server auth secret, so persona switching creates no hand-made sessions and no shared credential is stored or committed."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/co-lease-invoice-split.json",
+      "sha256": "281619594bc27ee12a2ef4e82375863eca7a7497fd86b5f4510083b901d921d6",
+      "prNumber": 67,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/67",
+      "mergedAt": "2026-11-06T10:21:16.000Z",
+      "decisions": [
+        {
+          "id": "D-67-01",
+          "category": "Database",
+          "decision": "Store co-lease shares as dated versions per contract so a later change never rewrites how already-due invoices were divided."
+        },
+        {
+          "id": "D-67-02",
+          "category": "Contract",
+          "decision": "Divide each invoice with a largest-remainder split in whole cents, while the lease holder stays responsible for the contract, because participants in this version are dummy accounts with no checks or charges."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/signatory-waiting-contract.json",
+      "sha256": "37be4745dbfd4eb0f850ec08aa3ab1db56b9ec5f06b496142b7ed829c2aee246",
+      "prNumber": 79,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/79",
+      "mergedAt": "2026-11-06T11:19:19.000Z",
+      "decisions": [
+        {
+          "id": "D-79-01",
+          "category": "Contract",
+          "decision": "Prepare a company contract whose applicant cannot sign with its price locked and item reserved but status awaiting_signature and no billing, and activate it with billing from the signing day when the named signatory signs, so card 6 explains what happens next instead of blocking in manual review."
+        },
+        {
+          "id": "D-79-02",
+          "category": "Auth",
+          "decision": "Let the account-less signatory sign through a link whose token is an HMAC of the contract ID with the server auth secret, compared in constant time, so links can't be guessed or reused across contracts and no extra secret is stored."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/price-lock-at-signing.json",
+      "sha256": "793cc1bc3c61a2c3f47e0b9ad71de19cede2b5b82630e5752820fbc9d1c4b37f",
+      "prNumber": 82,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/82",
+      "mergedAt": "2026-11-06T11:54:19.000Z",
+      "decisions": [
+        {
+          "id": "D-82-01",
+          "category": "Contract",
+          "decision": "Lock the price list valid on the signing day, keep approvals signable for 7 days with eligibility re-checked at today's amounts, and require the customer to accept a price that differs from their quote, so a price never changes silently in either direction and the contract records the original quote to explain it."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/invoice-issuance-on-view.json",
+      "sha256": "adc3eb38c87b4ccae142701a507545f57b6d4db19c31911e8b314fd8becf01fc",
+      "prNumber": 84,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/84",
+      "mergedAt": "2026-11-06T12:10:21.000Z",
+      "decisions": [
+        {
+          "id": "D-84-01",
+          "category": "Contract",
+          "decision": "Issue each monthly invoice of an active contract on its due date from the locked net rent, with the VAT rate of that due date stored on the invoice, so later price lists or VAT changes never rewrite an issued invoice; contracts waiting for a signatory or already ended are not billed."
+        },
+        {
+          "id": "D-84-02",
+          "category": "Infrastructure",
+          "decision": "Run billing idempotently when the customer opens their account, lease or buyout page instead of on a scheduler, because the demo clock moves in jumps; one audit row records each run that issued something, and the contract and due date uniqueness prevents duplicates."
+        },
+        {
+          "id": "D-84-03",
+          "category": "Contract",
+          "decision": "On demo leases only, record a simulated payment for invoices already past their due date, matching the persona scenarios, so moving the demo clock forward doesn't show months of overdue rent; real leases are never paid by the billing run."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/second-life-matching.json",
+      "sha256": "1d32c505cf76db0cb6693f30573d52c1e30ba79cc8cbc15d619411f653b5d9e5",
+      "prNumber": 88,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/88",
+      "mergedAt": "2026-11-06T12:24:45.000Z",
+      "decisions": [
+        {
+          "id": "D-88-01",
+          "category": "Contract",
+          "decision": "Refurbish a returned item only when it can be leased again and its price after the work is more than the work costs; otherwise retire it rather than refurbish at a loss."
+        },
+        {
+          "id": "D-88-02",
+          "category": "Contract",
+          "decision": "Match a second-life item to waiting-list entries whose minimum condition, deadline, financeable preferred term and net budget at that term all fit, using the condition after refurbishment; the earliest needed-by date wins and, on the same date, whoever signed up first wins, so the result is deterministic and explainable."
+        },
+        {
+          "id": "D-88-03",
+          "category": "UI",
+          "decision": "Show an item passport on used items' product pages with every life's dates, term, starting condition and outcome but never who leased it, and count CO₂ avoided per reuse life as manufacturing CO₂ minus the refurbishment share, scaled by the condition the life started in."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/end-of-term-and-sold.json",
+      "sha256": "39946abe760fbdff3170dc50fa335f0c741af5141dfec7ce6fad80b787ca8fc6",
+      "prNumber": 92,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/92",
+      "mergedAt": "2026-11-06T12:52:46.000Z",
+      "decisions": [
+        {
+          "id": "D-92-01",
+          "category": "Contract",
+          "decision": "Keep a lease active after its last month until the customer buys or returns the item, because they still hold it and ownership is unsettled; stop billing rent and show the end-of-term choice with the locked buyout instead of completing the contract automatically."
+        },
+        {
+          "id": "D-92-02",
+          "category": "Database",
+          "decision": "Mark a bought item's asset as sold rather than reserved, so it leaves the fleet for good and can never be relisted, offered to the waiting list or leased again."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/money-first-month-and-rounding.json",
+      "sha256": "d6138bb16c278f97df43b720a063c72c4d974f1fe257407993f8aa5907eb4b7c",
+      "prNumber": 94,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/94",
+      "mergedAt": "2026-11-06T13:08:48.000Z",
+      "decisions": [
+        {
+          "id": "D-94-01",
+          "category": "Contract",
+          "decision": "Bill a full month from the contract's start date with no pro-rata first month, keeping the start day each month and clamping it to the month's last day, so every invoice is the same locked net rent and the schedule is easy to check."
+        },
+        {
+          "id": "D-94-02",
+          "category": "Contract",
+          "decision": "Round every money amount once, to the nearest cent with half a cent up, using integer arithmetic at the final step (rent, VAT per invoice, buyout and settlements), and tell customers the rule on the product page."
+        },
+        {
+          "id": "D-94-03",
+          "category": "Testing",
+          "decision": "Check money rules with fast-check property tests over thousands of random contracts (every financed band and term, month-end and leap-year starts), alongside the example tests, so totals, VAT rounding, due dates, billing runs and early-exit limits hold for any contract."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/demo-clock-rewind.json",
+      "sha256": "10785a6aa3023bfa9c275f082f7e778ed758aa62fcab410326fadae9cc9bdd67",
+      "prNumber": 97,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/97",
+      "mergedAt": "2026-11-06T13:18:11.000Z",
+      "decisions": [
+        {
+          "id": "D-97-01",
+          "category": "Process",
+          "decision": "In demo mode, moving the demo date back undoes the signed-in account's demo actions dated after it (leases started later, later invoices, payments and events, later buyouts and signatory signatures, later applications) in the same audited transaction, and moving it forward sets up the persona's scenario again; real leases, other accounts and completed returns are never undone."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/infinity-brand-wordmark.json",
+      "sha256": "9a37624b482549dcbdde7973995cadb43c74b26e9bbe3bac6d4228c9ee647224",
+      "prNumber": 99,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/99",
+      "mergedAt": "2026-11-06T13:23:41.000Z",
+      "decisions": [
+        {
+          "id": "D-99-01",
+          "category": "UI",
+          "decision": "Use the infinity symbol as the oo ligature in the shared Lease Loop wordmark, retaining live translated letters and the full accessible name so the circular-leasing identity stays readable."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/customer-flow-sanity.json",
+      "sha256": "571323fab1846c205c442bacf696a6ca4249f1732ba0e95255a9312ef2b126a1",
+      "prNumber": 103,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/103",
+      "mergedAt": "2026-11-06T13:40:29.000Z",
+      "decisions": [
+        {
+          "id": "D-103-01",
+          "category": "Contract",
+          "decision": "Charge a return as the cost of ending early plus a falling share of real part-based repair costs, judging battery health against age, so the amount follows what the company must spend and how much of the lease is left."
+        },
+        {
+          "id": "D-103-02",
+          "category": "UI",
+          "decision": "Lead lease screens with what the customer still pays, show return and buyout amounts as real euro lines instead of a symbolic formula, and move agreed contract terms to a printable agreement page."
+        },
+        {
+          "id": "D-103-03",
+          "category": "UI",
+          "decision": "Show staff only the figures for the decision at hand: what the customer pays while a quote is open, and the price and work cost once the item can be relisted."
+        },
+        {
+          "id": "D-103-04",
+          "category": "Contract",
+          "decision": "Keep the ending-early and repair amounts from the customer's return form through inspection and payment, so the customer is not given a second price, accepting that damage they did not report is our cost."
+        },
+        {
+          "id": "D-103-05",
+          "category": "UI",
+          "decision": "Make accepting a return quote a simulated payment with the same line-by-line breakdown as the return form, because a customer who has agreed a price only has paying left to do."
+        },
+        {
+          "id": "D-103-06",
+          "category": "Process",
+          "decision": "Remove the refurbishment sign-off and its data wipe record, moving a received item straight to ready to relist, because a second assessment page and NIST fields made the demo tedious without changing any decision."
+        }
+      ]
+    }
+  ]
+}

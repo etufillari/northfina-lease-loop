@@ -4,7 +4,7 @@
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 
 export type AuditEntry = {
-  /** Who did it (a user id or name; there is no login in the starter). */
+  /** Verified user id, or an explicit system/anonymous actor for non-user operations. */
   actor: string;
   /** What happened, as `<entity>.<verb>`, e.g. `asset.status_changed`. */
   action: string;

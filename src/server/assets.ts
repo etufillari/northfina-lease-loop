@@ -42,10 +42,16 @@ export async function listAssets(
   filter: { category?: AssetCategory } = {}
 ): Promise<Asset[]> {
   const rows = await db.asset.findMany({
-    where: filter.category ? { category: filter.category } : {},
+    where: { isFleetHistory: false, ...(filter.category ? { category: filter.category } : {}) },
     orderBy: { id: 'asc' },
   });
   return rows.map(toAsset);
+}
+
+/** Fetch one asset in the same validated shape used by the catalogue. */
+export async function findAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
 }
 
 export type ChangeAssetStatusResult =

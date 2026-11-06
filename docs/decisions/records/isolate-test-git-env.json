@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Testing",
+      "decision": "Strip inherited GIT_* variables in every test worker and run fixture repositories with an explicit clean environment, because Git hooks export GIT_DIR, which overrides git -C and let a fixture test re-initialise, reconfigure and commit to the real repository."
+    }
+  ]
+}

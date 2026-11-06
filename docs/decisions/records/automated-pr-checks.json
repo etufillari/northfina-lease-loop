@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Process",
+      "decision": "Validate objective team PR metadata and repository checks in CI and remove manual attestation checklists so authors provide useful context without duplicating automated results."
+    },
+    {
+      "category": "Infrastructure",
+      "decision": "Run the existing secret scanner over tracked files in both CI and the full local check suite so detection does not depend only on a local pre-commit hook."
+    }
+  ]
+}

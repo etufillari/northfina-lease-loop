@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Process",
+      "decision": "In demo mode, moving the demo date back undoes the signed-in account's demo actions dated after it (leases started later, later invoices, payments and events, later buyouts and signatory signatures, later applications) in the same audited transaction, and moving it forward sets up the persona's scenario again; real leases, other accounts and completed returns are never undone."
+    }
+  ]
+}

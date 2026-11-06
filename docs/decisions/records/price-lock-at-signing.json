@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Lock the price list valid on the signing day, keep approvals signable for 7 days with eligibility re-checked at today's amounts, and require the customer to accept a price that differs from their quote, so a price never changes silently in either direction and the contract records the original quote to explain it."
+    }
+  ]
+}

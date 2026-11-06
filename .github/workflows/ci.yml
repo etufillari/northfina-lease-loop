@@ -64,6 +64,9 @@ jobs:
       - name: No AI/ML in the app
         run: npm run check:no-ai
 
+      - name: Scan tracked files for secrets
+        run: npm run check:secrets
+
       - name: Tests with coverage
         run: npm run test:coverage
 

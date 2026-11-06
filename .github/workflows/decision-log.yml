@@ -1,0 +1,41 @@
+name: Publish decision log
+
+on:
+  push:
+    paths:
+      - 'docs/decisions/records/**'
+      - 'docs/decisions/backfills/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each run reconciles ALL tracked records, so even a replaced/delayed event loses no PR.
+concurrency:
+  group: decision-log-publication
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  publish:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Only reviewed code on the default branch runs with write permissions.
+      # Never use a PR head, pull_request_target, or PR-authored shell commands here.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Reconcile and update the rolling documentation PR
+        run: node scripts/decisions/publish.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DECISIONS_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  findAsset,
+  listAssets,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -54,6 +61,16 @@ describe('listAssets', () => {
   });
 });
 
+describe('findAsset', () => {
+  it('finds an item by ID and returns null for an unknown item', async () => {
+    await seedAssets(db, dataPack);
+    expect(await findAsset(db, 'ebike-005')).toEqual(
+      dataPack.find((asset) => asset.id === 'ebike-005')
+    );
+    expect(await findAsset(db, 'missing')).toBeNull();
+  });
+});
+
 describe('changeAssetStatus', () => {
   it('updates the status and writes an audit row with from and to', async () => {
     await seedAssets(db, dataPack);
@@ -84,6 +101,12 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      originalPriceCents: null,
+      firstLeaseDate: null,
+      secondLifePriceCents: null,
+      maintenanceUsageValue: 0,
+      priceRevision: 1,
+      isFleetHistory: false,
       created_at: new Date(),
       updated_at: new Date(),
     };

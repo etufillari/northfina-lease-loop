@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Prepare a company contract whose applicant cannot sign with its price locked and item reserved but status awaiting_signature and no billing, and activate it with billing from the signing day when the named signatory signs, so card 6 explains what happens next instead of blocking in manual review."
+    },
+    {
+      "category": "Auth",
+      "decision": "Let the account-less signatory sign through a link whose token is an HMAC of the contract ID with the server auth secret, compared in constant time, so links can't be guessed or reused across contracts and no extra secret is stored."
+    }
+  ]
+}

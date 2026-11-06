@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     globalSetup: ['./tests/global-setup.ts'],
+    // Strip GIT_* inherited from Git hooks so tests can't write to this repository.
+    setupFiles: ['./tests/isolate-git-env.mjs'],
     coverage: {
       provider: 'v8',
       // Business logic and server code must stay tested; UI pages are not measured.

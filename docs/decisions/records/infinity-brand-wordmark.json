@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "UI",
+      "decision": "Use the infinity symbol as the oo ligature in the shared Lease Loop wordmark, retaining live translated letters and the full accessible name so the circular-leasing identity stays readable."
+    }
+  ]
+}

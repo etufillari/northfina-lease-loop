@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Keep a lease active after its last month until the customer buys or returns the item, because they still hold it and ownership is unsettled; stop billing rent and show the end-of-term choice with the locked buyout instead of completing the contract automatically."
+    },
+    {
+      "category": "Database",
+      "decision": "Mark a bought item's asset as sold rather than reserved, so it leaves the fleet for good and can never be relisted, offered to the waiting list or leased again."
+    }
+  ]
+}

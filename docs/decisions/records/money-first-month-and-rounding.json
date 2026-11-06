@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Bill a full month from the contract's start date with no pro-rata first month, keeping the start day each month and clamping it to the month's last day, so every invoice is the same locked net rent and the schedule is easy to check."
+    },
+    {
+      "category": "Contract",
+      "decision": "Round every money amount once, to the nearest cent with half a cent up, using integer arithmetic at the final step (rent, VAT per invoice, buyout and settlements), and tell customers the rule on the product page."
+    },
+    {
+      "category": "Testing",
+      "decision": "Check money rules with fast-check property tests over thousands of random contracts (every financed band and term, month-end and leap-year starts), alongside the example tests, so totals, VAT rounding, due dates, billing runs and early-exit limits hold for any contract."
+    }
+  ]
+}

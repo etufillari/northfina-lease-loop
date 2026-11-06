@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Database",
+      "decision": "Store co-lease shares as dated versions per contract so a later change never rewrites how already-due invoices were divided."
+    },
+    {
+      "category": "Contract",
+      "decision": "Divide each invoice with a largest-remainder split in whole cents, while the lease holder stays responsible for the contract, because participants in this version are dummy accounts with no checks or charges."
+    }
+  ]
+}

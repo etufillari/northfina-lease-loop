@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "originalPrNumber": 7,
+  "evidenceFiles": [
+    {
+      "path": "AUTHENTICATION.md",
+      "sha256": "d59b69df6e73f81c8f7fb5a5dfe6169b37a1d3adbef59fe38aeb5de744608c5d"
+    },
+    {
+      "path": "src/server/auth-handler.ts",
+      "sha256": "632dd171e41b7d6e807893538983f4d5a2af11abe9c6e30ea1e8a5a28c0cd426"
+    }
+  ],
+  "decisions": [
+    {
+      "category": "Auth",
+      "decision": "Derive customer ownership and audit actors from verified server sessions so browser-supplied identifiers cannot authorize access."
+    },
+    {
+      "category": "Database",
+      "decision": "Commit authentication writes and their audit entry in one transaction so an audit failure rolls back the identity change."
+    }
+  ]
+}

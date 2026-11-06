@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Process",
+      "decision": "Review one structured decision record alongside each implementation so the accepted wording is preserved without parallel PRs editing a shared table."
+    },
+    {
+      "category": "Infrastructure",
+      "decision": "Publish generated decision history through one rolling documentation PR because main requires PRs and prohibits direct bot writes."
+    }
+  ]
+}

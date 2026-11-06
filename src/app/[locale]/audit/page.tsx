@@ -2,6 +2,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { ActionChip, ActorCell, DetailsCell, RecordCell } from '@/components/audit-cells';
+import { loadAssets, loadCustomers } from '@/data/load';
+import { auditActor, auditFacts } from '@/domain/audit-facts';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { listAuditLog } from '@/server/audit';
@@ -20,7 +23,12 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
   await connection();
 
   const t = getT(locale);
-  const rows = await listAuditLog(db, 100);
+  const [rows, customers, assets] = await Promise.all([
+    listAuditLog(db, 100),
+    loadCustomers(),
+    loadAssets(),
+  ]);
+  const assetNames = new Map(assets.map((asset) => [asset.id, `${asset.make} ${asset.model}`]));
   const when = new Intl.DateTimeFormat(intlLocale[locale], {
     dateStyle: 'medium',
     timeStyle: 'medium',
@@ -58,17 +66,28 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
                   <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                     <time dateTime={row.created_at}>{when.format(new Date(row.created_at))}</time>
                   </td>
-                  <td className="px-4 py-3">{row.actor}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-surface-2 px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap text-accent-text">
-                      {row.action}
-                    </span>
+                    <ActorCell actor={auditActor(row.actor, customers)} t={t} />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
-                    {row.entity_type} {row.entity_id}
+                  <td className="px-4 py-3">
+                    <ActionChip action={row.action} t={t} />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs break-all text-muted">
-                    {row.details === null ? '' : JSON.stringify(row.details)}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <RecordCell
+                      entityType={row.entity_type}
+                      entityId={row.entity_id}
+                      assetName={assetNames.get(row.entity_id)}
+                      locale={locale}
+                      t={t}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <DetailsCell
+                      facts={auditFacts(row.action, row.details)}
+                      details={row.details}
+                      locale={locale}
+                      t={t}
+                    />
                   </td>
                 </tr>
               ))}

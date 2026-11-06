@@ -28,3 +28,17 @@ export function buildActionTexts(t: Translate): ActionTexts {
     },
   };
 }
+
+/** Texts for reserving a returned item for the waiting list: a few codes mean something else here. */
+export function buildReserveTexts(t: Translate): ActionTexts {
+  const base = buildActionTexts(t);
+  return {
+    ...base,
+    errors: {
+      ...base.errors,
+      NO_VIABLE_MATCH: t('dealer.secondLife.error.NO_VIABLE_MATCH'),
+      ASSET_NOT_RETURNED: t('dealer.secondLife.error.ASSET_NOT_RETURNED'),
+      REQUEST_ALREADY_RESERVED: t('dealer.secondLife.error.REQUEST_ALREADY_RESERVED'),
+    },
+  };
+}

@@ -2,10 +2,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { buildActionTexts } from '@/components/dealer/action-texts';
+import { buildActionTexts, buildReserveTexts } from '@/components/dealer/action-texts';
 import { InspectionForm } from '@/components/dealer/inspection-form';
 import { PlanForm } from '@/components/dealer/plan-form';
 import { ActionButton } from '@/components/dealer/action-button';
+import { SecondLifeCard } from '@/components/dealer/second-life-card';
 import { RefurbishmentPlanCard } from '@/components/dealer/refurbishment-plan-card';
 import { ReturnStatusBadge } from '@/components/dealer/return-status-badge';
 import { WorkflowTimeline } from '@/components/dealer/workflow-timeline';
@@ -22,6 +23,8 @@ import { isLocale } from '@/i18n/locales';
 import { ApiError } from '@/server/api-response';
 import { db } from '@/server/db';
 import { getReturnRequest } from '@/server/return-queries';
+import { getSecondLifeSection } from '@/server/second-life-view';
+import { todayIso } from '@/server/today';
 
 export default async function ReturnDetailPage({
   params,
@@ -37,6 +40,25 @@ export default async function ReturnDetailPage({
 
   const t = getT(locale);
   const texts = buildActionTexts(t);
+  const usageSinceLastService = detail.inspection?.usageSinceLastService ?? undefined;
+
+  // Second life: the reservation if there is one, else the decision for an item waiting to be matched.
+  const secondLife = await getSecondLifeSection(db, {
+    assetId: detail.asset.id,
+    today: todayIso(),
+    usageSinceLastService,
+  });
+
+  // The plan should start from what the next customer needs: the reservation's or the winner's target.
+  const planOptions = detail.inspection ? planTargetOptions(detail.inspection.condition) : [];
+  const suggestedTarget =
+    secondLife.kind === 'reserved'
+      ? secondLife.reservation.targetCondition
+      : secondLife.kind === 'preview'
+        ? secondLife.preview.matches.find(
+            (match) => match.requestId === secondLife.preview.decision.winnerRequestId
+          )?.targetCondition
+        : undefined;
   const assetName = `${detail.asset.make} ${detail.asset.model}`;
   const conditionOptions = (values: readonly string[]) =>
     values.map((value) => ({
@@ -154,8 +176,12 @@ export default async function ReturnDetailPage({
             </p>
             <PlanForm
               returnId={detail.id}
-              targets={conditionOptions(planTargetOptions(detail.inspection.condition))}
-              defaultTarget={defaultPlanTarget(detail.inspection.condition)}
+              targets={conditionOptions(planOptions)}
+              defaultTarget={
+                suggestedTarget && planOptions.includes(suggestedTarget)
+                  ? suggestedTarget
+                  : defaultPlanTarget(detail.inspection.condition)
+              }
               labels={{ target: t('dealer.plan.target'), create: t('dealer.plan.create') }}
               texts={texts}
             />
@@ -196,6 +222,19 @@ export default async function ReturnDetailPage({
           </p>
         ) : null}
       </section>
+
+      {secondLife.kind !== 'none' ? (
+        <div className="mt-10">
+          <SecondLifeCard
+            section={secondLife}
+            assetId={detail.asset.id}
+            usageSinceLastService={usageSinceLastService}
+            locale={locale}
+            t={t}
+            texts={buildReserveTexts(t)}
+          />
+        </div>
+      ) : null}
 
       {detail.inspection || detail.plan ? (
         <div className="mt-10 grid gap-6 lg:grid-cols-2">

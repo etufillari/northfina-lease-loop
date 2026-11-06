@@ -24,12 +24,42 @@ export async function InvoiceForecast({
   const invoices = rows
     .flatMap((row) => (row.ok ? [row.value] : []))
     .filter((row) => !terminatedOn || row.period.startDate < terminatedOn);
+  const netTotal = invoices.reduce((sum, row) => sum + row.netCents, 0);
+  const vatTotal = invoices.reduce((sum, row) => sum + row.vatCents, 0);
+  const changes = invoices.flatMap((row, index) => {
+    const before = invoices[index - 1];
+    return before && before.tax.rateBps !== row.tax.rateBps ? [{ before, after: row }] : [];
+  });
   return (
     <details className="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
       <summary className="cursor-pointer underline">{t('smart.forecast')}</summary>
       <p className="my-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {t('smart.forecastNote')}
       </p>
+      <p className="my-3 text-sm">{t('smart.calendarPolicy')}</p>
+      <p>
+        {t('engine.net')}: {formatEuro(netTotal, intlLocale[locale])} · {t('engine.vat')}:{' '}
+        {formatEuro(vatTotal, intlLocale[locale])}
+      </p>
+      {changes.map(({ before, after }) => (
+        <div
+          key={after.period.issueDate}
+          className="my-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100"
+        >
+          <strong>{t('smart.taxChanged')}</strong>
+          <p>
+            {before.period.issueDate}: {before.tax.rateBps / 100}% →{' '}
+            {formatEuro(before.grossCents, intlLocale[locale])}
+          </p>
+          <p>
+            {after.period.issueDate}: {after.tax.rateBps / 100}% →{' '}
+            {formatEuro(after.grossCents, intlLocale[locale])}
+          </p>
+          <p>
+            {t('engine.net')}: {formatEuro(after.netCents, intlLocale[locale])}
+          </p>
+        </div>
+      ))}
       <p>
         {t('smart.projectedTotal')}:{' '}
         {formatEuro(

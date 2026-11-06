@@ -32,7 +32,7 @@ Use this as slide copy and speaking notes. Reserve most of the four minutes for 
 
 **Say:** “Money is stored in integer cents. Monthly anniversaries follow the original start day, clamped when a month is shorter. A January 31 lease reaches February’s last day and returns to the original day when possible. We test leap years, boundaries and thousands of generated schedules.”
 
-**Evidence:** Current automated suite has 304 tests across 51 files, including 2,880 deterministic generated schedule cases. Recheck these counts if the code changes.
+**Evidence:** Current automated suite has 318 tests across 55 files, including 2,880 deterministic generated schedule cases. Recheck these counts if the code changes.
 
 ## Slide 5 — What we chose and what comes next (3:25–4:00)
 
@@ -53,3 +53,13 @@ Do not claim real payments, production identity, multi-asset fleet contracts or 
 ## Rehearsal
 
 Use one tested asset/customer pair and a prepared date example. The UI follows the system light/dark theme; check contrast and screen projection on the presentation laptop before rehearsing. Keep a second browser tab ready for the next customer and invoice comparison. If a live request fails, show the last saved state and explain it; do not improvise database resets during the pitch.
+
+## Five smart problems — ready for Q&A
+
+1. **Price versus tax:** “We lock the signed net rent and save tax per invoice date. The forecast shows exactly why the gross amount changes.”
+2. **Fair exit:** “Before committing, customers see remaining rents, the signed buyout cap, VAT and the fee. We charge the smaller net amount; confirmation recalculates it.”
+3. **Matching:** “The company sees the as-is value, expected uplift and work costs before repairs. Feasible requests rank by deadline, then stable ID; approval controls publication.”
+4. **Questions:** “We show only applicable questions and why we ask them. Changing an answer removes irrelevant answers; server rules still guard age, affordability, PEP and signing authority.”
+5. **Money:** “Cents and exact rounding keep totals consistent. Anniversary dates handle short months and leap years, with thousands of generated schedule checks.”
+
+Early-exit and matching explanations are implemented on the team handoff branch. Do not describe these as future work. Matching remains an advisory recommendation, not a persisted waiting-list assignment or full profit optimizer. A market-value early-exit formula is not claimed; we use the signed capped-rent policy.

@@ -71,6 +71,7 @@ export async function LeaseEnginePanel({
             <EndOptionActions
               leaseId={leaseId}
               status={status}
+              maxElapsedMonths={state ? state.termMonths - 1 : 47}
               locale={locale}
               labels={{
                 return: t('end.return'),
@@ -151,6 +152,12 @@ export async function LeaseEnginePanel({
           </Link>
         )}
       </div>
+      {contract && (
+        <p className="mt-3 text-sm">
+          {t('smart.priceLock')} {t('lease.checkoutPriceList')}: {contract.price_list_version} ·{' '}
+          {contract.start_date}
+        </p>
+      )}
       {operator && (
         <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
           {t('engine.demoNote')}

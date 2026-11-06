@@ -14,7 +14,7 @@ import {
   requiredWorkComplete,
   type WorkPlan,
 } from '@/domain/circular/refurbishment';
-import { residualValue, assetAgeMonths } from '@/domain/circular/valuation';
+import { projectRefurbishment } from '@/domain/circular/recommendation';
 import { anniversary } from '@/domain/lease-engine/calendar';
 import { toAsset } from '@/server/assets';
 import { auditedCommand } from '@/server/lease-engine/commands';
@@ -268,15 +268,11 @@ export async function finishRefurbishment(
         : (prices.find((list) => list.version === firstContract?.price_list_version) ?? prices[0])
             ?.prices[asset.id];
     if (originalNet === undefined) invalid('original_price_missing');
-    const restored = {
-      ...toAsset(asset),
-      condition: plan.resultingCondition,
-      usage: { unit: toAsset(asset).usage.unit, value: plan.resultingUsage },
-    };
-    const offerNet = residualValue(
-      restored,
+    const { priceCents: offerNet } = projectRefurbishment(
+      toAsset(asset),
       originalNet,
-      assetAgeMonths(asset.model_year, payload.completedOn),
+      plan,
+      payload.completedOn,
       curves
     );
     const financeable = monthlyFactorFor(coefficients, offerNet, 36).ok;

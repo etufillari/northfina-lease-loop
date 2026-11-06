@@ -1,4 +1,6 @@
 'use client';
+import { getT } from '@/i18n/get-t';
+import { explainDecision } from '@/i18n/decision-reason';
 
 import {
   createContext,
@@ -410,7 +412,7 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
       }
       if (applicationResult.data.status !== 'APPROVED') {
         setValidationError(
-          `${applicationResult.data.status === 'MANUAL_REVIEW' ? labels.manualReview : labels.rejected} ${applicationResult.data.decisionReason ?? ''}`
+          `${applicationResult.data.status === 'MANUAL_REVIEW' ? labels.manualReview : labels.rejected} ${explainDecision(applicationResult.data.decisionReason, getT(locale))}`
         );
         return;
       }
@@ -427,7 +429,7 @@ export function LeaseQuestions({ locale }: { locale: Locale }) {
       complete();
       setSigned(true);
       completedSuccessfully = true;
-      window.location.assign(`/${locale}/account`);
+      window.location.assign(`/${locale}/leases`);
     } catch (error: unknown) {
       console.error('Unable to complete leasing contract:', error);
       setValidationError(labels.signingError);

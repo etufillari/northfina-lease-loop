@@ -1,3 +1,4 @@
+import { previewEarlyExit } from './exit-quote';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '../../../tests/helpers/test-db';
 import { loadAssets, loadVatRates } from '@/data/load';
@@ -167,4 +168,39 @@ it('cannot switch to buyout after the customer has submitted a physical return r
     selectEndOption(db, ctx('buyout-after-return'), { leaseId, option: 'BUYOUT' })
   ).rejects.toMatchObject({ reason: 'return_workflow_already_started' });
   expect(await db.circularOffer.count()).toBe(0);
+});
+
+it('previews the same early-exit fee as settlement without changing the lease', async () => {
+  const db = database.db;
+  const quote = await previewEarlyExit(db, leaseId, 6);
+  expect(quote).toMatchObject({
+    remainingMonths: 30,
+    remainingRentNetCents: 321900,
+    feeNetCents: 58350,
+    grossCents: 73521,
+    blockedByIssuedInvoices: false,
+  });
+  expect(await db.leaseSettlement.count()).toBe(0);
+  expect((await db.engineLease.findUniqueOrThrow({ where: { id: leaseId } })).status).toBe(
+    'ACTIVE'
+  );
+  const settlement = await selectEndOption(db, ctx('confirm-preview'), {
+    leaseId,
+    option: 'EARLY_RETURN',
+    elapsedMonths: 6,
+  });
+  expect(settlement.netCents).toBe(quote.feeNetCents);
+  expect(settlement.grossCents).toBe(quote.grossCents);
+  expect(settlement.effectiveOn).toBe(quote.effectiveOn);
+});
+it('marks an exit preview blocked when future issued rent needs credit handling', async () => {
+  const db = database.db;
+  await issueInvoice(
+    db,
+    ctx('future-for-preview'),
+    { leaseId, periodIndex: 7 },
+    (await loadVatRates()).rates
+  );
+  expect((await previewEarlyExit(db, leaseId, 6)).blockedByIssuedInvoices).toBe(true);
+  expect(await db.leaseSettlement.count()).toBe(0);
 });

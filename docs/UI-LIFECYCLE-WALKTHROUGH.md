@@ -67,3 +67,13 @@ The local test database has been cleared and the 30 original assets restored. Re
 ## Invoice browsing and PDF
 
 Company All operations generates one next invoice per click. In the customer view, open Transactions to filter saved invoices by asset. Click an invoice number to view/download its PDF. The customer can access only their own invoices. Forecasts remain separate from issued invoices; neither implies payment.
+
+## Try the five smart problems
+
+- **Price/tax:** open a signed lease and check the saved price-list version. Expand the forecast: compare the December/January VAT panel and unchanged net rent.
+- **Early exit:** on an ACTIVE lease choose early return. Set completed months (6 means the start of month 7), calculate, read remaining rent/cap/net/VAT/gross and date, then confirm only if you want to persist termination. Creating a preview leaves the lease active. Future issued invoices require credits first.
+- **Matching:** inspect an item in Company operations. Before confirming repairs, read estimated as-is/restored values, work costs, incremental uplift and candidate ranking. Complete required work and approve before the next lease.
+- **Questions:** change customer type or financed amount while applying; check that irrelevant questions/answers disappear. Read why-we-ask and the localized decision reason. Do not override a known PEP/signing-authority flag.
+- **Calendar:** inspect forecast rows for short-month and leap-year dates, payment due dates and separate net/VAT/gross totals. Forecasts are not issued invoices or payments.
+
+Full explanation: [SMART-PROBLEMS.md](SMART-PROBLEMS.md).

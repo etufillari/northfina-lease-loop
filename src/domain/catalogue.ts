@@ -113,6 +113,13 @@ const comparators: Record<CatalogueSort, (a: CatalogueItem, b: CatalogueItem) =>
 };
 
 /**
+ * Statuses left out unless the customer picks them in the status filter. A sold item belongs to
+ * someone and can never be leased again, so it is only noise while browsing. Reserved items stay:
+ * the customer an item was passed on to has to find it, and others may see it come free.
+ */
+const HIDDEN_BY_DEFAULT: ReadonlySet<AssetStatus> = new Set(['sold']);
+
+/**
  * Prices every asset on `isoDate` (`YYYY-MM-DD`), keeps those that match `query`, and sorts
  * them. Ties are broken by asset id, so the order never depends on the input order.
  */
@@ -125,7 +132,9 @@ export function browseCatalogue(
   const compare = comparators[query.sort];
   return assets
     .filter((asset) => query.category === null || asset.category === query.category)
-    .filter((asset) => query.status === null || asset.status === query.status)
+    .filter((asset) =>
+      query.status === null ? !HIDDEN_BY_DEFAULT.has(asset.status) : asset.status === query.status
+    )
     .filter((asset) => matchesSearch(asset, query.search))
     .map((asset) => ({ asset, price: listPriceOn(priceLists, asset.id, isoDate) }))
     .sort((a, b) => compare(a, b) || a.asset.id.localeCompare(b.asset.id, 'en'));

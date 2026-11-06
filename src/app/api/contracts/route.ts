@@ -41,5 +41,5 @@ export const GET = handleRoute(async () => {
   if (customerId === undefined && !can(actor.role, 'contract.view_all')) {
     throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
   }
-  return ok(await contractViews(await listContracts(db, { customerId })));
+  return ok(await contractViews(db, await listContracts(db, { customerId })));
 });

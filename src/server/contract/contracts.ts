@@ -1,10 +1,12 @@
-// Signing and reading contracts. Signing is one transaction: the asset becomes leased, the
-// contract is created and a new life opens, or none of it happens.
+// Signing and reading contracts. Signing is one transaction: the asset becomes leased, and the
+// contract, its invoices and a new life are created, or none of it happens.
 import { randomUUID } from 'node:crypto';
 import { contractSchema, type Contract } from '@/data/lease-schemas';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/contract/contract';
+import { choiceDeadline, endChoice, type EndChoice } from '@/domain/end-of-term/end-of-term';
+import { invoiceSchedule } from '@/domain/invoicing/invoicing';
 import { listPriceOn } from '@/domain/pricing/price-list';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { getApplication } from '../application/applications';
@@ -42,17 +44,27 @@ export function toContract(row: ContractRow): Contract {
  * A contract as the screens see it. The list price on the signing date is what lets the UI
  * explain the lock: "you keep the price from your quote; the list says X today". It is
  * looked up when read and is `null` for a re-listed item, which has no list price.
+ * `end_choice` and `choice_deadline` tell a screen when to offer the end-of-term choice.
  */
-export type ContractView = Contract & { list_price_on_signing_cents: number | null };
+export type ContractView = Contract & {
+  list_price_on_signing_cents: number | null;
+  end_choice: EndChoice;
+  choice_deadline: string;
+};
 
-export async function contractViews(contracts: readonly Contract[]): Promise<ContractView[]> {
-  const priceLists = await loadPriceLists();
+export async function contractViews(
+  db: PrismaClient,
+  contracts: readonly Contract[]
+): Promise<ContractView[]> {
+  const [priceLists, today] = await Promise.all([loadPriceLists(), currentDate(db)]);
   return contracts.map((contract) => {
     const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
     const isListed = contract.price_list_version !== null && listPrice.ok;
     return {
       ...contract,
       list_price_on_signing_cents: isListed ? listPrice.priceCents * contract.quantity : null,
+      end_choice: endChoice(contract, today),
+      choice_deadline: choiceDeadline(contract),
     };
   });
 }
@@ -131,6 +143,7 @@ export async function signContract(
     select: { life_number: true, first_lease_price_cents: true },
   });
   const life = openLife(contract, toAsset(assetRow), latestLife);
+  const invoices = invoiceSchedule(contract, await loadVatRates());
 
   try {
     await withAudit(
@@ -149,6 +162,7 @@ export async function signContract(
           start_on: contract.start_on,
           asset_status: { from: 'available', to: 'leased' },
           life_number: life.life_number,
+          invoice_count: invoices.length,
         },
       },
       async (tx) => {
@@ -159,6 +173,7 @@ export async function signContract(
         if (taken.count === 0) throw new AssetNotAvailable();
 
         await tx.contract.create({ data: contract });
+        await tx.invoice.createMany({ data: invoices });
         await tx.assetLife.create({ data: life });
       }
     );
@@ -167,7 +182,7 @@ export async function signContract(
     throw error;
   }
 
-  const [view] = await contractViews([contract]);
+  const [view] = await contractViews(db, [contract]);
   if (!view) throw new Error('a contract view is always returned for a contract');
   return { ok: true, contract: view };
 }

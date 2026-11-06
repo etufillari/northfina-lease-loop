@@ -92,7 +92,7 @@ describe('POST /api/applications', () => {
     const { status, body } = await post({
       asset_id: 'laptop-008',
       term_months: 36,
-      answers: { q_birth_date: '2009-03-10' },
+      answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
     });
     expect(status).toBe(201);
     expect(body.data).toMatchObject({
@@ -155,7 +155,10 @@ describe('POST /api/applications', () => {
 
   it('lists the missing questions and the invalid answers in the error details', async () => {
     await actAs(AINO);
-    const missing = await post({ ...card1, answers: { q_full_name: 'Aino' } });
+    const missing = await post({
+      ...card1,
+      answers: { q_customer_type: 'consumer', q_full_name: 'Aino' },
+    });
     expect(missing.body.error.details.question_ids).toContain('q_monthly_income');
 
     const invalid = await post({ ...card1, answers: { ...ainoEbikeAnswers, q_email: 'x' } });

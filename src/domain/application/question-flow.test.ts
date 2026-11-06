@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadQuestions } from '@/data/load';
 import type { AskWhenCondition, Question } from '@/data/schemas';
-import { blockingAnswer, invalidAnswers, questionsToAsk, type Deal } from './question-flow';
+import {
+  answeredCustomerType,
+  blockingAnswer,
+  invalidAnswers,
+  questionsToAsk,
+  type Deal,
+} from './question-flow';
 
 // Tests run against the real data pack, so they also catch a changed question.
 let questions: Question[];
@@ -28,7 +34,27 @@ function question(id: string, askWhen: AskWhenCondition[] = []): Question {
   };
 }
 
+describe('answeredCustomerType', () => {
+  it('reads who is leasing from the answers', () => {
+    expect(answeredCustomerType({ q_customer_type: 'sole_trader' })).toBe('sole_trader');
+  });
+
+  it('gives nothing until there is a valid answer', () => {
+    expect(answeredCustomerType({})).toBeUndefined();
+    expect(answeredCustomerType({ q_customer_type: 'alien' })).toBeUndefined();
+  });
+});
+
 describe('questionsToAsk: which questions appear', () => {
+  it('asks only what does not depend on the type until it is answered', () => {
+    const deal = { ...consumerBike, customer_type: undefined };
+    expect(ids(questionsToAsk(questions, deal, {}).questions)).toEqual([
+      'q_customer_type',
+      'q_email',
+      'q_usage_purpose',
+    ]);
+  });
+
   it('asks a consumer leasing an e-bike the right questions, in data file order', () => {
     expect(ids(questionsToAsk(questions, consumerBike, {}).questions)).toEqual([
       'q_customer_type',

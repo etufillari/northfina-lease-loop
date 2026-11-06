@@ -18,7 +18,7 @@ export const GET = handleRoute(
       return fail(404, 'CONTRACT_NOT_FOUND', `No contract with id "${id}"`);
     }
 
-    const [view] = await contractViews([contract]);
+    const [view] = await contractViews(db, [contract]);
     return ok(view);
   }
 );

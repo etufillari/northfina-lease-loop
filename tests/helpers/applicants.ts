@@ -3,6 +3,7 @@ import type { Answers } from '@/data/lease-schemas';
 
 /** Aino on an e-bike: financed 200 000 to 999 999 asks for income, and nothing about PEP. */
 export const ainoEbikeAnswers: Answers = {
+  q_customer_type: 'consumer',
   q_full_name: 'Aino Virtanen',
   q_birth_date: '1997-04-12',
   q_email: 'aino@example.com',
@@ -14,6 +15,7 @@ export const ainoEbikeAnswers: Answers = {
 
 /** Haapalan Tila on a farm machine over 5 000 000 financed (card 7), saying they are no PEP. */
 export const haapalaFarmAnswers: Answers = {
+  q_customer_type: 'company',
   q_email: 'info@haapala.example.com',
   q_business_id: '2876543-5',
   q_company_name: 'Haapalan Tila Oy',
@@ -27,6 +29,7 @@ export const haapalaFarmAnswers: Answers = {
 
 /** Norvi on e-bikes over 1 000 000 financed (card 6): the applicant cannot sign. */
 export const norviEbikeAnswers: Answers = {
+  q_customer_type: 'company',
   q_email: 'fleet@norvi.example.com',
   q_business_id: '3299871-7',
   q_company_name: 'Norvi Logistics Oy',

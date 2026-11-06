@@ -143,6 +143,7 @@ describe('signContract: card 1', () => {
       monthly_net_rent_cents: 10_730,
       asset_status: { from: 'available', to: 'leased' },
       life_number: 1,
+      invoice_count: 36,
     });
   });
 
@@ -286,6 +287,7 @@ describe('signContract: one item, one contract', () => {
     const results = await Promise.all([sign(first.id), sign(second.id)]);
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     expect(await db.contract.count()).toBe(1);
+    expect(await db.invoice.count()).toBe(36);
     expect(await db.assetLife.count()).toBe(1);
   });
 
@@ -295,6 +297,7 @@ describe('signContract: one item, one contract', () => {
 
     expect(await sign(application.id)).toEqual({ ok: false, reason: 'asset_not_available' });
     expect(await db.contract.count()).toBe(0);
+    expect(await db.invoice.count()).toBe(0);
     expect(await db.assetLife.count()).toBe(0);
     expect(await assetStatus('ebike-003')).toBe('reserved');
   });
@@ -344,7 +347,7 @@ describe('a signed contract never changes with the price list', () => {
 
     const contract = await getContract(db, signed.id);
     if (!contract) throw new Error('expected the contract');
-    const [view] = await contractViews([contract]);
+    const [view] = await contractViews(db, [contract]);
     expect(view?.list_price_on_signing_cents).toBe(389_000);
   });
 });
@@ -365,13 +368,13 @@ describe('reading contracts', () => {
 
   it('has no list price to compare for a re-listed item', async () => {
     const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
-    const [view] = await contractViews([{ ...signed, price_list_version: null }]);
+    const [view] = await contractViews(db, [{ ...signed, price_list_version: null }]);
     expect(view?.list_price_on_signing_cents).toBeNull();
   });
 
   it('multiplies the list price by the quantity', async () => {
     const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
-    const [view] = await contractViews([{ ...signed, quantity: 2 }]);
+    const [view] = await contractViews(db, [{ ...signed, quantity: 2 }]);
     expect(view?.list_price_on_signing_cents).toBe(778_000);
   });
 });

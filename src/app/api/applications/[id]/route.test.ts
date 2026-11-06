@@ -34,6 +34,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await db.assetLife.deleteMany();
+  await db.invoice.deleteMany();
   await db.contract.deleteMany();
   await db.application.deleteMany();
   await db.asset.updateMany({ where: { id: 'ebike-003' }, data: { status: 'available' } });
@@ -60,7 +61,7 @@ beforeEach(async () => {
     quantity: 1,
     termMonths: 36,
     downPaymentCents: 0,
-    answers: { q_birth_date: '2009-03-10' },
+    answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
   });
   if (!aino.ok || !mikko.ok) throw new Error('setup failed');
   ainoApplicationId = aino.application.id;

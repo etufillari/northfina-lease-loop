@@ -84,6 +84,19 @@ describe('signingProblem', () => {
     expect(signingProblem(app, customer('cust-kettukoodi'))).toBe('signatory_required');
   });
 
+  it('stops Norvi even if they applied as a consumer', () => {
+    const app = application({
+      customer_id: 'cust-norvi',
+      answers: { q_customer_type: 'consumer' },
+    });
+    expect(signingProblem(app, customer('cust-norvi'))).toBe('signatory_required');
+  });
+
+  it('stops anyone leasing as a company who says they cannot sign', () => {
+    const app = application({ answers: { q_customer_type: 'company', q_can_sign: 'no' } });
+    expect(signingProblem(app, customer('cust-aino'))).toBe('signatory_required');
+  });
+
   it('reports the decision before the signatory', () => {
     const app = application({ customer_id: 'cust-norvi', decision: 'rejected' });
     expect(signingProblem(app, customer('cust-norvi'))).toBe('not_approved');

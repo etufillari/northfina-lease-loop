@@ -8,6 +8,7 @@ import { assetCategorySchema, type Customer, type Question } from '@/data/schema
 import { eligibleFrom } from '@/domain/application/age';
 import { applicantBirthDate, decide, minimumAge } from '@/domain/application/eligibility';
 import {
+  answeredCustomerType,
   blockingAnswer,
   invalidAnswers,
   questionsToAsk,
@@ -19,9 +20,6 @@ import type { Application as ApplicationRow, PrismaClient } from '@/generated/pr
 import { currentDate } from '../date/app-date';
 import { withAudit } from '../audit';
 import { quoteAsset, type AssetQuote, type QuoteAssetFailureReason } from '../pricing/quotes';
-
-/** Answered by the server from the logged-in customer, so the form never shows it. */
-const CUSTOMER_TYPE_QUESTION = 'q_customer_type';
 
 export type ApplicationRequest = {
   customer: Customer;
@@ -49,10 +47,9 @@ type Prepared = {
   financedCents: number;
   /** The whole question bank, which holds the age and country limits. */
   questionBank: Question[];
-  /** Questions the customer sees. */
   questions: Question[];
   unanswered: string[];
-  /** The answers that still count, including the server's own customer type. */
+  /** The answers that still count. */
   answers: Answers;
   dropped: string[];
   invalid: AnswerError[];
@@ -76,7 +73,7 @@ async function prepare(
   db: PrismaClient,
   request: ApplicationRequest
 ): Promise<({ ok: true } & Prepared) | { ok: false; reason: RequestFailureReason }> {
-  const { customer, assetId, quantity, termMonths, downPaymentCents } = request;
+  const { assetId, quantity, termMonths, downPaymentCents, answers } = request;
   const date = await currentDate(db);
 
   const priced = await quoteAsset(db, {
@@ -110,19 +107,14 @@ async function prepare(
     select: { category: true },
   });
   const deal: Deal = {
-    customer_type: customer.type,
+    customer_type: answeredCustomerType(answers),
     category: assetCategorySchema.parse(asset.category),
     financed_amount_cents: financedCents,
     term_months: termMonths,
   };
 
   const { questions: allQuestions } = await loadQuestions();
-  const flow = questionsToAsk(allQuestions, deal, {
-    ...request.answers,
-    [CUSTOMER_TYPE_QUESTION]: customer.type,
-  });
-  const visible = (list: readonly Question[]) =>
-    list.filter((question) => question.id !== CUSTOMER_TYPE_QUESTION);
+  const flow = questionsToAsk(allQuestions, deal, answers);
 
   return {
     ok: true,
@@ -132,8 +124,8 @@ async function prepare(
     priceListVersion,
     financedCents,
     questionBank: allQuestions,
-    questions: visible(flow.questions),
-    unanswered: visible(flow.unanswered).map((question) => question.id),
+    questions: flow.questions,
+    unanswered: flow.unanswered.map((question) => question.id),
     answers: flow.answers,
     dropped: flow.dropped,
     invalid: invalidAnswers(flow.questions, flow.answers),
@@ -149,6 +141,8 @@ export type QuestionsResult =
       dropped: string[];
       invalid: AnswerError[];
       blocked: Blocked | null;
+      /** The record's type, to preselect "Who is leasing?". The answer is what counts. */
+      suggested_customer_type: Customer['type'];
     }
   | { ok: false; reason: RequestFailureReason };
 
@@ -160,7 +154,15 @@ export async function describeQuestions(
   const prepared = await prepare(db, request);
   if (!prepared.ok) return prepared;
   const { questions, unanswered, dropped, invalid, blocked } = prepared;
-  return { ok: true, questions, unanswered, dropped, invalid, blocked };
+  return {
+    ok: true,
+    questions,
+    unanswered,
+    dropped,
+    invalid,
+    blocked,
+    suggested_customer_type: request.customer.type,
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -41,7 +41,7 @@ async function post(body: unknown, query = '') {
   return { status: response.status, body: await response.json() };
 }
 
-const deal = { asset_id: 'ebike-003', term_months: 36 };
+const deal = { asset_id: 'ebike-003', term_months: 36, answers: { q_customer_type: 'consumer' } };
 
 describe('POST /api/applications/questions', () => {
   it('returns the questions for the logged-in customer', async () => {
@@ -49,6 +49,7 @@ describe('POST /api/applications/questions', () => {
     const { status, body } = await post(deal);
     expect(status).toBe(200);
     expect(body.data.questions.map((q: { id: string }) => q.id)).toEqual([
+      'q_customer_type',
       'q_full_name',
       'q_birth_date',
       'q_email',
@@ -111,7 +112,7 @@ describe('POST /api/applications/questions', () => {
 
   it('gives the format hint to a question that has one, and only to that', async () => {
     await actAs({ sub: 'cust-norvi', role: 'client' });
-    const { body } = await post(deal);
+    const { body } = await post({ ...deal, answers: { q_customer_type: 'company' } });
     const byId = Object.fromEntries(body.data.questions.map((q: { id: string }) => [q.id, q]));
     expect(byId.q_business_id.hint).toBe('1234567-8 with a valid check digit');
     expect(byId.q_email).not.toHaveProperty('hint');
@@ -140,16 +141,27 @@ describe('POST /api/applications/questions', () => {
     const { body } = await post({
       asset_id: 'laptop-008',
       term_months: 36,
-      answers: { q_birth_date: '2009-03-10' },
+      answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
     });
     expect(body.data.blocked).toEqual({ reason: 'min_age', eligible_from: '2027-03-10' });
   });
 
-  it('works out the customer type itself, ignoring what the request claims', async () => {
+  it('follows the answered type, and suggests the one on record', async () => {
     await actAs(AINO);
     const { status, body } = await post({ ...deal, answers: { q_customer_type: 'company' } });
     expect(status).toBe(200);
-    expect(body.data.questions.map((q: { id: string }) => q.id)).toContain('q_employment');
+    expect(body.data.questions.map((q: { id: string }) => q.id)).toContain('q_business_id');
+    expect(body.data.suggested_customer_type).toBe('consumer');
+  });
+
+  it('asks who is leasing first, before anything that depends on it', async () => {
+    await actAs(AINO);
+    const { body } = await post({ asset_id: 'ebike-003', term_months: 36 });
+    expect(body.data.questions.map((q: { id: string }) => q.id)).toEqual([
+      'q_customer_type',
+      'q_email',
+      'q_usage_purpose',
+    ]);
   });
 
   it('needs a logged-in client', async () => {

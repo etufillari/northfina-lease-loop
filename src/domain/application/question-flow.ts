@@ -4,14 +4,23 @@ import type { Answers, AnswerValue } from '@/data/lease-schemas';
 import type { AskWhenCondition, AssetCategory, Customer, Question } from '@/data/schemas';
 import { ageOn } from './age';
 
+type CustomerType = Customer['type'];
+
 export type Deal = {
-  customer_type: Customer['type'];
+  /** `undefined` until "Who is leasing?" is answered: questions that depend on it stay hidden. */
+  customer_type: CustomerType | undefined;
   category: AssetCategory;
   financed_amount_cents: number;
   term_months: number;
 };
 
 const ANSWER_FIELD_PREFIX = 'answers.';
+
+/** Who is leasing, from the q_customer_type answer. */
+export function answeredCustomerType(answers: Answers): CustomerType | undefined {
+  const value = answers.q_customer_type;
+  return value === 'consumer' || value === 'sole_trader' || value === 'company' ? value : undefined;
+}
 
 function fieldValue(field: string, deal: Deal, answers: Answers): AnswerValue | undefined {
   switch (field) {

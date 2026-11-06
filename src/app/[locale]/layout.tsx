@@ -114,21 +114,22 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
 /** Two arrows chasing each other: lease, return, lease again. */
 function LoopMark() {
+  // The brand mark: an open loop with the "next life" dot in the gap, top right. The ring
+  // follows the theme (near-black teal on light, off-white on dark); the dot stays mint.
   return (
     <svg
       aria-hidden="true"
-      viewBox="0 0 32 32"
-      className="size-9 shrink-0 rounded-xl bg-emerald-700 p-1.5 text-white"
+      viewBox="0 0 48 48"
+      className="size-9 shrink-0 text-[#1d3b33] dark:text-stone-100"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
     >
-      <path d="M8 13a9 9 0 0 1 15.5-4.5L26 11" />
-      <path d="M26 5v6h-6" />
-      <path d="M24 19a9 9 0 0 1-15.5 4.5L6 21" />
-      <path d="M6 27v-6h6" />
+      <path
+        d="M 28.14 8.55 A 16 16 0 1 0 39.45 19.86"
+        stroke="currentColor"
+        strokeWidth="7"
+        strokeLinecap="round"
+      />
+      <circle cx="35.3" cy="12.7" r="4.5" fill="#34d399" />
     </svg>
   );
 }

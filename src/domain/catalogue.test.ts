@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadPriceLists } from '@/data/load';
 import type { Asset, PriceList } from '@/data/schemas';
 import {
+  catalogueStatuses,
   browseCatalogue,
   catalogueSearchString,
   defaultCatalogueQuery,
@@ -138,7 +139,7 @@ describe('browseCatalogue', () => {
     expect(ids({ status: 'reserved' })).toEqual(['bike-b']);
   });
 
-  it('hides sold items unless the sold status is picked', () => {
+  it('never shows sold items, and has no "sold" filter', () => {
     const sold = asset({ id: 'bike-s', make: 'Kettu', model: 'Urban 1', status: 'sold' });
     const browse = (query: Partial<CatalogueQuery>) =>
       browseCatalogue([...all, sold], priceLists, '2026-11-05', {
@@ -147,7 +148,8 @@ describe('browseCatalogue', () => {
       }).map((item) => item.asset.id);
     expect(browse({})).not.toContain('bike-s');
     expect(browse({ category: 'e_bike', search: 'kettu' })).toEqual(['bike-a']);
-    expect(browse({ status: 'sold' })).toEqual(['bike-s']);
+    expect(catalogueStatuses).not.toContain('sold');
+    expect(parseCatalogueQuery({ status: 'sold' }).status).toBeNull();
     // Reserved items still show by default.
     expect(browse({})).toContain('bike-b');
   });

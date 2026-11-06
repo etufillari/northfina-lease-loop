@@ -211,3 +211,43 @@ export function SignAsSignatory({
     </div>
   );
 }
+
+/** One button for every hold that ran out; each release is audited on its own. */
+export function ReleaseExpiredHolds({
+  locale,
+  actor,
+  count,
+  asOf,
+}: {
+  locale: Locale;
+  actor: string;
+  count: number;
+  /** The date the page listed the holds for, so the release uses the very same "today". */
+  asOf: string;
+}) {
+  const { t, busy, done, message, run, refresh } = useAction(locale);
+  return (
+    <div className="mt-4">
+      <p className="text-sm text-stone-600 dark:text-stone-400">{t('staff.expired.explain')}</p>
+      <button
+        type="button"
+        disabled={busy || done}
+        className={`${button} mt-3 bg-amber-700 text-white hover:bg-amber-800`}
+        onClick={() =>
+          run<{ released: Array<{ releasedAssetIds: string[] }> }>(
+            `/api/staff/holds/release?asOf=${asOf}`,
+            { actor },
+            (data) =>
+              t('staff.done.released', {
+                applications: data.released.length,
+                items: data.released.reduce((sum, r) => sum + r.releasedAssetIds.length, 0),
+              })
+          )
+        }
+      >
+        {t('staff.expired.release', { count })}
+      </button>
+      <Feedback message={message} onRefresh={refresh} refreshLabel={t('staff.refresh')} />
+    </div>
+  );
+}

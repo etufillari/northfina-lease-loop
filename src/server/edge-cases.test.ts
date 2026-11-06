@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers, loadSecondLifeDemand } from '@/data/load';
 import { ainoScript, applyAndSubmit } from '../../tests/helpers/apply-and-submit';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { answerQuestion, startApplication } from './applications';
+import { answerQuestion, startApplication, submitApplication } from './applications';
 import { seedAssets } from './assets';
 import { signApplication } from './contracts';
 import { seedCustomers } from './customers';
@@ -215,6 +215,56 @@ describe('age and residency stop the form kindly', () => {
     }
     return state;
   }
+
+  it('a 17-year-old cannot get a lease by choosing a start date after their 18th birthday', async () => {
+    // Turns 18 on 20 Jan 2027, inside the 3-month start window from 5 Nov 2026. Answer past
+    // the stop through the API and pick a start date after the birthday: still declined.
+    const started = await startApplication(db, {
+      assetIds: ['laptop-001'],
+      downPaymentCents: 0,
+      termMonths: 24,
+      customerId: 'cust-aino',
+      actor: 'cust-aino',
+      asOf: ON,
+    });
+    if (!started.ok) throw new Error(started.reason);
+    const id = started.state.application.id;
+    const script: Record<string, unknown> = {
+      ...ainoScript,
+      q_full_name: 'Almost Eighteen',
+      q_birth_date: '2009-01-20',
+    };
+    let next: string | null = started.state.nextQuestionId;
+    let blocked: unknown = null;
+    while (next !== null) {
+      const result = await answerQuestion(db, {
+        applicationId: id,
+        questionId: next,
+        answer: script[next] as never,
+        actor: 'cust-aino',
+        asOf: ON,
+      });
+      if (!result.ok) throw new Error(`${next}: ${result.reason}`);
+      blocked ??= result.state.blocked;
+      next = result.state.nextQuestionId;
+    }
+    // The form stops them at the birth date, measured on the day they apply…
+    expect(blocked).toMatchObject({ rule: 'age_under', eligibleFrom: '2027-01-20' });
+    // …and submission declines them even with a start date after the birthday.
+    const submitted = await submitApplication(db, {
+      applicationId: id,
+      startDate: '2027-01-25',
+      actor: 'cust-aino',
+      asOf: ON,
+    });
+    if (!submitted.ok) throw new Error(submitted.reason);
+    expect(submitted.state.application.status).toBe('declined');
+    const reasons = submitted.state.application.decisionReasons as Array<{
+      rule: string;
+      outcome: string;
+    }>;
+    expect(reasons.find((r) => r.rule === 'min_age')?.outcome).toBe('failed');
+  });
 
   it('someone born on 29 February is told 1 March in a year without one', async () => {
     const state = await answer('cust-aino', 'laptop-001', '2026-01-15', {

@@ -1,61 +1,34 @@
 @import 'tailwindcss';
 
 /*
- * "Second Life" design tokens (D-026). Colours are semantic CSS variables that switch with the
- * colour scheme, so components write `bg-surface text-fg` once instead of pairing every class
- * with a `dark:` twin. Dark is the main look; light is a paper-white version of it.
+ * "Second Life" design tokens (D-026). Colours are semantic CSS variables, so components write
+ * `bg-surface text-fg` once instead of pairing every class with a `dark:` twin. The app is
+ * always dark (D-051), whatever the OS colour scheme.
  */
 :root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --surface-2: #ebe9e3;
-  --line: #d9d6ce;
-  --fg: #11131c;
-  --muted: #545764;
-  --accent: #d9481f;
-  --accent-hover: #bf3c16;
-  --on-accent: #ffffff;
-  --accent-text: #b13a14;
-  --stage: #11131c;
-  --stage-fg: #f6f5f2;
+  --bg: #11131c;
+  --surface: #1a1d29;
+  --surface-2: #262a3a;
+  --line: #2f3447;
+  --fg: #f3f1ec;
+  --muted: #a7abbb;
+  --accent: #ff7a59;
+  --accent-hover: #ff9677;
+  --on-accent: #1a0d08;
+  --accent-text: #ff9677;
+  --stage: #1a1d29;
+  --stage-fg: #f3f1ec;
   --stage-muted: #b9bccb;
   --stage-accent: #ff7a59;
-  --tile-e-bike: #cfe5e1;
-  --tile-laptop: #dcd9f3;
-  --tile-farm-machine: #f1d9c8;
-  --tile-ink: #11131c;
-  --warn-bg: #fff3d6;
-  --warn-fg: #5c3b00;
-  --warn-line: #f0cf7a;
-  --danger: #b42318;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #11131c;
-    --surface: #1a1d29;
-    --surface-2: #262a3a;
-    --line: #2f3447;
-    --fg: #f3f1ec;
-    --muted: #a7abbb;
-    --accent: #ff7a59;
-    --accent-hover: #ff9677;
-    --on-accent: #1a0d08;
-    --accent-text: #ff9677;
-    --stage: #1a1d29;
-    --stage-fg: #f3f1ec;
-    --stage-muted: #b9bccb;
-    --stage-accent: #ff7a59;
-    --tile-e-bike: #1d3b3a;
-    --tile-laptop: #2a2550;
-    --tile-farm-machine: #4a2a1d;
-    --tile-ink: #f3f1ec;
-    --warn-bg: #3a2c0c;
-    --warn-fg: #ffe2a3;
-    --warn-line: #6b5216;
-    --danger: #ff8a7a;
-    color-scheme: dark;
-  }
+  --tile-e-bike: #1d3b3a;
+  --tile-laptop: #2a2550;
+  --tile-farm-machine: #4a2a1d;
+  --tile-ink: #f3f1ec;
+  --warn-bg: #3a2c0c;
+  --warn-fg: #ffe2a3;
+  --warn-line: #6b5216;
+  --danger: #ff8a7a;
+  color-scheme: dark;
 }
 
 @theme inline {

@@ -1,6 +1,6 @@
 // The whole waiting-list loop against a real database, on the data pack's own people:
 // the desk offers ebike-008 to Sanna (wait-01, a student) and she leases it through the normal
-// flow at the offered rent; Pekka (wait-02, a courier) declines ebike-007, which passes to
+// flow at the offered rent (€11.94 a month, its market value after the work); Pekka (wait-02, a courier) declines ebike-007, which passes to
 // Aino, who joined the list in the app; wait-13's offer runs out and passes to the bakery.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers, loadSecondLifeDemand } from '@/data/load';
@@ -82,7 +82,7 @@ describe('card 10: Sanna leases ebike-008 from the waiting list', () => {
           make: 'Kettu Bikes',
           model: 'Urban 1',
           condition: 'good',
-          monthlyNetRentCents: 1359,
+          monthlyNetRentCents: 1194,
         },
       ],
       until: '2026-11-12',
@@ -122,7 +122,7 @@ describe('card 10: Sanna leases ebike-008 from the waiting list', () => {
       financed_cents: asset.second_life_price_cents,
       down_payment_cents: 0,
       term_months: 24,
-      monthly_net_rent_cents: 1359,
+      monthly_net_rent_cents: 1194,
     });
     const [view] = await customerWaitlist(db, 'cust-sanna', AS_OF);
     expect(view!.entry.status).toBe('accepted');
@@ -238,7 +238,7 @@ describe('card 9: Pekka declines ebike-007', () => {
     );
     expect(view!.offer?.items[0]).toMatchObject({
       assetId: 'ebike-007',
-      monthlyNetRentCents: 8710,
+      monthlyNetRentCents: 6497,
     });
   });
 
@@ -252,8 +252,8 @@ describe('card 9: Pekka declines ebike-007', () => {
     });
     if (!live.ok) throw new Error(live.reason);
     expect(live.live.secondLifeAssetIds).toEqual(['ebike-007']);
-    expect(live.live.listPriceCents).toBe(155_476);
-    expect(live.live.quote.monthlyNetRentCents).toBe(8710);
+    expect(live.live.listPriceCents).toBe(115_976);
+    expect(live.live.quote.monthlyNetRentCents).toBe(6497);
   });
 });
 

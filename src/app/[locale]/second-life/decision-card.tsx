@@ -84,17 +84,14 @@ export function DecisionCard({
           <p className="mt-1 text-sm">
             {decision.upgrade === null
               ? t('secondLife.upgrade.none')
-              : t(
-                  decision.action === 'lease_to_waiter'
-                    ? 'secondLife.upgrade.forWaiter'
-                    : 'secondLife.upgrade.forListing',
-                  {
-                    from: condition(decision.upgrade.from),
-                    to: condition(decision.upgrade.to),
-                    cost: euro(decision.upgrade.costCents),
-                    gain: euro(decision.valueFinalCents - decision.valueAsIsCents),
-                  }
-                )}
+              : t(`secondLife.upgrade.${decision.upgrade.reason}`, {
+                  from: condition(decision.upgrade.from),
+                  to: condition(decision.upgrade.to),
+                  cost: euro(decision.upgrade.costCents),
+                  gain: euro(decision.valueFinalCents - decision.valueAsIsCents),
+                  value: euro(decision.valueFinalCents),
+                  work: euro(decision.workTotalCents),
+                })}
           </p>
         </section>
 
@@ -102,10 +99,19 @@ export function DecisionCard({
           <h3 className="text-sm font-semibold">{t('secondLife.priceTitle')}</h3>
           <dl className="mt-2 space-y-1 text-sm">
             <Row label={t('secondLife.v1Price')} value={euro(preview.originalListPriceCents)} />
+            <Row
+              label={t('secondLife.valueAsReturned')}
+              value={euro(decision.valueAsReturnedCents)}
+            />
             <Row label={t('secondLife.valueAsIs')} value={euro(decision.valueAsIsCents)} />
-            <Row label={t('secondLife.valueFinal')} value={euro(decision.valueFinalCents)} />
+            {decision.upgrade && (
+              <Row label={t('secondLife.valueFinal')} value={euro(decision.valueFinalCents)} />
+            )}
             <Row label={t('secondLife.financed')} value={euro(decision.financedCents)} strong />
           </dl>
+          <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
+            {t('secondLife.workNote', { work: euro(decision.workTotalCents) })}
+          </p>
         </section>
       </div>
 

@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+
 import { assetConditionSchema, assetSchema } from '@/data/schemas';
 import { loadRefurbishmentCosts } from '@/data/load';
 import { calculateRefurbishment } from '@/domain/refurbishment';
+
 import { toAsset } from './assets';
 import { ApiError } from './api-response';
 import { withAudit } from './audit';
@@ -18,14 +20,22 @@ const createReturnRequestSchema = z.strictObject({
 
 export type CreateReturnRequestInput = z.infer<typeof createReturnRequestSchema>;
 
-const receiveReturnSchema = z.strictObject({
+// Physical receipt only. Inspection details are recorded separately.
+export const markReturnReceivedSchema = z.strictObject({
+  actor: z.string().trim().min(1).max(100),
+});
+
+export type MarkReturnReceivedInput = z.infer<typeof markReturnReceivedSchema>;
+
+// Dealer inspection details.
+export const inspectReturnSchema = z.strictObject({
   condition: assetConditionSchema,
   usageValue: z.number().int().nonnegative(),
   usageSinceLastService: z.number().int().nonnegative().optional(),
   actor: z.string().trim().min(1).max(100),
 });
 
-export type ReceiveReturnInput = z.infer<typeof receiveReturnSchema>;
+export type InspectReturnInput = z.infer<typeof inspectReturnSchema>;
 
 export const planReturnSchema = z.strictObject({
   targetCondition: assetConditionSchema,
@@ -34,10 +44,11 @@ export const planReturnSchema = z.strictObject({
 
 export type PlanReturnInput = z.infer<typeof planReturnSchema>;
 
-const OPEN_STATUSES = ['requested', 'received', 'planned', 'approved'];
+const OPEN_STATUSES = ['requested', 'received', 'inspected', 'planned', 'approved'];
 
 const CONDITION_ORDER = ['poor', 'fair', 'good', 'like_new', 'new'];
 
+// Customer creates a return request.
 export async function createReturnRequest(db: PrismaClient, input: CreateReturnRequestInput) {
   const request = createReturnRequestSchema.parse(input);
 
@@ -121,19 +132,22 @@ export async function createReturnRequest(db: PrismaClient, input: CreateReturnR
 }
 
 /**
- * Records the dealer's physical inspection.
- * The asset itself is deliberately not updated here.
+ * Dealer confirms that the physical item has arrived.
+ *
+ * This operation does not record inspection details.
+ * The item remains unchanged in the Asset table.
+ *
+ * Transition: requested -> received
  */
-export async function receiveReturn(
+export async function markReturnReceived(
   db: PrismaClient,
   returnRequestId: string,
-  input: ReceiveReturnInput
+  input: MarkReturnReceivedInput
 ) {
-  const inspection = receiveReturnSchema.parse(input);
+  const receipt = markReturnReceivedSchema.parse(input);
 
   const existing = await db.returnRequest.findUnique({
     where: { id: returnRequestId },
-    include: { asset: true },
   });
 
   if (!existing) {
@@ -144,7 +158,77 @@ export async function receiveReturn(
     throw new ApiError(
       409,
       'RETURN_REQUEST_NOT_REQUESTED',
-      'Only a requested return can be received and inspected.'
+      'Only a requested return can be marked as received.'
+    );
+  }
+
+  return withAudit(
+    db,
+    {
+      actor: receipt.actor,
+      action: 'return.received',
+      entityType: 'return_request',
+      entityId: returnRequestId,
+      details: {
+        assetId: existing.asset_id,
+      },
+    },
+    async (tx) => {
+      const claimed = await tx.returnRequest.updateMany({
+        where: {
+          id: returnRequestId,
+          status: 'requested',
+        },
+        data: {
+          status: 'received',
+          received_at: new Date(),
+          received_by: receipt.actor,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ApiError(
+          409,
+          'RETURN_REQUEST_NOT_REQUESTED',
+          'Only a requested return can be marked as received.'
+        );
+      }
+
+      return tx.returnRequest.findUniqueOrThrow({
+        where: { id: returnRequestId },
+      });
+    }
+  );
+}
+
+/**
+ * Dealer records the inspection after physical receipt.
+ *
+ * Inspection data is saved on ReturnRequest, not on Asset.
+ *
+ * Transition: received -> inspected
+ */
+export async function inspectReturn(
+  db: PrismaClient,
+  returnRequestId: string,
+  input: InspectReturnInput
+) {
+  const inspection = inspectReturnSchema.parse(input);
+
+  const existing = await db.returnRequest.findUnique({
+    where: { id: returnRequestId },
+    include: { asset: true },
+  });
+
+  if (!existing) {
+    throw new ApiError(404, 'RETURN_REQUEST_NOT_FOUND', 'This return request does not exist.');
+  }
+
+  if (existing.status !== 'received') {
+    throw new ApiError(
+      409,
+      'RETURN_NOT_RECEIVED',
+      'Only a physically received return can be inspected.'
     );
   }
 
@@ -163,7 +247,7 @@ export async function receiveReturn(
     db,
     {
       actor: inspection.actor,
-      action: 'return.received',
+      action: 'return.inspected',
       entityType: 'return_request',
       entityId: returnRequestId,
       details: {
@@ -178,12 +262,12 @@ export async function receiveReturn(
       const claimed = await tx.returnRequest.updateMany({
         where: {
           id: returnRequestId,
-          status: 'requested',
+          status: 'received',
         },
         data: {
-          status: 'received',
-          received_at: new Date(),
-          received_by: inspection.actor,
+          status: 'inspected',
+          inspected_at: new Date(),
+          inspected_by: inspection.actor,
           inspected_condition: inspection.condition,
           inspected_usage_unit: existing.asset.usage_unit,
           inspected_usage_value: inspection.usageValue,
@@ -194,8 +278,8 @@ export async function receiveReturn(
       if (claimed.count !== 1) {
         throw new ApiError(
           409,
-          'RETURN_REQUEST_NOT_REQUESTED',
-          'Only a requested return can be received and inspected.'
+          'RETURN_NOT_RECEIVED',
+          'Only a physically received return can be inspected.'
         );
       }
 
@@ -208,7 +292,10 @@ export async function receiveReturn(
 
 /**
  * Calculates and saves a refurbishment plan using the dealer's inspection.
+ *
  * The asset itself is not updated until refurbishment is completed.
+ *
+ * Transition: inspected -> planned
  */
 export async function planReturn(
   db: PrismaClient,
@@ -226,11 +313,11 @@ export async function planReturn(
     throw new ApiError(404, 'RETURN_REQUEST_NOT_FOUND', 'This return request does not exist.');
   }
 
-  if (existing.status !== 'received') {
+  if (existing.status !== 'inspected') {
     throw new ApiError(
       409,
-      'RETURN_NOT_RECEIVED',
-      'Only a received return can be planned for refurbishment.'
+      'RETURN_NOT_INSPECTED',
+      'Only an inspected return can be planned for refurbishment.'
     );
   }
 
@@ -249,6 +336,7 @@ export async function planReturn(
   const inspectedCondition = assetConditionSchema.parse(existing.inspected_condition);
 
   const currentConditionIndex = CONDITION_ORDER.indexOf(inspectedCondition);
+
   const targetConditionIndex = CONDITION_ORDER.indexOf(request.targetCondition);
 
   if (currentConditionIndex === -1 || targetConditionIndex < currentConditionIndex) {
@@ -324,7 +412,7 @@ export async function planReturn(
       const claimed = await tx.returnRequest.updateMany({
         where: {
           id: returnRequestId,
-          status: 'received',
+          status: 'inspected',
         },
         data: {
           status: 'planned',
@@ -340,8 +428,8 @@ export async function planReturn(
       if (claimed.count !== 1) {
         throw new ApiError(
           409,
-          'RETURN_NOT_RECEIVED',
-          'Only a received return can be planned for refurbishment.'
+          'RETURN_NOT_INSPECTED',
+          'Only an inspected return can be planned for refurbishment.'
         );
       }
 

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
 import { loadAssets } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { ApiError } from './api-response';
@@ -7,7 +8,7 @@ import { signContract } from './contracts';
 import { loadPricingData, type PricingData } from './pricing-data';
 import type { PrismaClient } from './prisma-client';
 import { createQuote } from './quotes';
-import { createReturnRequest, receiveReturn, planReturn } from './returns';
+import { createReturnRequest, markReturnReceived, inspectReturn, planReturn } from './returns';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -73,6 +74,26 @@ async function createReturnForAsset(assetId = 'ebike-003') {
   });
 
   return { contract, returnRequest };
+}
+
+async function receiveAndInspect(
+  returnRequestId: string,
+  options?: {
+    condition?: 'new' | 'like_new' | 'good' | 'fair' | 'poor';
+    usageValue?: number;
+    usageSinceLastService?: number;
+  }
+) {
+  await markReturnReceived(db, returnRequestId, {
+    actor,
+  });
+
+  return inspectReturn(db, returnRequestId, {
+    condition: options?.condition ?? 'fair',
+    usageValue: options?.usageValue ?? 100,
+    usageSinceLastService: options?.usageSinceLastService,
+    actor,
+  });
 }
 
 describe('createReturnRequest', () => {
@@ -248,27 +269,25 @@ describe('createReturnRequest', () => {
   });
 });
 
-describe('receiveReturn', () => {
-  it('records the dealer inspection and audit without changing the asset', async () => {
+describe('markReturnReceived', () => {
+  it('records physical receipt without recording inspection details', async () => {
     const { contract, returnRequest } = await createReturnForAsset();
 
     const assetBefore = await db.asset.findUniqueOrThrow({
       where: { id: contract.assetId },
     });
 
-    const result = await receiveReturn(db, returnRequest.id, {
-      condition: 'fair',
-      usageValue: 18_400,
-      actor,
-    });
+    const result = await markReturnReceived(db, returnRequest.id, { actor });
 
     expect(result).toMatchObject({
       id: returnRequest.id,
       status: 'received',
       received_by: actor,
-      inspected_condition: 'fair',
-      inspected_usage_unit: 'km',
-      inspected_usage_value: 18_400,
+      inspected_at: null,
+      inspected_by: null,
+      inspected_condition: null,
+      inspected_usage_unit: null,
+      inspected_usage_value: null,
       usage_since_last_service: null,
     });
 
@@ -298,29 +317,17 @@ describe('receiveReturn', () => {
   });
 
   it('rejects an unknown return request', async () => {
-    expect(
-      await getErrorCode(
-        receiveReturn(db, 'missing-request', {
-          condition: 'good',
-          usageValue: 100,
-          actor,
-        })
-      )
-    ).toBe('RETURN_REQUEST_NOT_FOUND');
+    expect(await getErrorCode(markReturnReceived(db, 'missing-request', { actor }))).toBe(
+      'RETURN_REQUEST_NOT_FOUND'
+    );
   });
 
   it('does not allow the same return request to be received twice', async () => {
     const { returnRequest } = await createReturnForAsset();
 
-    const inspection = {
-      condition: 'good' as const,
-      usageValue: 18_400,
-      actor,
-    };
+    await markReturnReceived(db, returnRequest.id, { actor });
 
-    await receiveReturn(db, returnRequest.id, inspection);
-
-    expect(await getErrorCode(receiveReturn(db, returnRequest.id, inspection))).toBe(
+    expect(await getErrorCode(markReturnReceived(db, returnRequest.id, { actor }))).toBe(
       'RETURN_REQUEST_NOT_REQUESTED'
     );
 
@@ -334,12 +341,120 @@ describe('receiveReturn', () => {
     ).toBe(1);
   });
 
-  it('requires service history when receiving a farm machine', async () => {
-    const { returnRequest } = await createReturnForAsset('farm-002');
+  it('does not accept inspection fields in the receipt input', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    await expect(
+      markReturnReceived(db, returnRequest.id, {
+        actor,
+        condition: 'fair',
+        usageValue: 100,
+      } as never)
+    ).rejects.toThrow();
+
+    const unchanged = await db.returnRequest.findUniqueOrThrow({
+      where: { id: returnRequest.id },
+    });
+
+    expect(unchanged.status).toBe('requested');
+    expect(unchanged.received_at).toBeNull();
+  });
+});
+
+describe('inspectReturn', () => {
+  it('records inspection details after physical receipt', async () => {
+    const { contract, returnRequest } = await createReturnForAsset();
+
+    await markReturnReceived(db, returnRequest.id, { actor });
+
+    const assetBefore = await db.asset.findUniqueOrThrow({
+      where: { id: contract.assetId },
+    });
+
+    const result = await inspectReturn(db, returnRequest.id, {
+      condition: 'fair',
+      usageValue: 18_400,
+      actor,
+    });
+
+    expect(result).toMatchObject({
+      id: returnRequest.id,
+      status: 'inspected',
+      received_by: actor,
+      inspected_by: actor,
+      inspected_condition: 'fair',
+      inspected_usage_unit: 'km',
+      inspected_usage_value: 18_400,
+      usage_since_last_service: null,
+    });
+
+    expect(result.received_at).toBeInstanceOf(Date);
+    expect(result.inspected_at).toBeInstanceOf(Date);
+
+    const assetAfter = await db.asset.findUniqueOrThrow({
+      where: { id: contract.assetId },
+    });
+
+    expect(assetAfter.status).toBe(assetBefore.status);
+    expect(assetAfter.condition).toBe(assetBefore.condition);
+    expect(assetAfter.usage_value).toBe(assetBefore.usage_value);
+
+    expect(
+      await db.auditLog.findFirst({
+        where: {
+          action: 'return.inspected',
+          entity_id: returnRequest.id,
+        },
+      })
+    ).toMatchObject({
+      actor,
+      action: 'return.inspected',
+      entity_type: 'return_request',
+      entity_id: returnRequest.id,
+    });
+  });
+
+  it('rejects inspection before physical receipt', async () => {
+    const { returnRequest } = await createReturnForAsset();
 
     expect(
       await getErrorCode(
-        receiveReturn(db, returnRequest.id, {
+        inspectReturn(db, returnRequest.id, {
+          condition: 'good',
+          usageValue: 100,
+          actor,
+        })
+      )
+    ).toBe('RETURN_NOT_RECEIVED');
+
+    const unchanged = await db.returnRequest.findUniqueOrThrow({
+      where: { id: returnRequest.id },
+    });
+
+    expect(unchanged.status).toBe('requested');
+    expect(unchanged.inspected_condition).toBeNull();
+  });
+
+  it('rejects an unknown return request', async () => {
+    expect(
+      await getErrorCode(
+        inspectReturn(db, 'missing-request', {
+          condition: 'good',
+          usageValue: 100,
+          actor,
+        })
+      )
+    ).toBe('RETURN_REQUEST_NOT_FOUND');
+  });
+
+  it('requires service history when inspecting a farm machine', async () => {
+    const { returnRequest } = await createReturnForAsset('farm-002');
+
+    await markReturnReceived(db, returnRequest.id, { actor });
+
+    expect(
+      await getErrorCode(
+        inspectReturn(db, returnRequest.id, {
           condition: 'good',
           usageValue: 4_200,
           actor,
@@ -351,13 +466,14 @@ describe('receiveReturn', () => {
       where: { id: returnRequest.id },
     });
 
-    expect(unchanged.status).toBe('requested');
+    expect(unchanged.status).toBe('received');
     expect(unchanged.inspected_condition).toBeNull();
+    expect(unchanged.inspected_at).toBeNull();
 
     expect(
       await db.auditLog.count({
         where: {
-          action: 'return.received',
+          action: 'return.inspected',
           entity_id: returnRequest.id,
         },
       })
@@ -367,7 +483,9 @@ describe('receiveReturn', () => {
   it('stores farm machine usage since its last service', async () => {
     const { returnRequest } = await createReturnForAsset('farm-002');
 
-    const result = await receiveReturn(db, returnRequest.id, {
+    await markReturnReceived(db, returnRequest.id, { actor });
+
+    const result = await inspectReturn(db, returnRequest.id, {
       condition: 'good',
       usageValue: 4_200,
       usageSinceLastService: 350,
@@ -375,7 +493,7 @@ describe('receiveReturn', () => {
     });
 
     expect(result).toMatchObject({
-      status: 'received',
+      status: 'inspected',
       inspected_usage_unit: 'engine_hours',
       inspected_usage_value: 4_200,
       usage_since_last_service: 350,
@@ -385,8 +503,10 @@ describe('receiveReturn', () => {
   it('rejects negative usage values', async () => {
     const { returnRequest } = await createReturnForAsset();
 
+    await markReturnReceived(db, returnRequest.id, { actor });
+
     await expect(
-      receiveReturn(db, returnRequest.id, {
+      inspectReturn(db, returnRequest.id, {
         condition: 'good',
         usageValue: -1,
         actor,
@@ -397,8 +517,35 @@ describe('receiveReturn', () => {
       where: { id: returnRequest.id },
     });
 
-    expect(unchanged.status).toBe('requested');
+    expect(unchanged.status).toBe('received');
     expect(unchanged.inspected_usage_value).toBeNull();
+  });
+
+  it('does not allow the same return request to be inspected twice', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    await markReturnReceived(db, returnRequest.id, { actor });
+
+    const input = {
+      condition: 'good' as const,
+      usageValue: 100,
+      actor,
+    };
+
+    await inspectReturn(db, returnRequest.id, input);
+
+    expect(await getErrorCode(inspectReturn(db, returnRequest.id, input))).toBe(
+      'RETURN_NOT_RECEIVED'
+    );
+
+    expect(
+      await db.auditLog.count({
+        where: {
+          action: 'return.inspected',
+          entity_id: returnRequest.id,
+        },
+      })
+    ).toBe(1);
   });
 });
 
@@ -406,10 +553,9 @@ describe('planReturn', () => {
   it('creates and saves a refurbishment plan from dealer inspection', async () => {
     const { contract, returnRequest } = await createReturnForAsset();
 
-    await receiveReturn(db, returnRequest.id, {
+    await receiveAndInspect(returnRequest.id, {
       condition: 'fair',
       usageValue: 18_400,
-      actor,
     });
 
     const result = await planReturn(db, returnRequest.id, {
@@ -448,7 +594,7 @@ describe('planReturn', () => {
     expect(asset.status).toBe('reserved');
   });
 
-  it('rejects planning before dealer inspection', async () => {
+  it('rejects planning before inspection', async () => {
     const { returnRequest } = await createReturnForAsset();
 
     expect(
@@ -458,16 +604,30 @@ describe('planReturn', () => {
           actor,
         })
       )
-    ).toBe('RETURN_NOT_RECEIVED');
+    ).toBe('RETURN_NOT_INSPECTED');
+  });
+
+  it('rejects planning after receipt but before inspection', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    await markReturnReceived(db, returnRequest.id, { actor });
+
+    expect(
+      await getErrorCode(
+        planReturn(db, returnRequest.id, {
+          targetCondition: 'good',
+          actor,
+        })
+      )
+    ).toBe('RETURN_NOT_INSPECTED');
   });
 
   it('rejects a target condition worse than the inspection', async () => {
     const { returnRequest } = await createReturnForAsset();
 
-    await receiveReturn(db, returnRequest.id, {
+    await receiveAndInspect(returnRequest.id, {
       condition: 'good',
       usageValue: 100,
-      actor,
     });
 
     expect(
@@ -483,10 +643,9 @@ describe('planReturn', () => {
   it('does not allow a return to be planned twice', async () => {
     const { returnRequest } = await createReturnForAsset();
 
-    await receiveReturn(db, returnRequest.id, {
+    await receiveAndInspect(returnRequest.id, {
       condition: 'fair',
       usageValue: 100,
-      actor,
     });
 
     const input = {
@@ -496,7 +655,9 @@ describe('planReturn', () => {
 
     await planReturn(db, returnRequest.id, input);
 
-    expect(await getErrorCode(planReturn(db, returnRequest.id, input))).toBe('RETURN_NOT_RECEIVED');
+    expect(await getErrorCode(planReturn(db, returnRequest.id, input))).toBe(
+      'RETURN_NOT_INSPECTED'
+    );
 
     expect(
       await db.auditLog.count({
@@ -511,11 +672,10 @@ describe('planReturn', () => {
   it('uses recorded farm-machine service history for planning', async () => {
     const { returnRequest } = await createReturnForAsset('farm-002');
 
-    await receiveReturn(db, returnRequest.id, {
+    await receiveAndInspect(returnRequest.id, {
       condition: 'fair',
       usageValue: 4_200,
       usageSinceLastService: 350,
-      actor,
     });
 
     const result = await planReturn(db, returnRequest.id, {

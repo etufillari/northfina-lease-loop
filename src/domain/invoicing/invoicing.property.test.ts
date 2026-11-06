@@ -1,7 +1,7 @@
 // Property-based tests: instead of a few chosen examples, thousands of random contracts. Each
 // property must hold for all of them, and fast-check shrinks any failure to the smallest case.
 import fc from 'fast-check';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Invoice } from '@/data/lease-schemas';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
@@ -11,6 +11,9 @@ import { leaseTotals } from '../pricing/pricing';
 import { futureVatCorrections, invoiceSchedule, invoiceTotals } from './invoicing';
 
 const RUNS = { numRuns: 5_000 };
+
+// Thousands of runs take several seconds on a CI machine, past the default 5 second limit.
+vi.setConfig({ testTimeout: 60_000 });
 
 let vatRates: VatRates;
 beforeAll(async () => {

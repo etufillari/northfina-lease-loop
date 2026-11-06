@@ -3,7 +3,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  listAssets,
+  releaseAsset,
+  reserveAsset,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -52,6 +60,19 @@ describe('listAssets', () => {
     expect(laptops).toHaveLength(10);
     expect(laptops.every((asset) => asset.category === 'laptop')).toBe(true);
   });
+
+  it('treats expired reservations as available', async () => {
+    await seedAssets(db, dataPack);
+    const now = new Date('2026-11-05T20:00:00.000Z');
+    await db.asset.update({
+      where: { id: 'ebike-001' },
+      data: { status: 'reserved', reserved_until: new Date('2026-11-05T19:59:00.000Z') },
+    });
+
+    const assets = await listAssets(db, {}, now);
+
+    expect(assets.find((asset) => asset.id === 'ebike-001')?.status).toBe('available');
+  });
 });
 
 describe('changeAssetStatus', () => {
@@ -77,6 +98,43 @@ describe('changeAssetStatus', () => {
   });
 });
 
+describe('reservation lifecycle', () => {
+  it('releases an active reservation immediately and audits the change', async () => {
+    await seedAssets(db, dataPack);
+    const reserved = await reserveAsset(db, {
+      id: 'ebike-001',
+      actor: 'team-test',
+      now: new Date('2026-11-06T10:00:00.000Z'),
+    });
+    expect(reserved.ok).toBe(true);
+
+    const released = await releaseAsset(db, { id: 'ebike-001', actor: 'team-test' });
+    expect(released).toMatchObject({
+      ok: true,
+      asset: { id: 'ebike-001', status: 'available' },
+    });
+    expect(await db.auditLog.count({ where: { action: 'asset.reservation_released' } })).toBe(1);
+    expect(await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).toMatchObject({
+      status: 'available',
+      reserved_by: null,
+      reserved_until: null,
+    });
+  });
+
+  it('does not release another actor’s reservation', async () => {
+    await seedAssets(db, dataPack);
+    await reserveAsset(db, {
+      id: 'ebike-001',
+      actor: 'team-test',
+      now: new Date('2026-11-06T10:00:00.000Z'),
+    });
+    expect(await releaseAsset(db, { id: 'ebike-001', actor: 'someone-else' })).toEqual({
+      ok: false,
+      reason: 'not_reserved_by_actor',
+    });
+  });
+});
+
 describe('toAsset', () => {
   it('rejects a row with a value the schema does not allow', () => {
     const [first] = dataPack;
@@ -84,6 +142,8 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      reserved_until: null,
+      reserved_by: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

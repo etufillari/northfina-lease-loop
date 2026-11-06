@@ -1,12 +1,16 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset, AssetStatus } from '@/data/schemas';
+import { AssetCardLink } from '@/components/asset-card-link';
+import { SaveAssetButton } from '@/components/save-asset-button';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
+import { MonthlyRate } from '@/components/catalogue-pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 
 const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
+  retired: { badge: 'bg-stone-100 text-stone-700', dot: 'bg-stone-500' },
   available: {
     badge:
       'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
@@ -29,55 +33,98 @@ type AssetCardProps = {
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  userId?: string | null;
+  saved?: boolean;
+  saveLabel?: string;
+  removeSavedLabel?: string;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  price,
+  locale,
+  t,
+  userId = null,
+  saved = false,
+  saveLabel = 'Save item',
+  removeSavedLabel = 'Remove from saved items',
+}: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
 
   return (
-    <article
-      aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
-          <h3 id={headingId} className="text-lg leading-snug font-semibold">
-            {asset.model}
-          </h3>
+    <AssetCardLink href={`/${locale}/assets/${asset.id}`}>
+      <article
+        aria-labelledby={headingId}
+        className="relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 text-slate-950 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-600 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+      >
+        {userId ? (
+          <SaveAssetButton
+            assetId={asset.id}
+            userId={userId}
+            saved={saved}
+            label={saved ? removeSavedLabel : saveLabel}
+          />
+        ) : null}
+        <div className="mb-5 flex h-32 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+          <span className="text-7xl" aria-hidden="true">
+            {asset.category === 'e_bike' ? '🚲' : asset.category === 'laptop' ? '💻' : '🚜'}
+          </span>
         </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
-      </div>
-
-      <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
-        <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
-        <Fact
-          label={t('asset.usage')}
-          value={t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
-        />
-        <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
-      </dl>
-
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-        <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
-          ) : null}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
+            <h3 id={headingId} className="text-lg leading-snug font-semibold">
+              {asset.model}
+            </h3>
+          </div>
+          <p
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
+          >
+            <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
+            <span className="sr-only">{t('status.label')}: </span>
+            {t(`status.${asset.status}`)}
+          </p>
         </div>
-        <p className="text-right text-xl font-semibold tabular-nums">
-          {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
-        </p>
-      </div>
-    </article>
+
+        <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
+          <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
+          <Fact
+            label={t('asset.usage')}
+            value={t(`usage.${asset.usage.unit}`, {
+              value: formatNumber(asset.usage.value, locale),
+            })}
+          />
+          <Fact
+            label={t('asset.previousLives')}
+            value={formatNumber(asset.previous_lives, locale)}
+          />
+        </dl>
+
+        <div className="mt-auto border-t border-slate-100 pt-4 dark:border-slate-700">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.monthlyRate')}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums">
+                <MonthlyRate listPriceCents={price.ok ? price.priceCents : undefined} />
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-stone-600 dark:text-stone-400">{t('asset.listPrice')}</p>
+              <p className="mt-1 text-sm font-medium tabular-nums">
+                {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+              </p>
+              {price.ok ? (
+                <p className="mt-1 text-xs text-stone-600 dark:text-stone-400">
+                  {t('asset.priceListVersion', { version: price.priceListVersion })}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </article>
+    </AssetCardLink>
   );
 }
 

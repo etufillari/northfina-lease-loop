@@ -1,65 +1,123 @@
-# Lease Loop · Northfina × Hive Helsinki hackathon
+# Lease Loop
 
-Starter repo for the **Lease Loop** challenge, 5–6 November 2026 at Hive Helsinki. Teams of 3 build a circular-economy leasing app: one e-bike, laptop or tractor, three lives.
+Link to demo: [https://solving-poll-tiles-heating.trycloudflare.com/en]
 
-- 📋 **The challenge:** [CHALLENGE.md](CHALLENGE.md)
-- 📐 **Engineering rules (35 % of your score):** [RULES.md](RULES.md)
-- 🗂️ **The data pack:** [data/DATA.md](data/DATA.md)
+### One asset. Several customers. A traceable lease lifecycle.
 
-**Northfina** is a Helsinki-based leasing platform. It started as Etufillari, a bike-leasing service, and now leases any kind of asset. Dealers, banks and customers use it to get from a price quote to a signed contract, then through monthly invoices to the end of the lease. This repo is a small, independent playground, not our product code.
+Lease Loop is our Northfina × Hive Helsinki hackathon solution for circular leasing of **e-bikes, laptops and farm machines**. It connects customer finance, monthly billing and company return operations so a physical item can start its next lease without losing its history.
 
----
+**Implemented:** the complete lease loop and smart problems **1–5**. **Verified:** 321 tests across 56 files, repository checks and a production build. The interactive hackathon demo runs in development mode; this is a prototype, not a production lending or payment system.
 
-## Quick start
+[Challenge](CHALLENGE.md) · [Five smart problems](docs/SMART-PROBLEMS.md) · [UI walkthrough](docs/UI-LIFECYCLE-WALKTHROUGH.md) · [Scenario results](docs/SCENARIO-CARD-RESULTS.md) · [Pitch](docs/PITCH-OUTLINE.md)
 
-You need **Git** and **Node.js 22** (with [nvm](https://github.com/nvm-sh/nvm): `nvm install` reads `.nvmrc`).
+**Temporary live demo:** [Open Lease Loop](https://solving-poll-tiles-heating.trycloudflare.com/en). This preview depends on the team’s computer and tunnel staying online; use the local setup below if it is unavailable.
+
+## The business problem
+
+A leasing service must do more than calculate a monthly price. Customers need understandable terms and exit choices. The company needs accurate invoices, authorized decisions, confirmed physical returns and a defensible next-life price. Disconnected steps can double-allocate an item, change signed terms or offer it again before inspection.
+
+Our solution keeps the agreement, running lease, invoices and physical asset linked. Customer actions and company operations have separate views. Every business write and its audit record commit together.
+
+## The working loop
+
+**Browse → quote → application → signed contract → active lease → invoices → end choice → return request → physical receipt → inspection → required repairs → company approval → used offer → next customer.**
+
+| Customer view                                               | Company operations                                             |
+| ----------------------------------------------------------- | -------------------------------------------------------------- |
+| Browse assets and adjust term/down payment                  | See return-request notifications and the receipt queue         |
+| Answer relevant questions and sign agreed terms             | Confirm physical receipt and record condition/usage            |
+| View owned leases, invoice forecasts and saved invoice PDFs | Review mandatory work, costs and matching recommendations      |
+| Preview early-exit costs or choose return/pass-on/buyout    | Approve an offer before the asset becomes available again      |
+| Submit usage and request return; follow progress            | Generate invoices and inspect the asset passport/audit history |
+
+The next agreement gets new contract/lease IDs while preserving the **same asset ID and serial number**. Original signed terms and issued invoices remain unchanged. A return request is not physical receipt; an invoice or settlement is not proof of payment.
+
+## Five smart problems and our decisions
+
+| Problem                        | How Lease Loop solves it                                                                                                                                               | What to demonstrate                                                                                              |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **1. Lock price, not tax**     | Save quoted price-list version and signed net rent. Resolve VAT at invoice date and preserve each issued tax snapshot.                                                 | A saved v1 quote survives v2; December/January gross changes while net rent stays fixed.                         |
+| **2. Fair early exit**         | Preview the smaller of remaining net rents and signed end buyout, then add dated VAT. Confirmation recalculates before persisting termination.                         | Month 7: remaining rent, cap, fee and date shown before confirmation. Future issued rent requires credits first. |
+| **3. Second-life matchmaking** | Use condition, wear, mandatory repairs, residual curves and costs. Compare value uplift with repair costs; filter demand by feasibility and rank by deadline, then ID. | Work plan, as-is/restored values, proposed rent, first candidate and company approval.                           |
+| **4. Smart question flow**     | Apply targeting rules and explain why each question is asked. Prune irrelevant answers after edits; enforce server eligibility and signing guards.                     | Changing answers changes the questions; age, affordability, PEP and authority produce explained outcomes.        |
+| **5. Money that adds up**      | Integer cents, exact rational factors, deliberate half-up VAT rounding and original monthly anniversary dates.                                                         | January 31, February/leap-year dates, due dates and net/VAT/gross totals; 2,880 generated schedule cases.        |
+
+**Example:** Aino leases `ebike-003` on 5 November 2026 for 36 months, no down payment. Net rent is **€107.30/month**. The first three gross invoices are **€134.66, €134.66 and €135.20**. The January difference is the challenge’s fictional VAT increase, not a net-rent price change.
+
+For early exit after six completed months, remaining rent is **€3,219.00 net**, capped at the signed **€583.50** buyout. At the fictional 26% VAT, the recorded obligation is **€735.21**. These are synthetic challenge calculations.
+
+See [SMART-PROBLEMS.md](docs/SMART-PROBLEMS.md) for the formulas, policies, code paths and trade-offs.
+
+## Run locally
+
+Requires **Node.js 22**; `.nvmrc` pins the version.
 
 ```bash
-git clone https://github.com/<your-team>/northfina-lease-loop.git
-cd northfina-lease-loop
-nvm install          # Node 22
-npm ci               # installs dependencies and the Git hooks
-npm run db:setup     # creates .env and a local SQLite database with the 30 assets
-npm run dev          # http://localhost:3000
+git clone https://github.com/quietmid/northfina-lease-loop2026.git
+cd northfina-lease-loop2026
+git checkout feat/lease-lifecycle-team-handoff
+nvm install
+npm ci
+npm run db:setup
+npm run dev -- --webpack
 ```
 
-You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
+Open **http://localhost:3000/en**. Select a synthetic customer using **Dev mode**. English, Finnish, Swedish and Estonian are available; the UI follows the system light/dark theme.
 
-| Command                 | What it does                                                   |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run dev`           | Start the app with hot reload                                  |
-| `npm test`              | Run all tests once (`npm run test:watch` to keep them running) |
-| `npm run test:coverage` | Tests with the 60 % coverage gate                              |
-| `npm run check:all`     | **Everything CI runs.** Run it before you push                 |
-| `npm run db:migrate`    | After you change `prisma/schema.prisma`: creates a migration   |
-| `npm run db:reset`      | Wipe the local database and seed it again                      |
-| `npm run db:studio`     | Browse the database in your browser                            |
+For company operations, set a private `LEASE_LOOP_OPERATOR_PASSWORD` in `.env`, restart, click **Company operations**, then sign in. The navigation toggle alone does not authorize company APIs. Never commit `.env` or database files.
 
----
+## A short demo
 
-## 15-minute tour
+1. Select **Aino**, choose an available item, adjust pricing, answer questions and sign. Open **My leases**.
+2. Inspect the locked rent and invoice forecast. Expand the VAT-change comparison and calendar dates.
+3. For an active lease, calculate an early-exit preview without confirming, or use **Demo: finish this lease** to reach normal completion.
+4. Choose **Return my item**, enter usage and submit the return request.
+5. Enter **Company operations** and sign in. Open its notification, confirm physical receipt, inspect and review the required work/economics.
+6. Confirm completed work. Verify the item stays unavailable pending approval; approve to publish its used offer.
+7. Exit company mode, select **Lena**, and lease that same item. Inspect the distinct agreements and retained passport history. Generate invoices from company All operations; view/download them through customer Transactions.
 
-New to TypeScript, Next.js or Prisma? Read these files in this order:
+Use [the walkthrough](docs/UI-LIFECYCLE-WALKTHROUGH.md) for precise steps. Imported `ebike-007` and `ebike-008` cover the second/third-life cards and retain intentionally labeled historical counts.
 
-1. **`data/`**: the synthetic data pack. Open `assets.json` and `coefficient-table.json`, then the worked example in [DATA.md](data/DATA.md).
-2. **`src/data/`**: Zod schemas that load and type-check every data file. If you want to know a field's type, look here.
-3. **`src/domain/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
-4. **`src/domain/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
-5. **`src/app/[locale]/page.tsx`**: the catalogue page. Next.js App Router: every folder under `src/app/` is a URL.
-6. **`src/app/api/assets/`**: API routes. They use the response envelope (`src/server/api-response.ts`), and the status change writes an audit row in the same transaction (`src/server/audit.ts`).
-7. **`prisma/schema.prisma`**: the database. Add your own models (Contract, Invoice, …) and run `npm run db:migrate`.
+## Engineering and validation
 
-Handy docs: [Next.js App Router](https://nextjs.org/docs/app), [TypeScript for programmers who know C](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes.html), [Prisma](https://www.prisma.io/docs), [Vitest](https://vitest.dev/guide/), [Tailwind CSS](https://tailwindcss.com/docs).
+- **Next.js / React / TypeScript**, Tailwind CSS, Prisma + SQLite, Zod and Vitest.
+- Pure, tested business logic in `src/domain/`; dates and data are explicit inputs.
+- Audited transactional writes, idempotent commands and exclusive asset allocation.
+- Safe API error envelopes and customer-scoped invoice/PDF access.
+- No AI, ML, LLM model or API inside the product.
+- Generated Prisma migrations, conventional commits, hooks enabled and source files below 600 lines.
 
-Everything in the skeleton is replaceable. Keep the rules, not necessarily the code.
+```bash
+npm run check:all       # format, lint, types, size, no-AI, coverage, build
+npm test               # focused development suite
+npm run db:studio      # inspect the local database
+```
+
+`npm run db:reset` deletes current local records and restores the 30 original synthetic assets. It is only for deliberately starting a fresh local test. [The data pack](data/DATA.md) is synthetic; the VAT change and environmental factors are fictional.
+
+## Demo hosting and limits
+
+The current end-to-end demo uses development-only customer switching and company sessions. `npm run build` passes, but a production server intentionally disables demo flows. **Do not publish a normal production build and assume the complete demo is enabled.**
+
+For an immediate public preview, a temporary Cloudflare tunnel can expose a separately seeded local demo. Its link works only while the local server, network and tunnel remain running. See [DEPLOYMENT.md](docs/DEPLOYMENT.md). A durable hosted version needs production identity, an explicit hosted-demo access policy and persistent database storage.
+
+**Known prototype limits:** no real payments or credit-note workflow; no multi-asset fleet contract; shared development company identity rather than individual staff accounts; no rejected-proposal resubmission. Matching is advisory, not a persisted allocation to a waiting-list customer or complete profit optimizer. Impact figures are estimates from fictional factors, not verified savings. Visual browser/keyboard review is still a manual final step.
+
+## Repository map
+
+- `src/domain/` — pricing, eligibility, calendars, tax, exit and circular rules.
+- `src/server/` — persistence, ownership, command replay and audit transactions.
+- `src/app/` and `src/components/` — customer and company journeys.
+- `prisma/` — schema, generated migrations and synthetic seed.
+- `docs/` — scenario evidence, team handoff, demo and pitch.
 
 ---
 
 ## Submitting
 
-You can't push to this repo. You work in **your own fork** and send us a **pull request**.
+Submit from our team fork to **`etufillari/northfina-lease-loop` `main`**. A PR only inside the team fork does not count as the challenge submission.
 
-1. **One person per team forks** this repo (the **Fork** button, top right) and adds the other two as collaborators in the fork (_Settings → Collaborators_).
+1. Our team fork is [quietmid/northfina-lease-loop2026](https://github.com/quietmid/northfina-lease-loop2026). Use its final implementation branch and add teammates as collaborators if needed.
 2. **Enable Actions in the fork**: open the fork's **Actions** tab and click _"I understand my workflows, go ahead and enable them"_. Now CI runs on every push.
 3. Everyone clones the fork and commits as usual. Small, conventional commits; the hooks help.
 4. **Before Friday 6 November 16:00**, open a pull request from your fork to `etufillari/northfina-lease-loop` `main`.

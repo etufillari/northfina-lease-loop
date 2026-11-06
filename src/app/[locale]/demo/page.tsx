@@ -246,8 +246,9 @@ function ScenarioCard({
               <div className="text-sm">
                 <p className="eyebrow">{t('demo.then')}</p>
                 <ol className="mt-1 list-decimal space-y-0.5 pl-5 marker:text-muted">
-                  {setup.map((line) => (
-                    <li key={line}>{line}</li>
+                  {setup.map((line, i) => (
+                    // The lines never reorder; a translation may repeat a line.
+                    <li key={i}>{line}</li>
                   ))}
                 </ol>
               </div>

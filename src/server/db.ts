@@ -10,7 +10,10 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { createPrismaClient } from './prisma-client';
 
-const globalForPrisma = globalThis as typeof globalThis & { leaseLoopDb?: PrismaClient };
+// Typed loosely on purpose: after a regeneration the cached value is an instance of an older
+// class, which TypeScript can't describe.
+type CachedClient = { $disconnect(): Promise<void> };
+const globalForPrisma = globalThis as typeof globalThis & { leaseLoopDb?: CachedClient };
 
 function currentClient(): PrismaClient {
   const cached = globalForPrisma.leaseLoopDb;

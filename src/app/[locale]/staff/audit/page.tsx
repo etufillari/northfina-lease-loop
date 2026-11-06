@@ -1,18 +1,18 @@
 // The audit log, made readable: who did what, when, to which record, with the details as
 // labelled values instead of raw JSON. Filter by record type (?type=) or one record (?entity=).
+// The whole log is reachable, a page at a time (?page=); filters cover every row.
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
-import { listAuditLog } from '@/server/audit';
+import { pageAuditLog } from '@/server/audit';
 import { db } from '@/server/db';
 import { AuditRow } from './audit-row';
 
-/** How many of the newest rows the page reads before filtering. */
-const ROW_LIMIT = 500;
-const ENTITY_TYPES = ['application', 'contract', 'asset', 'customer'] as const;
+const PAGE_SIZE = 100;
+const ENTITY_TYPES = ['application', 'contract', 'asset', 'customer', 'waitlist_entry'] as const;
 
 export default async function AuditPage({
   params,
@@ -27,21 +27,26 @@ export default async function AuditPage({
   const { asOfParam } = await asOfFromPage(query);
   const type = typeof query.type === 'string' ? query.type : null;
   const entity = typeof query.entity === 'string' ? query.entity : null;
+  const requested = typeof query.page === 'string' ? Number(query.page) : 1;
 
-  const [rows, customers] = await Promise.all([
-    listAuditLog(db, ROW_LIMIT),
+  const [log, customers] = await Promise.all([
+    pageAuditLog(db, {
+      page: Number.isFinite(requested) ? requested : 1,
+      pageSize: PAGE_SIZE,
+      entityType: type,
+      entityId: entity,
+    }),
     db.customer.findMany({ select: { id: true, name: true } }),
   ]);
   const names = Object.fromEntries(customers.map((c) => [c.id, c.name]));
-  const shown = rows.filter(
-    (row) => (!type || row.entity_type === type) && (!entity || row.entity_id === entity)
-  );
+  const shown = log.entries;
 
-  const href = (next: { type?: string | null; entity?: string | null }) => {
+  const href = (next: { type?: string | null; entity?: string | null; page?: number }) => {
     const search = new URLSearchParams();
     if (asOfParam) search.set('asOf', asOfParam);
     if (next.type) search.set('type', next.type);
     if (next.entity) search.set('entity', next.entity);
+    if (next.page && next.page > 1) search.set('page', String(next.page));
     const qs = search.toString();
     return `/${locale}/staff/audit${qs ? `?${qs}` : ''}`;
   };
@@ -88,7 +93,7 @@ export default async function AuditPage({
       ) : null}
 
       <p className="mt-4 text-sm text-stone-600 dark:text-stone-400" aria-live="polite">
-        {t('staff.audit.count', { shown: shown.length, limit: ROW_LIMIT })}
+        {t('staff.audit.count', { total: log.total, page: log.page, pages: log.pages })}
       </p>
 
       {shown.length === 0 ? (
@@ -132,6 +137,31 @@ export default async function AuditPage({
             </tbody>
           </table>
         </div>
+      )}
+
+      {log.pages > 1 && (
+        <nav
+          aria-label={t('staff.audit.pages')}
+          className="mt-4 flex items-center justify-between gap-3 text-sm"
+        >
+          {log.page > 1 ? (
+            <Link href={href({ type, entity, page: log.page - 1 })} className={tab(false)}>
+              ← {t('staff.audit.newer')}
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-stone-600 dark:text-stone-400">
+            {t('staff.audit.pageOf', { page: log.page, pages: log.pages })}
+          </span>
+          {log.page < log.pages ? (
+            <Link href={href({ type, entity, page: log.page + 1 })} className={tab(false)}>
+              {t('staff.audit.older')} →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
       )}
     </div>
   );

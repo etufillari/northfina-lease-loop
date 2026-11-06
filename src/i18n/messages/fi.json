@@ -306,7 +306,7 @@
   "staff.audit.type.customer": "Asiakkaat",
   "staff.audit.onlyEntity": "Näytetään tietueen {id} historia.",
   "staff.audit.clear": "Näytä kaikki",
-  "staff.audit.count": "{shown} merkintää {limit} uusimmasta.",
+  "staff.audit.count": "{total} merkintää · sivu {page}/{pages}",
   "staff.audit.empty": "Tänne ei ole vielä kirjattu mitään.",
   "staff.audit.history": "Koko historia",
   "staff.audit.col.when": "Milloin",
@@ -460,5 +460,11 @@
   "demo.jumpTo": "Siirry päivään",
   "demo.go": "Siirry",
   "demo.reset": "Nollaa demo",
-  "demo.confirmReset": "Nollataanko demo? Kaikki hakemukset, sopimukset, laskut ja jonomuutokset poistetaan, aineisto ladataan uudelleen ja päivä palaa 1.1.2026."
+  "demo.confirmReset": "Nollataanko demo? Kaikki hakemukset, sopimukset, laskut ja jonomuutokset poistetaan, aineisto ladataan uudelleen ja päivä palaa 1.1.2026.",
+  "staff.audit.pages": "Lokin sivut",
+  "staff.audit.pageOf": "Sivu {page}/{pages}",
+  "staff.audit.newer": "Uudemmat",
+  "staff.audit.older": "Vanhemmat",
+  "staff.audit.type.waitlist_entry": "Jonotuslista",
+  "staff.audit.action.demo.reset": "Nollasi demon"
 }

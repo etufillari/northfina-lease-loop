@@ -306,7 +306,7 @@
   "staff.audit.type.customer": "Kliendid",
   "staff.audit.onlyEntity": "Kuvatakse kirje {id} ajalugu.",
   "staff.audit.clear": "Näita kõike",
-  "staff.audit.count": "{shown} kirjet {limit} uusima seast.",
+  "staff.audit.count": "{total} kirjet · lehekülg {page}/{pages}",
   "staff.audit.empty": "Siia pole veel midagi logitud.",
   "staff.audit.history": "Kogu ajalugu",
   "staff.audit.col.when": "Millal",
@@ -460,5 +460,11 @@
   "demo.jumpTo": "Hüppa kuupäevale",
   "demo.go": "Mine",
   "demo.reset": "Lähtesta demo",
-  "demo.confirmReset": "Kas lähtestada demo? Kõik taotlused, lepingud, arved ja järjekorra muudatused kustutatakse, andmepakett laaditakse uuesti ja kuupäev läheb tagasi 1. jaanuarile 2026."
+  "demo.confirmReset": "Kas lähtestada demo? Kõik taotlused, lepingud, arved ja järjekorra muudatused kustutatakse, andmepakett laaditakse uuesti ja kuupäev läheb tagasi 1. jaanuarile 2026.",
+  "staff.audit.pages": "Logi leheküljed",
+  "staff.audit.pageOf": "Lehekülg {page}/{pages}",
+  "staff.audit.newer": "Uuemad",
+  "staff.audit.older": "Vanemad",
+  "staff.audit.type.waitlist_entry": "Ootejärjekord",
+  "staff.audit.action.demo.reset": "Lähtestas demo"
 }

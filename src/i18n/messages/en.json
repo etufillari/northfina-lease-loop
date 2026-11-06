@@ -329,7 +329,7 @@
   "staff.audit.type.customer": "Customers",
   "staff.audit.onlyEntity": "Showing the history of {id}.",
   "staff.audit.clear": "Show everything",
-  "staff.audit.count": "{shown} entries, from the {limit} newest.",
+  "staff.audit.count": "{total} entries · page {page} of {pages}",
   "staff.audit.empty": "Nothing has been logged here yet.",
   "staff.audit.history": "Full history",
   "staff.audit.col.when": "When",
@@ -460,5 +460,11 @@
   "demo.jumpTo": "Jump to",
   "demo.go": "Go",
   "demo.reset": "Reset demo",
-  "demo.confirmReset": "Reset the demo? Every application, contract, invoice and waiting-list change is deleted, the data pack is loaded again and the date goes back to 1 January 2026."
+  "demo.confirmReset": "Reset the demo? Every application, contract, invoice and waiting-list change is deleted, the data pack is loaded again and the date goes back to 1 January 2026.",
+  "staff.audit.pages": "Audit log pages",
+  "staff.audit.pageOf": "Page {page} of {pages}",
+  "staff.audit.newer": "Newer",
+  "staff.audit.older": "Older",
+  "staff.audit.type.waitlist_entry": "Waiting list",
+  "staff.audit.action.demo.reset": "Reset the demo"
 }

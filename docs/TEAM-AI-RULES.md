@@ -2,6 +2,10 @@
 
 Paste this into your assistant setup, or tell it: “Read AGENTS.md and docs/TEAM-AI-RULES.md before making changes.” These rules supplement AGENTS.md and RULES.md.
 
+## Current ownership override
+
+On6 November the project lead explicitly assumed **Dev1 + Dev3 and all remaining lifecycle integration** because Dev3 is unavailable. The lead may implement circular rules/UI and necessary contract joins. Other agents still use the role boundaries below; prefer the existing implementations and coordinate overlapping teammate branches.
+
 ## Set your scope first
 
 At the start of a session, tell the assistant which role you own. The project lead/user is **Developer 1 — lease engine**. Teammates take Developer 2 or 3 according to their existing work. See the [role checklists](03-TEAM-EXECUTION-AND-TASK-BREAKDOWN.md).

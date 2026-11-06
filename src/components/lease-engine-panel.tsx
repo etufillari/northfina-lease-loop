@@ -1,3 +1,5 @@
+import { EndOptionActions } from './end-option-actions';
+import { totalNetIfBought } from '@/domain/circular/money';
 import { db } from '@/server/db';
 import { listLeaseInvoices } from '@/server/lease-engine/invoices';
 import { getLeaseSchedule } from '@/server/lease-engine/queries';
@@ -20,7 +22,13 @@ export async function LeaseEnginePanel({
   const t = getT(locale);
   const invoices = leaseId ? await listLeaseInvoices(db, leaseId) : [];
   const schedule = leaseId ? await getLeaseSchedule(db, leaseId) : null;
-  const periods = schedule?.periods.slice(0, 3) ?? [];
+  const settlement = leaseId ? await db.leaseSettlement.findUnique({ where: { leaseId } }) : null;
+  const contract = await db.contract.findUnique({ where: { id: contractId } });
+  const state = leaseId ? await db.engineLease.findUnique({ where: { id: leaseId } }) : null;
+  const periods = (schedule?.periods ?? [])
+    .filter((period) => !state?.terminatedOn || period.startDate < state.terminatedOn)
+    .filter((period) => !invoices.some((invoice) => invoice.periodIndex === period.index))
+    .slice(0, 3);
   return (
     <section className="mt-5 border-t border-stone-200 pt-4 dark:border-stone-700">
       <h3 className="font-semibold">{t('engine.invoices')}</h3>
@@ -44,6 +52,29 @@ export async function LeaseEnginePanel({
         <p className="mt-3 text-sm">
           {t('engine.totalNet')}: {formatEuro(schedule.totalNetCents, intlLocale[locale])}
         </p>
+      )}
+      {contract && contract.financed_cents > 0 && (
+        <div className="mt-3 text-sm">
+          <p>
+            {t('end.down')}: {formatEuro(contract.down_payment_cents, intlLocale[locale])}
+          </p>
+          <p>
+            {t('end.buyoutNet')}: {formatEuro(contract.buyout_net_cents, intlLocale[locale])}
+          </p>
+          <p>
+            {t('end.totalNet')}:{' '}
+            {formatEuro(
+              totalNetIfBought(
+                contract.monthly_net_cents,
+                contract.term_months,
+                contract.down_payment_cents,
+                contract.buyout_net_cents
+              ),
+              intlLocale[locale]
+            )}
+          </p>
+          <p>{t('end.taxHint')}</p>
+        </div>
       )}
       {invoices.length === 0 ? (
         <p className="mt-3 text-sm">{t('engine.noInvoices')}</p>
@@ -82,6 +113,27 @@ export async function LeaseEnginePanel({
             </tbody>
           </table>
         </div>
+      )}
+      {leaseId && !settlement && (
+        <EndOptionActions
+          assetId={state?.assetId ?? contract?.asset_id ?? ''}
+          leaseId={leaseId}
+          status={status}
+          locale={locale}
+          labels={{
+            return: t('end.return'),
+            pass: t('end.pass'),
+            buy: t('end.buy'),
+            early: t('end.early'),
+            error: t('engine.error'),
+          }}
+        />
+      )}
+      {settlement && (
+        <p className="mt-3">
+          {t('end.recorded')}: {settlement.option} ·{' '}
+          {formatEuro(settlement.grossCents, intlLocale[locale])} · {settlement.effectiveOn}
+        </p>
       )}
       {status === 'COMPLETED' && <p className="mt-4 font-medium">{t('engine.awaitingReturn')}</p>}
     </section>

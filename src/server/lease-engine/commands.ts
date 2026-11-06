@@ -21,8 +21,11 @@ export async function auditedCommand<T>(
         {
           actor,
           action: `engine.${operation}_command`,
-          entityType:
-            operation === 'activate' || operation === 'activate_contract' ? 'contract' : 'lease',
+          entityType: operation.startsWith('circular_')
+            ? 'asset'
+            : operation === 'activate' || operation === 'activate_contract'
+              ? 'contract'
+              : 'lease',
           entityId,
           details: { idempotencyKey: key },
         },

@@ -30,8 +30,6 @@ model Asset {
   reserved_by    String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
-  returns        AssetReturn[]
-
   @@index([category])
 }
 
@@ -60,7 +58,13 @@ model Application {
   payment_due_days   Int
   price_list_version Int
   offer_expires_on   String
+  down_payment_cents Int @default(0)
+  financed_cents Int @default(0)
+  buyout_net_cents Int @default(0)
+  circular_offer_id String?
+  termination_policy String?
   status             String
+  answers_json String @default("{}")
   decision_reason    String
   signing_authority  Boolean
   submitted_at       DateTime @default(now())
@@ -82,6 +86,11 @@ model Contract {
   monthly_net_cents  Int
   payment_due_days   Int
   price_list_version Int
+  down_payment_cents Int @default(0)
+  financed_cents Int @default(0)
+  buyout_net_cents Int @default(0)
+  circular_offer_id String?
+  termination_policy String?
   signer_id          String
   signed_at          DateTime
   application        Application @relation(fields: [application_id], references: [id])
@@ -101,11 +110,10 @@ model EngineLease {
   monthlyNetCents   Int
   paymentDueDays    Int
   status            String
+  terminatedOn      String?
   version           Int @default(1)
   invoices          EngineInvoice[]
   allocation        EngineAllocation?
-  returns           AssetReturn[]
-
   @@index([assetId])
 }
 
@@ -153,40 +161,39 @@ model EngineAllocation {
   lease EngineLease @relation(fields: [leaseId], references: [id])
 }
 
+// One receipt per actual lease, or a labeled imported return from the data pack.
 model AssetReturn {
-  id              String   @id
-  leaseId         String   @unique
-  lease           EngineLease @relation(fields: [leaseId], references: [id], onDelete: Restrict)
-  assetId         String
-  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Restrict)
-  idempotencyKey  String   @unique
-  payloadHash     String
-  status          String
-  condition       String
-  usageUnit       String
-  usageValue      Int
-  usageReductionEvidence String?
-  receivedAt      DateTime
-  work            RefurbishmentWork[]
-
+  id String @id
+  assetId String
+  leaseId String? @unique
+  receivedOn String
+  status String @default("RECEIVED")
+  condition String?
+  usageValue Int?
+  planJson String?
+  completedOn String?
+  costCents Int?
+  offerNetCents Int?
   @@index([assetId])
 }
 
-model RefurbishmentWork {
-  id                 String   @id
-  returnId           String
-  assetReturn        AssetReturn @relation(fields: [returnId], references: [id], onDelete: Restrict)
-  code               String
-  kind               String
-  costCents          Int
-  mandatory          Boolean
-  resetsUsage        Boolean
-  fromCondition      String?
-  toCondition        String?
-  status             String   @default("PENDING")
-  evidenceReference  String?
-  completedAt        DateTime?
+// Immutable published asset-life quote, used instead of the original new-item list.
+model CircularOffer {
+  id String @id
+  assetId String
+  returnId String @unique
+  netListCents Int
+  publishedOn String
+  @@index([assetId])
+}
 
-  @@unique([returnId, code])
-  @@index([returnId, status])
+// Signed fee snapshot for buyout; zero defaults keep existing contracts readable.
+model LeaseSettlement {
+  leaseId String @id
+  option String
+  netCents Int
+  vatCents Int
+  grossCents Int
+  effectiveOn String
+  policyVersion String @default("EXIT_CAP_BUYOUT_V1")
 }

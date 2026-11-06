@@ -1,4 +1,7 @@
+import { assetBusinessDate } from '@/server/circular/queries';
+import { loadCataloguePriceLists } from '@/server/circular/prices';
 // The catalogue: every asset, grouped by category, with today's net list price.
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import type { ZodType } from 'zod';
@@ -6,7 +9,7 @@ import { AssetCard } from '@/components/asset-card';
 import { AccountAccess } from '@/components/account-access';
 import { CataloguePricing } from '@/components/catalogue-pricing';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable } from '@/data/load';
 import { assetCategorySchema, assetConditionSchema, assetStatusSchema } from '@/data/schemas';
 import { filterAssets } from '@/domain/asset-filter';
 import { formatEuro } from '@/domain/money';
@@ -40,7 +43,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
   const [assets, priceLists, coefficientTable, activeUserData] = await Promise.all([
     listAssets(db),
-    loadPriceLists(),
+    loadCataloguePriceLists(db),
     loadCoefficientTable(),
     process.env.NODE_ENV === 'development'
       ? Promise.all([listActiveUserOptions(), getActiveUser()])
@@ -66,6 +69,12 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
       assets: filteredAssets.filter((asset) => asset.category === category),
     }))
     .filter((group) => group.assets.length > 0);
+
+  const assetDates = new Map(
+    await Promise.all(
+      assets.map(async (asset) => [asset.id, await assetBusinessDate(db, asset.id, today)] as const)
+    )
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -99,6 +108,11 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
               close: t('account.close'),
             }}
           />
+          {process.env.NODE_ENV === 'development' ? (
+            <Link href={`/${locale}/circular`} className="text-sm font-semibold underline">
+              {t('circular.title')}
+            </Link>
+          ) : null}
         </div>
       </div>
       <div className="max-w-2xl">
@@ -194,7 +208,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
             </div>
             <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {group.assets.map((asset) => {
-                const price = listPriceOn(priceLists, asset.id, today);
+                const price = listPriceOn(priceLists, asset.id, assetDates.get(asset.id) ?? today);
                 return (
                   <li key={asset.id}>
                     <AssetCard asset={asset} price={price} locale={locale} t={t} />

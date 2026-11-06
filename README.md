@@ -1,5 +1,8 @@
 # Lease Loop
 
+Link to demo: [https://solving-poll-tiles-heating.trycloudflare.com/en]
+password to dashboard: 344c4af88f18d734cd1fba914ded5b61
+
 ### One asset. Several customers. A traceable lease lifecycle.
 
 Lease Loop is our Northfina × Hive Helsinki hackathon solution for circular leasing of **e-bikes, laptops and farm machines**. It connects customer finance, monthly billing and company return operations so a physical item can start its next lease without losing its history.

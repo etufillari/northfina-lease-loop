@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assetStatusSchema } from '@/data/schemas';
-import { canChangeStatusByHand, isHeldForSomeoneElse } from './status';
+import type { Asset } from '@/data/schemas';
+import { assetForViewer, canChangeStatusByHand, isHeldForSomeoneElse } from './status';
 
 describe('canChangeStatusByHand', () => {
   it.each([
@@ -41,5 +42,43 @@ describe('isHeldForSomeoneElse', () => {
   it('stops everyone else, and the logged out', () => {
     expect(isHeldForSomeoneElse('cust-aino', 'cust-lena')).toBe(true);
     expect(isHeldForSomeoneElse('cust-aino', undefined)).toBe(true);
+  });
+});
+
+describe('assetForViewer', () => {
+  const asset: Asset = {
+    id: 'ebike-003',
+    category: 'e_bike',
+    make: 'Nordvolt',
+    model: 'Trail 500',
+    model_year: 2026,
+    serial_number: 'SN-1',
+    condition: 'good',
+    usage: { unit: 'km', value: 8_000 },
+    previous_lives: 1,
+    status: 'available',
+  };
+  const held: Asset = { ...asset, reserved_for: 'cust-wait-02' };
+
+  it('leaves an item with no hold as it is', () => {
+    expect(assetForViewer(asset, 'cust-aino')).toEqual(asset);
+  });
+
+  it('shows a held item as reserved to everyone else, and to the logged out', () => {
+    expect(assetForViewer(held, 'cust-aino').status).toBe('reserved');
+    expect(assetForViewer(held, undefined).status).toBe('reserved');
+  });
+
+  it('shows it as available to the person it is held for', () => {
+    expect(assetForViewer(held, 'cust-wait-02').status).toBe('available');
+  });
+
+  it('never reveals who it is held for', () => {
+    expect(assetForViewer(held, 'cust-aino')).not.toHaveProperty('reserved_for');
+    expect(assetForViewer(held, 'cust-wait-02')).not.toHaveProperty('reserved_for');
+  });
+
+  it('keeps a returned item returned while it waits for the dealer', () => {
+    expect(assetForViewer({ ...held, status: 'returned' }, 'cust-aino').status).toBe('returned');
   });
 });

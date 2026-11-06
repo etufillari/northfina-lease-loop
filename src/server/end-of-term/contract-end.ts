@@ -100,6 +100,28 @@ export async function contractPassOnCandidates(
   return passOnCandidates(customers, demand, category, contract.customer_id);
 }
 
+export type PassOnCandidatesResult =
+  | { ok: true; candidates: { id: string; name: string }[] }
+  | { ok: false; reason: 'contract_not_found' | 'already_ended' };
+
+/** Who the owner can choose, showing only what they need to pick someone. */
+export async function listPassOnCandidates(
+  db: PrismaClient,
+  input: { contractId: string; customer: Customer }
+): Promise<PassOnCandidatesResult> {
+  const contract = await getContract(db, input.contractId);
+  if (!contract || contract.customer_id !== input.customer.id) {
+    return { ok: false, reason: 'contract_not_found' };
+  }
+  if (contract.status !== 'active') return { ok: false, reason: 'already_ended' };
+
+  const candidates = await contractPassOnCandidates(db, contract);
+  return {
+    ok: true,
+    candidates: candidates.map(({ id, name }) => ({ id, name })),
+  };
+}
+
 /** The customer's own choice at the end of the lease. */
 export async function endContract(
   db: PrismaClient,

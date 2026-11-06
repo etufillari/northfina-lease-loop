@@ -229,17 +229,31 @@ function ScenarioCard({
         <h3 className="font-display text-lg font-bold">{t(key('title'))}</h3>
       </div>
       <p className="text-sm text-muted">{t(key('look'))}</p>
-      <div className="flex flex-wrap items-start gap-3">
-        {scenario.steps.map((step, index) => (
-          <StepAction
-            key={index}
-            step={step}
-            label={scenario.steps.length === 1 ? t('demo.run') : t(key(`step${index + 1}`))}
-            panel={panel}
-            locale={locale}
-            t={t}
-          />
-        ))}
+      <div className="flex flex-col gap-4">
+        {scenario.steps.map((step, index) => {
+          const single = scenario.steps.length === 1;
+          // What to do on the page the button opens: inputs and buttons only, never a result.
+          const setup = t(key(single ? 'setup' : `setup${index + 1}`)).split('\n');
+          return (
+            <div key={index} className="flex flex-col items-start gap-2">
+              <StepAction
+                step={step}
+                label={single ? t('demo.run') : t(key(`step${index + 1}`))}
+                panel={panel}
+                locale={locale}
+                t={t}
+              />
+              <div className="text-sm">
+                <p className="eyebrow">{t('demo.then')}</p>
+                <ol className="mt-1 list-decimal space-y-0.5 pl-5 marker:text-muted">
+                  {setup.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          );
+        })}
       </div>
       <p className="text-xs text-muted">{scenario.decisions.join(' · ')}</p>
     </li>

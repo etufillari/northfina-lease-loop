@@ -574,5 +574,19 @@
   "demo.contracts.start": "Algus",
   "demo.audit": "Muudatuste logi",
   "demo.audit.count": "Salvestatud muudatusi: {count}",
-  "demo.audit.open": "Ava muudatuste logi"
+  "demo.audit.open": "Ava muudatuste logi",
+  "demo.card.happyPath.setup": "Liisinguperiood 36 kuud, sissemakse 0 €\nVajuta „Salvesta pakkumine”\nTäida isikuna (demo): Aino Virtanen ja vasta ülejäänule\nVajuta „Allkirjasta ja lukusta hind”",
+  "demo.card.priceLock.setup1": "Liisinguperiood 36 kuud, sissemakse 0 €\nVajuta „Salvesta pakkumine” ja peatu: ära veel allkirjasta",
+  "demo.card.priceLock.setup2": "Avab neljapäevase pakkumise reedel\nTäida isikuna (demo): Aino Virtanen\nVali „Jää minu pakkumise juurde” või „Allkirjasta tänase hinnaga”",
+  "demo.card.taxNotPrice.setup": "Liisinguperiood 24 kuud, sissemakse 0 €\nVajuta „Salvesta pakkumine”, täida isikuna (demo): Aino Virtanen ja allkirjasta\nVõrdle lepingul 15. detsembri ja 15. jaanuari arveid",
+  "demo.card.calendar.setup": "Liisinguperiood 36 kuud, sissemakse 0 €\nVajuta „Salvesta pakkumine”, täida isikuna (demo): Aino Virtanen ja allkirjasta\nVaata lepingul veebruari arveid",
+  "demo.card.tooYoung.setup": "Mis tahes liisinguperiood\nVajuta „Salvesta pakkumine”\nTäida isikuna (demo): Mikko Laine",
+  "demo.card.whoCanSign.setup1": "Liisinguperiood 36 kuud, sissemakse 0 €\nVajuta „Salvesta pakkumine”\nTäida isikuna (demo): Norvi Logistics Oy\nVajuta „Saada allkirjastamiseks”",
+  "demo.card.whoCanSign.setup2": "Avab allkirjastajat ootava lepingu\nVajuta „Allkirjasta allkirjaõigusliku isikuna”",
+  "demo.card.bigTicket.setup": "Liisinguperiood 48 kuud; kirjuta sissemakse väljale 20 000\nVajuta „Salvesta pakkumine”\nTäida isikuna (demo): Haapalan Tila Oy ja vasta ilmuvatele küsimustele",
+  "demo.card.earlyExit.setup": "Vajab kaarti 1 allkirjastatuna 5. novembril 2026\nAva lepingul „Lõpeta ennetähtaegselt” 7. kuu juures\nVõrdle „Osta kohe välja” ja „Tagasta kohe”",
+  "demo.card.secondLife.setup": "Loe hinnangut, taastamiskava ja ootejärjekorda\nVajuta „Taasta ja pane uuesti müüki”\nSoovi korral: tee pakkumine ja allkirjasta nagu iga toote puhul",
+  "demo.card.thirdLife.setup1": "Taasta seisukorda Hea ja vajuta „Taasta ja pane uuesti müüki”\nLiisinguperiood 36 kuud, sissemakse 0 €, vajuta „Salvesta pakkumine”\nTäida isikuna (demo): Aino Virtanen ja allkirjasta",
+  "demo.card.thirdLife.setup2": "Loe iga elu ja CO₂ valemit",
+  "demo.then": "Siis"
 }

@@ -25,6 +25,7 @@ function stubSession(current: User | null) {
 }
 
 const reviewLink = messages.en['staff.applications.title'];
+const dashboardLink = messages.en['dealer.title'];
 
 async function renderAs(current: User | null) {
   stubSession(current);
@@ -54,9 +55,29 @@ describe('UserSwitcher', () => {
     ).toHaveAttribute('href', '/en/account/applications');
   });
 
-  it('shows a dealer no link, because a dealer cannot decide', async () => {
+  it('sends a dealer to the dashboard, but not to manual review', async () => {
     await renderAs(users[2] ?? null);
-    expect(screen.queryByRole('link')).toBeNull();
+
+    expect(await screen.findByRole('link', { name: dashboardLink })).toHaveAttribute(
+      'href',
+      '/en/dealer'
+    );
+    expect(screen.queryByRole('link', { name: reviewLink })).toBeNull();
+  });
+
+  it('gives an admin both staff links', async () => {
+    await renderAs(users[1] ?? null);
+
+    expect(await screen.findByRole('link', { name: dashboardLink })).toBeTruthy();
+    expect(screen.getByRole('link', { name: reviewLink })).toBeTruthy();
+  });
+
+  it('gives a customer no staff links', async () => {
+    await renderAs(users[0] ?? null);
+
+    await screen.findByRole('link', { name: messages.en['account.applications.title'] });
+    expect(screen.queryByRole('link', { name: dashboardLink })).toBeNull();
+    expect(screen.queryByRole('link', { name: reviewLink })).toBeNull();
   });
 
   it('shows no link when nobody is logged in', async () => {

@@ -56,7 +56,8 @@ describe('AssetDetails', () => {
   it('renders the fallback image for the asset category', () => {
     render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={null} />);
 
-    const image = screen.getByRole('img');
+    // An empty alt marks the image as decorative, which gives it the presentation role.
+    const image = screen.getByRole('presentation');
 
     expect(image).toHaveAttribute('src', categoryFallbackImages[asset.category]);
     expect(image).toHaveAttribute('alt', '');

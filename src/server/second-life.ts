@@ -6,6 +6,7 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { applySecondLifePrices } from '@/domain/price-list';
 import { repairLines, type CustomRepair } from '@/domain/repair-catalogue';
 import { leasableCondition, refurbishmentPlan } from '@/domain/second-life';
+import { assetsOn, hasLaterHistory } from './asset-state';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
 
@@ -70,18 +71,22 @@ export async function listRefurbishments(
   }));
 }
 
-/** Refurbished items' second-life prices, by asset id. */
-export async function secondLifePrices(db: PrismaClient): Promise<Record<string, number>> {
-  const rows = await db.asset.findMany({
-    where: { second_life_price_cents: { not: null } },
-    select: { id: true, second_life_price_cents: true },
-  });
-  return Object.fromEntries(rows.map((row) => [row.id, row.second_life_price_cents as number]));
+/** Refurbished items' second-life prices on `today`, by asset id. */
+export async function secondLifePrices(
+  db: PrismaClient,
+  today: string
+): Promise<Record<string, number>> {
+  const items = await assetsOn(db, today);
+  return Object.fromEntries(
+    items
+      .filter((item) => item.secondLifePriceCents !== null)
+      .map((item) => [item.asset.id, item.secondLifePriceCents as number])
+  );
 }
 
-/** The price lists with second-life prices in place, as every page and quote should see them. */
-export async function effectivePriceLists(db: PrismaClient): Promise<PriceList[]> {
-  const [lists, prices] = await Promise.all([loadPriceLists(), secondLifePrices(db)]);
+/** The price lists with second-life prices in place on `today`, as pages and quotes see them. */
+export async function effectivePriceLists(db: PrismaClient, today: string): Promise<PriceList[]> {
+  const [lists, prices] = await Promise.all([loadPriceLists(), secondLifePrices(db, today)]);
   return applySecondLifePrices(lists, prices);
 }
 
@@ -117,6 +122,7 @@ export type RefurbishResult =
       reason:
         | 'not_found'
         | 'not_returned'
+        | 'later_history'
         | 'invalid_usage'
         | 'cannot_downgrade'
         | 'cannot_reach_new'
@@ -141,6 +147,8 @@ export async function refurbishItem(
   const row = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!row) return { ok: false, reason: 'not_found' };
   if (row.status !== 'returned') return { ok: false, reason: 'not_returned' };
+  if (await hasLaterHistory(db, input.assetId, todayIso))
+    return { ok: false, reason: 'later_history' };
   if (!Number.isInteger(input.usageFound) || input.usageFound < 0 || input.usageFound > MAX_USAGE) {
     return { ok: false, reason: 'invalid_usage' };
   }

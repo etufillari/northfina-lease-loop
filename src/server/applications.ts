@@ -13,7 +13,7 @@ import { quoteLease, type LeaseQuote } from '@/domain/pricing';
 import type { EligibilityRuleId, EligibilityStatus } from '@/domain/question-flow';
 import { vatPercentOn } from '@/domain/vat';
 import { canBeLeasedBy } from '@/domain/availability';
-import { getAsset, getAssetExtras } from './assets';
+import { assetOn } from './asset-state';
 import { withAudit } from './audit';
 
 export type SubmitApplicationInput = {
@@ -59,19 +59,22 @@ export async function submitApplication(
   input: SubmitApplicationInput,
   todayIso: string
 ): Promise<SubmitApplicationResult> {
-  const [asset, priceLists, table, vatRates, questionsFile] = await Promise.all([
-    getAsset(db, input.assetId),
-    effectivePriceLists(db),
+  const [item, priceLists, table, vatRates, questionsFile] = await Promise.all([
+    assetOn(db, input.assetId, todayIso),
+    effectivePriceLists(db, todayIso),
     loadCoefficientTable(),
     effectiveVatRates(db),
     loadQuestions(),
   ]);
-  if (!asset) return { ok: false, reason: 'asset_not_found' };
-  const extras = await getAssetExtras(db, asset.id);
-  const leasable = canBeLeasedBy(
-    { status: asset.status, reservedFor: extras?.reservedFor ?? null },
-    input.customerId ?? null
-  );
+  if (!item) return { ok: false, reason: 'asset_not_found' };
+  const asset = item.asset;
+  // An item with later history (time travel) can only be looked at, not leased.
+  const leasable =
+    !item.laterHistory &&
+    canBeLeasedBy(
+      { status: asset.status, reservedFor: item.reservedFor },
+      input.customerId ?? null
+    );
   if (!leasable) return { ok: false, reason: 'asset_not_available' };
 
   const price = listPriceOn(priceLists, asset.id, todayIso);

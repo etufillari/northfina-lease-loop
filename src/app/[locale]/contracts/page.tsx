@@ -25,7 +25,7 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
   const viewer = await currentViewer();
   // Staff see every contract; a customer sees theirs; a guest sees those made as a guest.
   const filter = viewer.kind === 'staff' ? null : { customerId: viewerCustomerId(viewer) };
-  const [contracts, assets] = await Promise.all([listContracts(db, filter), listAssets(db)]);
+  const [contracts, assets] = await Promise.all([listContracts(db, filter, today), listAssets(db)]);
   const assetName = new Map(assets.map((a) => [a.id, `${a.make} ${a.model}`]));
   const date = (iso: string) => formatIsoDate(iso, locale);
 

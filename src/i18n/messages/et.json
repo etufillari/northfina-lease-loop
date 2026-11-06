@@ -467,5 +467,7 @@
   "secondLife.repair.hydraulics": "Hüdraulika",
   "secondLife.repair.cabin_glass": "Kabiini klaas",
   "secondLife.repair.rust_paint": "Roostetõrje ja värv",
-  "secondLife.repair.electrics": "Elektrisüsteem"
+  "secondLife.repair.electrics": "Elektrisüsteem",
+  "timeTravel.lockedItem": "näed seda toodet sellisena, nagu see oli rakenduse kuupäeval. Sellel on hilisem ajalugu, seega seda ei saa siin muuta: muudatuste tegemiseks liigu edasi selle olevikku (või vajuta „Tagasi tänasesse”).",
+  "timeTravel.notSignedYet": "rakenduse kuupäeval seda lepingut veel ei ole. See allkirjastatakse {date}."
 }

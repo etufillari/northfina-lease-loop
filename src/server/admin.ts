@@ -4,6 +4,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { contractStage } from '@/domain/contract';
 import { listContracts, type Contract } from './contracts';
+import { assetsOn } from './asset-state';
 import { receivedInvoices } from './invoices';
 
 export type AdminOverview = {
@@ -26,10 +27,10 @@ export type AdminOverview = {
 export async function adminOverview(db: PrismaClient, todayIso: string): Promise<AdminOverview> {
   // Invoices first: reading them issues any that are due, so the audit log below includes that.
   const received = await receivedInvoices(db, null, todayIso);
-  const [contracts, decisions, statuses, audit] = await Promise.all([
-    listContracts(db),
+  const [contracts, decisions, items, audit] = await Promise.all([
+    listContracts(db, null, todayIso),
     db.application.groupBy({ by: ['decision'], _count: { _all: true } }),
-    db.asset.groupBy({ by: ['status'], _count: { _all: true } }),
+    assetsOn(db, todayIso),
     db.auditLog.findMany({ orderBy: { id: 'desc' }, take: 15 }),
   ]);
 
@@ -39,7 +40,8 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
     stages[contract.status === 'active' ? contractStage(contract, todayIso) : closed] += 1;
   }
   const decided = Object.fromEntries(decisions.map((d) => [d.decision, d._count._all]));
-  const byStatus = Object.fromEntries(statuses.map((s) => [s.status, s._count._all]));
+  const byStatus: Partial<Record<string, number>> = {};
+  for (const item of items) byStatus[item.asset.status] = (byStatus[item.asset.status] ?? 0) + 1;
   const due = received.filter((r) => r.invoice.status === 'due');
   const paid = received.filter((r) => r.invoice.status === 'paid');
   const sum = (list: typeof received) => list.reduce((cents, r) => cents + r.invoice.totalCents, 0);

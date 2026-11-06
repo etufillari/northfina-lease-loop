@@ -18,7 +18,8 @@ import { vatPercentOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
-import { getAsset, getAssetExtras } from '@/server/assets';
+import { getAsset } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
 import { viewerCustomerId } from '@/server/viewer';
 import { canBeLeasedBy } from '@/domain/availability';
 import { db } from '@/server/db';
@@ -49,18 +50,19 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
     );
   }
 
-  const [{ today }, viewer, extras] = await Promise.all([
-    appDate(),
-    currentViewer(),
-    getAssetExtras(db, asset.id),
-  ]);
-  // Available to anyone, or reserved for this viewer (an item passed on to them).
-  const leasable = canBeLeasedBy(
-    { status: asset.status, reservedFor: extras?.reservedFor ?? null },
-    viewerCustomerId(viewer)
-  );
+  const [{ today }, viewer] = await Promise.all([appDate(), currentViewer()]);
+  // As it was on the app's date. Available to anyone, or reserved for this viewer (an item
+  // passed on to them); never while it has later history (time travel only looks back).
+  const item = await assetOn(db, asset.id, today);
+  const leasable =
+    !!item &&
+    !item.laterHistory &&
+    canBeLeasedBy(
+      { status: item.asset.status, reservedFor: item.reservedFor },
+      viewerCustomerId(viewer)
+    );
   const [priceLists, table, vatRates, questionsFile] = await Promise.all([
-    effectivePriceLists(db),
+    effectivePriceLists(db, today),
     loadCoefficientTable(),
     effectiveVatRates(db),
     loadQuestions(),

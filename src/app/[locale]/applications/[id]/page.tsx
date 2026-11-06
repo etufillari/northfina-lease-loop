@@ -16,7 +16,8 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { getApplication } from '@/server/applications';
-import { getAsset } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
+import { contractOn } from '@/domain/state-on';
 import { getContractForApplication } from '@/server/contracts';
 import { db } from '@/server/db';
 import { currentViewer } from '@/server/current-viewer';
@@ -38,19 +39,21 @@ export default async function ApplicationPage({
     const owner = (await loadCustomers()).find((c) => c.id === application.customerId);
     return <NotYoursNotice ownerName={owner?.name ?? null} locale={locale} t={getT(locale)} />;
   }
-  const contract = await getContractForApplication(db, application.id);
-  if (contract) redirect(`/${locale}/contracts/${contract.id}`);
+  const { today } = await appDate();
+  // Signed already (on or before the app's date): show the contract instead.
+  const signed = await getContractForApplication(db, application.id);
+  if (signed && contractOn(signed, today)) redirect(`/${locale}/contracts/${signed.id}`);
 
-  const [asset, table, vatRates, priceLists] = await Promise.all([
-    getAsset(db, application.assetId),
+  const [item, table, vatRates, priceLists] = await Promise.all([
+    assetOn(db, application.assetId, today),
     loadCoefficientTable(),
     effectiveVatRates(db),
-    effectivePriceLists(db),
+    effectivePriceLists(db, today),
   ]);
-  if (!asset) notFound();
+  if (!item) notFound();
+  const asset = item.asset;
 
   const t = getT(locale);
-  const { today } = await appDate();
   const check = checkSignable({
     decision: application.decision,
     quoteDate: application.quoteDate,

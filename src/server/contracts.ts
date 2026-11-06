@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { loadCoefficientTable } from '@/data/load';
 import { checkSignable, contractPeriod } from '@/domain/contract';
+import { contractOn } from '@/domain/state-on';
+import { hasLaterHistory } from './asset-state';
 import { percentOfCents } from '@/domain/money';
 import { getApplication } from './applications';
 import { withAudit } from './audit';
@@ -72,16 +74,20 @@ export async function getContract(db: PrismaClient, id: string): Promise<Contrac
 
 /**
  * Contracts, newest first: all of them, or only those of one customer (`null` = made by a guest).
+ * With `today`, as they were on that date: not yet signed ones left out, later endings undone.
  */
 export async function listContracts(
   db: PrismaClient,
-  filter: { customerId: string | null } | null = null
+  filter: { customerId: string | null } | null = null,
+  today?: string
 ): Promise<Contract[]> {
   const rows = await db.contract.findMany({
     where: filter ? { customer_id: filter.customerId } : {},
     orderBy: { created_at: 'desc' },
   });
-  return rows.map(toContract);
+  const contracts = rows.map(toContract);
+  if (!today) return contracts;
+  return contracts.flatMap((contract) => contractOn(contract, today) ?? []);
 }
 
 /** The contract signed from an application, if there is one. */
@@ -106,7 +112,8 @@ export type SignContractResult =
         | 'not_approved'
         | 'quote_expired'
         | 'signed_before_quote'
-        | 'asset_not_available';
+        | 'asset_not_available'
+        | 'later_history';
       contractId?: string;
     };
 
@@ -132,6 +139,9 @@ export async function signContract(
     signDate: todayIso,
   });
   if (!check.ok) return { ok: false, reason: check.reason };
+  if (await hasLaterHistory(db, application.assetId, todayIso)) {
+    return { ok: false, reason: 'later_history' };
+  }
 
   // The buyout is fixed at signing too, from the coefficient table in force today.
   const table = await loadCoefficientTable();

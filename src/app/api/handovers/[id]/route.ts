@@ -11,6 +11,11 @@ import { respondToHandover } from '@/server/end-of-term';
 const bodySchema = z.strictObject({ accept: z.boolean() });
 
 const failures = {
+  later_history: [
+    409,
+    'LATER_HISTORY',
+    'This item has later history: travel forward to its present to change it',
+  ],
   not_found: [404, 'NOT_FOUND', 'Handover not found'],
   not_yours: [403, 'NOT_YOURS', 'This item was passed on to another customer'],
   already_decided: [409, 'ALREADY_DECIDED', 'This has already been answered'],

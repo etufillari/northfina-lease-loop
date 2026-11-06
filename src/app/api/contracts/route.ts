@@ -17,6 +17,11 @@ const signSchema = z.strictObject({
 });
 
 const failures = {
+  later_history: [
+    409,
+    'LATER_HISTORY',
+    'This item has later history: travel forward to its present to change it',
+  ],
   application_not_found: [404, 'NOT_FOUND', 'Application not found'],
   already_signed: [409, 'ALREADY_SIGNED', 'This application has already been signed'],
   not_approved: [409, 'NOT_APPROVED', 'This application cannot be signed online'],

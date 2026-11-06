@@ -18,7 +18,10 @@ import { vatPercentOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
-import { getAsset, getAssetExtras } from '@/server/assets';
+import { getAsset } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
+import { contractOn } from '@/domain/state-on';
+import { TimeTravelNotice } from '@/components/time-travel-notice';
 import { listContractsForAsset } from '@/server/contracts';
 import { listRefurbishments } from '@/server/second-life';
 import { assetTimeline } from '@/domain/asset-timeline';
@@ -52,23 +55,26 @@ export default async function AssetPage({
   // Render on every request: the price depends on today's date and the item on the database.
   await connection();
 
-  const [asset, priceLists, table, vatRates] = await Promise.all([
-    getAsset(db, id),
-    effectivePriceLists(db),
+  const { today } = await appDate();
+  // The item as it was on the app's date (time travel goes both ways; see asset-state.ts).
+  const [item, priceLists, table, vatRates] = await Promise.all([
+    assetOn(db, id, today),
+    effectivePriceLists(db, today),
     loadCoefficientTable(),
     effectiveVatRates(db),
   ]);
-  if (!asset) notFound();
+  if (!item) notFound();
+  const asset = item.asset;
 
   const t = getT(locale);
-  const [{ today }, viewer, extras, customers, contracts, refurbishments] = await Promise.all([
-    appDate(),
+  const [viewer, customers, allContracts, allRefurbishments] = await Promise.all([
     currentViewer(),
-    getAssetExtras(db, asset.id),
     loadCustomers(),
     listContractsForAsset(db, asset.id),
     listRefurbishments(db, asset.id),
   ]);
+  const contracts = allContracts.flatMap((c) => contractOn(c, today) ?? []);
+  const refurbishments = allRefurbishments.filter((r) => r.date <= today);
   // The passport: the data pack's counted lives, then our own leases and refurbishments.
   const timeline = assetTimeline(
     asset,
@@ -87,10 +93,13 @@ export default async function AssetPage({
     })),
     today
   );
-  const reservedFor = extras?.reservedFor ?? null;
+  const reservedFor = item.reservedFor;
   const heldForName = customers.find((c) => c.id === reservedFor)?.name ?? null;
   // Available to anyone, or reserved for the viewer (an item passed on to them).
-  const leasable = canBeLeasedBy({ status: asset.status, reservedFor }, viewerCustomerId(viewer));
+  // Locked while the item has later history: you can look at the past, not change it.
+  const leasable =
+    !item.laterHistory &&
+    canBeLeasedBy({ status: asset.status, reservedFor }, viewerCustomerId(viewer));
   const price = listPriceOn(priceLists, asset.id, today);
   const change = nextPriceChange(priceLists, asset.id, today);
   const vatPercent = vatPercentOn(vatRates, today);
@@ -120,6 +129,10 @@ export default async function AssetPage({
         </div>
         <StatusBadge status={asset.status} t={t} />
       </div>
+
+      {item.laterHistory ? (
+        <TimeTravelNotice text={t('timeTravel.lockedItem')} locale={locale} t={t} inline />
+      ) : null}
 
       {asset.status !== 'available' ? (
         <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
@@ -166,7 +179,7 @@ export default async function AssetPage({
             {price.ok ? (
               <>
                 {' · '}
-                {extras?.secondLifePriceCents
+                {item.secondLifePriceCents
                   ? t('asset.secondLifePrice')
                   : t('asset.priceListVersion', { version: price.priceListVersion })}
               </>

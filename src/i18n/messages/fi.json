@@ -467,5 +467,7 @@
   "secondLife.repair.hydraulics": "Hydrauliikka",
   "secondLife.repair.cabin_glass": "Ohjaamon lasi",
   "secondLife.repair.rust_paint": "Ruostesuojaus ja maalaus",
-  "secondLife.repair.electrics": "Sähköjärjestelmä"
+  "secondLife.repair.electrics": "Sähköjärjestelmä",
+  "timeTravel.lockedItem": "näet tämän tuotteen sellaisena kuin se oli sovelluksen päivämääränä. Sillä on myöhempää historiaa, joten sitä ei voi muuttaa tässä: siirry eteenpäin sen nykyhetkeen (tai paina ”Takaisin tähän päivään”) tehdäksesi muutoksia.",
+  "timeTravel.notSignedYet": "sovelluksen päivämääränä tätä sopimusta ei vielä ole. Se allekirjoitetaan {date}."
 }

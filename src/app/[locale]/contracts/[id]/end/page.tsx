@@ -13,7 +13,9 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
-import { getAsset } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
+import { contractOn } from '@/domain/state-on';
+import { TimeTravelNotice } from '@/components/time-travel-notice';
 import { getContract } from '@/server/contracts';
 import { currentViewer } from '@/server/current-viewer';
 import { db } from '@/server/db';
@@ -36,13 +38,27 @@ export default async function EndOfTermPage({ params }: PageProps<'/[locale]/con
   }
 
   const { today } = await appDate();
-  const [asset, invoices, vatRates] = await Promise.all([
-    getAsset(db, contract.assetId),
+  // As it was on the app's date (time travel): not signed yet, or still running.
+  const contractThen = contractOn(contract, today);
+  if (!contractThen) {
+    return (
+      <TimeTravelNotice
+        text={t('timeTravel.notSignedYet', { date: formatIsoDate(contract.signedDate, locale) })}
+        locale={locale}
+        t={t}
+      />
+    );
+  }
+  const [item, invoices, vatRates] = await Promise.all([
+    assetOn(db, contract.assetId, today),
     contractInvoices(db, contract, today),
     effectiveVatRates(db),
   ]);
-  if (!asset) notFound();
-  const choice = endOfTermChoice(contract, invoices ?? [], today);
+  if (!item) notFound();
+  const asset = item.asset;
+  const choice = endOfTermChoice(contractThen, invoices ?? [], today);
+  // Its later history locks the item: the past can be looked at, not changed.
+  const locked = item.laterHistory;
   const quote = buyoutQuote(contract.buyoutCents, vatRates, today);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const contractHref = `/${locale}/contracts/${contract.id}`;
@@ -64,7 +80,11 @@ export default async function EndOfTermPage({ params }: PageProps<'/[locale]/con
         })}
       </p>
 
-      {choice.canDecide && !choice.settled ? (
+      {locked ? (
+        <TimeTravelNotice text={t('timeTravel.lockedItem')} locale={locale} t={t} inline />
+      ) : null}
+
+      {!locked && choice.canDecide && !choice.settled ? (
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
           <p className="mb-3">
             {t('end.unpaid', { count: choice.unpaidCount, total: euro(choice.unpaidCents) })}
@@ -80,7 +100,7 @@ export default async function EndOfTermPage({ params }: PageProps<'/[locale]/con
         </div>
       ) : null}
 
-      {choice.canDecide ? (
+      {!locked && choice.canDecide ? (
         <div className="mt-8">
           <EndOfTermChoices
             contractId={contract.id}

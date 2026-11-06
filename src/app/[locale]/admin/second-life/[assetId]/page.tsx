@@ -18,7 +18,9 @@ import { vatPercentOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
-import { getAsset, getAssetExtras } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
+import { TimeTravelNotice } from '@/components/time-travel-notice';
+import { contractOn } from '@/domain/state-on';
 import { listContractsForAsset } from '@/server/contracts';
 import { db } from '@/server/db';
 import { listRefurbishments, originalListPrice } from '@/server/second-life';
@@ -32,48 +34,43 @@ export default async function WorkbenchPage({
   await connection();
 
   const t = getT(locale);
-  const asset = await getAsset(db, assetId);
-  if (!asset) notFound();
   const { today } = await appDate();
-  const [
-    extras,
-    original,
-    curves,
-    costs,
-    demand,
-    table,
-    vatRates,
-    customers,
-    contracts,
-    refurbishments,
-  ] = await Promise.all([
-    getAssetExtras(db, asset.id),
-    originalListPrice(asset.id),
-    loadResidualCurves(),
-    loadRefurbishmentCosts(),
-    loadSecondLifeDemand(),
-    loadCoefficientTable(),
-    effectiveVatRates(db),
-    loadCustomers(),
-    listContractsForAsset(db, asset.id),
-    listRefurbishments(db, asset.id),
-  ]);
+  // As it was on the app's date; while it has later history it can only be looked at.
+  const item = await assetOn(db, assetId, today);
+  if (!item) notFound();
+  const asset = item.asset;
+  const [original, curves, costs, demand, table, vatRates, customers, contracts, refurbishments] =
+    await Promise.all([
+      originalListPrice(asset.id),
+      loadResidualCurves(),
+      loadRefurbishmentCosts(),
+      loadSecondLifeDemand(),
+      loadCoefficientTable(),
+      effectiveVatRates(db),
+      loadCustomers(),
+      listContractsForAsset(db, asset.id),
+      listRefurbishments(db, asset.id),
+    ]);
   const vatPercent = vatPercentOn(vatRates, today);
   const timeline = assetTimeline(
     asset,
-    contracts.map((c) => ({
-      startDate: c.startDate,
-      endDate: c.endDate,
-      status: c.status,
-      customerName: c.customerName,
-      closedDate: c.boughtDate ?? c.returnedDate,
-    })),
-    refurbishments.map((r) => ({
-      date: r.date,
-      conditionBefore: r.conditionBefore,
-      conditionAfter: r.conditionAfter,
-      priceCents: r.priceCents,
-    })),
+    contracts
+      .flatMap((c) => contractOn(c, today) ?? [])
+      .map((c) => ({
+        startDate: c.startDate,
+        endDate: c.endDate,
+        status: c.status,
+        customerName: c.customerName,
+        closedDate: c.boughtDate ?? c.returnedDate,
+      })),
+    refurbishments
+      .filter((r) => r.date <= today)
+      .map((r) => ({
+        date: r.date,
+        conditionBefore: r.conditionBefore,
+        conditionAfter: r.conditionAfter,
+        priceCents: r.priceCents,
+      })),
     today
   );
 
@@ -97,7 +94,9 @@ export default async function WorkbenchPage({
       </div>
 
       <div className="mt-8">
-        {asset.status === 'returned' && original !== null && vatPercent !== null ? (
+        {item.laterHistory ? (
+          <TimeTravelNotice text={t('timeTravel.lockedItem')} locale={locale} t={t} />
+        ) : asset.status === 'returned' && original !== null && vatPercent !== null ? (
           <SecondLifeWorkbench
             asset={asset}
             originalNetCents={original}
@@ -108,7 +107,7 @@ export default async function WorkbenchPage({
             table={table}
             vatPercent={vatPercent}
             today={today}
-            heldForName={customers.find((c) => c.id === extras?.reservedFor)?.name ?? null}
+            heldForName={customers.find((c) => c.id === item.reservedFor)?.name ?? null}
             locale={locale}
           />
         ) : (

@@ -467,5 +467,7 @@
   "secondLife.repair.hydraulics": "Hydraulik",
   "secondLife.repair.cabin_glass": "Hyttglas",
   "secondLife.repair.rust_paint": "Rostskydd och lack",
-  "secondLife.repair.electrics": "Elsystem"
+  "secondLife.repair.electrics": "Elsystem",
+  "timeTravel.lockedItem": "du ser den här artikeln som den var på appens datum. Den har senare historik, så den kan inte ändras här: res framåt till dess nutid (eller tryck på ”Tillbaka till i dag”) för att göra ändringar.",
+  "timeTravel.notSignedYet": "på appens datum finns det här avtalet inte ännu. Det skrivs under den {date}."
 }

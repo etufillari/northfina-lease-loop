@@ -11,7 +11,7 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
-import { toAsset } from '@/server/assets';
+import { assetsOn } from '@/server/asset-state';
 import { db } from '@/server/db';
 
 export default async function SecondLifePage({ params }: PageProps<'/[locale]/admin/second-life'>) {
@@ -21,14 +21,12 @@ export default async function SecondLifePage({ params }: PageProps<'/[locale]/ad
 
   const t = getT(locale);
   const [{ today }, demand] = await Promise.all([appDate(), loadSecondLifeDemand()]);
-  const [returned, refurbished, customers] = await Promise.all([
-    db.asset.findMany({ where: { status: 'returned' }, orderBy: { id: 'asc' } }),
-    db.asset.findMany({
-      where: { second_life_price_cents: { not: null }, status: { not: 'returned' } },
-      orderBy: { updated_at: 'desc' },
-    }),
-    loadCustomers(),
-  ]);
+  // Items as they were on the app's date (time travel goes both ways).
+  const [items, customers] = await Promise.all([assetsOn(db, today), loadCustomers()]);
+  const returned = items.filter((item) => item.asset.status === 'returned');
+  const refurbished = items.filter(
+    (item) => item.secondLifePriceCents !== null && item.asset.status !== 'returned'
+  );
   const nameOf = (id: string | null) => customers.find((c) => c.id === id)?.name ?? null;
 
   return (
@@ -53,9 +51,9 @@ export default async function SecondLifePage({ params }: PageProps<'/[locale]/ad
         <p className="mt-4 text-stone-600 dark:text-stone-400">{t('secondLife.queueEmpty')}</p>
       ) : (
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {returned.map((row) => {
-            const asset = toAsset(row);
-            const heldFor = nameOf(row.reserved_for);
+          {returned.map((item) => {
+            const asset = item.asset;
+            const heldFor = nameOf(item.reservedFor);
             return (
               <li
                 key={asset.id}
@@ -94,8 +92,8 @@ export default async function SecondLifePage({ params }: PageProps<'/[locale]/ad
         <p className="mt-4 text-stone-600 dark:text-stone-400">{t('secondLife.doneEmpty')}</p>
       ) : (
         <ul className="mt-4 space-y-2">
-          {refurbished.map((row) => {
-            const asset = toAsset(row);
+          {refurbished.map((item) => {
+            const asset = item.asset;
             return (
               <li
                 key={asset.id}
@@ -109,7 +107,7 @@ export default async function SecondLifePage({ params }: PageProps<'/[locale]/ad
                 </Link>
                 <span className="flex items-center gap-3 text-sm">
                   {t(`condition.${asset.condition}`)} ·{' '}
-                  {formatEuro(row.second_life_price_cents ?? 0, intlLocale[locale])}
+                  {formatEuro(item.secondLifePriceCents ?? 0, intlLocale[locale])}
                   <StatusBadge status={asset.status} t={t} />
                 </span>
               </li>

@@ -74,7 +74,7 @@ describe('refurbishItem', () => {
     expect(await db.auditLog.count({ where: { action: 'asset.refurbished' } })).toBe(1);
 
     // From now on every quote uses the second-life price, not the price when new
-    const lists = await effectivePriceLists(db);
+    const lists = await effectivePriceLists(db, TODAY);
     expect(listPriceOn(lists, 'ebike-007', TODAY)).toMatchObject({ priceCents: 172_700 });
     expect(await originalListPrice('ebike-007')).toBe(549_000);
   });

@@ -3,6 +3,7 @@
 // them that are refurbished and ready to lease, and invoices to pay.
 import type { PrismaClient } from '@/generated/prisma/client';
 import { contractStage } from '@/domain/contract';
+import { assetsOn } from './asset-state';
 import { listContracts, type Contract } from './contracts';
 import { pendingHandovers, type Handover } from './end-of-term';
 import { receivedInvoices, type ReceivedInvoice } from './invoices';
@@ -24,20 +25,22 @@ export async function notificationsFor(
 ): Promise<Notifications> {
   const filter = viewer.kind === 'staff' ? null : { customerId: viewerCustomerId(viewer) };
   const [contracts, received, handovers, ready] = await Promise.all([
-    listContracts(db, filter),
+    listContracts(db, filter, todayIso),
     receivedInvoices(db, filter, todayIso),
     // Only a customer can receive an item; staff see every pending handover.
     viewer.kind === 'guest'
       ? Promise.resolve([])
       : pendingHandovers(db, viewer.kind === 'staff' ? null : viewer.customer.id, todayIso),
-    viewer.kind === 'customer'
-      ? db.asset.findMany({
-          where: { status: 'reserved', reserved_for: viewer.customer.id },
-          select: { id: true },
-        })
-      : Promise.resolve([]),
+    viewer.kind === 'customer' ? assetsOn(db, todayIso) : Promise.resolve([]),
   ]);
-  const readyForYou = ready.map((row) => row.id);
+  const readyForYou = ready
+    .filter(
+      (item) =>
+        viewer.kind === 'customer' &&
+        item.asset.status === 'reserved' &&
+        item.reservedFor === viewer.customer.id
+    )
+    .map((item) => item.asset.id);
   const endedLeases = contracts.filter(
     (contract) => contract.status === 'active' && contractStage(contract, todayIso) === 'ended'
   );

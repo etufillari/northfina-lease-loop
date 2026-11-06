@@ -113,7 +113,7 @@ export async function receivedInvoices(
   filter: { customerId: string | null } | null,
   today: string
 ): Promise<ReceivedInvoice[]> {
-  const contracts = await listContracts(db, filter);
+  const contracts = await listContracts(db, filter, today);
   const perContract = await Promise.all(
     contracts.map(async (contract) => {
       const invoices = (await contractInvoices(db, contract, today)) ?? [];

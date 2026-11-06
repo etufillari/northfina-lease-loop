@@ -10,6 +10,7 @@ import { currentViewer } from './current-viewer';
 import { db } from './db';
 import { contractInvoices } from './invoices';
 import { canSee } from './viewer';
+import { contractOn } from '@/domain/state-on';
 
 export type InvoiceAccess =
   | { kind: 'not_found' }
@@ -30,6 +31,8 @@ export async function loadInvoice(contractId: string, number: string): Promise<I
     return { kind: 'not_yours', ownerName: owner?.name ?? null };
   }
   const { today } = await appDate();
+  // Not signed yet on the app's date (time travel): its invoices don't exist yet either.
+  if (!contractOn(contract, today)) return { kind: 'not_found' };
   const [invoices, asset] = await Promise.all([
     contractInvoices(db, contract, today),
     getAsset(db, contract.assetId),

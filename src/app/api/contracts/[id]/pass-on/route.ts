@@ -16,6 +16,11 @@ const bodySchema = z.strictObject({
 });
 
 const failures = {
+  later_history: [
+    409,
+    'LATER_HISTORY',
+    'This item has later history: travel forward to its present to change it',
+  ],
   not_found: [404, 'NOT_FOUND', 'Contract not found'],
   not_ended: [409, 'NOT_ENDED', 'The lease has not ended yet'],
   already_decided: [409, 'ALREADY_DECIDED', 'The end of this lease has already been decided'],

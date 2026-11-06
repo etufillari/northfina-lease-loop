@@ -467,5 +467,7 @@
   "secondLife.repair.hydraulics": "Hydraulics",
   "secondLife.repair.cabin_glass": "Cabin glass",
   "secondLife.repair.rust_paint": "Rust treatment and paint",
-  "secondLife.repair.electrics": "Electrics"
+  "secondLife.repair.electrics": "Electrics",
+  "timeTravel.lockedItem": "you are looking at this item as it was on the app’s date. It has later history, so it can’t be changed here: travel forward to its present (or press “Back to today”) to make changes.",
+  "timeTravel.notSignedYet": "on the app’s date this contract doesn’t exist yet. It is signed on {date}."
 }

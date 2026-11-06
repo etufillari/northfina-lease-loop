@@ -5,16 +5,20 @@ import type { Handover as HandoverRow, PrismaClient } from '@/generated/prisma/c
 import { loadCustomers } from '@/data/load';
 import { buyoutQuote, endOfTermChoice } from '@/domain/end-of-term';
 import { withAudit } from './audit';
+import { hasLaterHistory } from './asset-state';
 import { getContract, toContract, type Contract } from './contracts';
 import { contractInvoices } from './invoices';
 import { effectiveVatRates } from './vat';
 
-type Refusal = 'not_found' | 'not_ended' | 'already_decided' | 'unpaid_invoices';
+type Refusal = 'not_found' | 'not_ended' | 'already_decided' | 'unpaid_invoices' | 'later_history';
 
 /** Loads a contract and checks that its end of term can be decided now, settled. */
 async function decidable(db: PrismaClient, contractId: string, todayIso: string) {
   const contract = await getContract(db, contractId);
   if (!contract) return { ok: false as const, reason: 'not_found' as const };
+  if (await hasLaterHistory(db, contract.assetId, todayIso)) {
+    return { ok: false as const, reason: 'later_history' as const };
+  }
   const invoices = (await contractInvoices(db, contract, todayIso)) ?? [];
   const choice = endOfTermChoice(contract, invoices, todayIso);
   if (!choice.canDecide) {
@@ -195,8 +199,9 @@ export async function pendingHandovers(
   todayIso: string
 ): Promise<Handover[]> {
   const rows = await db.handover.findMany({
+    // Pending on that date: not answered yet, or answered only after it (time travel).
     where: {
-      status: 'pending',
+      OR: [{ status: 'pending' }, { decided_date: { gt: todayIso } }],
       passed_date: { lte: todayIso },
       ...(toCustomerId ? { to_customer_id: toCustomerId } : {}),
     },
@@ -215,7 +220,10 @@ export async function handoverForContract(
 
 export type RespondResult =
   | { ok: true; status: 'accepted' | 'declined' }
-  | { ok: false; reason: 'not_found' | 'not_yours' | 'already_decided' | 'not_yet' };
+  | {
+      ok: false;
+      reason: 'not_found' | 'not_yours' | 'already_decided' | 'not_yet' | 'later_history';
+    };
 
 /**
  * The recipient's answer, from the day of the pass-on. Accepting marks the item as held for them
@@ -230,8 +238,10 @@ export async function respondToHandover(
   const row = await db.handover.findUnique({ where: { id: input.handoverId } });
   if (!row) return { ok: false, reason: 'not_found' };
   if (row.to_customer_id !== input.customerId) return { ok: false, reason: 'not_yours' };
-  if (row.status !== 'pending') return { ok: false, reason: 'already_decided' };
   if (todayIso < row.passed_date) return { ok: false, reason: 'not_yet' };
+  if (row.decided_date && row.decided_date > todayIso)
+    return { ok: false, reason: 'later_history' };
+  if (row.status !== 'pending') return { ok: false, reason: 'already_decided' };
   const status = input.accept ? 'accepted' : 'declined';
 
   await withAudit(

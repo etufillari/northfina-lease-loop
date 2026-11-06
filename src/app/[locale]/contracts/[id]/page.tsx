@@ -21,7 +21,10 @@ import { differentPriceOn } from '@/domain/price-list';
 import { vatPercentOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
-import { getAsset } from '@/server/assets';
+import { assetOn } from '@/server/asset-state';
+import { contractOn } from '@/domain/state-on';
+import { formatIsoDate } from '@/i18n/format';
+import { TimeTravelNotice } from '@/components/time-travel-notice';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { currentViewer } from '@/server/current-viewer';
@@ -49,18 +52,29 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
     const owner = (await loadCustomers()).find((c) => c.id === contract.customerId);
     return <NotYoursNotice ownerName={owner?.name ?? null} locale={locale} t={getT(locale)} />;
   }
-  const [asset, vatRates, priceLists] = await Promise.all([
-    getAsset(db, contract.assetId),
-    effectiveVatRates(db),
-    effectivePriceLists(db),
-  ]);
-  if (!asset) notFound();
-
-  const t = getT(locale);
   const { today } = await appDate();
+  const t = getT(locale);
+  // As it was on the app's date (time travel): not signed yet, or still running.
+  const contractThen = contractOn(contract, today);
+  if (!contractThen) {
+    return (
+      <TimeTravelNotice
+        text={t('timeTravel.notSignedYet', { date: formatIsoDate(contract.signedDate, locale) })}
+        locale={locale}
+        t={t}
+      />
+    );
+  }
+  const [item, vatRates, priceLists] = await Promise.all([
+    assetOn(db, contract.assetId, today),
+    effectiveVatRates(db),
+    effectivePriceLists(db, today),
+  ]);
+  if (!item) notFound();
+  const asset = item.asset;
   const invoices = (await contractInvoices(db, contract, today)) ?? [];
   const handover =
-    contract.status === 'passed_on' ? await handoverForContract(db, contract.id) : null;
+    contractThen.status === 'passed_on' ? await handoverForContract(db, contract.id) : null;
   const passedTo = handover
     ? ((await loadCustomers()).find((c) => c.id === handover.toCustomerId)?.name ?? null)
     : null;
@@ -75,7 +89,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
       </div>
 
       <ContractDocument
-        view={{ ...contract, number: contractNumber(contract.id) }}
+        view={{ ...contractThen, number: contractNumber(contract.id) }}
         asset={asset}
         vatPercentToday={vatPercentOn(vatRates, today)}
         todaysPrice={differentPriceOn(priceLists, asset.id, today, contract.listPriceCents)}
@@ -88,15 +102,15 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         contractId={contract.id}
         assetId={contract.assetId}
         stage={contractStage(contract, today)}
-        status={contract.status}
+        status={contractThen.status}
         startDate={contract.startDate}
         endDate={contract.endDate}
-        returnedDate={contract.returnedDate}
-        boughtDate={contract.boughtDate}
+        returnedDate={contractThen.returnedDate}
+        boughtDate={contractThen.boughtDate}
         boughtFor={
-          contract.buyoutPaidCents === null
+          contractThen.buyoutPaidCents === null
             ? null
-            : formatEuro(contract.buyoutPaidCents, intlLocale[locale])
+            : formatEuro(contractThen.buyoutPaidCents, intlLocale[locale])
         }
         passedTo={passedTo}
         monthsIssued={splitByDate(invoices, today).issued.length}

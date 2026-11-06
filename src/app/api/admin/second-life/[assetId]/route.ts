@@ -24,6 +24,11 @@ const bodySchema = z.strictObject({
 });
 
 const failures = {
+  later_history: [
+    409,
+    'LATER_HISTORY',
+    'This item has later history: travel forward to its present to change it',
+  ],
   not_found: [404, 'NOT_FOUND', 'Item not found'],
   not_returned: [409, 'NOT_RETURNED', 'Only a returned item can be refurbished'],
   invalid_usage: [422, 'INVALID_USAGE', 'The usage reading must be a whole, non-negative number'],

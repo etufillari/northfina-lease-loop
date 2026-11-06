@@ -30,6 +30,7 @@ const modelPhotos: Record<string, Photo> = {
   'Pro 14': proLaptop,
   'Pro 16': proLaptop,
   'Gamer 17': { src: '/images/laptop-gamer.webp', backdrop: '#202328' },
+  'T-90 Tractor': { src: '/images/farm-machine-loader.webp', backdrop: '#171f2b' },
   'Bale Wrapper 2': { src: '/images/farm-machine-bale-wrapper.webp', backdrop: '#19212e' },
   'T-140 Tractor': {
     src: '/images/farm-machine-t140.webp',

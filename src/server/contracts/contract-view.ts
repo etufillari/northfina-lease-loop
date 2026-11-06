@@ -20,13 +20,13 @@ import { toCustomer } from '../assets/customers';
 import { toAsset } from '../assets/assets';
 import type { PrismaClient } from '../prisma-client';
 import { toInvoiceRecord, type InvoiceWithPayments } from '../invoicing/invoice-record';
+import { endOfTermAvailabilityFor, type EndOfTermAvailability } from '../lifecycle/end-of-term';
 
 type ContractWithRelations = Prisma.ContractGetPayload<{
   include: {
     application: { include: { customer: true } };
     asset: true;
     invoices: { orderBy: { sequence: 'asc' }; include: { payments: true } };
-    history: { orderBy: [{ occurred_on: 'desc' }, { id: 'desc' }] };
   };
 }>;
 
@@ -55,7 +55,7 @@ export type ContractViewActivity = {
   action: string;
   eventType: string | null;
   occurredOn: string;
-  actor: string;
+  actor: string | null;
 };
 
 export type CustomerContractView = {
@@ -82,6 +82,15 @@ export type CustomerContractView = {
   asset: Asset;
   invoices: ContractViewInvoice[];
   activity: ContractViewActivity[];
+  endOfTerm: EndOfTermAvailability;
+  passedOnTo: ContractViewPassOn | null;
+};
+
+export type ContractViewPassOn = {
+  recipient: string;
+  monthlyNetRentCents: number;
+  termMonths: number;
+  marketValueCents: number;
 };
 
 export type ContractViewResult = CustomerContractView | null;
@@ -175,6 +184,11 @@ async function activityFor(
   db: PrismaClient,
   row: ContractWithRelations
 ): Promise<ContractViewActivity[]> {
+  // The passport follows the item, so this reads every life, not only this contract.
+  const history = await db.assetHistory.findMany({
+    where: { asset_id: row.asset_id },
+    orderBy: [{ occurred_on: 'desc' }, { id: 'desc' }],
+  });
   const audits = await db.auditLog.findMany({
     where: { entity_type: 'contract', entity_id: row.id },
     orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
@@ -189,13 +203,14 @@ async function activityFor(
   }));
 
   activities.push(
-    ...row.history.map((history) => ({
-      id: `history-${history.id}`,
+    ...history.map((entry) => ({
+      id: `history-${entry.id}`,
       kind: 'asset' as const,
       action: 'asset.history',
-      eventType: history.event_type,
-      occurredOn: history.occurred_on,
-      actor: history.actor,
+      eventType: entry.event_type,
+      occurredOn: entry.occurred_on,
+      // Other lives may belong to someone else, so their customer stays private.
+      actor: entry.contract_id === row.id ? entry.actor : null,
     }))
   );
 
@@ -203,6 +218,21 @@ async function activityFor(
     (left, right) =>
       right.occurredOn.localeCompare(left.occurredOn) || right.id.localeCompare(left.id)
   );
+}
+
+async function passedOnToFor(
+  db: PrismaClient,
+  contractId: string
+): Promise<ContractViewPassOn | null> {
+  const match = await db.secondLifeMatch.findUnique({ where: { from_contract_id: contractId } });
+  if (!match) return null;
+  const request = JSON.parse(match.request_snapshot_json) as { who?: string };
+  return {
+    recipient: match.recipient_name ?? request.who ?? '',
+    monthlyNetRentCents: match.monthly_net_rent_cents,
+    termMonths: match.term_months,
+    marketValueCents: match.market_value_cents,
+  };
 }
 
 /** Builds the read-only customer contract screen without changing invoice state. */
@@ -217,7 +247,6 @@ export async function getCustomerContract(
       application: { include: { customer: true } },
       asset: true,
       invoices: { orderBy: { sequence: 'asc' }, include: { payments: true } },
-      history: { orderBy: [{ occurred_on: 'desc' }, { id: 'desc' }] },
     },
   });
   if (!row) return null;
@@ -249,5 +278,7 @@ export async function getCustomerContract(
     asset: toAsset(row.asset),
     invoices: await invoicesFor(row, asOf),
     activity: await activityFor(db, row),
+    endOfTerm: endOfTermAvailabilityFor(row, asOf),
+    passedOnTo: await passedOnToFor(db, row.id),
   };
 }

@@ -13,6 +13,13 @@ import {
 import { paymentStateFor } from '@/domain/invoicing/payments';
 import { withAudit, type TransactionClient } from '../audit';
 import type { PrismaClient } from '../prisma-client';
+import {
+  handoverReportFields,
+  passOnRecipientSchema,
+  recordPassOn,
+  resolvePassOn,
+  type PassOnServiceFailure,
+} from './pass-on';
 import { z } from 'zod';
 
 const endOfTermBase = {
@@ -23,7 +30,12 @@ const endOfTermBase = {
 export const endOfTermRequestSchema = z.discriminatedUnion('action', [
   z.strictObject({ ...endOfTermBase, action: z.literal('bought'), buyoutPaidCents: centsSchema }),
   z.strictObject({ ...endOfTermBase, action: z.literal('returned') }),
-  z.strictObject({ ...endOfTermBase, action: z.literal('passed_on') }),
+  z.strictObject({
+    ...endOfTermBase,
+    ...handoverReportFields,
+    action: z.literal('passed_on'),
+    recipient: passOnRecipientSchema,
+  }),
 ]);
 
 export type EndOfTermRequest = z.infer<typeof endOfTermRequestSchema>;
@@ -32,7 +44,20 @@ export type EndOfTermServiceFailure =
   | { ok: false; reason: 'contract_not_found' }
   | { ok: false; reason: 'invoice_schedule_not_generated' }
   | { ok: false; reason: 'asset_not_reserved'; status: string }
+  | PassOnServiceFailure
   | EndOfTermFailure;
+
+export type EndOfTermAvailability =
+  | { status: 'ready' }
+  | {
+      status: 'blocked';
+      reason:
+        | 'contract_not_active'
+        | 'term_not_finished'
+        | 'rent_balance_outstanding'
+        | 'invoice_schedule_not_generated';
+      outstandingRentCents: number;
+    };
 
 export type CompletedContract = {
   id: string;
@@ -61,7 +86,10 @@ class EndOfTermTransactionFailure extends Error {
   }
 }
 
-function outstandingRentCents(invoices: readonly InvoiceWithPayments[], asOf: string): number {
+export function outstandingRentCents(
+  invoices: readonly InvoiceWithPayments[],
+  asOf: string
+): number {
   return invoices.reduce((total, invoice) => {
     const state = paymentStateFor({
       totalCents: invoice.total_cents,
@@ -76,7 +104,9 @@ function outstandingRentCents(invoices: readonly InvoiceWithPayments[], asOf: st
   }, 0);
 }
 
-function hasCompleteInvoiceSchedule(row: ContractWithInvoices): boolean {
+export function hasCompleteInvoiceSchedule(
+  row: Pick<ContractRow, 'term_months'> & { invoices: Pick<InvoiceRow, 'sequence'>[] }
+): boolean {
   return (
     row.invoices.length === row.term_months &&
     row.invoices.every((invoice, index) => invoice.sequence === index + 1)
@@ -117,6 +147,32 @@ async function findContract(
   });
 }
 
+/** Says whether the customer can choose today, and why not, for the contract page. */
+export function endOfTermAvailabilityFor(
+  row: ContractWithInvoices,
+  asOf: string
+): EndOfTermAvailability {
+  const outstanding = outstandingRentCents(row.invoices, asOf);
+  const decision = decide(row, { action: 'returned', completedOn: asOf, actor: 'availability' });
+  if (decision.ok) {
+    return hasCompleteInvoiceSchedule(row)
+      ? { status: 'ready' }
+      : {
+          status: 'blocked',
+          reason: 'invoice_schedule_not_generated',
+          outstandingRentCents: outstanding,
+        };
+  }
+  if (
+    decision.reason === 'contract_not_active' ||
+    decision.reason === 'term_not_finished' ||
+    decision.reason === 'rent_balance_outstanding'
+  ) {
+    return { status: 'blocked', reason: decision.reason, outstandingRentCents: outstanding };
+  }
+  return { status: 'blocked', reason: 'contract_not_active', outstandingRentCents: outstanding };
+}
+
 /** Completes an active contract and moves its asset in one audited transaction. */
 export async function completeContract(
   db: PrismaClient,
@@ -147,6 +203,7 @@ export async function completeContract(
           assetStatus: { from: 'reserved', to: decision.assetStatus },
           buyoutCents: existing.buyout_cents,
           buyoutPaidCents: decision.buyoutPaidCents,
+          recipientType: input.action === 'passed_on' ? input.recipient.type : null,
         },
       },
       async (tx) => {
@@ -173,6 +230,21 @@ export async function completeContract(
           });
         }
 
+        const passOnDetails =
+          input.action === 'passed_on'
+            ? {
+                condition: input.condition,
+                usageValue: input.usageValue,
+                recipient: input.recipient,
+                completedOn: input.completedOn,
+                actor: input.actor,
+              }
+            : null;
+        const resolvedPassOn = passOnDetails ? await resolvePassOn(tx, asset, passOnDetails) : null;
+        if (resolvedPassOn && !resolvedPassOn.ok) {
+          throw new EndOfTermTransactionFailure(resolvedPassOn);
+        }
+
         const updatedContract = await tx.contract.update({
           where: { id: current.id },
           data: {
@@ -182,10 +254,16 @@ export async function completeContract(
             completed_on: input.completedOn,
           },
         });
-        await tx.asset.update({
-          where: { id: current.asset_id },
-          data: { status: currentDecision.assetStatus },
-        });
+        const passOnRecord =
+          passOnDetails && resolvedPassOn
+            ? await recordPassOn(tx, current, passOnDetails, resolvedPassOn)
+            : null;
+        if (!passOnRecord) {
+          await tx.asset.update({
+            where: { id: current.asset_id },
+            data: { status: currentDecision.assetStatus },
+          });
+        }
         await tx.assetHistory.create({
           data: {
             asset_id: current.asset_id,
@@ -194,9 +272,11 @@ export async function completeContract(
             occurred_on: input.completedOn,
             from_status: 'reserved',
             to_status: currentDecision.assetStatus,
+            condition: passOnDetails?.condition ?? null,
+            usage_unit: passOnDetails ? asset.usage_unit : null,
+            usage_value: passOnDetails?.usageValue ?? null,
             actor: input.actor,
-            details_json:
-              input.action === 'passed_on' ? JSON.stringify({ action: input.action }) : null,
+            details_json: passOnRecord ? JSON.stringify(passOnRecord) : null,
           },
         });
 

@@ -15,8 +15,9 @@ export default async function CustomerContractPage({
   // Contract status and invoice payments are live database data.
   await connection();
 
-  const view = await getCustomerContract(db, contractId, todayIso());
+  const today = todayIso();
+  const view = await getCustomerContract(db, contractId, today);
   if (!view) notFound();
 
-  return <ContractView locale={locale} view={view} />;
+  return <ContractView locale={locale} view={view} today={today} />;
 }

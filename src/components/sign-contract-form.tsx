@@ -68,6 +68,9 @@ export function SignContractForm({
       const contractId = payload.data?.id ?? payload.error?.details?.contractId;
       if (contractId) {
         router.push(`/${locale}/contracts/${contractId}`);
+        // The header's bell is in the shared layout, which a push alone keeps as it was: an
+        // item held for this customer would still say "ready for you" after leasing it.
+        router.refresh();
         return;
       }
       const code = payload.error?.code as keyof typeof errorKeys | undefined;

@@ -3,7 +3,8 @@
 A circular leasing app for e-bikes, laptops and farm machines, built for the Northfina × Hive
 Helsinki hackathon (5–6 Nov 2026). One item goes round the whole loop: catalogue → live price
 → application → signed contract → monthly invoices → end of term (buy, return or pass on) →
-second life (inspect, refurbish, re-price, lease to the next person) — and again.
+second life (inspect, refurbish, re-price, lease to the next person) — and again. Passing a
+lease on works two ways: a hand-over link mid-term, or a successor nominated for when it ends.
 
 No AI inside the product: every decision is a tested rule over the data pack. The challenge is
 in [CHALLENGE.md](CHALLENGE.md), the rules in [RULES.md](RULES.md), and every product and
@@ -11,13 +12,13 @@ engineering decision, with its reasoning, in **[docs/DECISIONS.md](docs/DECISION
 
 ## Smart Problems we picked
 
-| #   | Problem                     | What's smart about it                                                                                                                                                                                                                              |
-| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Lock the price, not the tax | Net rent locked at signing; VAT at the rate on each invoice's due date. The contract page explains the 1 Jan 2027 rise as tax, not price. The quote locks its price-list version for its day and the next (card 2).                                |
-| 2   | Fair early exit             | Re-price the months actually used at the term that would have covered them, plus a two-month fee, at least 6 months charged, never more than staying. The full calculation is shown before confirming.                                             |
-| 3   | Second-life matchmaking     | Return inspection, mandatory work, at most one upgrade only when it pays for itself, re-price at market value, first come first served with a reason per waiter, whole sets for multi-item waiters, offers that lapse and pass on, and a passport. |
-| 4   | The smart question flow     | A pure engine over `data/questions.json`: each question only when it applies, with "why we ask", answers pruned when an earlier one changes, kind stops (under 18, residency), and every eligibility rule returned with its reason.                |
-| 5   | Money that adds up          | Integer cents throughout, one rounding rule, the last invoice absorbs the leftover cents, due dates clamped to short months (31 Jan → 28 Feb → 31 Mar, 29 Feb 2028), property-based tests.                                                         |
+| #   | Problem                     | What's smart about it                                                                                                                                                                                                                                                                                                              |
+| --- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Lock the price, not the tax | Net rent locked at signing; VAT at the rate on each invoice's due date. The contract page explains the 1 Jan 2027 rise as tax, not price. The quote locks its price-list version for its day and the next (card 2).                                                                                                                |
+| 2   | Fair early exit             | Re-price the months actually used at the term that would have covered them, plus a two-month fee, at least 6 months charged, never more than staying. The full calculation is shown before confirming.                                                                                                                             |
+| 3   | Second-life matchmaking     | A meter reading at every return and wear counted across leases at the return inspection, mandatory work, at most one upgrade only when it pays for itself, re-price at market value, first come first served with a reason per waiter, whole sets for multi-item waiters, offers that lapse and pass on, and a passport.           |
+| 4   | The smart question flow     | A pure engine over `data/questions.json`: each question only when it applies, with "why we ask", answers pruned when an earlier one changes, kind stops (under 18, residency), and every eligibility rule returned with its reason — affordability checked in every month of the lease, together with the customer's other leases. |
+| 5   | Money that adds up          | Integer cents throughout, one rounding rule, the last invoice absorbs the leftover cents, due dates clamped to short months (31 Jan → 28 Feb → 31 Mar, 29 Feb 2028), property-based tests.                                                                                                                                         |
 
 Also touched: **#6** (a price breakdown in the configurator) and **#7** (CO₂ avoided per life
 on the passport, from the second life on, and a per-customer counter on My page).
@@ -28,15 +29,6 @@ on the passport, from the second life on, and a per-customer counter on My page)
   running the overnight job for every day passed — unsigned approvals expire, unanswered offers
   pass to the next person — plus a **Reset** that rebuilds the data pack and starts on 1 Jan 2026.
 - **Fleet leases:** several distinct items in one contract, banded on the total.
-- **Pass it on:** hand a lease over mid-term with a link, or nominate a successor who gets the
-  item ahead of the waiting list once it is back and refurbished.
-- **Usage over a lifetime:** lifetime and since-last-battery/service counters, a meter reading
-  at every return, and wear counted across leases at the return inspection.
-- **Affordability over the whole lease:** 30 % of income in every month, with the VAT rise and
-  the leases the customer already has.
-- **Staff desk and audit log:** manual reviews (four-eyes), holds, the second-life desk, and the
-  whole audit trail, filterable and paged.
-- **Four languages** (en, fi, sv, et) with one European date format, shown and typed.
 
 ## Run it
 

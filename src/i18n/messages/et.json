@@ -153,5 +153,6 @@
   "account.applications.contractAvailable": "Leping on saadaval",
   "account.applications.manualReviewDescription": "Sinu taotlus ootab käsitsi läbivaatamist.",
   "account.applications.continueToContract": "Jätka lepingu juurde",
+  "account.applications.contractSigned": "Allkirjastatud",
   "staff.applications.title": "Taotlused"
 }

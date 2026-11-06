@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
@@ -139,22 +140,23 @@ export default function ApplicationsList({ locale }: ApplicationsListProps) {
             </div>
           </div>
 
-          {application.decision === 'approved' && application.contract_id && (
+          {application.decision === 'approved' && (
             <div className="mt-5 rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-medium text-emerald-300">
-                  {t('account.applications.contractAvailable')}
+                  {application.contract_id
+                    ? t('account.applications.contractSigned')
+                    : t('account.applications.contractAvailable')}
                 </p>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    // TODO: Navigate to the contract page.
-                  }}
-                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-emerald-400"
-                >
-                  {t('account.applications.continueToContract')}
-                </button>
+                {!application.contract_id && (
+                  <Link
+                    href={`/${locale}/account/contracts/${application.id}`}
+                    className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-emerald-400"
+                  >
+                    {t('account.applications.continueToContract')}
+                  </Link>
+                )}
               </div>
             </div>
           )}

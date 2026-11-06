@@ -153,5 +153,6 @@
   "account.applications.contractAvailable": "Contract available",
   "account.applications.manualReviewDescription": "Your application is awaiting manual review.",
   "account.applications.continueToContract": "Continue to contract",
+  "account.applications.contractSigned": "Signed",
   "staff.applications.title": "Applications"
 }

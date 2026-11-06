@@ -68,6 +68,8 @@
   "catalogue.pricesOn": "Net list prices on {date}",
   "catalogue.itemCount": "{count} items",
   "catalogue.empty": "No assets in the database yet. Run npm run db:setup and reload.",
+  "catalogue.viewLabel": "Show items by status",
+  "catalogue.noReserved": "No items in this category are reserved.",
   "category.e_bike": "E-bikes",
   "category.laptop": "Laptops",
   "category.farm_machine": "Farm machines",

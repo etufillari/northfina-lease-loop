@@ -43,7 +43,9 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
             </p>
             <ul className="mt-8 grid gap-6 lg:grid-cols-3">
               {assetCategorySchema.options.map((category) => {
-                const count = assets.filter((asset) => asset.category === category).length;
+                const count = assets.filter(
+                  (asset) => asset.category === category && asset.status === 'available'
+                ).length;
                 return (
                   <li key={category}>
                     <Link

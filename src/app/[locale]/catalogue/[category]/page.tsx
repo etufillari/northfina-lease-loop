@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { CatalogueGrid } from '@/components/catalogue-grid';
@@ -12,6 +13,7 @@ import { todayIso } from '@/server/today';
 
 export default async function CategoryPage({
   params,
+  searchParams,
 }: PageProps<'/[locale]/catalogue/[category]'>) {
   const { locale, category: categoryParam } = await params;
   if (!isLocale(locale)) notFound();
@@ -25,11 +27,21 @@ export default async function CategoryPage({
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists, residualCurves] = await Promise.all([
+  const [allAssets, priceLists, residualCurves] = await Promise.all([
     listAssets(db, { category }),
     loadPriceLists(),
     loadResidualCurves(),
   ]);
+  // Customers see what they can lease, and can look at reserved items in a second tab.
+  // Returned items wait on the second-life page, and sold items are gone.
+  const { view } = await searchParams;
+  const shownStatus = view === 'reserved' ? 'reserved' : 'available';
+  const assets = allAssets.filter((asset) => asset.status === shownStatus);
+  const tabs = (['available', 'reserved'] as const).map((status) => ({
+    status,
+    count: allAssets.filter((asset) => asset.status === status).length,
+    href: `/${locale}/catalogue/${category}${status === 'reserved' ? '?view=reserved' : ''}`,
+  }));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -45,12 +57,33 @@ export default async function CategoryPage({
         </p>
       </div>
 
+      <nav aria-label={t('catalogue.viewLabel')} className="mt-10">
+        <ul className="inline-flex gap-1 rounded-full bg-ink-100 p-1 dark:bg-ink-800">
+          {tabs.map((tab) => (
+            <li key={tab.status}>
+              <Link
+                href={tab.href}
+                scroll={false}
+                aria-current={tab.status === shownStatus ? 'page' : undefined}
+                className={`block rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  tab.status === shownStatus
+                    ? 'bg-white text-ink-900 shadow-sm dark:bg-ink-950 dark:text-white'
+                    : 'text-ink-700 hover:text-ink-950 dark:text-ink-300 dark:hover:text-white'
+                }`}
+              >
+                {t(`status.${tab.status}`)} ({tab.count})
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       {assets.length === 0 ? (
         <p className="mt-10 rounded-xl border border-dashed border-ink-300 p-6 text-ink-700 dark:border-ink-700 dark:text-ink-300">
-          {t('catalogue.empty')}
+          {t(shownStatus === 'reserved' ? 'catalogue.noReserved' : 'catalogue.empty')}
         </p>
       ) : (
-        <section aria-labelledby="category-assets" className="mt-12">
+        <section aria-labelledby="category-assets" className="mt-6">
           <div className="mb-6 flex items-baseline justify-between gap-4 border-b border-ink-200 pb-3 dark:border-ink-800">
             <p className="text-sm text-ink-600 dark:text-ink-400">
               {t('catalogue.itemCount', { count: assets.length })}

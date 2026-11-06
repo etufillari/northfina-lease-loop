@@ -68,6 +68,8 @@
   "catalogue.pricesOn": "Nettolistahinnat {date}",
   "catalogue.itemCount": "{count} kpl",
   "catalogue.empty": "Tietokannassa ei ole vielä laitteita. Aja npm run db:setup ja lataa sivu uudelleen.",
+  "catalogue.viewLabel": "Näytä laitteet tilan mukaan",
+  "catalogue.noReserved": "Tässä kategoriassa ei ole varattuja laitteita.",
   "category.e_bike": "Sähköpyörät",
   "category.laptop": "Kannettavat tietokoneet",
   "category.farm_machine": "Maatalouskoneet",

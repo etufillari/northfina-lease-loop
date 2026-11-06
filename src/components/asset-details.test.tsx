@@ -47,14 +47,14 @@ const t = ((key: string) => translations[key] ?? key) as Translate;
 
 describe('AssetDetails', () => {
   it('renders the asset make and model', () => {
-    render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={null} />);
+    render(<AssetDetails asset={asset} locale={locale} t={t} priceCents={null} />);
 
     expect(screen.getByText('Specialized')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Turbo Vado' })).toBeInTheDocument();
   });
 
   it('renders the fallback image for the asset category', () => {
-    render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={null} />);
+    render(<AssetDetails asset={asset} locale={locale} t={t} priceCents={null} />);
 
     // An empty alt marks the image as decorative, which gives it the presentation role.
     const image = screen.getByRole('presentation');
@@ -64,22 +64,22 @@ describe('AssetDetails', () => {
   });
 
   it('renders the formatted list price when provided', () => {
-    const unitPriceCents = 189900;
+    const priceCents = 189900;
 
-    render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={unitPriceCents} />);
+    render(<AssetDetails asset={asset} locale={locale} t={t} priceCents={priceCents} />);
 
     expect(screen.getByText('List price')).toBeInTheDocument();
-    expect(screen.getByText(formatEuro(unitPriceCents, intlLocale[locale]))).toBeInTheDocument();
+    expect(screen.getByText(formatEuro(priceCents, intlLocale[locale]))).toBeInTheDocument();
   });
 
   it('does not render the list price when it is null', () => {
-    render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={null} />);
+    render(<AssetDetails asset={asset} locale={locale} t={t} priceCents={null} />);
 
     expect(screen.queryByText('List price')).not.toBeInTheDocument();
   });
 
   it('renders the asset specifications', () => {
-    render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={null} />);
+    render(<AssetDetails asset={asset} locale={locale} t={t} priceCents={null} />);
 
     expect(screen.getByText('Condition')).toBeInTheDocument();
     expect(screen.getByText('Good')).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('AssetDetails', () => {
   });
 
   it('renders the asset status badge', () => {
-    render(<AssetDetails asset={asset} locale={locale} t={t} unitPriceCents={null} />);
+    render(<AssetDetails asset={asset} locale={locale} t={t} priceCents={null} />);
 
     expect(screen.getByText('Available')).toBeInTheDocument();
   });

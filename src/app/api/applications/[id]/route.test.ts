@@ -50,7 +50,6 @@ beforeEach(async () => {
   const aino = await submitApplication(db, {
     customer: find('cust-aino'),
     assetId: 'ebike-003',
-    quantity: 1,
     termMonths: 36,
     downPaymentCents: 0,
     answers: ainoEbikeAnswers,
@@ -58,7 +57,6 @@ beforeEach(async () => {
   const mikko = await submitApplication(db, {
     customer: find('cust-mikko'),
     assetId: 'laptop-008',
-    quantity: 1,
     termMonths: 36,
     downPaymentCents: 0,
     answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },

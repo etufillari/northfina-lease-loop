@@ -12,7 +12,6 @@ type PageProps = {
   searchParams: Promise<{
     term?: string;
     down?: string;
-    quantity?: string;
   }>;
 };
 
@@ -46,8 +45,6 @@ export default async function ApplyPage({ params, searchParams }: PageProps) {
   const requestedTerm = parsePositiveInt(query.term, 36);
   const termMonths = VALID_TERMS.includes(requestedTerm) ? requestedTerm : 36;
 
-  const quantity = Math.min(1000, parsePositiveInt(query.quantity, 1));
-
   const downPaymentCents = parseNonNegativeInt(query.down, 0);
 
   return (
@@ -56,7 +53,6 @@ export default async function ApplyPage({ params, searchParams }: PageProps) {
         <ApplicationFlow
           assetId={id}
           locale={locale}
-          quantity={quantity}
           termMonths={termMonths}
           downPaymentCents={downPaymentCents}
         />

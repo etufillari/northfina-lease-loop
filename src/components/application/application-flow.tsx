@@ -49,7 +49,6 @@ type AccessState = 'loading' | 'customer' | 'guest' | 'staff' | 'error';
 type ApplicationFlowProps = {
   assetId: string;
   locale: Locale;
-  quantity: number;
   termMonths: number;
   downPaymentCents: number;
 };
@@ -67,7 +66,6 @@ async function readApi<T>(response: Response): Promise<T> {
 export default function ApplicationFlow({
   assetId,
   locale,
-  quantity,
   termMonths,
   downPaymentCents,
 }: ApplicationFlowProps) {
@@ -97,7 +95,6 @@ export default function ApplicationFlow({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             asset_id: assetId,
-            quantity,
             term_months: termMonths,
             down_payment_cents: downPaymentCents,
             answers: currentAnswers,
@@ -108,7 +105,7 @@ export default function ApplicationFlow({
 
       return readApi<QuestionsResult>(response);
     },
-    [assetId, downPaymentCents, locale, quantity, termMonths]
+    [assetId, downPaymentCents, locale, termMonths]
   );
 
   // Check the current session before loading application questions.
@@ -251,7 +248,6 @@ export default function ApplicationFlow({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           asset_id: assetId,
-          quantity,
           term_months: termMonths,
           down_payment_cents: downPaymentCents,
           answers,
@@ -379,7 +375,6 @@ export default function ApplicationFlow({
       {step === 'review' && (
         <ApplicationReview
           locale={locale}
-          quantity={quantity}
           termMonths={termMonths}
           downPaymentCents={downPaymentCents}
           questions={questions}

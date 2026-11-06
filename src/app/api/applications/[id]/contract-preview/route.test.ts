@@ -107,9 +107,7 @@ describe('GET /api/applications/:id/contract-preview', () => {
   });
 
   it('shows the applicant and their signatory the same terms, with who can sign', async () => {
-    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers, {
-      quantity: 4,
-    });
+    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers);
 
     await actAs({ sub: 'cust-norvi', role: 'client' });
     const applicant = await preview(application.id);

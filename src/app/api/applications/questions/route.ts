@@ -1,5 +1,5 @@
 // POST /api/applications/questions?locale=fi
-// body: { asset_id, quantity?, term_months, down_payment_cents?, answers? }
+// body: { asset_id, term_months, down_payment_cents?, answers? }
 // Which questions apply to this customer and deal, given the answers so far. Send it again
 // after every answer: the list can grow or shrink. Saves nothing. Texts come back in `locale`
 // (default en), and `why_we_ask` falls back to English where it has no translation.
@@ -25,7 +25,6 @@ export const POST = handleRoute(async (request) => {
   const result = await describeQuestions(db, {
     customer,
     assetId: body.asset_id,
-    quantity: body.quantity,
     termMonths: body.term_months,
     downPaymentCents: body.down_payment_cents,
     answers: body.answers,

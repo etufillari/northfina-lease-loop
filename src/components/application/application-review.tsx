@@ -11,7 +11,6 @@ type Blocked = {
 
 type ApplicationReviewProps = {
   locale: Locale;
-  quantity: number;
   termMonths: number;
   downPaymentCents: number;
   questions: ApplicationQuestion[];
@@ -29,7 +28,6 @@ const blockedMessages: Record<Blocked['reason'], string> = {
 
 export default function ApplicationReview({
   locale,
-  quantity,
   termMonths,
   downPaymentCents,
   questions,
@@ -71,11 +69,6 @@ export default function ApplicationReview({
             <dd className="text-sm font-medium text-stone-900 dark:text-stone-100">
               {termMonths} months
             </dd>
-          </div>
-
-          <div className="flex justify-between gap-4 py-3">
-            <dt className="text-sm text-stone-500 dark:text-stone-400">Quantity</dt>
-            <dd className="text-sm font-medium text-stone-900 dark:text-stone-100">{quantity}</dd>
           </div>
 
           <div className="flex justify-between gap-4 py-3">

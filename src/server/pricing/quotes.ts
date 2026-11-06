@@ -13,9 +13,6 @@ export type DownPaymentRange = { min_cents: number; max_cents: number } | null;
 
 export type AssetQuote = Quote & {
   asset_id: string;
-  quantity: number;
-  /** The list price of one unit. `base_price_cents` is this times `quantity`. */
-  unit_price_cents: number;
   quote_date: string;
   factor: number;
   vat_rate_percent: number;
@@ -44,11 +41,6 @@ export type QuoteAssetResult =
       price_list_version?: number | null;
     };
 
-/**
- * `quantity` units are priced as one deal: `base_price_cents` is the total for all of them,
- * so the band and limits follow the total financed amount. (Availability still checks one
- * asset; real fleets are a known gap.)
- */
 export async function quoteAsset(
   db: PrismaClient,
   input: {
@@ -56,13 +48,9 @@ export async function quoteAsset(
     date: string;
     termMonths: number;
     downPaymentCents: number;
-    quantity?: number;
   }
 ): Promise<QuoteAssetResult> {
-  const { assetId, date, termMonths, downPaymentCents, quantity = 1 } = input;
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    throw new RangeError(`quantity must be a positive whole number, got ${quantity}`);
-  }
+  const { assetId, date, termMonths, downPaymentCents } = input;
 
   const asset = await db.asset.findUnique({
     where: { id: assetId },
@@ -85,7 +73,7 @@ export async function quoteAsset(
   const vatRate = vatRateOn(vatRates, date);
   if (!listPrice.ok || !vatRate.ok) return { ok: false, reason: 'no_price_on_date' };
 
-  const basePriceCents = listPrice.priceCents * quantity;
+  const basePriceCents = listPrice.priceCents;
   const limits = downPaymentLimits(table, basePriceCents);
   const range: DownPaymentRange = limits.ok
     ? { min_cents: limits.minCents, max_cents: limits.maxCents }
@@ -116,8 +104,6 @@ export async function quoteAsset(
     quote: {
       ...priced,
       asset_id: assetId,
-      quantity,
-      unit_price_cents: listPrice.priceCents,
       quote_date: date,
       factor: priced.factor_micros / 1_000_000,
       vat_rate_percent: vatRate.rateBasisPoints / 100,

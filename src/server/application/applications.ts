@@ -24,7 +24,6 @@ import { quoteAsset, type AssetQuote, type QuoteAssetFailureReason } from '../pr
 export type ApplicationRequest = {
   customer: Customer;
   assetId: string;
-  quantity: number;
   termMonths: number;
   downPaymentCents: number;
   answers: Answers;
@@ -73,7 +72,7 @@ async function prepare(
   db: PrismaClient,
   request: ApplicationRequest
 ): Promise<({ ok: true } & Prepared) | { ok: false; reason: RequestFailureReason }> {
-  const { assetId, quantity, termMonths, downPaymentCents, answers } = request;
+  const { assetId, termMonths, downPaymentCents, answers } = request;
   const date = await currentDate(db);
 
   const priced = await quoteAsset(db, {
@@ -81,7 +80,6 @@ async function prepare(
     date,
     termMonths,
     downPaymentCents,
-    quantity,
   });
 
   let quote: AssetQuote | null = null;
@@ -174,7 +172,6 @@ export function toApplication(row: ApplicationRow): Application {
     id: row.id,
     customer_id: row.customer_id,
     asset_id: row.asset_id,
-    quantity: row.quantity,
     quote_date: row.quote_date,
     start_on: row.start_on,
     price_list_version: row.price_list_version,
@@ -305,7 +302,6 @@ export async function submitApplication(
       entityId: id,
       details: {
         asset_id: request.assetId,
-        quantity: request.quantity,
         term_months: request.termMonths,
         decision: verdict.decision,
         reasons: verdict.reasons,
@@ -317,7 +313,6 @@ export async function submitApplication(
           id,
           customer_id: request.customer.id,
           asset_id: request.assetId,
-          quantity: request.quantity,
           quote_date: prepared.date,
           start_on: prepared.date,
           price_list_version: prepared.priceListVersion,

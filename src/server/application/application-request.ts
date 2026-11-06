@@ -8,7 +8,6 @@ import type { SubmitResult } from './applications';
 
 export const applicationRequestSchema = z.strictObject({
   asset_id: z.string().trim().min(1),
-  quantity: z.number().int().positive().max(1000).default(1),
   term_months: z.number().int().positive(),
   down_payment_cents: z.number().int().nonnegative().default(0),
   answers: answersSchema.default({}),

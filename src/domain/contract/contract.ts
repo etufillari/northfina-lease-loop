@@ -53,7 +53,6 @@ export function buildContract(
     application_id: application.id,
     customer_id: application.customer_id,
     asset_id: application.asset_id,
-    quantity: application.quantity,
     quote_date: application.quote_date,
     signed_on: signedOn,
     start_on: startOn,
@@ -82,7 +81,7 @@ export function openLife(
     life_number: lifeNumber,
     contract_id: contract.id,
     first_lease_price_cents: isFirstLife
-      ? contract.base_price_cents / contract.quantity
+      ? contract.base_price_cents
       : (latest?.first_lease_price_cents ?? asset.first_lease_price_cents ?? null),
     started_on: contract.start_on,
     ended_on: null,

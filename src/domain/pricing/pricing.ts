@@ -22,7 +22,7 @@ export type DownPaymentLimitsResult =
  * The down payments that keep the financed amount inside the table, for a slider.
  * The table's smallest and largest financed amounts decide, so the limits follow the data.
  * `ok: false` means the price is under the minimum, so no down payment can make the deal valid.
- * The limits do not depend on the term. Pass the price for all units when leasing several.
+ * The limits do not depend on the term.
  */
 export function downPaymentLimits(
   table: CoefficientTable,

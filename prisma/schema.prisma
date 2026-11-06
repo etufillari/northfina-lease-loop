@@ -53,7 +53,6 @@ model Application {
   id                 String   @id
   customer_id        String
   asset_id           String
-  quantity           Int      @default(1)
   quote_date         String
   start_on           String // planned contract start: the date age is judged on
   price_list_version Int? // null for a re-listed item, which has no list price
@@ -83,7 +82,6 @@ model Contract {
   application_id               String   @unique
   customer_id                  String
   asset_id                     String
-  quantity                     Int      @default(1)
   quote_date                   String
   signed_on                    String
   signed_by                    String? // the customer, or a signatory for a company

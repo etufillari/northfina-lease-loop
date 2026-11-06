@@ -22,7 +22,6 @@ const application = (overrides: Partial<Application> = {}): Application => ({
   id: 'app-1',
   customer_id: 'cust-aino',
   asset_id: 'ebike-003',
-  quantity: 1,
   quote_date: '2026-11-05',
   start_on: '2026-11-05',
   price_list_version: 1,
@@ -140,9 +139,8 @@ describe('lockedQuote', () => {
     });
   });
 
-  it('prices a down payment and several units from the stored total', () => {
+  it('prices a down payment from the stored total', () => {
     const app = application({
-      quantity: 4,
       base_price_cents: 2_196_000,
       down_payment_cents: 196_000,
       financed_cents: 2_000_000,
@@ -166,7 +164,6 @@ describe('buildContract', () => {
       application_id: 'app-1',
       customer_id: 'cust-aino',
       asset_id: 'ebike-003',
-      quantity: 1,
       quote_date: '2026-11-05',
       signed_on: '2026-11-05',
       start_on: '2026-11-05',
@@ -266,15 +263,6 @@ describe('openLife', () => {
       end_condition: null,
       end_usage_value: null,
     });
-  });
-
-  it('records the price of one unit when several are leased', () => {
-    const several = contract({
-      quantity: 4,
-      base_price_cents: 2_196_000,
-      financed_cents: 2_196_000,
-    });
-    expect(openLife(several, asset(), null).first_lease_price_cents).toBe(549_000);
   });
 
   it('numbers on from the latest life and carries its price at first lease', () => {

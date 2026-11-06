@@ -1,4 +1,4 @@
-// POST /api/applications   body: { asset_id, quantity?, term_months, down_payment_cents?, answers }
+// POST /api/applications   body: { asset_id, term_months, down_payment_cents?, answers }
 //   A client applies. The server prices the deal on its own date and decides:
 //   approved, rejected (with reasons) or manual_review.
 // GET /api/applications[?decision=manual_review]
@@ -33,7 +33,6 @@ export const POST = handleRoute(async (request) => {
   const result = await submitApplication(db, {
     customer,
     assetId: body.asset_id,
-    quantity: body.quantity,
     termMonths: body.term_months,
     downPaymentCents: body.down_payment_cents,
     answers: body.answers,

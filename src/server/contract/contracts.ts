@@ -25,7 +25,6 @@ export function toContract(row: ContractRow): Contract {
     application_id: row.application_id,
     customer_id: row.customer_id,
     asset_id: row.asset_id,
-    quantity: row.quantity,
     quote_date: row.quote_date,
     signed_on: row.signed_on,
     signed_by: row.signed_by,
@@ -64,7 +63,7 @@ function listPriceOnSigning(
 ): number | null {
   const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
   const isListed = contract.price_list_version !== null && listPrice.ok;
-  return isListed ? listPrice.priceCents * contract.quantity : null;
+  return isListed ? listPrice.priceCents : null;
 }
 
 export async function contractViews(

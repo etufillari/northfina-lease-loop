@@ -56,7 +56,6 @@ describe('the lease loop', () => {
     const applied = await submitApplication(db, {
       customer: aino,
       assetId: 'ebike-003',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       answers: ainoEbikeAnswers,
@@ -129,7 +128,6 @@ describe('the lease loop', () => {
     const reapplied = await submitApplication(db, {
       customer: lena,
       assetId: 'ebike-003',
-      quantity: 1,
       termMonths: 24,
       downPaymentCents: 0,
       answers: { ...ainoEbikeAnswers, q_country: 'EE', q_monthly_income: 210_000 },

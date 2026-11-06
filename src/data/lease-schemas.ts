@@ -95,7 +95,6 @@ export const applicationSchema = z.strictObject({
   id: z.string().min(1),
   customer_id: z.string().min(1),
   asset_id: z.string().min(1),
-  quantity: positiveIntSchema,
   quote_date: isoDateSchema,
   /** Planned contract start. Age is judged on this date, and the contract copies it. */
   start_on: isoDateSchema,
@@ -122,7 +121,6 @@ export const contractSchema = z.strictObject({
   application_id: z.string().min(1),
   customer_id: z.string().min(1),
   asset_id: z.string().min(1),
-  quantity: positiveIntSchema,
   quote_date: isoDateSchema,
   signed_on: isoDateSchema,
   /** Who signed: the customer, or a signatory for a company. Empty on older contracts. */

@@ -151,9 +151,7 @@ describe('POST /api/contracts', () => {
   });
 
   it('answers 403 and names who must sign for Norvi (card 6)', async () => {
-    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers, {
-      quantity: 4,
-    });
+    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers);
     await actAs({ sub: 'cust-norvi', role: 'client' });
 
     const { status, body } = await sign({ application_id: application.id });
@@ -165,9 +163,7 @@ describe('POST /api/contracts', () => {
   });
 
   it('lets the signatory sign for Norvi, and the contract stays with the company', async () => {
-    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers, {
-      quantity: 4,
-    });
+    const application = await applyFor(db, 'cust-norvi', 'ebike-004', norviEbikeAnswers);
     await actAs(NORVI_CEO);
 
     const { status, body } = await sign({ application_id: application.id });

@@ -59,12 +59,11 @@ async function apply(
   customerId: string,
   assetId: string,
   answers: Answers,
-  deal: { termMonths?: number; downPaymentCents?: number; quantity?: number } = {}
+  deal: { termMonths?: number; downPaymentCents?: number } = {}
 ) {
   const result = await submitApplication(db, {
     customer: customer(customerId),
     assetId,
-    quantity: deal.quantity ?? 1,
     termMonths: deal.termMonths ?? 36,
     downPaymentCents: deal.downPaymentCents ?? 0,
     answers,
@@ -156,7 +155,7 @@ describe('previewContract', () => {
   });
 
   it('lets a company applicant read the terms, and says they cannot sign (card 6)', async () => {
-    const application = await apply('cust-norvi', 'ebike-004', norviEbikeAnswers, { quantity: 4 });
+    const application = await apply('cust-norvi', 'ebike-004', norviEbikeAnswers);
     expect(await previewOk(application.id, 'cust-norvi')).toMatchObject({
       can_sign: false,
       signatory_email: 'ceo@norvi.example.com',
@@ -348,7 +347,7 @@ describe('signContract: who may sign', () => {
   });
 
   it('stops Norvi and says who must sign (card 6)', async () => {
-    const application = await apply('cust-norvi', 'ebike-004', norviEbikeAnswers, { quantity: 4 });
+    const application = await apply('cust-norvi', 'ebike-004', norviEbikeAnswers);
     expect(await sign(application.id, 'cust-norvi')).toEqual({
       ok: false,
       reason: 'signatory_required',
@@ -359,7 +358,7 @@ describe('signContract: who may sign', () => {
 
   it('stops Norvi even if they answer yes, with no signatory to name', async () => {
     const answers: Answers = { ...norviEbikeAnswers, q_can_sign: 'yes' };
-    const application = await apply('cust-norvi', 'ebike-004', answers, { quantity: 4 });
+    const application = await apply('cust-norvi', 'ebike-004', answers);
     expect(await sign(application.id, 'cust-norvi')).toEqual({
       ok: false,
       reason: 'signatory_required',
@@ -478,11 +477,5 @@ describe('reading contracts', () => {
     const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
     const [view] = await contractViews(db, [{ ...signed, price_list_version: null }]);
     expect(view?.list_price_on_signing_cents).toBeNull();
-  });
-
-  it('multiplies the list price by the quantity', async () => {
-    const signed = await signOk((await apply(AINO, 'ebike-003', ainoEbikeAnswers)).id);
-    const [view] = await contractViews(db, [{ ...signed, quantity: 2 }]);
-    expect(view?.list_price_on_signing_cents).toBe(778_000);
   });
 });

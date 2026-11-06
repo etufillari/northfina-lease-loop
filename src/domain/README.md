@@ -29,6 +29,8 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 | `money.ts`                     | `roundedDivide` is the one rounding rule. `formatEuro` formats cents for a locale; use it only in the UI.                                                                                                      |
 | `pricing/pricing.ts`           | `quote` prices a deal: financed amount, band, monthly net rent and buyout.                                                                                                                                     |
 | `vat.ts`                       | The VAT rate on a date, and VAT on a net amount.                                                                                                                                                               |
+| `dates.ts`                     | `addDays` and `addMonths` on ISO dates. `addMonths` clamps to short months.                                                                                                                                    |
+| `contract/contract.ts`         | `signingProblem` says who may sign, `lockedQuote` keeps the quoted price, and `buildContract` builds the contract.                                                                                             |
 | `application/question-flow.ts` | `questionsToAsk` works out which questions apply and drops answers that no longer do. `invalidAnswers` checks each answer fits its question type. `blockingAnswer` finds an answer that stops the application. |
 | `application/age.ts`           | `ageOn` gives an age in whole years on a date, and `eligibleFrom` gives the date someone reaches an age.                                                                                                       |
 | `application/business-id.ts`   | `isValidBusinessId` checks the format and check digit of a Finnish Y-tunnus.                                                                                                                                   |
@@ -39,7 +41,6 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 Create these as you need them. Do not commit empty files.
 
-- `contract`: build the contract from an approved application and lock it so it cannot change.
 - `invoicing`: the monthly invoices for a contract, including a VAT rate change mid-contract.
 - `end-of-term`: return, buy out or extend, and the value of the returned item.
 - `second-life`: refurbishment cost, matching a returned item to the waiting list, CO2 saved.

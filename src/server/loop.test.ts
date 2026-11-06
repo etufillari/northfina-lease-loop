@@ -7,6 +7,7 @@ import { createTestDb } from '../../tests/helpers/test-db';
 import { setDemoDate } from './date/app-date';
 import { submitApplication } from './application/applications';
 import { seedAssets } from './assets/assets';
+import { signContract } from './contract/contracts';
 import type { PrismaClient } from './prisma-client';
 import { quoteAsset } from './pricing/quotes';
 
@@ -66,5 +67,23 @@ describe('the lease loop', () => {
         financed_cents: 389_000,
       },
     });
+    if (!applied.ok) throw new Error(applied.reason);
+
+    // 3. Contract
+    const signed = await signContract(db, {
+      applicationId: applied.application.id,
+      customer: aino,
+    });
+    expect(signed).toMatchObject({
+      ok: true,
+      contract: {
+        status: 'active',
+        monthly_net_rent_cents: 10_730,
+        buyout_cents: 58_350,
+        planned_end_on: '2029-11-04',
+      },
+    });
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(asset.status).toBe('leased');
   });
 });

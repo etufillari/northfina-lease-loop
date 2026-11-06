@@ -105,3 +105,16 @@ model Contract {
   @@index([asset_id])
   @@index([customer_id])
 }
+
+// A paid invoice. Invoices themselves are derived from the contract (src/domain/invoicing.ts);
+// only the payment is stored. Demo payments: no money moves and no bank details are taken.
+model InvoicePayment {
+  id             Int      @id @default(autoincrement())
+  created_at     DateTime @default(now())
+  contract_id    String
+  invoice_number Int // 1 = the first month of the lease
+  paid_date      String // YYYY-MM-DD, the app's date when it was paid
+  amount_cents   Int // the invoice total incl. VAT that was paid
+
+  @@unique([contract_id, invoice_number])
+}

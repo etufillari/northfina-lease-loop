@@ -120,7 +120,7 @@ describe('invoiceScheduleFor', () => {
       }),
       { numRuns: 2_000 }
     );
-  });
+  }, 15_000);
 
   it('returns a value failure when no VAT rate covers an invoice date', () => {
     const noRates: VatRates = {

@@ -246,6 +246,8 @@ export type StoredApplication = {
   answers: Record<string, string>;
   /** Set when it was applied for as part of a fleet. */
   fleetId: string | null;
+  /** Set when the company's signatory declined to sign it (see src/domain/signature.ts). */
+  signatureDeclined: { date: string; by: string | null; note: string | null } | null;
 };
 
 type ApplicationRow = NonNullable<Awaited<ReturnType<PrismaClient['application']['findUnique']>>>;
@@ -271,7 +273,7 @@ export async function listFleetApplications(
   return rows.map(toStoredApplication);
 }
 
-function toStoredApplication(row: ApplicationRow): StoredApplication {
+export function toStoredApplication(row: ApplicationRow): StoredApplication {
   return {
     id: row.id,
     createdAt: row.created_at.toISOString(),
@@ -292,5 +294,12 @@ function toStoredApplication(row: ApplicationRow): StoredApplication {
     reasons: JSON.parse(row.reasons_json) as EligibilityRuleId[],
     answers: JSON.parse(row.answers_json) as Record<string, string>,
     fleetId: row.fleet_id,
+    signatureDeclined: row.signature_declined_date
+      ? {
+          date: row.signature_declined_date,
+          by: row.signature_declined_by,
+          note: row.signature_decline_note,
+        }
+      : null,
   };
 }

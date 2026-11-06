@@ -15,6 +15,7 @@ import { adminOverview } from '@/server/admin';
 import { appDate } from '@/server/app-date';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
+import { listSignatureRequests } from '@/server/signatures';
 import { effectiveVatRates, listVatChanges } from '@/server/vat';
 
 export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>) {
@@ -24,12 +25,14 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
 
   const t = getT(locale);
   const { today } = await appDate();
-  const [overview, rates, changes, assets] = await Promise.all([
+  const [overview, rates, changes, assets, signatures] = await Promise.all([
     adminOverview(db, today),
     effectiveVatRates(db),
     listVatChanges(db),
     listAssets(db),
+    listSignatureRequests(db, today),
   ]);
+  const waitingForSignature = signatures.filter((s) => s.status === 'waiting').length;
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const assetName = new Map(assets.map((a) => [a.id, `${a.make} ${a.model}`]));
   const adminIdByDate = new Map(changes.map((c) => [c.validFrom, c.id]));
@@ -121,6 +124,20 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
             className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
           >
             {t('admin.secondLifeOpen')}
+          </Link>
+        </div>
+      </Panel>
+
+      <Panel title={t('signatures.title')}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-stone-700 dark:text-stone-300">
+            {t('signatures.adminPanel', { count: waitingForSignature })}
+          </p>
+          <Link
+            href={`/${locale}/admin/signatures`}
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            {t('signatures.adminOpen')}
           </Link>
         </div>
       </Panel>

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { loadCoefficientTable } from '@/data/load';
 import { checkSignable, contractPeriod } from '@/domain/contract';
+import { waitsOnlyForSignatory } from '@/domain/signature';
 import { contractOn } from '@/domain/state-on';
 import { hasLaterHistory } from './asset-state';
 import { percentOfCents } from '@/domain/money';
@@ -119,21 +120,37 @@ export type SignFailure =
   | 'signed_before_quote'
   | 'asset_not_available'
   | 'later_history'
-  | 'part_of_fleet';
+  | 'part_of_fleet'
+  /** The company's signatory declined to sign it. */
+  | 'declined';
 
 export type SignContractResult =
   { ok: true; contract: Contract } | { ok: false; reason: SignFailure; contractId?: string };
 
-/** Whether `application` can be signed on `todayIso`: not yet signed, approved, quote valid. */
+/**
+ * Whether `application` can be signed on `todayIso`: not yet signed, approved, quote valid.
+ * With `asSignatory`, the company's signatory signs (card 6): an application that went to
+ * manual review only because the applicant may not sign counts as approved for them.
+ */
 export async function signingCheck(
   db: PrismaClient,
   application: StoredApplication,
-  todayIso: string
+  todayIso: string,
+  { asSignatory = false }: { asSignatory?: boolean } = {}
 ): Promise<{ ok: true } | { ok: false; reason: SignFailure; contractId?: string }> {
   const existing = await getContractForApplication(db, application.id);
   if (existing) return { ok: false, reason: 'already_signed', contractId: existing.id };
+  if (application.signatureDeclined) {
+    // Declined later than today (time travel): it is still waiting then, but can't change.
+    return {
+      ok: false,
+      reason: application.signatureDeclined.date > todayIso ? 'later_history' : 'declined',
+    };
+  }
+  const signatoryMaySign =
+    asSignatory && waitsOnlyForSignatory(application.decision, application.reasons);
   const check = checkSignable({
-    decision: application.decision,
+    decision: signatoryMaySign ? 'approved' : application.decision,
     quoteDate: application.quoteDate,
     signDate: todayIso,
   });
@@ -219,13 +236,15 @@ export async function createContractIn(
 export async function signContract(
   db: PrismaClient,
   input: { applicationId: string; signerName: string },
-  todayIso: string
+  todayIso: string,
+  /** The company's signatory signing for the applicant (card 6), and their email. */
+  signatory?: { email: string }
 ): Promise<SignContractResult> {
   const application = await getApplication(db, input.applicationId);
   if (!application) return { ok: false, reason: 'application_not_found' };
   // A fleet is signed as a whole (see fleets.ts), never one item at a time.
   if (application.fleetId) return { ok: false, reason: 'part_of_fleet' };
-  const check = await signingCheck(db, application, todayIso);
+  const check = await signingCheck(db, application, todayIso, { asSignatory: !!signatory });
   if (!check.ok) return check;
 
   const table = await loadCoefficientTable();
@@ -233,7 +252,7 @@ export async function signContract(
   const row = await withAudit(
     db,
     {
-      actor: input.signerName,
+      actor: signatory ? `${input.signerName} <${signatory.email}>` : input.signerName,
       action: 'contract.signed',
       entityType: 'contract',
       entityId: id,
@@ -243,6 +262,7 @@ export async function signContract(
         monthlyNetCents: application.monthlyNetCents,
         priceListVersion: application.priceListVersion,
         quoteDate: application.quoteDate,
+        ...(signatory ? { signedBy: 'signatory', signatoryEmail: signatory.email } : {}),
       },
     },
     (tx) => createContractIn(tx, { id, application, signerName: input.signerName, todayIso, table })

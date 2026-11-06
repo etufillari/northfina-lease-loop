@@ -1,12 +1,20 @@
 // The root layout. Every page lives under /[locale] (/en, /fi, /sv, /et), so the
 // <html lang> attribute is always right for the page.
 import type { Metadata } from 'next';
+import { Zalando_Sans_SemiExpanded } from 'next/font/google';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
+
+// Self-hosted at build time by Next.js; system fonts are the fallback.
+const brandFont = Zalando_Sans_SemiExpanded({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-brand',
+  display: 'swap',
+});
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
   const { locale } = await params;
@@ -21,7 +29,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const t = getT(locale);
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={brandFont.variable}>
       <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
         <a
           href="#main"
@@ -43,7 +51,29 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <div className="flex flex-wrap items-center gap-3">
+              <nav aria-label={t('nav.main')}>
+                <Link
+                  href={`/${locale}`}
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                >
+                  {t('nav.catalogue')}
+                </Link>
+                <Link
+                  href={`/${locale}/contracts`}
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                >
+                  {t('nav.contracts')}
+                </Link>
+                <Link
+                  href={`/${locale}/audit`}
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                >
+                  {t('nav.audit')}
+                </Link>
+              </nav>
+              <LanguageSwitcher current={locale} label={t('nav.language')} />
+            </div>
           </div>
         </header>
 
@@ -67,7 +97,7 @@ function LoopMark() {
     <svg
       aria-hidden="true"
       viewBox="0 0 32 32"
-      className="size-9 shrink-0 rounded-xl bg-emerald-700 p-1.5 text-white"
+      className="size-9 shrink-0 rounded-xl bg-linear-to-br from-emerald-400 via-emerald-500 to-emerald-800 p-1.5 text-white"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.5"

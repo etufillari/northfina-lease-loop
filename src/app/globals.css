@@ -1,12 +1,73 @@
 @import 'tailwindcss';
 
+/*
+ * Look and feel in the style of the challenge host's site: a calm blue primary, cool greys,
+ * pill-shaped buttons and the Zalando Sans SemiExpanded typeface. Components keep using
+ * the `emerald` (primary) and `stone` (neutral) names; only the colours behind them change.
+ */
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    var(--font-brand), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial,
+    sans-serif;
+  /* Amounts and codes use the same typeface as the text, so a euro amount always looks the same. */
+  --font-mono:
+    var(--font-brand), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial,
+    sans-serif;
+
+  /* Primary: blue (#0a44fa on white is 6.6:1, so text in it passes WCAG AA). */
+  --color-emerald-50: #f6f7ff;
+  --color-emerald-100: #e9f0ff;
+  --color-emerald-200: #cddcff;
+  --color-emerald-300: #9dbcff;
+  --color-emerald-400: #67a4ff;
+  --color-emerald-500: #4471ff;
+  --color-emerald-600: #2863fe;
+  --color-emerald-700: #0a44fa;
+  --color-emerald-800: #002ae4;
+  --color-emerald-900: #0100cc;
+  --color-emerald-950: #0b1650;
+
+  /* Success / available: the host's green (#009b01 on white is 4.8:1). */
+  --color-green-50: #eeffed;
+  --color-green-100: #d9f8d8;
+  --color-green-200: #b4ebb3;
+  --color-green-400: #4fd04f;
+  --color-green-600: #009b01;
+  --color-green-700: #007f01;
+  --color-green-800: #0b6a0c;
+  --color-green-900: #0d4f0e;
+  --color-green-950: #062d07;
+
+  /* Neutrals: cool greys around the host's #231f20 text and #757575 secondary text. */
+  --color-stone-50: #f7f9fc;
+  --color-stone-100: #eef1f7;
+  --color-stone-200: #e6e9f2;
+  --color-stone-300: #d3d8e3;
+  --color-stone-400: #a2a7b2;
+  --color-stone-500: #7c818c;
+  --color-stone-600: #5c6069;
+  --color-stone-700: #44474e;
+  --color-stone-800: #2c2b30;
+  --color-stone-900: #231f20;
+  --color-stone-950: #141213;
 }
 
 /* A visible keyboard focus everywhere, in both color schemes. */
 :focus-visible {
   outline: 2px solid var(--color-emerald-600);
   outline-offset: 2px;
+}
+
+/*
+ * The brand typeface's tabular figures swap in a slashed zero and a wide space, which made
+ * amounts like "4 084,00 €" look odd next to the same amount in a sentence. Use its normal
+ * figures everywhere so every euro amount looks the same.
+ */
+.tabular-nums {
+  font-variant-numeric: normal;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.01em;
 }

@@ -316,3 +316,76 @@ describe('secondLifeDecision: an upgrade must pay for itself', () => {
     expect(decision.action).toBe('parts_bin');
   });
 });
+
+describe('secondLifeDecision: why an upgrade was or was not taken', () => {
+  const decide = (asset: Asset, asOfDate: string, withDemand = true) => {
+    const v1 = listPriceOn(priceLists, asset.id, '2026-01-01');
+    if (!v1.ok) throw new Error('no v1 price');
+    return secondLifeDecision(
+      { asset, originalListPriceCents: v1.priceCents, asOfDate },
+      { curves, costs, demand: withDemand ? demand : [], table }
+    );
+  };
+  const find = (id: string) => assets.find((a) => a.id === id)!;
+
+  it('card 9: wait-02 takes ebike-007 as it is, so no upgrade is needed', () => {
+    const decision = decide(find('ebike-007'), '2026-11-05');
+    expect(decision.upgrade).toBeNull();
+    expect(decision.upgradeSkipped).toEqual({ why: 'waiter_takes_as_is' });
+  });
+
+  it('a taken upgrade has no skip reason, and the work total is mandatory + upgrade', () => {
+    // Nobody waiting: fair cannot be listed, but good is worth more than all the work.
+    const decision = decide(find('ebike-007'), '2029-04-29', false);
+    expect(decision.upgrade).toMatchObject({ from: 'fair', to: 'good', reason: 'reach_listing' });
+    expect(decision.upgradeSkipped).toBeNull();
+    expect(decision.workTotalCents).toBe(decision.requiredTotalCents + decision.upgrade!.costCents);
+  });
+
+  it('a new item has nowhere to go', () => {
+    const decision = decide({ ...find('ebike-003'), status: 'returned' }, '2026-11-05', false);
+    expect(decision.upgradeSkipped).toEqual({ why: 'top_condition' });
+  });
+
+  const as = (id: string, condition: Asset['condition']) => ({ ...find(id), condition });
+
+  it('a listable item is not upgraded when the value it adds is not more than it costs', () => {
+    const decision = decide(as('ebike-001', 'good'), '2028-11-05', false);
+    expect(decision.action).toBe('list_available');
+    const skipped = decision.upgradeSkipped!;
+    expect(skipped.why).toBe('gain_below_cost');
+    if (skipped.why !== 'gain_below_cost') return;
+    expect(skipped.gainCents).toBeLessThanOrEqual(skipped.costCents);
+  });
+
+  it('like new has no priced step up', () => {
+    expect(decide(as('ebike-001', 'like_new'), '2026-11-05', false).upgradeSkipped).toEqual({
+      why: 'not_priced',
+      to: 'new',
+    });
+  });
+
+  it('parts, saying why: under the €300 minimum even upgraded', () => {
+    const decision = decide(as('ebike-005', 'poor'), '2030-11-05', false);
+    expect(decision.action).toBe('parts_bin');
+    const skipped = decision.upgradeSkipped!;
+    expect(skipped.why).toBe('below_minimum');
+    if (skipped.why === 'below_minimum') expect(skipped.valueCents).toBeLessThan(30_000);
+  });
+
+  it('parts, saying why: upgraded it would not be worth all the work', () => {
+    const decision = decide(as('farm-008', 'poor'), '2028-11-05', false);
+    expect(decision.action).toBe('parts_bin');
+    const skipped = decision.upgradeSkipped!;
+    expect(skipped.why).toBe('not_worth_work');
+    if (skipped.why === 'not_worth_work') {
+      expect(skipped.valueCents).toBeLessThanOrEqual(skipped.workTotalCents);
+    }
+  });
+
+  it('parts, saying why: the upgrade would pay but fair still cannot be listed', () => {
+    const decision = decide(as('ebike-001', 'poor'), '2026-11-05', false);
+    expect(decision.action).toBe('parts_bin');
+    expect(decision.upgradeSkipped).toMatchObject({ why: 'still_not_listable', to: 'fair' });
+  });
+});

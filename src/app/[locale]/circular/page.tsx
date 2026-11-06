@@ -188,11 +188,44 @@ export default async function CircularPage({
                 {row.offer.publishedOn}
               </p>
             )}
+            {row.assessment && (
+              <aside className="rounded-xl bg-slate-100 p-4 text-sm dark:bg-slate-800">
+                <h3 className="font-semibold">{t('match.assessment')}</h3>
+                {row.receipt?.status === 'INSPECTED' && <p>{t('match.estimate')}</p>}
+                <p>
+                  {t('circular.price')}: {formatEuro(row.proposedPrice ?? 0, intlLocale[locale])} ·{' '}
+                  {t('circular.cost')}: {formatEuro(row.workCost ?? 0, intlLocale[locale])}
+                </p>
+                <p>
+                  {t(
+                    row.assessment.recommendation === 'REFURBISH'
+                      ? 'match.refurbish'
+                      : row.assessment.recommendation === 'NO_DEMAND'
+                        ? 'match.noDemand'
+                        : 'match.reviewCost'
+                  )}
+                </p>
+                <p>
+                  {t('match.margin')}:{' '}
+                  {formatEuro(row.assessment.valueAfterWorkNetCents, intlLocale[locale])}
+                </p>
+                <p>
+                  {t('match.asIs')}: {formatEuro(row.assessment.asIsNetCents, intlLocale[locale])} ·{' '}
+                  {t('match.uplift')}:{' '}
+                  {formatEuro(row.assessment.upliftNetCents, intlLocale[locale])} ·{' '}
+                  {t('match.incremental')}:{' '}
+                  {formatEuro(row.assessment.incrementalNetCents, intlLocale[locale])}
+                </p>
+                <p>{t('match.assumption')}</p>
+              </aside>
+            )}
             {row.matches.length > 0 && (
               <div className="mt-3">
-                <p>{t('circular.matches')}</p>
-                {row.matches.map((match) => (
+                <p className="font-semibold">{t('circular.matches')}</p>
+                <p className="text-sm">{t('match.ranking')}</p>
+                {row.matches.map((match, index) => (
                   <p key={match.requestId}>
+                    {index === 0 ? `${t('match.first')}: ` : ''}
                     {match.requestId}: {formatEuro(match.monthlyNetCents, intlLocale[locale])} /{' '}
                     {match.termMonths} · {match.neededBy}
                   </p>

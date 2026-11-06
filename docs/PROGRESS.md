@@ -32,7 +32,7 @@ Also implemented: conditional question flow, a documented early-exit cap, requir
 
 ## Validation
 
-Latest full gate: `npm run check:all` — 304 tests across 51 files, formatting, lint, typecheck, file-size, no-AI scan, coverage and production build.
+Latest full gate: `npm run check:all` — 318 tests across 55 files, formatting, lint, typecheck, file-size, no-AI scan, coverage and production build.
 
 An isolated SQLite HTTP/render smoke verified customer mutation denials, company sign-in, pending→approval→offer, the full two-customer loop, replay, cards 9/10, buyout and pass-on. User dev.db was not used for the smoke test. The new migration was applied additively to it.
 
@@ -61,3 +61,19 @@ Customer and company views now share paired light/dark surfaces, readable contro
 ## Latest teammate merge: invoices and PDF
 
 Integrated team main `f50304f` (PR 20): invoice browsing by asset, saved invoice viewer/PDF download and active sidebar navigation. Customer end choices, demo completion, company permissions, return notifications, VAT forecasts and dark-mode improvements are retained. Company invoice generation now creates one next invoice per click. PDF access is customer-scoped and errors use the safe API envelope. Invoice pages share the dark palette and show all saved invoices rather than silently truncating the list.
+
+## Five smart problems — current local increment
+
+Target problems 1–5. [SMART-PROBLEMS.md](SMART-PROBLEMS.md) explains each business problem, rule, demo and limitation.
+
+- Price/tax: signed price-list version shown; forecast highlights gross changes across VAT boundaries with unchanged net rent.
+- Early exit: owned read-only quote, selectable completed months, remaining-rent calculation, signed cap, dated VAT and explicit confirmation. Issued future rent blocks confirmation pending credits. The settlement recalculates authoritatively.
+- Matching: pre-work restored-value projection, as-is baseline, incremental value after work costs, no-demand/cost warnings, ranked candidate explanation and approval gate. Recommendation and ranking are advisory; no fictional waiting-list/customer link is created.
+- Questions: existing applicability/pruning/why-we-ask behavior retained; authoritative rejection/manual-review reasons are now localized instead of printing raw server reason strings. Signing returns to My leases.
+- Money/calendar: forecast explains full anniversary periods, month-end clamping, calendar-day due dates and half-up VAT rounding; net/VAT/gross totals are shown separately.
+
+Full check passes: 318 tests, production build and all repository checks. An isolated HTTP/render smoke verified read-only preview → identical confirmed fee, pre-work economics rendering, customer request notifications, approval and the second customer's lease/invoice. User dev.db was not changed by this verification. Visual browser/keyboard rehearsal remains pending. This smart-problem increment is included on the team handoff branch.
+
+## Fresh testing baseline
+
+At the user’s request, local dev.db was backed up, reset and reseeded after the five-smart-problem work. Verified: 30 original synthetic assets and zero applications, contracts, leases, invoices, returns, offers, settlements, allocations, command receipts and audit records. Local database files and credentials are excluded from Git.

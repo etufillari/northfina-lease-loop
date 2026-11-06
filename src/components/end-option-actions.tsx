@@ -1,4 +1,6 @@
 'use client';
+import { EarlyExitPreview } from './early-exit-preview';
+import type { Locale } from '@/i18n/locales';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 export function EndOptionActions({
@@ -6,10 +8,12 @@ export function EndOptionActions({
   status,
   locale,
   labels,
+  maxElapsedMonths = 47,
 }: {
   leaseId: string;
   status: string;
-  locale: string;
+  locale: Locale;
+  maxElapsedMonths?: number;
   labels: {
     return: string;
     pass: string;
@@ -26,7 +30,8 @@ export function EndOptionActions({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
-  async function run(option: string) {
+  const [showExit, setShowExit] = useState(false);
+  async function run(option: string, elapsedMonths = 6) {
     if (busy) return;
     setBusy(true);
     setError(false);
@@ -36,7 +41,7 @@ export function EndOptionActions({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           option,
-          ...(option === 'EARLY_RETURN' ? { elapsedMonths: 6 } : {}),
+          ...(option === 'EARLY_RETURN' ? { elapsedMonths } : {}),
         }),
       });
       if (!response.ok) throw new Error('failed');
@@ -73,7 +78,7 @@ export function EndOptionActions({
             aria-describedby={`option-${leaseId}-${option}`}
             type="button"
             disabled={busy}
-            onClick={() => void run(option)}
+            onClick={() => (option === 'EARLY_RETURN' ? setShowExit(true) : void run(option))}
             className="ui-secondary mt-auto w-full"
           >
             {option === 'RETURN'
@@ -86,6 +91,15 @@ export function EndOptionActions({
           </button>
         </div>
       ))}
+      {showExit && status === 'ACTIVE' && (
+        <EarlyExitPreview
+          leaseId={leaseId}
+          locale={locale}
+          busy={busy}
+          maxElapsedMonths={maxElapsedMonths}
+          confirm={(elapsed) => run('EARLY_RETURN', elapsed)}
+        />
+      )}
       {busy && (
         <p role="status" className="sm:col-span-3">
           {labels.busy}

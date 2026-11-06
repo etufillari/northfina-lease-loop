@@ -4,84 +4,18 @@
 // - No I/O, no database, no fetch, no Date.now() / new Date() / Math.random().
 // - Pure functions accepting dates (ISO YYYY-MM-DD) and plain data structures.
 // - All money amounts are integer euro cents.
-// - Rounding rule: VAT per invoice is Math.round((netRentCents * vatRatePercent) / 100).
+// - Rounding rule: VAT per invoice is mulDivRound(net, vatRateBp, 10 000), half up (./rounding).
 // - Gross invoice total is strictly netRentCents + vatCents.
 // - Date math: Month-end clamping for calendar traps (e.g. 31 Jan -> 28 Feb in normal years, 29 Feb in leap years).
 
 import type { VatRates } from '@/data/schemas';
-import { vatRateOn } from './contract-pricing';
+import { generateSchedule } from './schedule';
+import { vatRateOn } from './vat';
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/**
- * Returns true if the specified Gregorian calendar year is a leap year.
- */
-export function isLeapYear(year: number): boolean {
-  if (!Number.isInteger(year) || year < 1) {
-    throw new RangeError(`year must be a positive integer, got ${year}`);
-  }
-  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-}
-
-/**
- * Returns the number of days in a given month (1 = January, 12 = December).
- */
-export function daysInMonth(year: number, month: number): number {
-  if (!Number.isInteger(year) || year < 1) {
-    throw new RangeError(`year must be a positive integer, got ${year}`);
-  }
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
-    throw new RangeError(`month must be between 1 and 12, got ${month}`);
-  }
-
-  switch (month) {
-    case 2:
-      return isLeapYear(year) ? 29 : 28;
-    case 4:
-    case 6:
-    case 9:
-    case 11:
-      return 30;
-    default:
-      return 31;
-  }
-}
-
-/**
- * Adds `monthsToAdd` months to an ISO `YYYY-MM-DD` date, clamping the day of the
- * month to the last day of the target month when the target month is shorter.
- *
- * Example:
- *   addMonthsClamped('2026-01-31', 1) => '2026-02-28' (2026 is non-leap)
- *   addMonthsClamped('2026-01-31', 25) => '2028-02-29' (2028 is a leap year)
- *   addMonthsClamped('2026-08-31', 1) => '2026-09-30'
- */
-export function addMonthsClamped(isoDate: string, monthsToAdd: number): string {
-  const match = ISO_DATE_PATTERN.exec(isoDate);
-  if (!match) {
-    throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
-  }
-  if (!Number.isInteger(monthsToAdd) || monthsToAdd < 0) {
-    throw new RangeError(`monthsToAdd must be a non-negative integer, got ${monthsToAdd}`);
-  }
-
-  const origYear = Number(match[1]);
-  const origMonth = Number(match[2]);
-  const origDay = Number(match[3]);
-
-  const totalMonths = origYear * 12 + (origMonth - 1) + monthsToAdd;
-  const targetYear = Math.floor(totalMonths / 12);
-  const targetMonth = (totalMonths % 12) + 1;
-
-  const maxDays = daysInMonth(targetYear, targetMonth);
-  const targetDay = Math.min(origDay, maxDays);
-
-  const yStr = String(targetYear).padStart(4, '0');
-  const mStr = String(targetMonth).padStart(2, '0');
-  const dStr = String(targetDay).padStart(2, '0');
-
-  return `${yStr}-${mStr}-${dStr}`;
-}
+// Calendar helpers live in ./calendar; re-exported so existing imports keep working.
+export { addMonthsClamped, daysInMonth, isLeapYear } from './calendar';
 
 /**
  * Formats a deterministic, human-readable invoice document number from the contract
@@ -144,7 +78,7 @@ export type MonthlyInvoice = {
   vatRatePercent: number;
   /** Whether the VAT rate on this date is designated fictional (e.g. 2027 reform) */
   vatRateFictional: boolean;
-  /** Computed VAT amount in euro cents: Math.round((netRentCents * vatRatePercent) / 100) */
+  /** VAT in euro cents: mulDivRound(netRentCents, vatRateBp, 10 000), half up */
   vatCents: number;
   /** Total invoice payable in euro cents: netRentCents + vatCents */
   grossTotalCents: number;
@@ -211,40 +145,32 @@ export function generateInvoiceSchedule(input: GenerateInvoiceScheduleInput): In
   }
   const signingVatRatePercent = signingVat.ratePercent;
 
-  const invoices: MonthlyInvoice[] = [];
-  let totalNetRentCents = 0;
-  let totalVatCents = 0;
-  let totalGrossCents = 0;
+  // One schedule, one rounding rule: the rows come from ./schedule.
+  const schedule = generateSchedule(
+    { startDate: signedOn, termMonths, monthlyNetRentCents, downPaymentCents: 0 },
+    vatRates
+  );
 
-  for (let index = 0; index < termMonths; index += 1) {
-    const invoiceNumber = index + 1;
-    const dueDate = addMonthsClamped(signedOn, index);
-    const invoiceVat = vatRateOn(vatRates, dueDate);
-
+  const invoices: MonthlyInvoice[] = schedule.rows.map((row, index) => {
+    const invoiceVat = vatRateOn(vatRates, row.invoiceDate);
     if (!invoiceVat.ok) {
-      throw new Error(`No VAT rate found for invoice due date ${dueDate}`);
+      throw new Error(`No VAT rate found for invoice due date ${row.invoiceDate}`);
     }
-
-    const vatCents = Math.round((monthlyNetRentCents * invoiceVat.ratePercent) / 100);
-    const grossTotalCents = monthlyNetRentCents + vatCents;
-    const isVatChangedFromSigning = invoiceVat.ratePercent !== signingVatRatePercent;
-
-    invoices.push({
-      invoiceNumber,
-      dueDate,
-      netRentCents: monthlyNetRentCents,
+    return {
+      invoiceNumber: index + 1,
+      dueDate: row.invoiceDate,
+      netRentCents: row.netCents,
       vatRatePercent: invoiceVat.ratePercent,
       vatRateFictional: invoiceVat.fictional,
-      vatCents,
-      grossTotalCents,
-      isVatChangedFromSigning,
+      vatCents: row.vatCents,
+      grossTotalCents: row.grossCents,
+      isVatChangedFromSigning: invoiceVat.ratePercent !== signingVatRatePercent,
       signingVatRatePercent,
-    });
-
-    totalNetRentCents += monthlyNetRentCents;
-    totalVatCents += vatCents;
-    totalGrossCents += grossTotalCents;
-  }
+    };
+  });
+  const totalNetRentCents = schedule.totalRentNetCents;
+  const totalGrossCents = schedule.totalGrossCents;
+  const totalVatCents = totalGrossCents - totalNetRentCents;
 
   return {
     signedOn,

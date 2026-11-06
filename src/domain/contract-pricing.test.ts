@@ -8,7 +8,6 @@ import {
   calculateContractQuote,
   clampDownPaymentCents,
   downPaymentBoundsFor,
-  vatRateOn,
 } from './contract-pricing';
 
 let table: CoefficientTable;
@@ -16,40 +15,6 @@ let vatRates: VatRates;
 
 beforeAll(async () => {
   [table, vatRates] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
-});
-
-describe('vatRateOn', () => {
-  it('returns 25.5 % on 2026-11-05 and 2026-12-31', () => {
-    expect(vatRateOn(vatRates, '2026-11-05')).toEqual({
-      ok: true,
-      ratePercent: 25.5,
-      fictional: false,
-    });
-    expect(vatRateOn(vatRates, '2026-12-31')).toEqual({
-      ok: true,
-      ratePercent: 25.5,
-      fictional: false,
-    });
-  });
-
-  it('switches to the fictional 26.0 % rate on 2027-01-01', () => {
-    expect(vatRateOn(vatRates, '2027-01-01')).toEqual({
-      ok: true,
-      ratePercent: 26.0,
-      fictional: true,
-    });
-  });
-
-  it('returns no_vat_rate_on_date before the earliest rate', () => {
-    expect(vatRateOn(vatRates, '2010-01-01')).toEqual({
-      ok: false,
-      reason: 'no_vat_rate_on_date',
-    });
-  });
-
-  it('throws on malformed ISO dates', () => {
-    expect(() => vatRateOn(vatRates, '05-11-2026')).toThrow(RangeError);
-  });
 });
 
 describe('availableTermsFromTable & downPaymentBoundsFor', () => {
@@ -128,15 +93,19 @@ describe('calculateContractQuote', () => {
         termMonths: 36,
         band: expect.objectContaining({ band: 'B', annual_interest_percent: 7.9 }),
         factor: 0.027584,
+        factorPpm: 27_584,
+        annualInterestBp: 790,
         monthlyNetRentCents: 10_730,
         vatRatePercent: 25.5,
+        vatRateBp: 2_550,
         vatRateFictional: false,
         monthlyVatCents: 2_736,
         monthlyGrossRentCents: 13_466,
         buyoutPercent: 15,
         buyoutNetCents: 58_350,
         totalRentNetCents: 386_280,
-        totalRentGrossCents: 484_776,
+        // Sum of the rows: 2 invoices at 25.5 % (13 466) + 34 at 26 % from Jan 2027 (13 520).
+        totalRentGrossCents: 486_612,
         totalLeaseNetCents: 386_280,
         totalWithBuyoutNetCents: 444_630,
       },

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { monthlyFactorFor } from './coefficient';
+import { monthlyFactorFor, monthlyNetRentFor } from './coefficient';
 
 // Tests run against the real data pack, so they also catch a changed data file.
 let table: CoefficientTable;
@@ -52,5 +52,25 @@ describe('monthlyFactorFor', () => {
 
   it('throws on fractions of a cent, because that is a bug in the caller', () => {
     expect(() => monthlyFactorFor(table, 1999.5, 24)).toThrow(RangeError);
+  });
+});
+
+describe('monthlyNetRentFor', () => {
+  it('matches the DATA.md worked example: 389 000 × 0.027584 = 10 730.176 → 10 730', () => {
+    expect(monthlyNetRentFor(389_000, 0.027584)).toBe(10_730);
+  });
+
+  it('matches card 9: relist price 92 781 at band A, 12 months → 5 198', () => {
+    expect(monthlyNetRentFor(92_781, 0.056022)).toBe(5_198);
+  });
+
+  it('rounds half up in integer arithmetic', () => {
+    // 500 000 × 0.000001 = 0.5 exactly → 1.
+    expect(monthlyNetRentFor(500_000, 0.000001)).toBe(1);
+  });
+
+  it('throws on non-integer cents or a factor finer than parts per million', () => {
+    expect(() => monthlyNetRentFor(100.5, 0.027584)).toThrow(RangeError);
+    expect(() => monthlyNetRentFor(100, 0.0275845)).toThrow(RangeError);
   });
 });

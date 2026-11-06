@@ -1,6 +1,8 @@
 // Worked example 1: look up the monthly rent factor in the coefficient table.
-// monthly net rent (cents) = financed amount (cents) × factor. Rounding is your decision.
+// monthly net rent (cents) = financed amount (cents) × factor, rounded once, half up,
+// in integer arithmetic: mulDivRound(financed, factorPpm, 1 000 000). See ./rounding.
 import type { CoefficientBand, CoefficientTable } from '@/data/schemas';
+import { fractionToPpm, mulDivRound } from './rounding';
 
 export type MonthlyFactorResult =
   | { ok: true; band: CoefficientBand; factor: number }
@@ -35,4 +37,13 @@ export function monthlyFactorFor(
   if (factor === undefined) return { ok: false, reason: 'unknown_term' };
 
   return { ok: true, band, factor };
+}
+
+/**
+ * Monthly net rent in cents for a financed amount and a table factor:
+ * `mulDivRound(financedCents, factor in ppm, 1 000 000)`. 389 000 × 0.027584 → 10 730.
+ * Throws if the factor has more precision than parts per million.
+ */
+export function monthlyNetRentFor(financedCents: number, factor: number): number {
+  return mulDivRound(financedCents, fractionToPpm(factor), 1_000_000);
 }

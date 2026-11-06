@@ -1,45 +1,25 @@
-// Pure contract pricing and VAT lookup functions.
+// Pure contract pricing.
 //
-// Rounding rule (documented per RULES.md):
-// All monetary inputs and outputs are integer euro cents. Derived cent amounts
-// (`monthlyNetRentCents`, `monthlyVatCents`, `buyoutNetCents`) are rounded once
-// using `Math.round` (half-up to the nearest cent for positive numbers), matching
-// the worked example in `data/DATA.md`:
+// Rounding rule (documented per RULES.md, ARCHITECTURE.md §6.1):
+// All monetary inputs and outputs are integer euro cents, and rates are integers
+// (factor in ppm, VAT in basis points). Each derived amount (`monthlyNetRentCents`,
+// `monthlyVatCents`, `buyoutNetCents`) is rounded once, half up, by `mulDivRound`,
+// matching the worked example in `data/DATA.md`:
 //   389 000 × 0.027584 = 10 730.176 → 10 730 cents
 //   10 730 × 25.5 %    =  2 736.15  →  2 736 cents
 //   10 730 + 2 736     = 13 466 cents
 import type { CoefficientBand, CoefficientTable, VatRates } from '@/data/schemas';
-import { monthlyFactorFor } from './coefficient';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+import { monthlyFactorFor, monthlyNetRentFor } from './coefficient';
+import { LEASE_CONFIG } from './config';
+import { fractionToPpm, mulDivRound, percentToBp } from './rounding';
+import { generateSchedule } from './schedule';
+import { vatRateOn } from './vat';
 
 /** Default down payment slider step: 5 000 cents (€50.00). */
-export const DEFAULT_DOWN_PAYMENT_STEP_CENTS = 5_000;
+export const DEFAULT_DOWN_PAYMENT_STEP_CENTS = LEASE_CONFIG.downPaymentStepCents;
 
-export type VatRateResult =
-  | { ok: true; ratePercent: number; fictional: boolean }
-  | { ok: false; reason: 'no_vat_rate_on_date' };
-
-/**
- * Looks up the general VAT rate in effect on `isoDate` (`YYYY-MM-DD`).
- * Both `valid_from` and `valid_to` are inclusive; `valid_to: null` means open-ended.
- */
-export function vatRateOn(vatRates: VatRates, isoDate: string): VatRateResult {
-  if (!ISO_DATE.test(isoDate)) {
-    throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
-  }
-
-  const rate = vatRates.rates.find(
-    (r) => r.valid_from <= isoDate && (r.valid_to === null || isoDate <= r.valid_to)
-  );
-  if (!rate) return { ok: false, reason: 'no_vat_rate_on_date' };
-
-  return {
-    ok: true,
-    ratePercent: rate.rate_percent,
-    fictional: Boolean(rate.fictional),
-  };
-}
+// VAT lookup lives in ./vat; re-exported so existing imports keep working.
+export { vatRateOn, type VatRateResult } from './vat';
 
 /**
  * Returns the sorted lease terms (in months) supported by a coefficient table,
@@ -115,14 +95,21 @@ export type ContractQuote = {
   termMonths: number;
   band: CoefficientBand;
   factor: number;
+  /** The factor in parts per million (0.027584 → 27 584), as stored on the quote. */
+  factorPpm: number;
+  /** The band's annual interest in basis points (7.9 % → 790). */
+  annualInterestBp: number;
   monthlyNetRentCents: number;
   vatRatePercent: number;
+  /** VAT on the quote date in basis points (25.5 % → 2550). */
+  vatRateBp: number;
   vatRateFictional: boolean;
   monthlyVatCents: number;
   monthlyGrossRentCents: number;
   buyoutPercent: number;
   buyoutNetCents: number;
   totalRentNetCents: number;
+  /** Sum of every rent invoice's gross, each with VAT on its own invoice date. */
   totalRentGrossCents: number;
   totalLeaseNetCents: number;
   totalWithBuyoutNetCents: number;
@@ -180,12 +167,17 @@ export function calculateContractQuote(input: ContractQuoteInput): ContractQuote
     return { ok: false, reason: 'no_vat_rate_on_date', financedCents };
   }
 
-  const monthlyNetRentCents = Math.round(financedCents * factorResult.factor);
-  const monthlyVatCents = Math.round((monthlyNetRentCents * vatResult.ratePercent) / 100);
+  const monthlyNetRentCents = monthlyNetRentFor(financedCents, factorResult.factor);
+  // VAT on the quote date, for display. Each invoice gets its own date's rate.
+  const monthlyVatCents = mulDivRound(monthlyNetRentCents, vatResult.rateBp, 10_000);
   const monthlyGrossRentCents = monthlyNetRentCents + monthlyVatCents;
-  const buyoutNetCents = Math.round((financedCents * buyoutPercent) / 100);
+  const buyoutNetCents = mulDivRound(financedCents, buyoutPercent, 100);
   const totalRentNetCents = monthlyNetRentCents * termMonths;
-  const totalRentGrossCents = monthlyGrossRentCents * termMonths;
+  // The VAT rate can change during the term, so the gross total is the sum of the rows.
+  const totalRentGrossCents = generateSchedule(
+    { startDate: isoDate, termMonths, monthlyNetRentCents, downPaymentCents: 0 },
+    vatRates
+  ).totalGrossCents;
   const totalLeaseNetCents = downPaymentCents + totalRentNetCents;
   const totalWithBuyoutNetCents = totalLeaseNetCents + buyoutNetCents;
 
@@ -200,8 +192,11 @@ export function calculateContractQuote(input: ContractQuoteInput): ContractQuote
       termMonths,
       band: factorResult.band,
       factor: factorResult.factor,
+      factorPpm: fractionToPpm(factorResult.factor),
+      annualInterestBp: percentToBp(factorResult.band.annual_interest_percent),
       monthlyNetRentCents,
       vatRatePercent: vatResult.ratePercent,
+      vatRateBp: vatResult.rateBp,
       vatRateFictional: vatResult.fictional,
       monthlyVatCents,
       monthlyGrossRentCents,

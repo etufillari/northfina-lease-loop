@@ -50,6 +50,14 @@
       "value": "0"
     },
     {
+      "key": "refurbishmentAssetId",
+      "value": "ebike-007"
+    },
+    {
+      "key": "refurbishmentCompletedOn",
+      "value": "2026-11-06"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -501,6 +509,90 @@
                   "    pm.expect(body.success).to.eql(true);",
                   "    pm.expect(body.data.termination.status).to.eql('completed');",
                   "    pm.expect(body.data.termination.action).to.eql('returned');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Second life refurbishment",
+      "description": "Quotes and accepts refurbishment for a returned asset. This uses ebike-007 from the seeded data pack and can be run independently of the contract flow.",
+      "item": [
+        {
+          "name": "Quote refurbishment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetCondition\": \"good\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{refurbishmentAssetId}}/refurbishment/quote"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('refurbishment quote is available', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.asset.status).to.eql('returned');",
+                  "    pm.expect(body.data.quote.targetCondition).to.eql('good');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept refurbishment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetCondition\": \"good\",\n  \"completedOn\": \"{{refurbishmentCompletedOn}}\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{refurbishmentAssetId}}/refurbishment"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returned asset is available again', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.asset.status).to.eql('available');",
+                  "    pm.expect(body.data.asset.condition).to.eql('good');",
                   "});"
                 ]
               }

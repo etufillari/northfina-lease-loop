@@ -1,7 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { MAX_DOWN_PAYMENT_CENTS, monthlyRentFor, parseDownPaymentCents } from './monthly-rent';
+import {
+  canStartLease,
+  MAX_DOWN_PAYMENT_CENTS,
+  monthlyRentFor,
+  parseDownPaymentCents,
+} from './monthly-rent';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -43,6 +48,19 @@ describe('monthlyRentFor', () => {
     expect(monthlyRentFor(table, 189_900, 500_000, 24)).toEqual({
       ok: true,
       monthlyRentCents: 0,
+    });
+  });
+
+  describe('canStartLease', () => {
+    it('blocks a zero-month lease unless the full price is paid upfront', () => {
+      expect(canStartLease(189_900, 100_000, 0)).toBe(false);
+      expect(canStartLease(189_900, 189_900, 0)).toBe(true);
+      expect(canStartLease(189_900, 200_000, 0)).toBe(true);
+    });
+
+    it('allows a positive-term lease with a valid down payment', () => {
+      expect(canStartLease(189_900, 0, 12)).toBe(true);
+      expect(canStartLease(undefined, 0, 12)).toBe(false);
     });
   });
 

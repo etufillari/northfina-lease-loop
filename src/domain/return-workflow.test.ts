@@ -4,6 +4,7 @@ import {
   defaultPlanTarget,
   describeRefurbishmentAction,
   isReturnStatus,
+  assetAfterRefurbishment,
   planTargetOptions,
   returnNextAction,
   returnTimeline,
@@ -14,11 +15,11 @@ describe('returnNextAction', () => {
     expect(returnNextAction('requested')).toBe('receive');
     expect(returnNextAction('received')).toBe('inspect');
     expect(returnNextAction('inspected')).toBe('plan');
-    expect(returnNextAction('planned')).toBe('ready_for_next_step');
+    expect(returnNextAction('planned')).toBe('approve');
+    expect(returnNextAction('approved')).toBe('complete');
   });
 
-  it('offers no action for statuses without a screen', () => {
-    expect(returnNextAction('approved')).toBe('none');
+  it('offers no action once the return is completed or cancelled', () => {
     expect(returnNextAction('completed')).toBe('none');
     expect(returnNextAction('cancelled')).toBe('none');
   });
@@ -35,10 +36,24 @@ describe('returnTimeline', () => {
     returnTimeline(status).map((entry) => entry.state);
 
   it('marks earlier steps done, the current step, and later steps upcoming', () => {
-    expect(states('requested')).toEqual(['current', 'upcoming', 'upcoming', 'upcoming']);
-    expect(states('received')).toEqual(['done', 'current', 'upcoming', 'upcoming']);
-    expect(states('inspected')).toEqual(['done', 'done', 'current', 'upcoming']);
-    expect(states('planned')).toEqual(['done', 'done', 'done', 'current']);
+    expect(states('requested')).toEqual([
+      'current',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+    ]);
+    expect(states('received')).toEqual([
+      'done',
+      'current',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+    ]);
+    expect(states('planned')).toEqual(['done', 'done', 'done', 'current', 'upcoming', 'upcoming']);
+    expect(states('approved')).toEqual(['done', 'done', 'done', 'done', 'current', 'upcoming']);
   });
 
   it('lists the steps in workflow order', () => {
@@ -47,12 +62,13 @@ describe('returnTimeline', () => {
       'received',
       'inspected',
       'planned',
+      'approved',
+      'completed',
     ]);
   });
 
-  it('shows every step done once the return is past the plan', () => {
-    expect(states('approved')).toEqual(['done', 'done', 'done', 'done']);
-    expect(states('completed')).toEqual(['done', 'done', 'done', 'done']);
+  it('shows every step done once the return is completed', () => {
+    expect(states('completed')).toEqual(['done', 'done', 'done', 'done', 'done', 'done']);
   });
 
   it('has no current step for a cancelled return', () => {
@@ -103,5 +119,39 @@ describe('describeRefurbishmentAction', () => {
       kind: 'work',
       id: 'condition_upgrade_fair',
     });
+  });
+});
+
+describe('assetAfterRefurbishment', () => {
+  const plan = {
+    resultingCondition: 'good' as const,
+    resultingUsage: 0,
+    inspectedUsage: { unit: 'km' },
+  };
+
+  it('gives a returned asset the planned condition and usage and makes it available', () => {
+    expect(assetAfterRefurbishment(plan, 'returned')).toEqual({
+      ok: true,
+      asset: { condition: 'good', usage: { unit: 'km', value: 0 }, status: 'available' },
+    });
+  });
+
+  it('keeps a reserved asset reserved', () => {
+    const result = assetAfterRefurbishment(plan, 'reserved');
+
+    expect(result).toMatchObject({ ok: true, asset: { status: 'reserved', condition: 'good' } });
+  });
+
+  it('refuses an asset that was never returned', () => {
+    expect(assetAfterRefurbishment(plan, 'available')).toEqual({
+      ok: false,
+      reason: 'asset_not_returned_or_reserved',
+    });
+  });
+
+  it('keeps the usage the plan ends with, even when no work resets it', () => {
+    const result = assetAfterRefurbishment({ ...plan, resultingUsage: 9_800 }, 'returned');
+
+    expect(result).toMatchObject({ ok: true, asset: { usage: { unit: 'km', value: 9_800 } } });
   });
 });

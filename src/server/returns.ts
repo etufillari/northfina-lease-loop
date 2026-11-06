@@ -204,7 +204,10 @@ export async function markReturnReceived(
 /**
  * Dealer records the inspection after physical receipt.
  *
- * Inspection data is saved on ReturnRequest, not on Asset.
+ * The inspection is saved on the ReturnRequest, and in the same transaction the lease ends:
+ * the asset takes the inspected condition and usage and becomes `returned` (so it can enter
+ * second-life matching), and the contract is marked `ended`. Refurbishment later changes the
+ * asset again (see return-completion.ts).
  *
  * Transition: received -> inspected
  */
@@ -256,6 +259,12 @@ export async function inspectReturn(
         usageUnit: existing.asset.usage_unit,
         usageValue: inspection.usageValue,
         usageSinceLastService: inspection.usageSinceLastService ?? null,
+        asset: {
+          condition: { from: existing.asset.condition, to: inspection.condition },
+          usageValue: { from: existing.asset.usage_value, to: inspection.usageValue },
+          status: { from: existing.asset.status, to: 'returned' },
+        },
+        contract: { id: existing.contract_id, status: { from: 'active', to: 'ended' } },
       },
     },
     async (tx) => {
@@ -280,6 +289,38 @@ export async function inspectReturn(
           409,
           'RETURN_NOT_RECEIVED',
           'Only a physically received return can be inspected.'
+        );
+      }
+
+      // The lease ends with the inspection. Conditional updates, so a lease that was already
+      // ended or an asset that is no longer on lease rolls the whole inspection back.
+      const assetReturned = await tx.asset.updateMany({
+        where: { id: existing.asset_id, status: 'reserved' },
+        data: {
+          status: 'returned',
+          condition: inspection.condition,
+          usage_value: inspection.usageValue,
+        },
+      });
+
+      if (assetReturned.count !== 1) {
+        throw new ApiError(
+          409,
+          'ASSET_NOT_ON_ACTIVE_LEASE',
+          'The asset is not currently reserved by an active lease.'
+        );
+      }
+
+      const contractEnded = await tx.contract.updateMany({
+        where: { id: existing.contract_id, status: 'active' },
+        data: { status: 'ended' },
+      });
+
+      if (contractEnded.count !== 1) {
+        throw new ApiError(
+          409,
+          'CONTRACT_NOT_ACTIVE',
+          'The contract for this return is no longer active.'
         );
       }
 

@@ -45,7 +45,7 @@ export type ReturnListItem = {
 };
 
 // The plan as saved by planReturn() in ./returns.ts.
-const savedPlanSchema = z.object({
+export const returnPlanSchema = z.object({
   targetCondition: assetConditionSchema,
   inspectedCondition: assetConditionSchema,
   actions: z.array(
@@ -57,7 +57,7 @@ const savedPlanSchema = z.object({
   resultingUsage: z.number().int(),
   usageReset: z.boolean(),
 });
-export type ReturnPlan = z.infer<typeof savedPlanSchema>;
+export type ReturnPlan = z.infer<typeof returnPlanSchema>;
 
 export type ReturnDetail = ReturnListItem & {
   received: { at: string; by: string } | null;
@@ -70,6 +70,8 @@ export type ReturnDetail = ReturnListItem & {
     usageSinceLastService: number | null;
   } | null;
   plan: ReturnPlan | null;
+  approved: { at: string; by: string } | null;
+  completed: { at: string; by: string } | null;
 };
 
 const FINISHED: ReturnStatus[] = ['completed', 'cancelled'];
@@ -188,7 +190,17 @@ export async function getReturnRequest(
   const plan =
     row.refurbishment_plan_json === null
       ? null
-      : savedPlanSchema.parse(JSON.parse(row.refurbishment_plan_json));
+      : returnPlanSchema.parse(JSON.parse(row.refurbishment_plan_json));
 
-  return { ...toListItem(row, customers), received, inspection, plan };
+  const approved =
+    row.approved_at && row.approved_by
+      ? { at: row.approved_at.toISOString(), by: row.approved_by }
+      : null;
+
+  const completed =
+    row.completed_at && row.completed_by
+      ? { at: row.completed_at.toISOString(), by: row.completed_by }
+      : null;
+
+  return { ...toListItem(row, customers), received, inspection, plan, approved, completed };
 }

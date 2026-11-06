@@ -1,7 +1,8 @@
-// The dealer's return workflow: Return requested → Received → Inspected → Plan created.
-// The server owns the transitions (src/server/returns.ts). This file only answers
-// "what should the dealer do next?" and "how far along is this return?", so the UI shows
-// those answers instead of inventing its own rules.
+// The dealer's return workflow:
+// Return requested → Received → Inspected → Plan created → Plan approved → Completed.
+// The server owns the transitions (src/server/returns.ts, return-completion.ts). This file
+// answers "what should the dealer do next?", "how far along is this return?" and "what does
+// the asset look like once the work is done?", so the UI and the server share one set of rules.
 
 export const RETURN_STATUSES = [
   'requested',
@@ -18,15 +19,21 @@ export function isReturnStatus(value: string): value is ReturnStatus {
   return (RETURN_STATUSES as readonly string[]).includes(value);
 }
 
-/** The four steps a dealer works through, in order. */
-export const WORKFLOW_STEPS = ['requested', 'received', 'inspected', 'planned'] as const;
+/** The six steps a return goes through, in order. `completed` is the last. */
+export const WORKFLOW_STEPS = [
+  'requested',
+  'received',
+  'inspected',
+  'planned',
+  'approved',
+  'completed',
+] as const;
 export type WorkflowStep = (typeof WORKFLOW_STEPS)[number];
 
-export type ReturnNextAction = 'receive' | 'inspect' | 'plan' | 'ready_for_next_step' | 'none';
+export type ReturnNextAction = 'receive' | 'inspect' | 'plan' | 'approve' | 'complete' | 'none';
 
 /**
- * The one thing the dealer can do now. `planned` is the end of this workflow ("ready for the
- * next step"); approval and completion have no screens yet, so they and `cancelled` offer none.
+ * The one thing the dealer can do now. A completed or cancelled return has nothing left to do.
  */
 export function returnNextAction(status: ReturnStatus): ReturnNextAction {
   switch (status) {
@@ -37,8 +44,9 @@ export function returnNextAction(status: ReturnStatus): ReturnNextAction {
     case 'inspected':
       return 'plan';
     case 'planned':
-      return 'ready_for_next_step';
+      return 'approve';
     case 'approved':
+      return 'complete';
     case 'completed':
     case 'cancelled':
       return 'none';
@@ -49,18 +57,16 @@ export type TimelineState = 'done' | 'current' | 'upcoming';
 export type TimelineEntry = { step: WorkflowStep; state: TimelineState };
 
 /**
- * Progress through the four steps. The step the return is in is `current`, earlier steps are
- * `done`, later ones `upcoming`. `approved` and `completed` are past the plan, so every step
- * is `done`. A cancelled return has no current step: nothing is left to do.
+ * Progress through the six steps. The step the return is in is `current`, earlier steps are
+ * `done`, later ones `upcoming`. Once `completed`, every step is `done`. A cancelled return
+ * has no current step: nothing is left to do.
  */
 export function returnTimeline(status: ReturnStatus): TimelineEntry[] {
   if (status === 'cancelled') {
     return WORKFLOW_STEPS.map((step) => ({ step, state: 'upcoming' }));
   }
   const currentIndex =
-    status === 'approved' || status === 'completed'
-      ? WORKFLOW_STEPS.length
-      : WORKFLOW_STEPS.indexOf(status);
+    status === 'completed' ? WORKFLOW_STEPS.length : WORKFLOW_STEPS.indexOf(status);
   return WORKFLOW_STEPS.map((step, index) => ({
     step,
     state: index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'upcoming',
@@ -101,4 +107,45 @@ export function describeRefurbishmentAction(id: string): RefurbishmentActionLabe
     if (from && to) return { kind: 'condition_upgrade', from, to };
   }
   return { kind: 'work', id };
+}
+
+// --- Finishing the refurbishment -------------------------------------------------------
+
+export type AssetStatus = 'available' | 'reserved' | 'returned';
+
+export type AssetAfterRefurbishment = {
+  condition: Condition;
+  usage: { unit: string; value: number };
+  status: AssetStatus;
+};
+
+export type CompletionResult =
+  | { ok: true; asset: AssetAfterRefurbishment }
+  | { ok: false; reason: 'asset_not_returned_or_reserved' };
+
+/**
+ * What the asset looks like when the dealer completes the refurbishment: the condition and
+ * usage the plan promised, and a status the next lease can start from.
+ *
+ * - A `returned` asset becomes `available`: it is back in the catalogue.
+ * - A `reserved` asset stays `reserved`: someone has already been promised it.
+ * - An `available` asset was never returned, so something is wrong; the work is refused.
+ */
+export function assetAfterRefurbishment(
+  plan: {
+    resultingCondition: Condition;
+    resultingUsage: number;
+    inspectedUsage: { unit: string };
+  },
+  assetStatus: AssetStatus
+): CompletionResult {
+  if (assetStatus === 'available') return { ok: false, reason: 'asset_not_returned_or_reserved' };
+  return {
+    ok: true,
+    asset: {
+      condition: plan.resultingCondition,
+      usage: { unit: plan.inspectedUsage.unit, value: plan.resultingUsage },
+      status: assetStatus === 'returned' ? 'available' : 'reserved',
+    },
+  };
 }

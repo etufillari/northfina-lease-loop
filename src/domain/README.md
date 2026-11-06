@@ -31,6 +31,7 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 | `vat.ts`           | The VAT rate on a date, and the VAT of one invoice.                          |
 | `pricing.ts`       | Rent, buyout and contract total for a net price or a catalogue item.         |
 | `quote-options.ts` | The terms and down payments on offer, and when less down gives a lower rent. |
+| `quote-costs.ts`   | What a quote costs with VAT, for the sliders and the server.                 |
 | `contract.ts`      | The price-lock rule, and the snapshot that signing makes.                    |
 | `invoicing.ts`     | The invoice schedule, totals, VAT-change notes and cost forecast.            |
 

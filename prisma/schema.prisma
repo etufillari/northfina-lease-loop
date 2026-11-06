@@ -93,6 +93,7 @@ model Contract {
   invoices                 Invoice[]
   access_tokens            CustomerAccessToken[]
   return_requests          ReturnRequest[]
+  buyout_requests        BuyoutRequest[]
 
   @@index([asset_id])
   @@index([customer_id])
@@ -184,6 +185,23 @@ model ReturnRequest {
   @@index([contract_id])
   @@index([customer_id])
   @@index([status])
+}
+
+// A customer's end-of-term request to buy the leased asset.
+// The buyout amount is copied from the signed contract and cannot change.
+model BuyoutRequest {
+  id              String   @id
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  contract_id     String
+  contract        Contract @relation(fields: [contract_id], references: [id])
+  customer_id     String
+  buyout_net_cents Int
+  settlement_due_after String
+  status          String // requested | approved | completed | cancelled
+
+  @@index([contract_id, status])
+  @@index([customer_id])
 }
 
 // An issued invoice. The VAT rate and amounts are stored, so history never changes even if

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CustomerReturnRequest } from '@/components/customer-return-request';
+import { CustomerEndOfTermActions } from '@/components/customer-end-of-term-actions';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -24,6 +24,29 @@ export default async function CustomerPortalPage({
   }
   const t = getT(locale);
   const timeline = await getInvoiceTimeline(db, await loadPricingData(), contract.id);
+  const [buyoutRequest, returnRequest] = await Promise.all([
+    db.buyoutRequest.findFirst({
+      where: { contract_id: contract.id, status: { in: ['requested', 'approved'] } },
+      orderBy: { created_at: 'desc' },
+    }),
+    db.returnRequest.findFirst({
+      where: {
+        contract_id: contract.id,
+        status: { in: ['requested', 'received', 'inspected', 'planned', 'approved'] },
+      },
+      orderBy: { created_at: 'desc' },
+    }),
+  ]);
+  const initialAction =
+    buyoutRequest && returnRequest
+      ? buyoutRequest.created_at >= returnRequest.created_at
+        ? 'buyout'
+        : 'return'
+      : buyoutRequest
+        ? 'buyout'
+        : returnRequest
+          ? 'return'
+          : null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
@@ -84,7 +107,12 @@ export default async function CustomerPortalPage({
           ))}
         </ul>
       </section>
-      <CustomerReturnRequest token={token} locale={locale} />
+      <CustomerEndOfTermActions
+        token={token}
+        locale={locale}
+        buyoutNetCents={contract.buyout_net_cents}
+        initialAction={initialAction}
+      />
       <Link
         href={`/${locale}`}
         className="mt-8 inline-flex rounded-xl border border-stone-300 px-5 py-3 font-medium text-stone-700 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"

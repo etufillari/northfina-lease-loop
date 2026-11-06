@@ -56,6 +56,9 @@ export function EndOfTermSection(props: EndOfTermSectionProps) {
       passOn={props.passOn}
     />
   ) : null;
+  // Before the choice opens the form lists the same three dates as a timeline, so they aren't
+  // repeated here as a sentence.
+  const timelineShown = !ending && asset !== null && props.today < dates.opensOn;
 
   // Beside Leave early it is one card of a pair. On its own it spans the page, so on a wide screen
   // the heading and dates take a column and the form or the recorded ending the rest.
@@ -68,13 +71,15 @@ export function EndOfTermSection(props: EndOfTermSectionProps) {
         <h2 id="end-of-term" className="font-display text-lg font-bold tracking-tight uppercase">
           {t('end.title')}
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          {t('end.dates', {
-            lastDay: date(dates.lastDay),
-            opensOn: date(dates.opensOn),
-            handover: date(dates.handoverDate),
-          })}
-        </p>
+        {timelineShown ? null : (
+          <p className="mt-1 text-sm text-muted">
+            {t('end.dates', {
+              lastDay: date(dates.lastDay),
+              opensOn: date(dates.opensOn),
+              handover: date(dates.handoverDate),
+            })}
+          </p>
+        )}
       </div>
       {content ? (
         <div

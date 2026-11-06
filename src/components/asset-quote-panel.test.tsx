@@ -340,6 +340,72 @@ describe('AssetQuotePanel', () => {
     );
   });
 
+  it('keeps the previous quote on screen while a new one loads', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(successResponse) })
+      .mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel();
+    await flushDebounce();
+
+    fireEvent.change(screen.getByLabelText('Lease term'), { target: { value: '24' } });
+    await flushDebounce();
+
+    expect(
+      screen.getByText(formatEuro(quote.monthly_total_cents, intlLocale[locale]))
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Updating quote...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unable to calculate quote.')).not.toBeInTheDocument();
+  });
+
+  it('turns off the Apply button until the new quote arrives', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(successResponse) })
+      .mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel();
+    await flushDebounce();
+    expect(screen.getByRole('link', { name: /Apply for leasing/ })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Lease term'), { target: { value: '24' } });
+    await flushDebounce();
+
+    expect(screen.queryByRole('link', { name: /Apply for leasing/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Apply for leasing')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('shows no error while the down payment is being raised to the minimum', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: vi.fn().mockResolvedValue({
+          success: false,
+          error: {
+            code: 'QUOTE_NOT_AVAILABLE',
+            message: 'This deal cannot be priced',
+            details: {
+              reason: 'above_maximum',
+              down_payment_limits: { min_cents: 5000, max_cents: 50000 },
+            },
+          },
+        }),
+      })
+      .mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel();
+    await flushDebounce();
+
+    expect(screen.getByText('Updating quote...')).toBeInTheDocument();
+    expect(screen.queryByText('Unable to calculate quote.')).not.toBeInTheDocument();
+    expect(screen.queryByText('This deal cannot be priced')).not.toBeInTheDocument();
+  });
+
   it('displays the leasing application CTA when a quote is available', async () => {
     mockFetch(successResponse);
 

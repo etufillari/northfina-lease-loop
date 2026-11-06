@@ -94,9 +94,11 @@ export function AssetQuotePanel({
     const controller = new AbortController();
 
     const timeout = window.setTimeout(async () => {
+      // The previous quote stays on screen until this one arrives, so the panel does not jump.
+      let adjusting = false;
+
       try {
         setLoadingQuote(true);
-        setQuote(null);
         setQuoteError(null);
 
         const query = new URLSearchParams({
@@ -120,6 +122,7 @@ export function AssetQuotePanel({
               const adjustedDownPayment = clampDownPayment(downPayment, limits);
 
               if (adjustedDownPayment !== downPayment) {
+                adjusting = true;
                 setDownPayment(adjustedDownPayment);
                 return;
               }
@@ -138,6 +141,7 @@ export function AssetQuotePanel({
         const adjustedDownPayment = clampDownPayment(downPayment, limits);
 
         if (adjustedDownPayment !== downPayment) {
+          adjusting = true;
           setDownPayment(adjustedDownPayment);
           return;
         }
@@ -154,7 +158,8 @@ export function AssetQuotePanel({
 
         setQuoteError(error instanceof Error ? error.message : t('asset.quoteUnavailable'));
       } finally {
-        if (!controller.signal.aborted) {
+        // While adjusting, the next request is on its way, so this one is not finished.
+        if (!controller.signal.aborted && !adjusting) {
           setLoadingQuote(false);
         }
       }
@@ -245,12 +250,15 @@ export function AssetQuotePanel({
 
           {/* Quote result */}
           <div className="mt-8 rounded-xl bg-stone-50 p-4 dark:bg-stone-800/60 sm:p-5">
-            {loadingQuote ? (
+            {!quote && loadingQuote ? (
               <p className="text-sm text-stone-500 dark:text-stone-400">
                 {t('asset.updatingQuote')}
               </p>
             ) : quote ? (
-              <>
+              <div
+                aria-busy={loadingQuote}
+                className={`transition-opacity ${loadingQuote ? 'opacity-60' : ''}`}
+              >
                 <p className="text-xs text-stone-600 dark:text-stone-400">
                   {t('asset.monthlyPaymentIncludingVat')}
                 </p>
@@ -299,7 +307,7 @@ export function AssetQuotePanel({
                 <p className="mt-5 text-xs text-stone-500 dark:text-stone-400">
                   {t('asset.quoteDate')}: {quote.quote_date}
                 </p>
-              </>
+              </div>
             ) : (
               <p className="text-sm text-red-600 dark:text-red-400">
                 {quoteError ?? t('asset.quoteUnavailable')}
@@ -307,11 +315,12 @@ export function AssetQuotePanel({
             )}
           </div>
 
-          {quote && !loadingQuote && (
+          {quote && (
             <ApplyForLeasingCta
               assetId={assetId}
               termMonths={term}
               downPaymentCents={downPayment}
+              disabled={loadingQuote}
               locale={locale}
               t={t}
             />

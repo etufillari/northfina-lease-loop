@@ -10,8 +10,9 @@ import { EndOfTermPanel } from '@/components/end-of-term-panel';
 import { InvoiceList } from '@/components/invoice-list';
 import { PrintButton } from '@/components/print-button';
 import { loadCustomers, loadPriceLists, loadVatRates } from '@/data/load';
-import { contractStage } from '@/domain/contract';
-import { invoiceSchedule, splitByDate } from '@/domain/invoicing';
+import { contractNumber, contractStage } from '@/domain/contract';
+import { splitByDate } from '@/domain/invoicing';
+import { contractInvoices } from '@/server/invoices';
 import { differentPriceOn } from '@/domain/price-list';
 import { vatPercentOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
@@ -23,9 +24,6 @@ import { currentViewer } from '@/server/current-viewer';
 import { canSee } from '@/server/viewer';
 import { NotYoursNotice } from '@/components/not-yours-notice';
 import { appDate } from '@/server/app-date';
-
-/** Short, readable contract number from the id: the first 8 characters, upper case. */
-const contractNumber = (id: string) => id.slice(0, 8).toUpperCase();
 
 export async function generateMetadata({
   params,
@@ -56,8 +54,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
 
   const t = getT(locale);
   const { today } = await appDate();
-  const schedule = invoiceSchedule(contract, vatRates);
-  const invoices = schedule.ok ? schedule.invoices : [];
+  const invoices = (await contractInvoices(db, contract, today)) ?? [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 print:max-w-none print:p-0">
@@ -91,7 +88,13 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         termMonths={contract.termMonths}
         locale={locale}
       />
-      <InvoiceList invoices={invoices} today={today} locale={locale} t={t} />
+      <InvoiceList
+        invoices={invoices}
+        contractId={contract.id}
+        today={today}
+        locale={locale}
+        t={t}
+      />
 
       <Link
         href={`/${locale}/contracts`}

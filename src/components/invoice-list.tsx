@@ -1,16 +1,23 @@
 // The invoices of a contract: those issued by today, the next one, and the whole schedule.
 // When the VAT rate changes, it says so in plain words: the locked rent stays the same and
 // only the VAT part (and so the total) moves.
-import type { Invoice } from '@/domain/invoicing';
+import Link from 'next/link';
+import type { InvoiceWithStatus } from '@/domain/invoicing';
 import { splitByDate, sumInvoices, upcomingVatChange } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 
-type InvoiceListProps = { invoices: Invoice[]; today: string; locale: Locale; t: Translate };
+type InvoiceListProps = {
+  invoices: InvoiceWithStatus[];
+  contractId: string;
+  today: string;
+  locale: Locale;
+  t: Translate;
+};
 
-export function InvoiceList({ invoices, today, locale, t }: InvoiceListProps) {
+export function InvoiceList({ invoices, contractId, today, locale, t }: InvoiceListProps) {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const { issued, upcoming } = splitByDate(invoices, today);
   const next = upcoming[0];
@@ -94,7 +101,8 @@ export function InvoiceList({ invoices, today, locale, t }: InvoiceListProps) {
             </thead>
             <tbody>
               {invoices.map((invoice) => {
-                const isIssued = invoice.dueDate <= today;
+                const isIssued = invoice.status !== 'upcoming';
+                const href = `/${locale}/contracts/${contractId}/invoices/${invoice.number}`;
                 return (
                   <tr
                     key={invoice.number}
@@ -104,7 +112,18 @@ export function InvoiceList({ invoices, today, locale, t }: InvoiceListProps) {
                       (isIssued ? '' : 'text-stone-500 dark:text-stone-500')
                     }
                   >
-                    <td className="py-1.5 pr-3">{invoice.number}</td>
+                    <td className="py-1.5 pr-3">
+                      {isIssued ? (
+                        <Link
+                          href={href}
+                          className="font-medium text-emerald-800 underline underline-offset-2 dark:text-emerald-300"
+                        >
+                          {invoice.number}
+                        </Link>
+                      ) : (
+                        invoice.number
+                      )}
+                    </td>
                     <td className="py-1.5 pr-3">{formatIsoDate(invoice.dueDate, locale)}</td>
                     <td className="py-1.5 pr-3 text-right">{euro(invoice.netCents)}</td>
                     <td className="py-1.5 pr-3 text-right">
@@ -116,9 +135,7 @@ export function InvoiceList({ invoices, today, locale, t }: InvoiceListProps) {
                     <td className="py-1.5 pr-3 text-right font-medium">
                       {euro(invoice.totalCents)}
                     </td>
-                    <td className="py-1.5">
-                      {isIssued ? t('invoices.issued') : t('invoices.upcoming')}
-                    </td>
+                    <td className="py-1.5">{t(`invoices.state.${invoice.status}`)}</td>
                   </tr>
                 );
               })}

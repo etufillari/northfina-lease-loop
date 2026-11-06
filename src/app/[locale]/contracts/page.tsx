@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { contractStage } from '@/domain/contract';
+import { contractNumber, contractStage } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -51,9 +51,7 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
             return (
               <li key={contract.id}>
                 <article className="relative h-full rounded-2xl border border-stone-200 bg-white p-5 shadow-sm hover:border-emerald-300 dark:border-stone-800 dark:bg-stone-900">
-                  <p className="font-mono text-xs text-stone-500">
-                    {contract.id.slice(0, 8).toUpperCase()}
-                  </p>
+                  <p className="font-mono text-xs text-stone-500">{contractNumber(contract.id)}</p>
                   <h2 className="mt-1 font-semibold">
                     <Link
                       href={`/${locale}/contracts/${contract.id}`}

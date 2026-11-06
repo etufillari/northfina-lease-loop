@@ -22,16 +22,17 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 ## What is here
 
-| File             | What it does                                                             |
-| ---------------- | ------------------------------------------------------------------------ |
-| `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term. |
-| `price-list.ts`  | Worked example: finds the net list price of an asset on a date.          |
-| `money.ts`       | The rounding rule, rate conversions, and euro formatting for the UI.     |
-| `calendar.ts`    | Month arithmetic on ISO dates, safe for month ends and leap years.       |
-| `vat.ts`         | The VAT rate on a date, and the VAT of one invoice.                      |
-| `pricing.ts`     | Rent, buyout and contract total for a net price or a catalogue item.     |
-| `contract.ts`    | The price-lock rule, and the snapshot that signing makes.                |
-| `invoicing.ts`   | The invoice schedule, totals, VAT-change notes and cost forecast.        |
+| File               | What it does                                                                 |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `coefficient.ts`   | Worked example: finds the monthly factor for a financed amount and term.     |
+| `price-list.ts`    | Worked example: finds the net list price of an asset on a date.              |
+| `money.ts`         | The rounding rule, rate conversions, and euro formatting for the UI.         |
+| `calendar.ts`      | Month arithmetic on ISO dates, safe for month ends and leap years.           |
+| `vat.ts`           | The VAT rate on a date, and the VAT of one invoice.                          |
+| `pricing.ts`       | Rent, buyout and contract total for a net price or a catalogue item.         |
+| `quote-options.ts` | The terms and down payments on offer, and when less down gives a lower rent. |
+| `contract.ts`      | The price-lock rule, and the snapshot that signing makes.                    |
+| `invoicing.ts`     | The invoice schedule, totals, VAT-change notes and cost forecast.            |
 
 ## Pricing and invoicing rules
 

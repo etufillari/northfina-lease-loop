@@ -19,7 +19,10 @@ const marker = {
 
 export function WorkflowTimeline({ entries, notes, t }: Props) {
   return (
-    <ol aria-label={t('dealer.timeline.title')} className="grid gap-4 sm:grid-cols-4">
+    <ol
+      aria-label={t('dealer.timeline.title')}
+      className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6"
+    >
       {entries.map((entry, index) => (
         <li
           key={entry.step}

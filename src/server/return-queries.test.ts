@@ -8,6 +8,7 @@ import { signContract } from './contracts';
 import { loadPricingData, type PricingData } from './pricing-data';
 import type { PrismaClient } from './prisma-client';
 import { createQuote } from './quotes';
+import { approveReturnPlan, completeReturn } from './return-completion';
 import { getReturnRequest, listReturnRequests } from './return-queries';
 import { createReturnRequest, inspectReturn, markReturnReceived, planReturn } from './returns';
 
@@ -162,7 +163,7 @@ describe('getReturnRequest', () => {
     const detail = await getReturnRequest(db, created.id);
 
     expect(detail.status).toBe('planned');
-    expect(detail.nextAction).toBe('ready_for_next_step');
+    expect(detail.nextAction).toBe('approve');
     expect(detail.plan).toMatchObject({
       targetCondition: 'good',
       inspectedCondition: 'fair',
@@ -173,6 +174,32 @@ describe('getReturnRequest', () => {
     expect(detail.plan?.totalCostCents).toBe(
       detail.plan?.actions.reduce((sum, action) => sum + action.costCents, 0)
     );
+  });
+
+  it('shows who approved and completed the work', async () => {
+    const created = await requestReturn('ebike-003', '2026-11-10');
+    await markReturnReceived(db, created.id, { actor });
+    await inspectReturn(db, created.id, { condition: 'fair', usageValue: 18_400, actor });
+    await planReturn(db, created.id, { targetCondition: 'good', actor });
+
+    await approveReturnPlan(db, created.id, { actor: 'approver' });
+    const approved = await getReturnRequest(db, created.id);
+
+    expect(approved).toMatchObject({
+      status: 'approved',
+      nextAction: 'complete',
+      approved: { by: 'approver' },
+      completed: null,
+    });
+
+    await completeReturn(db, created.id, { actor: 'finisher' });
+    const completed = await getReturnRequest(db, created.id);
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      nextAction: 'none',
+      completed: { by: 'finisher' },
+    });
   });
 
   it('reports an unknown request as not found', async () => {

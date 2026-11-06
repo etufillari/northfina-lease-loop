@@ -5,7 +5,7 @@ import { connection } from 'next/server';
 import { buildActionTexts } from '@/components/dealer/action-texts';
 import { InspectionForm } from '@/components/dealer/inspection-form';
 import { PlanForm } from '@/components/dealer/plan-form';
-import { ReceiveButton } from '@/components/dealer/receive-button';
+import { ActionButton } from '@/components/dealer/action-button';
 import { RefurbishmentPlanCard } from '@/components/dealer/refurbishment-plan-card';
 import { ReturnStatusBadge } from '@/components/dealer/return-status-badge';
 import { WorkflowTimeline } from '@/components/dealer/workflow-timeline';
@@ -52,6 +52,10 @@ export default async function ReturnDetailPage({
     ...(detail.received ? { received: recordedBy(detail.received.at, detail.received.by) } : {}),
     ...(detail.inspection
       ? { inspected: recordedBy(detail.inspection.at, detail.inspection.by) }
+      : {}),
+    ...(detail.approved ? { approved: recordedBy(detail.approved.at, detail.approved.by) } : {}),
+    ...(detail.completed
+      ? { completed: recordedBy(detail.completed.at, detail.completed.by) }
       : {}),
   };
 
@@ -101,7 +105,9 @@ export default async function ReturnDetailPage({
 
       <section aria-labelledby="next" className="mt-10">
         <h2 id="next" className="mb-1 text-xl font-semibold">
-          {t(`dealer.action.${detail.nextAction}`)}
+          {detail.status === 'completed'
+            ? t('dealer.status.completed')
+            : t(`dealer.action.${detail.nextAction}`)}
         </h2>
 
         {detail.nextAction === 'receive' ? (
@@ -109,7 +115,12 @@ export default async function ReturnDetailPage({
             <p className="mb-4 max-w-xl text-stone-700 dark:text-stone-300">
               {t('dealer.receive.help')}
             </p>
-            <ReceiveButton returnId={detail.id} label={t('dealer.action.receive')} texts={texts} />
+            <ActionButton
+              returnId={detail.id}
+              step="receive"
+              label={t('dealer.action.receive')}
+              texts={texts}
+            />
           </>
         ) : null}
 
@@ -151,15 +162,37 @@ export default async function ReturnDetailPage({
           </>
         ) : null}
 
-        {detail.nextAction === 'ready_for_next_step' ? (
-          <p className="max-w-xl text-stone-700 dark:text-stone-300">
-            {t('dealer.plan.result.next')}
-          </p>
+        {detail.nextAction === 'approve' ? (
+          <>
+            <p className="mb-4 max-w-xl text-stone-700 dark:text-stone-300">
+              {t('dealer.approve.help')}
+            </p>
+            <ActionButton
+              returnId={detail.id}
+              step="approve"
+              label={t('dealer.action.approve')}
+              texts={texts}
+            />
+          </>
+        ) : null}
+
+        {detail.nextAction === 'complete' ? (
+          <>
+            <p className="mb-4 max-w-xl text-stone-700 dark:text-stone-300">
+              {t('dealer.complete.help')}
+            </p>
+            <ActionButton
+              returnId={detail.id}
+              step="complete"
+              label={t('dealer.action.complete')}
+              texts={texts}
+            />
+          </>
         ) : null}
 
         {detail.nextAction === 'none' ? (
           <p className="max-w-xl text-stone-700 dark:text-stone-300">
-            {t('dealer.detail.noAction')}
+            {detail.status === 'completed' ? t('dealer.done.message') : t('dealer.detail.noAction')}
           </p>
         ) : null}
       </section>

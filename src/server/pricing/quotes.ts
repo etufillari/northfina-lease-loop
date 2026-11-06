@@ -3,7 +3,7 @@
 // its own VAT.
 import type { Quote, QuoteFailureReason } from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
-import { listPriceOn } from '@/domain/pricing/price-list';
+import { assetPriceOn } from '@/domain/pricing/price-list';
 import { downPaymentLimits, quote } from '@/domain/pricing/pricing';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -41,7 +41,7 @@ export type QuoteAssetResult =
       reason: QuoteAssetFailureReason;
       down_payment_limits?: DownPaymentRange;
       base_price_cents?: number;
-      price_list_version?: number;
+      price_list_version?: number | null;
     };
 
 /**
@@ -64,7 +64,10 @@ export async function quoteAsset(
     throw new RangeError(`quantity must be a positive whole number, got ${quantity}`);
   }
 
-  const asset = await db.asset.findUnique({ where: { id: assetId }, select: { status: true } });
+  const asset = await db.asset.findUnique({
+    where: { id: assetId },
+    select: { status: true, relist_price_cents: true },
+  });
   if (!asset) return { ok: false, reason: 'asset_not_found' };
   if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
 
@@ -74,7 +77,11 @@ export async function quoteAsset(
     loadVatRates(),
   ]);
 
-  const listPrice = listPriceOn(priceLists, assetId, date);
+  const listPrice = assetPriceOn(
+    priceLists,
+    { id: assetId, relist_price_cents: asset.relist_price_cents ?? undefined },
+    date
+  );
   const vatRate = vatRateOn(vatRates, date);
   if (!listPrice.ok || !vatRate.ok) return { ok: false, reason: 'no_price_on_date' };
 

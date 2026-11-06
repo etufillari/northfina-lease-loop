@@ -1,5 +1,5 @@
 // Worked example 2: which net list price applies to an asset on a given day.
-import type { PriceList } from '@/data/schemas';
+import type { Asset, PriceList } from '@/data/schemas';
 
 export type ListPriceResult =
   | { ok: true; priceCents: number; priceListVersion: number }
@@ -34,4 +34,20 @@ export function listPriceOn(
   if (priceCents === undefined) return { ok: false, reason: 'unknown_asset' };
 
   return { ok: true, priceCents, priceListVersion: priceList.version };
+}
+
+export type AssetPriceResult =
+  | { ok: true; priceCents: number; priceListVersion: number | null }
+  | { ok: false; reason: 'unknown_asset' | 'no_price_list_on_date' };
+
+/** What an asset leases at: its own re-list price if it has one, otherwise the list price. */
+export function assetPriceOn(
+  priceLists: readonly PriceList[],
+  asset: Pick<Asset, 'id' | 'relist_price_cents'>,
+  isoDate: string
+): AssetPriceResult {
+  if (asset.relist_price_cents !== undefined) {
+    return { ok: true, priceCents: asset.relist_price_cents, priceListVersion: null };
+  }
+  return listPriceOn(priceLists, asset.id, isoDate);
 }

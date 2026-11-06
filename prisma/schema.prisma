@@ -30,6 +30,7 @@ model Asset {
   reserved_by    String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
+  returns        AssetReturn[]
 
   @@index([category])
 }
@@ -103,6 +104,7 @@ model EngineLease {
   version           Int @default(1)
   invoices          EngineInvoice[]
   allocation        EngineAllocation?
+  returns           AssetReturn[]
 
   @@index([assetId])
 }
@@ -149,4 +151,42 @@ model EngineAllocation {
   assetId String @id
   leaseId String @unique
   lease EngineLease @relation(fields: [leaseId], references: [id])
+}
+
+model AssetReturn {
+  id              String   @id
+  leaseId         String   @unique
+  lease           EngineLease @relation(fields: [leaseId], references: [id], onDelete: Restrict)
+  assetId         String
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  idempotencyKey  String   @unique
+  payloadHash     String
+  status          String
+  condition       String
+  usageUnit       String
+  usageValue      Int
+  usageReductionEvidence String?
+  receivedAt      DateTime
+  work            RefurbishmentWork[]
+
+  @@index([assetId])
+}
+
+model RefurbishmentWork {
+  id                 String   @id
+  returnId           String
+  assetReturn        AssetReturn @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  code               String
+  kind               String
+  costCents          Int
+  mandatory          Boolean
+  resetsUsage        Boolean
+  fromCondition      String?
+  toCondition        String?
+  status             String   @default("PENDING")
+  evidenceReference  String?
+  completedAt        DateTime?
+
+  @@unique([returnId, code])
+  @@index([returnId, status])
 }

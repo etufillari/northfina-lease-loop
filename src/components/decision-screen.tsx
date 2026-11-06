@@ -73,7 +73,7 @@ export function DecisionScreen({
       <h1 className="text-2xl font-semibold">{t(`decision.${textKey}.title` as MessageKey)}</h1>
       <p className="mt-2 text-stone-700 dark:text-stone-300">
         {t(`decision.${textKey}.text` as MessageKey, {
-          date: holdUntil ?? '',
+          date: holdUntil ? formatIsoDate(holdUntil, locale) : '',
           email: signatoryEmail ?? '',
         })}
       </p>

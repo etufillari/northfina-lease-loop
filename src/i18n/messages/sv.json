@@ -436,7 +436,7 @@
   "demo.jumpTo": "Hoppa till",
   "demo.go": "Gå",
   "demo.reset": "Återställ demo",
-  "demo.confirmReset": "Återställa demon? Alla ansökningar, avtal, fakturor och ändringar i kön raderas, datapaketet laddas på nytt och datumet går tillbaka till 1 januari 2026.",
+  "demo.confirmReset": "Återställa demon? Alla ansökningar, avtal, fakturor och ändringar i kön raderas, datapaketet laddas på nytt och datumet går tillbaka till 01 jan 2026.",
   "waitlist.join.budget": "Månadsbudget (€, exkl. moms)",
   "waitlist.offers": "Erbjudanden till dig",
   "waitlist.offersIntro": "En passande artikel har kommit in. Den är reserverad åt dig till det visade datumet: acceptera för att börja ansökan, eller tacka nej så går den till nästa person.",
@@ -492,5 +492,11 @@
   "usage.sinceService": "Sedan senaste stora service",
   "passport.detail.reading": "mätare {reading} (+{added} under det här avtalet)",
   "apply.backToItem": "Tillbaka till artikeln",
-  "apply.backToFleet": "Tillbaka till flottan"
+  "apply.backToFleet": "Tillbaka till flottan",
+  "date.placeholder": "dd.mm.åååå",
+  "date.pick": "Välj i kalendern",
+  "date.invalid": "Skriv datumet som dd.mm.åååå, t.ex. 06.11.2026",
+  "date.between": "Välj ett datum från {min} till {max}",
+  "date.from": "Välj {min} eller senare",
+  "date.until": "Välj {max} eller tidigare"
 }

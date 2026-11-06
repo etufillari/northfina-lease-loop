@@ -25,6 +25,7 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { isSentinel, previousAnswered } from './wizard-back';
+import { DateField } from './date-field';
 
 type WizardState = {
   application: {
@@ -359,9 +360,11 @@ export function ApplicationWizard({
                     <span className="font-medium">
                       {question.type === 'choice'
                         ? optionLabel(t, String(value))
-                        : Array.isArray(value)
-                          ? value.join(', ')
-                          : String(value)}
+                        : question.type === 'date'
+                          ? formatIsoDate(String(value), locale)
+                          : Array.isArray(value)
+                            ? value.join(', ')
+                            : String(value)}
                     </span>
                     <button
                       type="button"
@@ -427,6 +430,7 @@ export function ApplicationWizard({
             ) : null}
 
             <QuestionInput
+              locale={locale}
               key={current.id}
               t={t}
               question={current}
@@ -453,15 +457,17 @@ export function ApplicationWizard({
             <label htmlFor="start" className="block text-sm font-medium">
               {t('apply.startDate')}
             </label>
-            <input
-              id="start"
-              type="date"
-              value={startDate}
-              min={today}
-              max={maxStartDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="mt-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
-            />
+            <div className="mt-1 max-w-xs">
+              <DateField
+                locale={locale}
+                id="start"
+                value={startDate}
+                min={today}
+                max={maxStartDate}
+                onChange={setStartDate}
+                className="rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+              />
+            </div>
             <p className="mt-1 text-xs text-stone-500">{t('apply.startDateHint')}</p>
             {personaId ? (
               <label className="mt-4 flex items-center gap-2 text-sm">
@@ -477,7 +483,7 @@ export function ApplicationWizard({
             <button
               type="button"
               onClick={submit}
-              disabled={busy}
+              disabled={busy || !startDate}
               className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
             >
               {t('apply.submit')}

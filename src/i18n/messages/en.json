@@ -436,7 +436,7 @@
   "demo.jumpTo": "Jump to",
   "demo.go": "Go",
   "demo.reset": "Reset demo",
-  "demo.confirmReset": "Reset the demo? Every application, contract, invoice and waiting-list change is deleted, the data pack is loaded again and the date goes back to 1 January 2026.",
+  "demo.confirmReset": "Reset the demo? Every application, contract, invoice and waiting-list change is deleted, the data pack is loaded again and the date goes back to 01 Jan 2026.",
   "waitlist.join.budget": "Monthly budget (€, excl. VAT)",
   "waitlist.offers": "Offers for you",
   "waitlist.offersIntro": "A matching item came in. It is held for you until the date shown: accept to start the application, or decline to pass it to the next person.",
@@ -492,5 +492,11 @@
   "usage.sinceService": "Since the last major service",
   "passport.detail.reading": "meter {reading} (+{added} on this lease)",
   "apply.backToItem": "Back to the item",
-  "apply.backToFleet": "Back to the fleet"
+  "apply.backToFleet": "Back to the fleet",
+  "date.placeholder": "dd.mm.yyyy",
+  "date.pick": "Choose from a calendar",
+  "date.invalid": "Write the date as dd.mm.yyyy, e.g. 06.11.2026",
+  "date.between": "Choose a date from {min} to {max}",
+  "date.from": "Choose {min} or later",
+  "date.until": "Choose {max} or earlier"
 }

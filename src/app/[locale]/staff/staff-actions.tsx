@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { DateField } from '@/components/date-field';
 
 type Envelope<T> =
   { success: true; data: T } | { success: false; error: { code: string; message: string } };
@@ -171,12 +172,12 @@ export function SignAsSignatory({
         {t('staff.startDate')}
       </label>
       <div className="mt-1 flex flex-wrap items-center gap-3">
-        <input
+        <DateField
+          locale={locale}
           id={inputId}
-          type="date"
           value={startDate}
           min={defaultStartDate}
-          onChange={(event) => setStartDate(event.target.value)}
+          onChange={setStartDate}
           className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-950"
         />
         <button

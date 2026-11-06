@@ -436,7 +436,7 @@
   "demo.jumpTo": "Siirry päivään",
   "demo.go": "Siirry",
   "demo.reset": "Nollaa demo",
-  "demo.confirmReset": "Nollataanko demo? Kaikki hakemukset, sopimukset, laskut ja jonomuutokset poistetaan, aineisto ladataan uudelleen ja päivä palaa 1.1.2026.",
+  "demo.confirmReset": "Nollataanko demo? Kaikki hakemukset, sopimukset, laskut ja jonomuutokset poistetaan, aineisto ladataan uudelleen ja päivä palaa: 01 tam 2026.",
   "waitlist.join.budget": "Kuukausibudjetti (€, ilman alv:tä)",
   "waitlist.offers": "Tarjoukset sinulle",
   "waitlist.offersIntro": "Sopiva tuote saapui. Se on varattu sinulle näytettyyn päivään asti: hyväksy aloittaaksesi hakemuksen tai hylkää, jolloin se siirtyy seuraavalle.",
@@ -492,5 +492,11 @@
   "usage.sinceService": "Edellisen huollon jälkeen",
   "passport.detail.reading": "mittari {reading} (+{added} tällä vuokrauksella)",
   "apply.backToItem": "Takaisin tuotteeseen",
-  "apply.backToFleet": "Takaisin kalustoon"
+  "apply.backToFleet": "Takaisin kalustoon",
+  "date.placeholder": "pp.kk.vvvv",
+  "date.pick": "Valitse kalenterista",
+  "date.invalid": "Kirjoita päivä muodossa pp.kk.vvvv, esim. 06.11.2026",
+  "date.between": "Valitse päivä väliltä {min}–{max}",
+  "date.from": "Valitse {min} tai myöhemmin",
+  "date.until": "Valitse {max} tai aiemmin"
 }

@@ -5,6 +5,7 @@ import { formatEuro } from '@/domain/money';
 import { getT, messages, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { AuditLogEntry } from '@/server/audit';
+import { formatDateTime } from '@/i18n/format';
 
 /** Where a record of each type can be opened; customers have no page of their own. */
 const RECORD_PATH: Record<string, string> = {
@@ -51,11 +52,7 @@ export function AuditRow({
   filterHref: string;
 }) {
   const t = getT(locale);
-  const when = new Intl.DateTimeFormat(intlLocale[locale], {
-    dateStyle: 'medium',
-    timeStyle: 'medium',
-    timeZone: 'Europe/Helsinki',
-  }).format(new Date(row.created_at));
+  const when = formatDateTime(row.created_at, locale);
   const path = RECORD_PATH[row.entity_type];
   const recordHref = path
     ? `/${locale}/${path}/${row.entity_id}${asOfParam ? `?asOf=${asOfParam}` : ''}`

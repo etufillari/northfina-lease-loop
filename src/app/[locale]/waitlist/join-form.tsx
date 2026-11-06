@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { euroInputToCentsClamped } from '@/domain/euro-input';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { DateField } from '@/components/date-field';
 
 const CATEGORIES = ['e_bike', 'laptop', 'farm_machine'] as const;
 const CONDITIONS = ['fair', 'good', 'like_new', 'new'] as const;
@@ -188,12 +189,12 @@ export function JoinForm({
       </label>
       <label className="text-sm font-medium">
         {t('waitlist.join.neededBy')}
-        <input
+        <DateField
+          locale={locale}
           className={field}
-          type="date"
           min={asOf}
           value={neededBy}
-          onChange={(e) => setNeededBy(e.target.value)}
+          onChange={setNeededBy}
           required
         />
       </label>

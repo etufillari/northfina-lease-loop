@@ -23,6 +23,12 @@ export function formatIsoDate(isoDate: string, locale: Locale): string {
   return `${day} ${MONTHS_3[locale][Number(month) - 1]} ${year}`;
 }
 
+/** `2027-01` → "Jan 2027" (a calendar month, e.g. the month a payment limit is exceeded). */
+export function formatMonth(yearMonth: string, locale: Locale): string {
+  const [year, month] = yearMonth.split('-');
+  return `${MONTHS_3[locale][Number(month) - 1]} ${year}`;
+}
+
 /** A timestamp → "06 Nov 2026 14:05", in Helsinki time (the audit log). */
 export function formatDateTime(timestamp: string | Date, locale: Locale): string {
   const parts = new Intl.DateTimeFormat('en-GB', {

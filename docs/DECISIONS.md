@@ -64,8 +64,14 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   questions no longer apply; changing the deal re-evaluates the thresholds and asks what
   newly applies. Eligibility = the six rules in the data file, each result with reasons.
   Blocking answers stop the form at once; a PEP "yes" flags manual review but never blocks.
-- **Affordability (consumers only):** monthly rent incl. VAT ≤ 30 % of monthly net income.
-  Income unknown (not asked under €2,000 financed) → passes, with that stated as the reason.
+- **Affordability (consumers only):** what the customer pays incl. VAT ≤ 30 % of monthly net
+  income in **every month of the lease** (6 Nov), not just the first: each invoice at the VAT
+  rate of its due date (so the 1 Jan 2027 rise counts), plus every lease invoice they already
+  pay on their other active leases in the same calendar month. One month over → declined,
+  and the reason names the month and the sum (this lease + current leases). A take-over is
+  weighed on the invoices it would take over. The price configurator's hint and suggestion
+  use the same rule. Buyout and exit invoices are one-offs and do not count. Income unknown
+  (not asked under €2,000 financed) → passes, with that stated as the reason.
   The price slider warns live and suggests parameters with "a better chance of approval"
   (longer term first, then a larger down payment); it never hard-rejects before an application.
 - **Business ID:** check digit validated as the field is typed (mod-11 rule, weights

@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { formatEuro } from '@/domain/money';
-import { formatIsoDate } from '@/i18n/format';
+import { formatIsoDate, formatMonth } from '@/i18n/format';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 
@@ -100,10 +100,21 @@ export function DecisionScreen({
                   ) : null}
                   {reason.rule === 'affordability' && reason.params?.limitCents !== undefined ? (
                     <p className="text-stone-600 dark:text-stone-400">
-                      {t('reason.affordability.detail', {
-                        rent: euro(Number(reason.params.monthlyRentWithVatCents ?? 0)),
-                        limit: euro(Number(reason.params.limitCents)),
-                      })}
+                      {t(
+                        Number(reason.params.existingCents ?? 0) > 0
+                          ? 'reason.affordability.detailExisting'
+                          : 'reason.affordability.detail',
+                        {
+                          month:
+                            typeof reason.params.month === 'string'
+                              ? formatMonth(reason.params.month, locale)
+                              : '',
+                          total: euro(Number(reason.params.totalCents ?? 0)),
+                          new: euro(Number(reason.params.newCents ?? 0)),
+                          existing: euro(Number(reason.params.existingCents ?? 0)),
+                          limit: euro(Number(reason.params.limitCents)),
+                        }
+                      )}
                     </p>
                   ) : null}
                 </div>

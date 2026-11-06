@@ -16,13 +16,14 @@ import {
   type AnswerValue,
   type DealContext,
 } from '@/domain/question-flow';
-import { grossCents, vatRateOn } from '@/domain/vat';
+import { vatRateOn } from '@/domain/vat';
 import { checkAnswer } from '@/domain/answer-check';
 import { loadCoefficientTable } from '@/data/load';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { checkClaim } from '@/server/asset-claims';
 import { withAudit } from '@/server/audit';
 import { buildLiveQuote, quoteAssetIds, quoteRowData } from '@/server/quotes';
+import { existingPayments, newLeasePayments } from './payments';
 
 export type ApplicationState = {
   application: {
@@ -404,6 +405,23 @@ export async function submitApplication(
   const vat = vatRateOn(vatRates, input.asOf);
   if (!vat.ok) return { ok: false, reason: vat.reason };
 
+  // The 30 % rule weighs every month of the new lease against what the customer already pays.
+  const newPayments = await newLeasePayments(db, {
+    startDate: input.startDate,
+    asOf: input.asOf,
+    termMonths: rows.quote.term_months,
+    monthlyNetRentCents: rows.quote.monthly_net_rent_cents,
+    netTotalCents: rows.quote.net_total_cents,
+    transferContractId: rows.application.transfer_contract_id,
+    vatRates,
+  });
+  if (!newPayments) return { ok: false, reason: 'no_vat_rate_on_date' };
+  const alreadyPaying = await existingPayments(db, {
+    customerId: rows.application.customer_id,
+    fromDate: input.asOf,
+    excludeContractId: rows.application.transfer_contract_id,
+  });
+
   const str = (id: string) => (answers[id] === undefined ? null : String(answers[id]));
   const income =
     typeof answers['q_monthly_income'] === 'number' ? answers['q_monthly_income'] : null;
@@ -417,7 +435,8 @@ export async function submitApplication(
     applicationDate: input.asOf,
     financedCents: rows.quote.financed_cents,
     termMonths: rows.quote.term_months,
-    monthlyRentWithVatCents: grossCents(rows.quote.monthly_net_rent_cents, vat.rateBasisPoints),
+    newPayments,
+    existingPayments: alreadyPaying,
     table,
   });
 

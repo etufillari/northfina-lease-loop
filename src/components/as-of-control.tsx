@@ -3,7 +3,7 @@
 // The demo "as of" date (D-030): pick the day the app treats as today, or go back to the real
 // date. The server validates the date again and keeps it in a cookie; we only refresh the page.
 import { useRouter } from 'next/navigation';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AS_OF_MAX, AS_OF_MIN } from '@/domain/as-of';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -19,7 +19,8 @@ export function useAsOf(then?: () => void) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>('idle');
 
-  async function send(init: RequestInit) {
+  /** True once the server has accepted the change. */
+  async function send(init: RequestInit): Promise<boolean> {
     setStatus('busy');
     const response = await fetch('/api/as-of', init).catch(() => null);
     const body = (await response?.json().catch(() => null)) as {
@@ -30,13 +31,14 @@ export function useAsOf(then?: () => void) {
       // When `then` navigates away, stay busy so a second click can't send the date again.
       if (then) {
         then();
-        return;
+        return true;
       }
       setStatus('idle');
       router.refresh();
-      return;
+      return true;
     }
     setStatus(body?.error?.code === 'INVALID_AS_OF_DATE' ? 'invalid' : 'error');
+    return false;
   }
 
   return {
@@ -79,9 +81,33 @@ export function AsOfControl({ locale, date }: { locale: Locale; date: string }) 
   const id = useId();
   const { status, set } = useAsOf();
   const [value, setValue] = useState(date);
+  const menu = useRef<HTMLDetailsElement>(null);
+
+  // A <details> menu only closes when its summary is clicked. Close it on a click outside and on
+  // Escape too, like any dropdown.
+  useEffect(() => {
+    const close = () => {
+      if (menu.current) menu.current.open = false;
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (menu.current?.open && !menu.current.contains(event.target as Node)) close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && menu.current?.open) {
+        close();
+        menu.current.querySelector('summary')?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
 
   return (
-    <details className="relative">
+    <details ref={menu} className="relative">
       <summary className="cursor-pointer list-none rounded-full px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">
         {t('asOf.label')}
       </summary>
@@ -89,7 +115,11 @@ export function AsOfControl({ locale, date }: { locale: Locale; date: string }) 
         className="panel absolute right-0 z-50 mt-2 flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-3 p-4 shadow-lg"
         onSubmit={(event) => {
           event.preventDefault();
-          void set(value);
+          // Close once the date is set, also when it was already the demo date (then the header
+          // isn't re-mounted, which is what used to close it).
+          void set(value).then((ok) => {
+            if (ok && menu.current) menu.current.open = false;
+          });
         }}
       >
         <label htmlFor={id} className="eyebrow">

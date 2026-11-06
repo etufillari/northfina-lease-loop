@@ -3,7 +3,7 @@
 import type { Answers, AnswerValue } from '@/data/lease-schemas';
 import type { AskWhenCondition, AssetCategory, Customer, Question } from '@/data/schemas';
 import { isIsoDate } from '../dates';
-import { ageOn } from './age';
+import { ageOn, eligibleFrom } from './age';
 
 type CustomerType = Customer['type'];
 
@@ -145,6 +145,23 @@ export function invalidAnswers(questions: readonly Question[], answers: Answers)
 export type BlockingAnswer =
   | { question_id: string; rule: 'age_under'; min_age: number }
   | { question_id: string; rule: 'answer_in' };
+
+/** Why the form stopped asking, as the screen needs it. */
+export type Blocked = { reason: 'min_age' | 'residency'; eligible_from: string | null };
+
+/** Says why an answer blocked the application, and when a too-young applicant can try again. */
+export function toBlocked(block: BlockingAnswer | null, answers: Answers): Blocked | null {
+  if (block === null) return null;
+  if (block.rule === 'age_under') {
+    const birthDate = answers[block.question_id];
+    return {
+      reason: 'min_age',
+      eligible_from: typeof birthDate === 'string' ? eligibleFrom(birthDate, block.min_age) : null,
+    };
+  }
+  // The only `answer_in` rule in the data is the country question.
+  return { reason: 'residency', eligible_from: null };
+}
 
 /**
  * The first answer that stops the application, so the form can stop asking and say why.

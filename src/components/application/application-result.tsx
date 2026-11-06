@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { EligibilityReason } from '@/data/lease-schemas';
 import type { Locale } from '@/i18n/locales';
+import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 
 type ApplicationDecision = 'approved' | 'rejected' | 'manual_review';
@@ -91,7 +92,8 @@ export default function ApplicationResult({ application, locale }: ApplicationRe
 
         {application.eligible_from && (
           <p className="text-sm text-stone-400">
-            {t('application.result.eligibleFrom')} {application.eligible_from}
+            {t('application.result.eligibleFrom')}{' '}
+            {formatIsoDate(application.eligible_from, locale)}
           </p>
         )}
       </section>

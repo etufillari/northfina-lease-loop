@@ -1,6 +1,7 @@
 // GET /api/assets/:id/quote?term=36&down=0&on=2026-11-05
 // `term` is in months, `down` in cents (default 0), and `on` is the quote date (default: the
 // date the app runs on). `on` only previews a price; applications never take a date from here.
+// `upcoming_vat_change` warns when VAT changes during the lease, or is null when it does not.
 import { z } from 'zod';
 import { isoDateSchema } from '@/data/schemas';
 import { actingCustomerId } from '@/domain/identity';

@@ -25,6 +25,7 @@
     "db:setup": "node scripts/ensure-env.mjs && prisma generate && prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
     "db:reset": "node scripts/ensure-env.mjs && prisma migrate reset --force && prisma db seed",
+    "db:demo": "npm run db:reset && tsx prisma/demo.ts",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",

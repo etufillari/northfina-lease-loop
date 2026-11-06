@@ -25,15 +25,16 @@ npm run dev          # http://localhost:3000
 
 You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
 
-| Command                 | What it does                                                   |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run dev`           | Start the app with hot reload                                  |
-| `npm test`              | Run all tests once (`npm run test:watch` to keep them running) |
-| `npm run test:coverage` | Tests with the 60 % coverage gate                              |
-| `npm run check:all`     | **Everything CI runs.** Run it before you push                 |
-| `npm run db:migrate`    | After you change `prisma/schema.prisma`: creates a migration   |
-| `npm run db:reset`      | Wipe the local database and seed it again                      |
-| `npm run db:studio`     | Browse the database in your browser                            |
+| Command                 | What it does                                                        |
+| ----------------------- | ------------------------------------------------------------------- |
+| `npm run dev`           | Start the app with hot reload                                       |
+| `npm test`              | Run all tests once (`npm run test:watch` to keep them running)      |
+| `npm run test:coverage` | Tests with the 60 % coverage gate                                   |
+| `npm run check:all`     | **Everything CI runs.** Run it before you push                      |
+| `npm run db:migrate`    | After you change `prisma/schema.prisma`: creates a migration        |
+| `npm run db:reset`      | Wipe the local database and seed it again                           |
+| `npm run db:demo`       | Wipe the local database and show every flow: see [DEMO.md](DEMO.md) |
+| `npm run db:studio`     | Browse the database in your browser                                 |
 
 ---
 

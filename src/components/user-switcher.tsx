@@ -7,9 +7,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useState } from 'react';
 
-import type { IdentitySummary } from '@/domain/identity';
+import { can, type IdentitySummary } from '@/domain/identity';
 import { getT, type Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+
+import { DemoDateControl } from './demo-date-control';
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -136,28 +138,33 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
 
   const currentUser = users.find((user) => user.id === currentId);
 
-  const applicationsHref =
-    currentUser?.kind === 'customer'
-      ? `/${locale}/account/applications`
-      : currentUser?.kind === 'staff'
-        ? `/${locale}/admin/applications`
-        : null;
-
-  const applicationsLabel =
-    currentUser?.kind === 'customer'
-      ? t('account.applications.title')
-      : t('staff.applications.title');
+  const links: { href: string; label: string }[] = [];
+  if (currentUser?.kind === 'customer') {
+    links.push({
+      href: `/${locale}/account/applications`,
+      label: t('account.applications.title'),
+    });
+  }
+  if (currentUser && can(currentUser.role, 'application.decide_manual_review')) {
+    links.push({ href: `/${locale}/admin/applications`, label: t('staff.applications.title') });
+  }
+  if (currentUser && can(currentUser.role, 'second_life.refurbish')) {
+    links.push({ href: `/${locale}/dealer`, label: t('dealer.title') });
+  }
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {applicationsHref && (
+      {currentUser?.role === 'admin' && <DemoDateControl locale={locale} />}
+
+      {links.map(({ href, label }) => (
         <Link
-          href={applicationsHref}
+          key={href}
+          href={href}
           className="shrink-0 rounded-lg border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-300 transition hover:bg-emerald-900/60 hover:text-emerald-200"
         >
-          {applicationsLabel}
+          {label}
         </Link>
-      )}
+      ))}
 
       <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-800 bg-stone-900 p-2">
         <label htmlFor={selectId} className="sr-only">

@@ -1,14 +1,25 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { contractSchema, type Application, type Quote } from '@/data/lease-schemas';
-import { loadCoefficientTable, loadCustomers } from '@/data/load';
-import type { Asset, CoefficientTable, Customer } from '@/data/schemas';
-import { buildContract, lockedQuote, openLife, signingProblem } from './contract';
+import { loadCoefficientTable, loadCustomers, loadPriceLists } from '@/data/load';
+import type { Asset, CoefficientTable, Customer, PriceList } from '@/data/schemas';
+import {
+  buildContract,
+  listPriceOnSigning,
+  lockedQuote,
+  openLife,
+  signingProblem,
+} from './contract';
 
 // Tests run against the real data pack, so they also catch a changed file.
 let table: CoefficientTable;
 let customers: Customer[];
+let priceLists: PriceList[];
 beforeAll(async () => {
-  [table, customers] = await Promise.all([loadCoefficientTable(), loadCustomers()]);
+  [table, customers, priceLists] = await Promise.all([
+    loadCoefficientTable(),
+    loadCustomers(),
+    loadPriceLists(),
+  ]);
 });
 
 function customer(id: string): Customer {
@@ -288,5 +299,21 @@ describe('openLife', () => {
   it('keeps an unknown price at first lease unknown', () => {
     const latest = { life_number: 1, first_lease_price_cents: null };
     expect(openLife(contract(), asset(), latest).first_lease_price_cents).toBeNull();
+  });
+});
+
+describe('listPriceOnSigning', () => {
+  const signed = { asset_id: 'laptop-004', signed_on: '2026-11-06', price_list_version: 1 };
+
+  it('gives the list price on the day, not the locked one (card 2)', () => {
+    expect(listPriceOnSigning(signed, priceLists)).toBe(321_100);
+  });
+
+  it('has nothing to compare for a re-listed item', () => {
+    expect(listPriceOnSigning({ ...signed, price_list_version: null }, priceLists)).toBeNull();
+  });
+
+  it('has nothing to compare when the list does not hold the item', () => {
+    expect(listPriceOnSigning({ ...signed, asset_id: 'nope' }, priceLists)).toBeNull();
   });
 });

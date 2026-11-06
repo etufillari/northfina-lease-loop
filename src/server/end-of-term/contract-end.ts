@@ -13,13 +13,11 @@ import {
   type EndOutcome,
 } from '@/domain/end-of-term/end-of-term';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { withAudit } from '../audit';
+import { SYSTEM_ACTOR, withAudit } from '../audit';
 import { contractViews, getContract, toContract, type ContractView } from '../contract/contracts';
 import { currentDate } from '../date/app-date';
 
 class AlreadyEnded extends Error {}
-
-const SYSTEM_ACTOR = 'system';
 
 async function closeContract(
   db: PrismaClient,

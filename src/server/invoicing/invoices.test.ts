@@ -107,6 +107,30 @@ describe('listInvoices', () => {
   });
 });
 
+describe('the VAT change on an invoice', () => {
+  it('survives a status filter that hides the invoice before it', async () => {
+    const contract = await signedContract();
+    await db.invoice.updateMany({
+      where: { contract_id: contract.id, sequence: { lte: 2 } },
+      data: { status: 'paid' },
+    });
+
+    const [january] = await listInvoices(db, { contractId: contract.id, status: 'issued' });
+
+    expect(january).toMatchObject({ sequence: 3, vat_change: { total_change_cents: 54 } });
+  });
+
+  it('is on a single invoice too', async () => {
+    const contract = await signedContract();
+    const invoices = await listInvoices(db, { contractId: contract.id });
+    const [december, january] = [invoices[1], invoices[2]];
+    if (!december || !january) throw new Error('expected invoices');
+
+    expect((await getInvoice(db, december.id))?.invoice.vat_change).toBeNull();
+    expect((await getInvoice(db, january.id))?.invoice.vat_change?.to_percent).toBe(26);
+  });
+});
+
 describe('getInvoice', () => {
   it('finds an invoice and says whose it is', async () => {
     const contract = await signedContract();

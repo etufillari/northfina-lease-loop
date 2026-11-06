@@ -6,6 +6,7 @@ import {
   blockingAnswer,
   invalidAnswers,
   questionsToAsk,
+  toBlocked,
   type Deal,
 } from './question-flow';
 
@@ -304,5 +305,35 @@ describe('blockingAnswer', () => {
   it('ignores a non-text answer, and questions it was not given', () => {
     expect(blockingAnswer(questions, { q_country: 5 }, startOn)).toBeNull();
     expect(blockingAnswer([], { q_country: 'other' }, startOn)).toBeNull();
+  });
+});
+
+describe('toBlocked', () => {
+  const tooYoung = { question_id: 'q_birth_date', rule: 'age_under', min_age: 18 } as const;
+
+  it('says nothing when no answer blocks the application', () => {
+    expect(toBlocked(null, {})).toBeNull();
+  });
+
+  it('says when a too-young applicant can try again', () => {
+    expect(toBlocked(tooYoung, { q_birth_date: '2009-03-10' })).toEqual({
+      reason: 'min_age',
+      eligible_from: '2027-03-10',
+    });
+  });
+
+  it('gives no date when the answer is not a date string', () => {
+    expect(toBlocked(tooYoung, { q_birth_date: 20_090_310 })).toEqual({
+      reason: 'min_age',
+      eligible_from: null,
+    });
+  });
+
+  it('reads an answer rule as residency, with nothing to wait for', () => {
+    const block = { question_id: 'q_country', rule: 'answer_in' } as const;
+    expect(toBlocked(block, { q_country: 'other' })).toEqual({
+      reason: 'residency',
+      eligible_from: null,
+    });
   });
 });

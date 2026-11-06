@@ -138,6 +138,55 @@ describe('previewContract', () => {
     expect(invoices).toHaveLength(36);
     expect(invoices.slice(0, 3).map((i) => i.total_cents)).toEqual([13_466, 13_466, 13_520]);
     expect(invoices[2]).toMatchObject({ vat_rate_percent: 26, kind: 'rent' });
+    expect(invoices[2]?.vat_change?.total_change_cents).toBe(54);
+  });
+
+  it('names the item in words', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    const asset = assets.find(({ id }) => id === 'ebike-003');
+
+    expect((await previewOk(application.id)).asset_name).toBe(`${asset?.make} ${asset?.model}`);
+  });
+
+  it('warns about the VAT change and gives the real total before signing', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+
+    expect(await previewOk(application.id)).toMatchObject({
+      upcoming_vat_change: { effective_on: '2027-01-01', monthly_total_cents: 13_520 },
+      total_net_cents: 386_280,
+      total_vat_cents: 100_332,
+      total_cents: 486_612,
+    });
+  });
+
+  it('gives the same totals on the signed contract as on the preview', async () => {
+    const application = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    const { total_net_cents, total_vat_cents, total_cents } = await previewOk(application.id);
+
+    const signed = await signContract(db, {
+      applicationId: application.id,
+      customer: customer(AINO),
+    });
+
+    expect(signed).toMatchObject({
+      ok: true,
+      contract: { total_net_cents, total_vat_cents, total_cents },
+    });
+  });
+
+  it('keeps the totals of two contracts apart', async () => {
+    const first = await apply(AINO, 'ebike-003', ainoEbikeAnswers);
+    const second = await apply(AINO, 'laptop-004', ainoEbikeAnswers);
+    const expected = await previewOk(second.id);
+    await signContract(db, { applicationId: first.id, customer: customer(AINO) });
+    await signContract(db, { applicationId: second.id, customer: customer(AINO) });
+
+    const views = await contractViews(db, await listContracts(db));
+    const totalOf = (applicationId: string) =>
+      views.find((view) => view.application_id === applicationId)?.total_cents;
+
+    expect(totalOf(first.id)).toBe(486_612);
+    expect(totalOf(second.id)).toBe(expected.total_cents);
   });
 
   it('keeps the quoted price and compares it with the list on the day (card 2)', async () => {

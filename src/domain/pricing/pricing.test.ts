@@ -6,6 +6,7 @@ import {
   DEFAULT_TERM_MONTHS,
   downPaymentLimits,
   leaseEstimate,
+  leaseTotals,
   quote,
   type QuoteInput,
 } from './pricing';
@@ -221,5 +222,26 @@ describe('leaseEstimate', () => {
 
   it('gives nothing for a price that cannot be financed (ebike-010 on price list 1)', () => {
     expect(leaseEstimate(table, 28_900, VAT)).toBeNull();
+  });
+});
+
+describe('leaseTotals', () => {
+  const deal = {
+    down_payment_cents: 50_000,
+    monthly_net_rent_cents: 9_351,
+    term_months: 36,
+    buyout_cents: 50_850,
+  };
+
+  it('counts the down payment and every rent if the item is returned', () => {
+    expect(leaseTotals(deal).total_if_returned_cents).toBe(386_636);
+  });
+
+  it('adds the buyout if the item is kept', () => {
+    expect(leaseTotals(deal).total_if_bought_cents).toBe(437_486);
+  });
+
+  it('works with no down payment', () => {
+    expect(leaseTotals({ ...deal, down_payment_cents: 0 }).total_if_returned_cents).toBe(336_636);
   });
 });

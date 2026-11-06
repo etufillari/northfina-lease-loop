@@ -4,7 +4,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
   const { db } = await import('./server/db');
-  const { closeDueContracts } = await import('./server/end-of-term/contract-end');
+  const { currentDate } = await import('./server/date/app-date');
+  const { runDueWork } = await import('./server/due-work');
   const { startContractScheduler } = await import('./server/end-of-term/scheduler');
-  startContractScheduler(() => closeDueContracts(db));
+
+  startContractScheduler(async () => runDueWork(db, await currentDate(db)));
 }

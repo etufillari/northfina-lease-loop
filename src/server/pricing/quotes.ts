@@ -4,28 +4,28 @@
 import type { Quote, QuoteFailureReason } from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { isHeldForSomeoneElse } from '@/domain/assets/status';
+import { upcomingVatChange, type UpcomingVatChange } from '@/domain/invoicing/vat-change';
 import { assetPriceOn } from '@/domain/pricing/price-list';
-import { downPaymentLimits, quote } from '@/domain/pricing/pricing';
+import { downPaymentLimits, leaseTotals, quote, type LeaseTotals } from '@/domain/pricing/pricing';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
 
 /** The down payments that keep the deal valid. `null` when no down payment can. */
 export type DownPaymentRange = { min_cents: number; max_cents: number } | null;
 
-export type AssetQuote = Quote & {
-  asset_id: string;
-  quote_date: string;
-  factor: number;
-  vat_rate_percent: number;
-  monthly_vat_cents: number;
-  monthly_total_cents: number;
-  buyout_percent: number | null;
-  /** Down payment plus every rent: what a customer who returns the item pays. */
-  total_if_returned_cents: number;
-  /** The same plus the buyout: what a customer who keeps the item pays. */
-  total_if_bought_cents: number;
-  down_payment_limits: DownPaymentRange;
-};
+export type AssetQuote = Quote &
+  LeaseTotals & {
+    asset_id: string;
+    quote_date: string;
+    factor: number;
+    vat_rate_percent: number;
+    monthly_vat_cents: number;
+    monthly_total_cents: number;
+    /** Set when a VAT change falls within the lease, so the total above will not last. */
+    upcoming_vat_change: UpcomingVatChange | null;
+    buyout_percent: number | null;
+    down_payment_limits: DownPaymentRange;
+  };
 
 export type QuoteAssetFailureReason =
   QuoteFailureReason | 'asset_not_found' | 'asset_not_available' | 'no_price_on_date';
@@ -101,8 +101,6 @@ export async function quoteAsset(
 
   const priced = result.quote;
   const monthlyVatCents = vatCents(priced.monthly_net_rent_cents, vatRate.rateBasisPoints);
-  const totalIfReturned =
-    priced.down_payment_cents + priced.monthly_net_rent_cents * priced.term_months;
 
   return {
     ok: true,
@@ -114,9 +112,13 @@ export async function quoteAsset(
       vat_rate_percent: vatRate.rateBasisPoints / 100,
       monthly_vat_cents: monthlyVatCents,
       monthly_total_cents: priced.monthly_net_rent_cents + monthlyVatCents,
+      upcoming_vat_change: upcomingVatChange(vatRates, {
+        startOn: date,
+        termMonths: priced.term_months,
+        monthlyNetRentCents: priced.monthly_net_rent_cents,
+      }),
       buyout_percent: table.end_of_term_buyout_percent_of_financed[String(termMonths)] ?? null,
-      total_if_returned_cents: totalIfReturned,
-      total_if_bought_cents: totalIfReturned + priced.buyout_cents,
+      ...leaseTotals(priced),
       down_payment_limits: range,
     },
   };

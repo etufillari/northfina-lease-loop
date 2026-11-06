@@ -1,6 +1,7 @@
 // The invoices of a contract: the down payment, if any, then one for each month of rent.
 // Net amounts are locked; VAT is not. Each invoice takes the rate on its own date and stores
-// it, so a later VAT change never touches an existing invoice.
+// it, so a past invoice keeps the VAT it was billed with. One dated in the future has not been
+// billed yet, so a rate announced after signing still reaches it: see `futureVatCorrections`.
 import type { Contract, Invoice, InvoiceKind } from '@/data/lease-schemas';
 import type { VatRates } from '@/data/schemas';
 import { addDays, addMonths } from '../dates';
@@ -10,6 +11,19 @@ type ScheduledContract = Pick<
   Contract,
   'id' | 'start_on' | 'term_months' | 'down_payment_cents' | 'monthly_net_rent_cents'
 >;
+
+/** The VAT an invoice should move to, and the rate it is leaving. */
+export type VatCorrection = Pick<
+  Invoice,
+  'id' | 'contract_id' | 'sequence' | 'vat_rate_basis_points' | 'vat_cents' | 'total_cents'
+> & { from_basis_points: number };
+
+/** What a set of invoices adds up to, VAT and all. */
+export type InvoiceTotals = {
+  total_net_cents: number;
+  total_vat_cents: number;
+  total_cents: number;
+};
 
 type InvoiceDates = Pick<Invoice, 'period_start' | 'period_end' | 'invoice_date' | 'due_date'>;
 
@@ -85,4 +99,52 @@ export function invoiceSchedule(
     vatRates
   );
   return [downPayment, ...rents];
+}
+
+/**
+ * Adds up what is really billed, so a total crossing a VAT change is exact. A cancelled invoice
+ * is never paid and does not count. A buyout only counts once it has been invoiced.
+ */
+export function invoiceTotals(
+  invoices: readonly Pick<Invoice, 'status' | 'net_cents' | 'vat_cents' | 'total_cents'>[]
+): InvoiceTotals {
+  const totals: InvoiceTotals = { total_net_cents: 0, total_vat_cents: 0, total_cents: 0 };
+  for (const invoice of invoices) {
+    if (invoice.status === 'cancelled') continue;
+    totals.total_net_cents += invoice.net_cents;
+    totals.total_vat_cents += invoice.vat_cents;
+    totals.total_cents += invoice.total_cents;
+  }
+  return totals;
+}
+
+/**
+ * The invoices dated after `today` that are no longer on the rate of their own date. An invoice
+ * dated today or earlier has been billed, and a paid or cancelled one is finished, so those
+ * never change. Neither does the net amount. A date with no known rate keeps what it has.
+ */
+export function futureVatCorrections(
+  invoices: readonly Invoice[],
+  vatRates: VatRates,
+  today: string
+): VatCorrection[] {
+  return invoices.flatMap((invoice) => {
+    if (invoice.status !== 'issued' || invoice.invoice_date <= today) return [];
+
+    const rate = vatRateOn(vatRates, invoice.invoice_date);
+    if (!rate.ok || rate.rateBasisPoints === invoice.vat_rate_basis_points) return [];
+
+    const vat = vatCents(invoice.net_cents, rate.rateBasisPoints);
+    return [
+      {
+        id: invoice.id,
+        contract_id: invoice.contract_id,
+        sequence: invoice.sequence,
+        from_basis_points: invoice.vat_rate_basis_points,
+        vat_rate_basis_points: rate.rateBasisPoints,
+        vat_cents: vat,
+        total_cents: invoice.net_cents + vat,
+      },
+    ];
+  });
 }

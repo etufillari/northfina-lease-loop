@@ -1,8 +1,9 @@
 // Turns an approved application into a contract. The quote always wins: the contract keeps
 // the price the customer was quoted, even if the price list changes before they sign.
 import type { Application, AssetLife, Contract, Quote, QuoteResult } from '@/data/lease-schemas';
-import type { Asset, CoefficientTable, Customer } from '@/data/schemas';
+import type { Asset, CoefficientTable, Customer, PriceList } from '@/data/schemas';
 import { addDays, addMonths } from '../dates';
+import { listPriceOn } from '../pricing/price-list';
 import { quote } from '../pricing/pricing';
 
 export type SigningProblem = 'not_owner' | 'not_approved' | 'signatory_required';
@@ -34,6 +35,18 @@ export function lockedQuote(table: CoefficientTable, application: Application): 
     downPaymentCents: application.down_payment_cents,
     termMonths: application.term_months,
   });
+}
+
+/**
+ * The list price on the signing date, which lets a screen explain the lock: "you keep the price
+ * from your quote; the list says X today". `null` for a re-listed item, which has no list price.
+ */
+export function listPriceOnSigning(
+  contract: Pick<Contract, 'asset_id' | 'signed_on' | 'price_list_version'>,
+  priceLists: readonly PriceList[]
+): number | null {
+  const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
+  return contract.price_list_version !== null && listPrice.ok ? listPrice.priceCents : null;
 }
 
 /**

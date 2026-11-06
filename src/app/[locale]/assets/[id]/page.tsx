@@ -22,23 +22,7 @@ type PageProps = {
   }>;
 };
 
-type ApiSuccess<T> = {
-  success: true;
-  data: T;
-  meta: {
-    timestamp: string;
-  };
-};
-
-type ApiError = {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-  };
-};
-
-type ApiResponse<T> = ApiSuccess<T> | ApiError;
+type AssetResponse = { data?: Asset };
 
 export default function AssetDetailsPage({ params }: PageProps) {
   const { locale: localeParam, id } = use(params);
@@ -55,7 +39,7 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loadingAsset, setLoadingAsset] = useState(true);
-  const [assetError, setAssetError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [priceCents, setPriceCents] = useState<number | null>(null);
 
@@ -63,41 +47,32 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
     setPriceCents(cents);
   }, []);
 
-  // Load the asset from the existing catalogue API.
   useEffect(() => {
     const controller = new AbortController();
 
     async function loadAsset() {
       try {
         setLoadingAsset(true);
-        setAssetError(null);
+        setLoadFailed(false);
         setAsset(null);
         setPriceCents(null);
 
-        const response = await fetch('/api/assets', {
+        const response = await fetch(`/api/assets/${encodeURIComponent(id)}`, {
           signal: controller.signal,
         });
+        // A 404 is a normal answer: no asset and no failure shows the "not found" state.
+        if (response.status === 404) return;
 
-        const body = (await response.json()) as ApiResponse<Asset[]>;
+        const body = (await response.json()) as AssetResponse;
+        if (!response.ok || !body.data) throw new Error('could not load the asset');
 
-        if (!response.ok || !body.success) {
-          throw new Error(body.success ? 'Unable to load asset' : body.error.message);
-        }
-
-        const found = body.data.find((item) => item.id === id);
-
-        if (!found) {
-          setAssetError('Asset not found');
-          return;
-        }
-
-        setAsset(found);
+        setAsset(body.data);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           return;
         }
 
-        setAssetError(error instanceof Error ? error.message : 'Unable to load asset');
+        setLoadFailed(true);
       } finally {
         if (!controller.signal.aborted) {
           setLoadingAsset(false);
@@ -113,12 +88,12 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
   if (loadingAsset) {
     return (
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <p className="text-sm text-stone-500 dark:text-stone-400">Loading...</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">{t('asset.loading')}</p>
       </main>
     );
   }
 
-  if (assetError || !asset) {
+  if (!asset) {
     return (
       <main className="mx-auto max-w-6xl px-6 py-10">
         <Link
@@ -129,10 +104,10 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
         </Link>
 
         <div className="mt-8">
-          {assetError ? (
+          {loadFailed ? (
             <ErrorState
-              title="Unable to load asset"
-              description={assetError}
+              title={t('asset.loadError')}
+              description={t('application.access.errorDescription')}
               action={
                 <Link
                   href={`/${locale}`}
@@ -144,8 +119,8 @@ function AssetDetailsContent({ locale, id }: { locale: Locale; id: string }) {
             />
           ) : (
             <EmptyState
-              title="Asset not found"
-              description="The asset may have been removed or is no longer available."
+              title={t('asset.notFound')}
+              description={t('asset.notFoundDescription')}
               action={
                 <Link
                   href={`/${locale}`}

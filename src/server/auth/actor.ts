@@ -64,6 +64,19 @@ export async function requireRole(permission: Permission): Promise<Identity> {
 }
 
 /**
+ * For listing contracts and invoices: the customer to limit the list to, or `undefined` for
+ * staff, who see everything. Anyone else gets a 403.
+ */
+export async function requireContractListScope(): Promise<string | undefined> {
+  const actor = await requireActor();
+  const customerId = actor.kind === 'customer' ? actor.customer.id : undefined;
+  if (customerId === undefined && !can(actor.role, 'contract.view_all')) {
+    throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
+  }
+  return customerId;
+}
+
+/**
  * Like `requireRole`, but also hands back the customer record. Only customers can hold a
  * client permission, so the 403 here is a safeguard for a permission granted to staff later.
  */

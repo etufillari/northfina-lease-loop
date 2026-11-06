@@ -1,5 +1,5 @@
 // Prices a deal. All amounts are net: VAT follows the invoice date, so it is not part of a quote.
-import type { QuoteResult } from '@/data/lease-schemas';
+import type { Quote, QuoteResult } from '@/data/lease-schemas';
 import type { CoefficientTable } from '@/data/schemas';
 import { monthlyFactorFor } from './coefficient';
 import { BASIS_POINTS_PER_WHOLE, roundedDivide } from '../money';
@@ -117,5 +117,22 @@ export function leaseEstimate(
     monthlyTotalCents: rent + vatCents(rent, vatRateBasisPoints),
     termMonths: DEFAULT_TERM_MONTHS,
     requiresDownPayment: limits.minCents > 0,
+  };
+}
+
+/** What a lease adds up to before VAT, which depends on each invoice's date. */
+export type LeaseTotals = { total_if_returned_cents: number; total_if_bought_cents: number };
+
+/** The down payment plus every rent is what returning costs. Keeping the item adds the buyout. */
+export function leaseTotals(
+  deal: Pick<
+    Quote,
+    'down_payment_cents' | 'monthly_net_rent_cents' | 'term_months' | 'buyout_cents'
+  >
+): LeaseTotals {
+  const ifReturned = deal.down_payment_cents + deal.monthly_net_rent_cents * deal.term_months;
+  return {
+    total_if_returned_cents: ifReturned,
+    total_if_bought_cents: ifReturned + deal.buyout_cents,
   };
 }

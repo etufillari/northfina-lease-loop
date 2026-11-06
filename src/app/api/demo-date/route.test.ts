@@ -1,6 +1,8 @@
 // Runs the real handlers against a real, migrated SQLite database, only swapping which one.
 import { cookies } from 'next/headers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as DataLoad from '@/data/load';
+import type { VatRates } from '@/data/schemas';
 import type { PrismaClient } from '@/server/prisma-client';
 import { SESSION_COOKIE_NAME, signSession } from '@/server/auth/session';
 import { todayIso } from '@/server/date/today';
@@ -17,6 +19,12 @@ vi.mock('@/server/db', () => ({
 }));
 vi.mock('next/headers', () => ({ cookies: vi.fn() }));
 
+const announced = vi.hoisted(() => ({ rates: undefined as VatRates | undefined }));
+vi.mock('@/data/load', async (importOriginal) => {
+  const actual = await importOriginal<typeof DataLoad>();
+  return { ...actual, loadVatRates: async () => announced.rates ?? actual.loadVatRates() };
+});
+
 const secret = 'test-secret-at-least-this-long';
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -31,6 +39,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  announced.rates = undefined;
   await db.auditLog.deleteMany();
   await db.assetLife.deleteMany();
   await db.invoice.deleteMany();
@@ -92,6 +101,29 @@ describe('PUT /api/demo-date', () => {
       status: 'returned',
       actual_end_on: '2029-11-11',
     });
+  });
+
+  it('brings future invoices up to a newly announced VAT rate when the date moves', async () => {
+    await resetLeaseData(db);
+    const application = await applyFor(db, 'cust-aino', 'ebike-003', ainoEbikeAnswers);
+    const contract = await signFor(db, 'cust-aino', application.id);
+    announced.rates = {
+      country: 'FI',
+      note: 'A rate announced after signing.',
+      rates: [
+        { rate_percent: 25.5, valid_from: '2024-09-01', valid_to: '2026-12-31' },
+        { rate_percent: 26, valid_from: '2027-01-01', valid_to: '2027-06-30' },
+        { rate_percent: 27, valid_from: '2027-07-01', valid_to: null },
+      ],
+    };
+
+    await actAs(admin);
+    expect((await putDate({ date: '2026-12-01' })).status).toBe(200);
+
+    const invoice = await db.invoice.findFirstOrThrow({
+      where: { contract_id: contract.id, invoice_date: '2027-07-05' },
+    });
+    expect(invoice).toMatchObject({ vat_rate_basis_points: 2_700, total_cents: 13_627 });
   });
 
   it('lets an admin go back to the real date', async () => {

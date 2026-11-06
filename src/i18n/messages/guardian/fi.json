@@ -1,0 +1,22 @@
+{
+  "guardian.title": "Hintavahti: edullisempi vaihtoehto",
+  "guardian.summary": "Arvioitu säästö on {useSaving}, jos palautat tuotteen, tai {ownSaving}, jos myös lunastat sen.",
+  "guardian.context": "Sama tuote ja hinta, {months} kuukautta, alkaen {date}. Säästöt sisältävät arvioidun ALV:n.",
+  "guardian.reason": "Pienempi ennakkomaksu siirtää rahoituksen luokasta {fromBand} luokkaan {toBand}. Kuukausikerroin muuttuu arvosta {fromFactor} arvoon {toFactor}.",
+  "guardian.comparison": "Valintasi ja ehdotetun ennakkomaksun vertailu",
+  "guardian.payment": "Maksu",
+  "guardian.current": "Valintasi",
+  "guardian.suggested": "Ehdotettu vaihtoehto",
+  "guardian.downNet": "Ennakkomaksu (ilman ALV:tä)",
+  "guardian.downGross": "Ennakkomaksu (arvio, sis. ALV)",
+  "guardian.monthlyNet": "Kuukausivuokra (ilman ALV:tä)",
+  "guardian.firstGross": "Ensimmäinen vuokra {date} (arvio, sis. ALV)",
+  "guardian.useGross": "Ennakko + kaikki vuokrat, sitten palautus (arvio, sis. ALV)",
+  "guardian.buyoutGross": "Vapaaehtoinen lunastus lopussa (arvio, sis. ALV)",
+  "guardian.ownGross": "Ennakko + kaikki vuokrat + lunastus (arvio, sis. ALV)",
+  "guardian.buyoutWarning": "Ehdotetun vaihtoehdon vapaaehtoinen lunastus maksaa {amount} enemmän. Kokonaishinta lunastuksineen on silti pienempi.",
+  "guardian.taxNote": "ALV perustuu suunniteltuihin laskutuspäiviin. Todelliset laskutuspäivät voivat muuttaa veroa. Demon vuoden 2027 ALV-muutos on kuvitteellinen.",
+  "guardian.scope": "Tarkistimme nollaennakon ja rahoitusluokkien rajat kasvattamatta ennakkomaksuasi tai kuukausivuokraasi. Haku ei kata kaikkia mahdollisia hintoja.",
+  "guardian.choose": "Valitse {amount} ennakkomaksu (ilman ALV:tä)",
+  "guardian.actionHelp": "Tämä päivittää vain luonnoksen. Tarkista se ja tallenna erikseen. Valinta ei hyväksy rahoitusta eikä varaa tuotetta."
+}

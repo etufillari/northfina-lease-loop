@@ -15,19 +15,26 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  usage_value             Int
+  previous_lives          Int
+  // Original valuation reference survives returns and release revisions.
+  valuation_baseline_json String?
+  status                  String // available | reserved | returned
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  quotes       Quote[]
+  contracts    Contract[]
+  active_lease AssetLease?
+  release      AssetRelease?
 
   @@index([category])
 }
@@ -45,4 +52,131 @@ model AuditLog {
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// An offer is an immutable snapshot. Its UUID also identifies a retry of the same request.
+model Quote {
+  id               String        @id
+  customer_id      String
+  asset_id         String
+  priced_on        String
+  start_date       String
+  valid_through    String
+  release_revision Int
+  price_source     String
+  terms_json       String
+  created_at       DateTime      @default(now())
+  asset            Asset         @relation(fields: [asset_id], references: [id])
+  applications     Application[]
+  contract         Contract?
+
+  @@index([customer_id])
+}
+
+// Each submission is retained; editing answers creates a new submission.
+model Application {
+  id           String    @id
+  quote_id     String
+  customer_id  String
+  submitted_on String
+  request_hash String
+  answers_json String
+  decision     String
+  reasons_json String
+  created_at   DateTime  @default(now())
+  quote        Quote     @relation(fields: [quote_id], references: [id])
+  contract     Contract?
+
+  @@index([quote_id])
+}
+
+// terms_json never changes after signature; only the lifecycle columns change.
+model Contract {
+  id                 String      @id
+  quote_id           String      @unique
+  application_id     String      @unique
+  customer_id        String
+  asset_id           String
+  life_number        Int
+  signed_on          String
+  start_date         String
+  end_date           String
+  terms_json         String
+  status             String      @default("active")
+  closed_on          String?
+  close_request_id   String?     @unique
+  close_request_hash String?
+  next_customer_id   String?
+  created_at         DateTime    @default(now())
+  quote              Quote       @relation(fields: [quote_id], references: [id])
+  application        Application @relation(fields: [application_id], references: [id])
+  asset              Asset       @relation(fields: [asset_id], references: [id])
+  active_lease       AssetLease?
+  invoices           Invoice[]
+
+  @@unique([asset_id, life_number])
+  @@index([customer_id])
+}
+
+// The primary key is the physical asset, so two current leases cannot claim it.
+model AssetLease {
+  asset_id    String   @id
+  contract_id String   @unique
+  asset       Asset    @relation(fields: [asset_id], references: [id])
+  contract    Contract @relation(fields: [contract_id], references: [id])
+}
+
+// Issued money and dates are stored, not recalculated from today's rate.
+model Invoice {
+  id               String   @id
+  contract_id      String
+  kind             String
+  period           Int
+  scheduled_for    String
+  invoice_date     String
+  due_date         String
+  net_cents        Int
+  vat_basis_points Int
+  vat_cents        Int
+  gross_cents      Int
+  created_at       DateTime @default(now())
+  contract         Contract @relation(fields: [contract_id], references: [id])
+
+  @@unique([contract_id, kind, period])
+}
+
+// Current resale offer. Returning increments revision, invalidating old unsigned quotes.
+model AssetRelease {
+  asset_id                 String  @id
+  revision                 Int
+  net_price_cents          Int?
+  ready_on                 String?
+  reserved_for_customer_id String?
+  readiness_json           String?
+  valuation_reason         String?
+  relist_request_id        String? @unique
+  relist_request_hash      String?
+  asset                    Asset   @relation(fields: [asset_id], references: [id])
+}
+
+// Customer identity comes from the selected demo context, never a submitted customer ID.
+model WaitingRequest {
+  revision                   Int     @default(0)
+  update_request_id          String? @unique
+  update_request_hash        String?
+  id                         String  @id
+  customer_id                String
+  submitted_on               String
+  request_hash               String
+  category                   String
+  min_condition              String
+  max_monthly_net_rent_cents Int
+  preferred_term_months      Int
+  needed_by                  String
+  status                     String  @default("pending")
+  pending_key                String? @unique
+  allocated_asset_id         String?
+
+  @@index([customer_id])
+  @@index([status, category])
 }

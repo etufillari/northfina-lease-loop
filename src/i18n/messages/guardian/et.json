@@ -1,0 +1,22 @@
+{
+  "guardian.title": "Hinnavalvur: soodsam võimalus",
+  "guardian.summary": "Hinnanguline sääst on {useSaving}, kui tagastad eseme, või {ownSaving}, kui ostad selle ka välja.",
+  "guardian.context": "Sama ese ja hind, {months} kuud, algusega {date}. Sääst sisaldab prognoositavat käibemaksu.",
+  "guardian.reason": "Väiksem sissemakse viib rahastuse vahemikust {fromBand} vahemikku {toBand}. Kuukoefitsient muutub väärtuselt {fromFactor} väärtusele {toFactor}.",
+  "guardian.comparison": "Sinu valiku ja soovitatud sissemakse võrdlus",
+  "guardian.payment": "Makse",
+  "guardian.current": "Sinu valik",
+  "guardian.suggested": "Soovitatud võimalus",
+  "guardian.downNet": "Sissemakse (käibemaksuta)",
+  "guardian.downGross": "Sissemakse (hinnang, käibemaksuga)",
+  "guardian.monthlyNet": "Kuurent (käibemaksuta)",
+  "guardian.firstGross": "Esimene rent {date} (hinnang, käibemaksuga)",
+  "guardian.useGross": "Sissemakse + kogu rent, seejärel tagastus (hinnang, käibemaksuga)",
+  "guardian.buyoutGross": "Vabatahtlik väljaost lõpus (hinnang, käibemaksuga)",
+  "guardian.ownGross": "Sissemakse + kogu rent + väljaost (hinnang, käibemaksuga)",
+  "guardian.buyoutWarning": "Soovitatud võimaluse vabatahtlik väljaost maksab {amount} rohkem. Kogukulu koos väljaostuga on siiski väiksem.",
+  "guardian.taxNote": "Käibemaks põhineb kavandatud arvekuupäevadel. Tegelik väljastamiskuupäev võib maksu muuta. Selle demo 2027. aasta käibemaksumuutus on väljamõeldud.",
+  "guardian.scope": "Kontrollisime nullsissemakset ja rahastusvahemike piire ilma sinu sissemakset või kuurenti suurendamata. See ei ole kõigi võimalike hindade otsing.",
+  "guardian.choose": "Kasuta {amount} sissemakset (käibemaksuta)",
+  "guardian.actionHelp": "See uuendab ainult mustandit. Vaata see üle ja salvesta eraldi. Valik ei kinnita rahastust ega broneeri eset."
+}

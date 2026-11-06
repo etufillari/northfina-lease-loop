@@ -84,6 +84,7 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      valuation_baseline_json: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

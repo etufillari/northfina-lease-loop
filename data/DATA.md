@@ -6,6 +6,50 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 
 ## Conventions
 
+### Team extension: waiting-request identities
+
+`second-life-demand.json` has optional `customer_id` links to existing demo personas.
+These associations were created by the team for demonstration; the original pack
+did not identify the customers. Original budgets, conditions, terms and deadlines
+are unchanged. `wait-02` links to Sanna and `wait-13` to Olavi.
+`wait-01` intentionally has no customer link to exercise anonymous recommendations.
+
+These read-only sample requests are distinct from editable database registrations.
+A linked sample can be reserved once; its allocation is recorded atomically in the
+relisting audit. Missing or unknown customer IDs permit a recommendation preview,
+but never a reservation. No database reset or new migration is needed for these links.
+
+For a repeatable check, use an unmodified returned `ebike-007` in Dealer mode:
+
+- Set demo date and ready date to `2026-11-06`. Original date and price now default
+  to `2023-01-01` and EUR 5490 from v1, labelled as assumptions; age is 46 months.
+  To repeat the older synthetic example, check **Correct the original date or price**,
+  enter `2024-11-06`, EUR 2500 and a source/reason of at least 10 characters.
+  Age becomes 24 months automatically. Compare: `wait-02` recommends Sanna, fair condition, with EUR 395
+  required work. Confirm the work to allocate; a new application is still required.
+- Before publishing any offer, change both dates to `2026-11-11` and compare again.
+  `wait-01` should be recommended anonymously, with its repair estimate and rent;
+  **Use recommended plan** must be disabled. Earlier requests have missed their deadlines.
+
+Existing customer registrations can change the winner. Run these checks before
+allocating the item, or use a separate disposable demo database; do not reset a
+database whose saved work you need to keep.
+
+To test an operator override, compare on `2026-11-06` before publishing. Under
+**Choose another eligible plan**, select Olavi's `wait-13` in good condition.
+Enter a reason of at least 10 characters, then use the selected plan. The preparation
+form must show good condition and its required work. After confirmation the offer
+is reserved for Olavi; the audit retains the reason and the original `wait-02`
+recommendation. Anonymous requests and failed constraints cannot be overridden.
+
+Original valuation references are persisted on the asset, separate from later offer
+prices. Real first-lease dates and locked prices are captured when a new item is
+first signed. Existing first-life contracts can supply missing references. Neither
+returns, repairs nor subsequent signatures reset the original reference. Corrections
+are saved only on confirmed publication with the audit entry, never by previewing.
+This feature adds an additive Prisma migration; existing databases need
+`npx prisma migrate deploy` and `npx prisma generate` after pulling the change.
+
 - **Money is integer euro cents.** `389000` means €3,890.00. Prices are **net (VAT excluded)** unless a field says otherwise.
 - **Dates are ISO `YYYY-MM-DD`.** `valid_to: null` means "still valid".
 - **Percentages are plain numbers.** `25.5` means 25.5 %.

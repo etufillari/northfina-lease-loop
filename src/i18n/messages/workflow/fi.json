@@ -1,0 +1,18 @@
+{
+  "spine.demoRole": "Demorooli",
+  "spine.customerMode": "Asiakas",
+  "spine.dealerMode": "Jälleenmyyjä",
+  "spine.dealerHelp": "Käytät demojälleenmyyjän roolia. Kirjaa palautettujen tuotteiden tehdyt työt ja uusi hinta. Roolin vaihto on simulaatio, ei suojattu kirjautuminen.",
+  "spine.dealerUnavailable": "Vain palautettuja tuotteita voi valmistella. Valitse palautettu tuote luettelosta tai vaihda Asiakas-rooliin vuokrataksesi saatavilla olevan tuotteen.",
+  "spine.returnedForDealer": "Tuote odottaa, että jälleenmyyjä kirjaa valmistelutyöt ja uuden hinnan.",
+  "spine.answerSource": "Päätös perustuu vastauksiisi tässä näkyviin kysymyksiin. Demotiedot ovat vain muokattavia alkuarvoja.",
+  "spine.incomeSkipped": "Emme kysy tuloja tai tarkista maksukykyä, koska rahoitettava summa on alle 2 000 euroa.",
+  "spine.pepSkipped": "Emme kysy poliittisesti vaikutusvaltaisista henkilöistä tai tee tätä tarkistusta, kun rahoitus on alle 10 000 euroa.",
+  "spine.companyResidence": "Tässä demossa henkilökohtaista asuinmaatarkistusta ei sovelleta yrityksiin.",
+  "spine.signatory.pricePolicy": "Tallennetut verottomat ehdot ovat voimassa {date} asti. Sen jälkeen uusi tarjous on tarkistettava. ALV määräytyy edelleen kunkin laskun päivämäärän mukaan.",
+  "spine.error.CUSTOMER_MODE_REQUIRED": "Vaihda Asiakas-rooliin käsitelläksesi hakemusta tai sopimusta. Jälleenmyyjä ei voi allekirjoittaa asiakkaan puolesta.",
+  "spine.error.SIGNATURE_HANDOFF_PENDING": "Tämä tarjous odottaa jo nimetyn allekirjoittajan allekirjoitusta. Hakija ei voi aktivoida sitä lähettämällä eri vastauksia.",
+  "spine.dealerReturned": "Palautetut tuotteet ({count})",
+  "spine.dealerEmpty": "Yhtään tuotetta ei tällä hetkellä odota valmistelua.",
+  "spine.dealerPublished": "Tuote on jälleen saatavilla hintaan {price} ilman ALV:tä. Vaihda Asiakas-rooliin ja valitse seuraava vuokraaja aloittaaksesi uuden vuokrasopimuksen."
+}

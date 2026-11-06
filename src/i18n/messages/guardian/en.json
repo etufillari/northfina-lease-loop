@@ -1,0 +1,22 @@
+{
+  "guardian.title": "Price Guardian: a cheaper option",
+  "guardian.summary": "Save an estimated {useSaving} if you return the item, or {ownSaving} including the optional purchase.",
+  "guardian.context": "Same item and price, {months} months, starting {date}. Savings include forecast VAT.",
+  "guardian.reason": "A lower upfront payment moves financing from band {fromBand} to {toBand}. The monthly coefficient changes from {fromFactor} to {toFactor}.",
+  "guardian.comparison": "Your choice compared with the suggested upfront payment",
+  "guardian.payment": "Payment",
+  "guardian.current": "Your choice",
+  "guardian.suggested": "Suggested option",
+  "guardian.downNet": "Upfront payment (before VAT)",
+  "guardian.downGross": "Upfront payment (estimated, including VAT)",
+  "guardian.monthlyNet": "Monthly rent (before VAT)",
+  "guardian.firstGross": "First rent on {date} (estimated, including VAT)",
+  "guardian.useGross": "Upfront + all rent, then return (estimated, including VAT)",
+  "guardian.buyoutGross": "Optional purchase at the end (estimated, including VAT)",
+  "guardian.ownGross": "Upfront + all rent + purchase (estimated, including VAT)",
+  "guardian.buyoutWarning": "The suggested option's optional purchase is {amount} higher. Its full cost including purchase is still lower.",
+  "guardian.taxNote": "VAT uses planned invoice dates. Actual issue dates can change tax. The 2027 VAT change in this demo is fictional.",
+  "guardian.scope": "We checked zero upfront and financing-band boundaries without increasing your upfront payment or monthly rent. This is not a search of every possible price.",
+  "guardian.choose": "Use {amount} upfront (before VAT)",
+  "guardian.actionHelp": "This only updates your draft. Review it, then save separately. It does not approve financing or reserve the item."
+}

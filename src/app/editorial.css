@@ -1,0 +1,301 @@
+/* Editorial skin for the leasing journey. Domain data and accessibility stay authoritative. */
+@layer components {
+  .site-shell {
+    background: #f7f8f1;
+    color: var(--ui-ink);
+  }
+  .site-header {
+    border-bottom: 1px solid var(--ui-line);
+    background: var(--ui-surface);
+  }
+  .site-footer {
+    border-top: 1px solid var(--ui-line);
+  }
+  .brand-mark {
+    background: #164d3b;
+    color: #d9f78b;
+  }
+  .asset-back-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: var(--ui-accent);
+    font-weight: 650;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .asset-hero {
+    position: relative;
+    display: grid;
+    min-height: 14rem;
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.65fr);
+    align-items: center;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    background: radial-gradient(circle at 83% 28%, #216f56, #144a3a 46%, #102d27);
+    padding: clamp(1.5rem, 4vw, 3rem);
+    color: #f4f9eb;
+  }
+  .asset-hero-content {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+  .asset-hero-eyebrow {
+    color: #dcf79b;
+    font-size: 0.8rem;
+    font-weight: 750;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
+  .asset-hero-title {
+    margin-top: 0.75rem;
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    font-size: clamp(2.25rem, 5.5vw, 4.3rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+  }
+  .asset-hero-detail {
+    margin-top: 1rem;
+    color: #e1eddc;
+    font-size: 0.95rem;
+  }
+  .asset-hero-art {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -1rem -2.25rem -1rem 0;
+    color: #d9f78b;
+  }
+  .asset-art {
+    width: 100%;
+    height: auto;
+    max-height: 13rem;
+  }
+  .demo-panel {
+    border-style: dashed;
+    background: transparent;
+  }
+  .catalogue-card {
+    box-shadow: 0 12px 32px rgb(15 51 35 / 5%);
+    transition:
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+  .catalogue-card:hover {
+    box-shadow: 0 16px 38px rgb(15 51 35 / 12%);
+    transform: translateY(-2px);
+  }
+  .catalogue-visual {
+    position: relative;
+    display: flex;
+    min-height: 9.5rem;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    border-radius: 0.9rem;
+    background: #dcebd4;
+    color: #205540;
+  }
+  .catalogue-visual[data-category='laptop'] {
+    background: #dde9ed;
+    color: #21495a;
+  }
+  .catalogue-visual[data-category='farm_machine'] {
+    background: #f1e4c8;
+    color: #78552c;
+  }
+  .catalogue-visual .asset-art {
+    width: 72%;
+    max-height: 9rem;
+  }
+  .catalogue-category {
+    position: absolute;
+    z-index: 1;
+    top: 0.75rem;
+    left: 0.75rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 82%);
+    padding: 0.3rem 0.65rem;
+    color: #183b31;
+    font-size: 0.75rem;
+    font-weight: 750;
+  }
+  .price-workbench {
+    box-shadow: 0 18px 50px rgb(18 65 42 / 6%);
+  }
+  .price-section-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+  .step-mark {
+    display: inline-flex;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--ui-ink);
+    color: var(--ui-surface);
+    font-size: 0.875rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-controls {
+    border: 1px solid var(--ui-line);
+    border-radius: 1.25rem;
+  }
+  .price-control-details {
+    border-top: 1px solid var(--ui-line);
+    padding-top: 0.5rem;
+  }
+  .price-control-details > summary {
+    color: var(--ui-accent);
+    font-weight: 650;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .price-headline {
+    position: relative;
+    overflow: hidden;
+    border: 0;
+    border-radius: 1.25rem;
+    background: linear-gradient(130deg, #113c32, #166249);
+    padding: clamp(1.5rem, 3vw, 2rem);
+    color: #f6fff1;
+    box-shadow: 0 18px 38px rgb(9 57 38 / 13%);
+  }
+  .price-headline::after {
+    position: absolute;
+    top: -6rem;
+    right: -5rem;
+    width: 17rem;
+    height: 17rem;
+    border: 1px solid rgb(217 247 139 / 35%);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2.5rem rgb(217 247 139 / 5%);
+    content: '';
+    pointer-events: none;
+  }
+  .price-headline > * {
+    position: relative;
+    z-index: 1;
+  }
+  .price-headline .price-number {
+    color: #d9f78b;
+    font-size: clamp(2.65rem, 5vw, 4.5rem);
+    letter-spacing: -0.045em;
+  }
+  .price-headline .ui-note {
+    color: #e2f0e5;
+  }
+  .price-outcome-grid {
+    display: grid;
+    gap: 1rem;
+  }
+  .price-outcome-grid .price-total {
+    border: 1px solid var(--ui-line);
+    border-radius: 1rem;
+    background: var(--ui-quiet);
+    padding: 1.25rem;
+  }
+  .price-outcome-grid .price-total:first-child {
+    background: var(--ui-tint);
+  }
+  .price-tax-surface {
+    border-top: 1px solid var(--ui-line);
+    padding-top: 1.5rem;
+  }
+  .comparison-option {
+    background: var(--ui-surface);
+    box-shadow: 0 8px 24px rgb(14 54 35 / 5%);
+  }
+  .comparison-option[data-selected='true'] {
+    border-color: var(--ui-accent);
+    background: var(--ui-tint);
+    box-shadow: 0 12px 30px rgb(14 54 35 / 10%);
+  }
+  .comparison-option h4 {
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    font-size: clamp(1.7rem, 2.6vw, 2.25rem);
+  }
+  .ui-button {
+    border-radius: 999px;
+  }
+  .ui-button:not(:disabled):hover {
+    filter: brightness(1.08);
+  }
+}
+@layer components {
+  :root[data-theme='dark'] {
+    .site-shell {
+      background: #0e201a;
+    }
+    .catalogue-card {
+      box-shadow: none;
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .site-shell {
+    background: #0e201a;
+  }
+}
+@layer components {
+  .catalogue-intro {
+    max-width: 42rem;
+  }
+  .catalogue-description {
+    margin-top: 0.75rem;
+    color: var(--ui-muted);
+    font-size: 1.125rem;
+  }
+  .catalogue-date {
+    display: inline-flex;
+    margin-top: 1.25rem;
+    border: 1px solid var(--ui-line);
+    border-radius: 999px;
+    background: var(--ui-tint);
+    padding: 0.25rem 0.75rem;
+    color: var(--ui-ink);
+    font-size: 0.875rem;
+  }
+  @media (max-width: 36rem) {
+    .asset-hero {
+      min-height: 13rem;
+      padding: 1.25rem;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .asset-hero-art {
+      max-width: 12rem;
+      margin: 0 auto;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalogue-card:hover {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  .asset-hero,
+  .price-headline,
+  .catalogue-visual {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+  .asset-hero *,
+  .price-headline *,
+  .catalogue-category {
+    color: CanvasText;
+  }
+  .price-headline::after {
+    display: none;
+  }
+}

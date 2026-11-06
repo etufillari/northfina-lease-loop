@@ -1,0 +1,18 @@
+{
+  "spine.demoRole": "Demoroll",
+  "spine.customerMode": "Kund",
+  "spine.dealerMode": "Återförsäljare",
+  "spine.dealerHelp": "Du använder demoåterförsäljaren. Registrera utfört arbete och ett nytt pris för återlämnade objekt. Rollbytet är en simulering, inte en säker inloggning.",
+  "spine.dealerUnavailable": "Endast återlämnade objekt kan förberedas. Välj ett återlämnat objekt i katalogen eller byt till Kund för att leasa ett tillgängligt objekt.",
+  "spine.returnedForDealer": "Objektet väntar på att återförsäljaren registrerar förberedelserna och det nya priset.",
+  "spine.answerSource": "Beslutet baseras på dina svar på frågorna som visas här. Demouppgifterna är bara redigerbara startvärden.",
+  "spine.incomeSkipped": "Vi frågar inte om inkomst eller kontrollerar betalningsförmågan eftersom det finansierade beloppet är under 2 000 euro.",
+  "spine.pepSkipped": "Vi frågar inte om personer i politiskt utsatt ställning eller gör den kontrollen vid finansiering under 10 000 euro.",
+  "spine.companyResidence": "I den här demon tillämpas inte kontrollen av privatpersoners bosättningsland på företag.",
+  "spine.signatory.pricePolicy": "De sparade villkoren exklusive moms gäller till och med {date}. Därefter måste ett nytt erbjudande granskas. Momsen följer fortfarande varje fakturadatum.",
+  "spine.error.CUSTOMER_MODE_REQUIRED": "Byt till Kund för att hantera en ansökan eller ett avtal. Återförsäljaren kan inte underteckna åt kunden.",
+  "spine.error.SIGNATURE_HANDOFF_PENDING": "Erbjudandet väntar redan på den angivna firmatecknaren. Sökanden kan inte aktivera det genom att skicka andra svar.",
+  "spine.dealerReturned": "Returnerade produkter ({count})",
+  "spine.dealerEmpty": "Inga produkter väntar på förberedelse just nu.",
+  "spine.dealerPublished": "Produkten är tillgänglig igen för {price} exklusive moms. Byt till Kund och välj nästa hyrestagare för att starta ett nytt avtal."
+}

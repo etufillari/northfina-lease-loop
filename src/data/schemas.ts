@@ -334,6 +334,8 @@ export const customersFileSchema = z.array(customerSchema);
 
 export const secondLifeRequestSchema = z.strictObject({
   id: z.string().min(1),
+  /** Team-created synthetic association; omitted requests remain preview-only. */
+  customer_id: z.string().min(1).optional(),
   category: assetCategorySchema,
   max_monthly_net_rent_cents: centsSchema,
   /** Worst condition this person accepts. */

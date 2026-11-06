@@ -2,11 +2,23 @@
 // <html lang> attribute is always right for the page.
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Zalando_Sans_SemiExpanded } from 'next/font/google';
+import { AppearanceSwitcher } from '@/components/appearance/appearance-switcher';
+import { appearanceInit } from '@/components/appearance/preferences';
 import { notFound } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
+// Downloaded at build time and self-hosted; browsers do not contact a font service.
+const northfinaFont = Zalando_Sans_SemiExpanded({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-northfina',
+  display: 'swap',
+  preload: false,
+  // This family has no Next.js fallback metrics; retain the explicit CSS fallback.
+  adjustFontFallback: false,
+});
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
   const { locale } = await params;
@@ -21,8 +33,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const t = getT(locale);
 
   return (
-    <html lang={locale}>
-      <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
+    <html lang={locale} data-design="green" data-mode="system" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: appearanceInit }} />
+      </head>
+      <body className={northfinaFont.variable + ' site-shell flex min-h-dvh flex-col antialiased'}>
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-stone-900 focus:shadow"
@@ -30,7 +45,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
-        <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
+        <header className="site-header">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <Link href={`/${locale}`} className="flex items-center gap-3 rounded-lg">
               <LoopMark />
@@ -38,12 +53,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 <span className="block text-lg font-semibold tracking-tight">
                   {t('brand.name')}
                 </span>
-                <span className="block text-sm text-stone-600 dark:text-stone-400">
-                  {t('brand.tagline')}
-                </span>
+                <span className="brand-tagline ui-note block text-sm">{t('brand.tagline')}</span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <div className="header-actions">
+              <LanguageSwitcher current={locale} label={t('nav.language')} />
+              <AppearanceSwitcher locale={locale} />
+            </div>
           </div>
         </header>
 
@@ -51,9 +67,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {children}
         </main>
 
-        <footer className="border-t border-stone-200 dark:border-stone-800">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
+        <footer className="site-footer">
+          <div className="footer-note ui-note mx-auto max-w-6xl px-4 py-6 text-sm sm:px-6">
+            {t('spine.demo')}
           </div>
         </footer>
       </body>
@@ -67,7 +83,7 @@ function LoopMark() {
     <svg
       aria-hidden="true"
       viewBox="0 0 32 32"
-      className="size-9 shrink-0 rounded-xl bg-emerald-700 p-1.5 text-white"
+      className="brand-mark size-9 shrink-0 rounded-xl p-1.5"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.5"

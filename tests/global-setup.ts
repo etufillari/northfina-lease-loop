@@ -1,7 +1,7 @@
 // Runs once before all tests: builds an empty SQLite database with the real migrations
 // (`prisma migrate deploy`) in a temporary folder. Tests copy it, so they never touch dev.db.
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -16,6 +16,9 @@ declare module 'vitest' {
 export default async function setup(project: TestProject) {
   const dir = await mkdtemp(path.join(tmpdir(), 'lease-loop-test-'));
   const templateDatabasePath = path.join(dir, 'template.db');
+  // An empty file is a valid new SQLite database. Pre-create it because the
+  // schema engine can fail to create a missing file on Windows before migrating.
+  await writeFile(templateDatabasePath, '', { flag: 'wx' });
 
   const require = createRequire(import.meta.url);
   const prismaCli = path.join(

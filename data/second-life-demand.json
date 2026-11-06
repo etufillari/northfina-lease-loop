@@ -15,7 +15,8 @@
     "min_condition": "fair",
     "preferred_term_months": 12,
     "needed_by": "2026-11-10",
-    "who": "Delivery courier, accepts scratches"
+    "who": "Delivery courier, accepts scratches",
+    "customer_id": "cust-sanna"
   },
   {
     "id": "wait-03",
@@ -24,7 +25,8 @@
     "min_condition": "like_new",
     "preferred_term_months": 36,
     "needed_by": "2026-12-15",
-    "who": "Commuter, wants it to look new"
+    "who": "Commuter, wants it to look new",
+    "customer_id": "cust-lena"
   },
   {
     "id": "wait-04",
@@ -33,7 +35,8 @@
     "min_condition": "good",
     "preferred_term_months": 24,
     "needed_by": "2027-01-05",
-    "who": "Small bakery, cargo bike for deliveries"
+    "who": "Small bakery, cargo bike for deliveries",
+    "customer_id": "cust-kettukoodi"
   },
   {
     "id": "wait-05",
@@ -42,7 +45,8 @@
     "min_condition": "good",
     "preferred_term_months": 12,
     "needed_by": "2026-11-08",
-    "who": "Tourist rental shop, short term"
+    "who": "Tourist rental shop, short term",
+    "customer_id": "cust-norvi"
   },
   {
     "id": "wait-06",
@@ -51,7 +55,8 @@
     "min_condition": "good",
     "preferred_term_months": 24,
     "needed_by": "2026-11-15",
-    "who": "First-year Hive student"
+    "who": "First-year Hive student",
+    "customer_id": "cust-aino"
   },
   {
     "id": "wait-07",
@@ -60,7 +65,8 @@
     "min_condition": "like_new",
     "preferred_term_months": 12,
     "needed_by": "2026-11-30",
-    "who": "Freelance designer"
+    "who": "Freelance designer",
+    "customer_id": "cust-pekka"
   },
   {
     "id": "wait-08",
@@ -69,7 +75,8 @@
     "min_condition": "fair",
     "preferred_term_months": 36,
     "needed_by": "2026-11-12",
-    "who": "Non-profit, needs 3 office laptops"
+    "who": "Non-profit, needs 3 office laptops",
+    "customer_id": "cust-kettukoodi"
   },
   {
     "id": "wait-09",
@@ -78,7 +85,8 @@
     "min_condition": "good",
     "preferred_term_months": 24,
     "needed_by": "2026-11-09",
-    "who": "School pilot programme"
+    "who": "School pilot programme",
+    "customer_id": "cust-norvi"
   },
   {
     "id": "wait-10",
@@ -87,7 +95,8 @@
     "min_condition": "good",
     "preferred_term_months": 48,
     "needed_by": "2027-03-01",
-    "who": "Young farmer starting out"
+    "who": "Young farmer starting out",
+    "customer_id": "cust-olavi"
   },
   {
     "id": "wait-11",
@@ -96,7 +105,8 @@
     "min_condition": "fair",
     "preferred_term_months": 36,
     "needed_by": "2027-04-15",
-    "who": "Contractor, seasonal work"
+    "who": "Contractor, seasonal work",
+    "customer_id": "cust-pekka"
   },
   {
     "id": "wait-12",
@@ -105,7 +115,8 @@
     "min_condition": "like_new",
     "preferred_term_months": 48,
     "needed_by": "2027-02-01",
-    "who": "Large dairy farm"
+    "who": "Large dairy farm",
+    "customer_id": "cust-haapala"
   },
   {
     "id": "wait-13",
@@ -114,7 +125,8 @@
     "min_condition": "good",
     "preferred_term_months": 24,
     "needed_by": "2026-11-10",
-    "who": "Delivery courier, same budget as wait-02"
+    "who": "Delivery courier, same budget as wait-02",
+    "customer_id": "cust-olavi"
   },
   {
     "id": "wait-14",
@@ -123,6 +135,7 @@
     "min_condition": "good",
     "preferred_term_months": 24,
     "needed_by": "2026-11-15",
-    "who": "Same needs as wait-06, signed up one day later"
+    "who": "Same needs as wait-06, signed up one day later",
+    "customer_id": "cust-sanna"
   }
 ]

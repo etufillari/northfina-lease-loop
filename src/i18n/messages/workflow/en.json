@@ -1,0 +1,18 @@
+{
+  "spine.demoRole": "Demo role",
+  "spine.customerMode": "Customer",
+  "spine.dealerMode": "Dealer",
+  "spine.dealerHelp": "You are using the demo dealer. Record completed work and a new price for returned items. This role switch is a simulation, not secure sign-in.",
+  "spine.dealerUnavailable": "Only returned items can be prepared. Choose a returned item in the catalogue, or switch to Customer to lease an available item.",
+  "spine.returnedForDealer": "This item is waiting for the dealer to record its preparation and new price.",
+  "spine.answerSource": "The decision uses your answers to the questions shown here. Demo details are only editable starting values.",
+  "spine.incomeSkipped": "We do not ask about income or check affordability because the financed amount is below EUR 2,000.",
+  "spine.pepSkipped": "We do not ask about politically exposed persons or run that check below EUR 10,000 financed.",
+  "spine.companyResidence": "This demo does not apply the personal residence check to companies.",
+  "spine.signatory.pricePolicy": "These saved net terms remain valid through {date}. After expiry, a new offer must be reviewed. VAT still follows each invoice date.",
+  "spine.error.CUSTOMER_MODE_REQUIRED": "Switch to Customer to manage an application or agreement. The dealer cannot sign for a customer.",
+  "spine.error.SIGNATURE_HANDOFF_PENDING": "This offer is already waiting for its named signatory. The applicant cannot activate it by submitting different answers.",
+  "spine.dealerReturned": "Returned items ({count})",
+  "spine.dealerEmpty": "No items are currently waiting for preparation.",
+  "spine.dealerPublished": "This item is available again at {price} before VAT. Switch to Customer and select the next lessee to start a new lease."
+}

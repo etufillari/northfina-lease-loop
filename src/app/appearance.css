@@ -1,0 +1,136 @@
+@layer components {
+  .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .appearance {
+    position: relative;
+    z-index: 30;
+  }
+  .appearance-trigger {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--ui-control);
+    border-radius: 999px;
+    background: var(--ui-surface);
+    padding: 0.5rem 0.875rem;
+    color: var(--ui-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+    list-style: none;
+  }
+  .appearance-trigger::-webkit-details-marker {
+    display: none;
+  }
+  .appearance-trigger::after {
+    content: '+';
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+  .appearance[open] .appearance-trigger::after {
+    content: '−';
+  }
+  .appearance-icon {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+  }
+  .appearance-panel {
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    right: 0;
+    width: min(29rem, calc(100vw - 2rem));
+    border: 1px solid var(--ui-line);
+    border-radius: 1.25rem;
+    background: var(--ui-surface);
+    padding: 1.25rem;
+    color: var(--ui-ink);
+    box-shadow: 0 18px 45px rgb(9 24 50 / 20%);
+  }
+  .appearance-panel legend {
+    margin-bottom: 0.5rem;
+    font-weight: 650;
+  }
+  .appearance-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .appearance-choice {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--ui-control);
+    border-radius: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    cursor: pointer;
+    font-size: 0.9375rem;
+  }
+  .appearance-choice:has(:checked) {
+    border-color: var(--ui-accent);
+    background: var(--ui-tint);
+    font-weight: 650;
+  }
+  .appearance-choice input {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+  }
+  .appearance-choice:focus-within {
+    outline: 3px solid var(--ui-focus);
+    outline-offset: 3px;
+  }
+  .appearance-swatch {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+  }
+  .appearance-swatch[data-swatch='green'] {
+    background: linear-gradient(135deg, #135d45, #d9f78b);
+  }
+  .appearance-swatch[data-swatch='northfina'] {
+    background: linear-gradient(135deg, #003dfc, #26aefb);
+  }
+  @media (max-width: 40rem) {
+    .header-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .appearance {
+      margin-left: auto;
+    }
+  }
+}
+@media (forced-colors: active) {
+  .appearance-trigger,
+  .appearance-panel,
+  .appearance-choice {
+    border-color: ButtonText;
+  }
+  .appearance-choice:has(:checked) {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+}
+
+/* Two-tone focus remains distinguishable on white pills and the blue header. */
+@layer components {
+  :root[data-design='northfina'] .site-header :is(a, .appearance-trigger):focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px #0b2562;
+  }
+}
+@media (forced-colors: active) {
+  :root[data-design='northfina'] .site-header :is(a, .appearance-trigger):focus-visible {
+    outline-color: Highlight;
+    box-shadow: none;
+  }
+}

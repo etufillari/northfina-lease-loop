@@ -1,12 +1,22 @@
 @import 'tailwindcss';
+@import './ui-base.css';
+@import './editorial.css';
+@import './appearance.css';
+@import './northfina.css';
+@import './language-switcher.css';
+
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
 
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* A visible keyboard focus everywhere, in both color schemes. */
-:focus-visible {
-  outline: 2px solid var(--color-emerald-600);
-  outline-offset: 2px;
 }

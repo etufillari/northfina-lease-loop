@@ -25,6 +25,15 @@ npm run dev          # http://localhost:3000
 
 You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
 
+### Explain my price (Smart Problem 6)
+
+Open an available item and choose its terms. The price screen explains each payment,
+compares two lease terms, and shows the separate costs of using or buying the item.
+Start with `/en/lease/ebike-003` and the demo date **5 November 2026**.
+See [the feature guide](docs/explain-my-price.md) for the calculation rules, examples,
+short demo and verification record. The complete loop is described in
+[the Spine demo](docs/spine-demo.md).
+
 | Command                 | What it does                                                   |
 | ----------------------- | -------------------------------------------------------------- |
 | `npm run dev`           | Start the app with hot reload                                  |

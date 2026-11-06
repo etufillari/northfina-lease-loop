@@ -1,0 +1,22 @@
+{
+  "guardian.title": "Prisvakten: ett billigare alternativ",
+  "guardian.summary": "Spara uppskattningsvis {useSaving} om du lämnar tillbaka varan, eller {ownSaving} inklusive det valfria köpet.",
+  "guardian.context": "Samma vara och pris, {months} månader, med start {date}. Besparingen inkluderar beräknad moms.",
+  "guardian.reason": "En lägre förskottsbetalning flyttar finansieringen från intervall {fromBand} till {toBand}. Månadskoefficienten ändras från {fromFactor} till {toFactor}.",
+  "guardian.comparison": "Ditt val jämfört med den föreslagna förskottsbetalningen",
+  "guardian.payment": "Betalning",
+  "guardian.current": "Ditt val",
+  "guardian.suggested": "Föreslaget alternativ",
+  "guardian.downNet": "Förskottsbetalning (exklusive moms)",
+  "guardian.downGross": "Förskottsbetalning (uppskattning, inklusive moms)",
+  "guardian.monthlyNet": "Månadshyra (exklusive moms)",
+  "guardian.firstGross": "Första hyran den {date} (uppskattning, inklusive moms)",
+  "guardian.useGross": "Förskott + all hyra, sedan retur (uppskattning, inklusive moms)",
+  "guardian.buyoutGross": "Valfritt köp vid slutet (uppskattning, inklusive moms)",
+  "guardian.ownGross": "Förskott + all hyra + köp (uppskattning, inklusive moms)",
+  "guardian.buyoutWarning": "Det föreslagna alternativets valfria köp kostar {amount} mer. Totalkostnaden inklusive köp är ändå lägre.",
+  "guardian.taxNote": "Momsen följer planerade fakturadatum. Faktiska utfärdandedatum kan ändra skatten. Momsändringen 2027 i denna demo är fiktiv.",
+  "guardian.scope": "Vi kontrollerade noll förskott och finansieringsintervallens gränser utan att höja ditt förskott eller din månadshyra. Sökningen omfattar inte alla möjliga priser.",
+  "guardian.choose": "Använd {amount} i förskott (exklusive moms)",
+  "guardian.actionHelp": "Detta uppdaterar bara ditt utkast. Granska det och spara separat. Det godkänner inte finansiering och reserverar inte varan."
+}

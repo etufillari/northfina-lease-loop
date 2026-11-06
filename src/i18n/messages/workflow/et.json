@@ -1,0 +1,18 @@
+{
+  "spine.demoRole": "Demoroll",
+  "spine.customerMode": "Klient",
+  "spine.dealerMode": "Edasimüüja",
+  "spine.dealerHelp": "Kasutad demoedasimüüja rolli. Salvesta tagastatud esemete tehtud tööd ja uus hind. Rollivahetus on simulatsioon, mitte turvaline sisselogimine.",
+  "spine.dealerUnavailable": "Ette saab valmistada ainult tagastatud esemeid. Vali kataloogist tagastatud ese või vaheta rolliks Klient, et liisida saadaolev ese.",
+  "spine.returnedForDealer": "Ese ootab, et edasimüüja salvestaks ettevalmistustööd ja uue hinna.",
+  "spine.answerSource": "Otsus põhineb sinu vastustel siin kuvatud küsimustele. Demoandmed on vaid muudetavad algväärtused.",
+  "spine.incomeSkipped": "Me ei küsi sissetulekut ega kontrolli maksevõimet, sest finantseeritav summa on alla 2000 euro.",
+  "spine.pepSkipped": "Alla 10 000 euro suuruse finantseeringu puhul ei küsi me riikliku taustaga isikute kohta ega tee seda kontrolli.",
+  "spine.companyResidence": "Selles demos ei kohaldata ettevõtetele eraisiku elukohariigi kontrolli.",
+  "spine.signatory.pricePolicy": "Salvestatud käibemaksuta tingimused kehtivad kuni {date}. Pärast tähtaja möödumist tuleb uus pakkumine üle vaadata. Käibemaks sõltub endiselt iga arve kuupäevast.",
+  "spine.error.CUSTOMER_MODE_REQUIRED": "Taotluse või lepingu haldamiseks vali roll Klient. Edasimüüja ei saa kliendi eest allkirjastada.",
+  "spine.error.SIGNATURE_HANDOFF_PENDING": "See pakkumine ootab juba nimetatud allkirjastajat. Taotleja ei saa seda teistsuguste vastuste esitamisega aktiveerida.",
+  "spine.dealerReturned": "Tagastatud esemed ({count})",
+  "spine.dealerEmpty": "Ükski ese ei oota praegu ettevalmistamist.",
+  "spine.dealerPublished": "Ese on taas saadaval hinnaga {price} ilma käibemaksuta. Uue lepingu alustamiseks vali roll Klient ja järgmine rentnik."
+}

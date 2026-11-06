@@ -1,0 +1,320 @@
+/* Northfina-inspired presentation, sampled from the public site on 6 Nov 2026.
+   The dark adaptation is ours. Financial states and semantics are unchanged. */
+@layer base {
+  :root[data-design='northfina'] {
+    --ui-surface: #ffffff;
+    --ui-quiet: #f6f7ff;
+    --ui-ink: #231f20;
+    --ui-muted: #555964;
+    --ui-line: #dce4fa;
+    --ui-control: #6d7891;
+    --ui-accent: #0a44fa;
+    --ui-on-accent: #ffffff;
+    --ui-tint: #eef2ff;
+    --ui-focus: #0a44fa;
+    --ui-danger: #b3121a;
+    --nf-page: #ffffff;
+    --nf-form: linear-gradient(135deg, #dfe9ff, #e6eeff 50%, #edf2ff);
+    --nf-button: linear-gradient(180deg, #474747, #1b1819);
+    --nf-button-text: #ffffff;
+    --nf-footer: #231f20;
+    --nf-shadow: 0 12px 34px rgb(35 31 32 / 8%);
+  }
+  :root[data-design='northfina'][data-theme='dark'] {
+    --ui-surface: #131c32;
+    --ui-quiet: #1c2945;
+    --ui-ink: #f2f5ff;
+    --ui-muted: #b8c5df;
+    --ui-line: #394965;
+    --ui-control: #869abf;
+    --ui-accent: #97b9ff;
+    --ui-on-accent: #081634;
+    --ui-tint: #162a56;
+    --ui-focus: #accbff;
+    --ui-danger: #ffaab3;
+    --nf-page: #080f21;
+    --nf-form: linear-gradient(135deg, #1c3158, #172744 50%, #14203a);
+    --nf-button: linear-gradient(180deg, #f3f6ff, #cbd9fa);
+    --nf-button-text: #131c32;
+    --nf-footer: #0d1425;
+    --nf-shadow: 0 12px 34px rgb(0 0 0 / 22%);
+  }
+}
+
+@layer components {
+  :root[data-design='northfina'] {
+    .site-shell {
+      background: var(--nf-page);
+      font-family: var(--font-northfina), system-ui, sans-serif;
+    }
+    .site-header {
+      border: 0;
+      background: linear-gradient(110deg, #053df3, #2166ee);
+      color: #ffffff;
+    }
+    .site-header .brand-tagline {
+      color: #ffffff;
+    }
+    .site-header > div > a:focus-visible {
+      outline-color: #ffffff;
+    }
+    .site-header .appearance-trigger {
+      border-color: transparent;
+    }
+    .brand-mark {
+      background: linear-gradient(145deg, #0055f7, #03d4e8);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgb(0 21 133 / 24%);
+    }
+    .asset-hero,
+    .catalogue-intro {
+      isolation: isolate;
+      border: 0;
+      border-radius: 28px 28px 52px 52px;
+      background:
+        radial-gradient(ellipse 48% 30% at 95% 84%, rgb(220 242 255 / 50%), transparent 82%),
+        radial-gradient(ellipse 65% 90% at 100% 100%, rgb(38 174 251 / 92%), transparent 82%),
+        linear-gradient(140deg, rgb(103 164 255 / 22%), transparent 45%),
+        linear-gradient(180deg, #003dfc, #0036e5);
+      box-shadow: 0 14px 36px rgb(10 68 250 / 16%);
+      color: #ffffff;
+    }
+    .asset-hero {
+      min-height: 15rem;
+    }
+    .asset-hero-title {
+      font-family: inherit;
+      font-size: clamp(2rem, 3.3vw, 2.8125rem);
+      font-weight: 400;
+      line-height: 1.26;
+      letter-spacing: -0.5px;
+    }
+    .asset-hero-eyebrow {
+      display: inline-flex;
+      border: 1px solid rgb(255 255 255 / 75%);
+      border-radius: 999px;
+      background: rgb(0 40 170 / 24%);
+      padding: 0.375rem 0.875rem;
+      color: #ffffff;
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .asset-hero-detail {
+      color: #ffffff;
+    }
+    .asset-hero-art {
+      position: relative;
+      isolation: isolate;
+      margin: 0 0 0 2rem;
+      border: 1px solid rgb(255 255 255 / 55%);
+      border-radius: 24px;
+      background: linear-gradient(150deg, rgb(255 255 255 / 20%), rgb(0 43 173 / 35%));
+      padding: 1rem;
+      color: #ffffff;
+      box-shadow: 0 14px 32px rgb(0 31 119 / 22%);
+    }
+    .asset-hero-art::before,
+    .asset-hero-art::after {
+      position: absolute;
+      z-index: -1;
+      inset: 14px -16px;
+      border: 1px solid rgb(255 255 255 / 35%);
+      border-radius: 20px;
+      background: rgb(0 43 160 / 16%);
+      transform: rotate(-5deg);
+      content: '';
+      pointer-events: none;
+    }
+    .asset-hero-art::after {
+      transform: rotate(5deg);
+    }
+    .catalogue-intro {
+      max-width: none;
+      padding: clamp(1.5rem, 4vw, 3rem);
+    }
+    .catalogue-intro h1 {
+      font-weight: 400;
+      letter-spacing: -0.5px;
+    }
+    .catalogue-description {
+      max-width: 50ch;
+      color: #ffffff;
+    }
+    .catalogue-date {
+      border-color: rgb(255 255 255 / 65%);
+      background: #ffffff;
+      color: #0035ce;
+    }
+    .catalogue-card,
+    .ui-panel {
+      border-radius: 30px;
+      box-shadow: var(--nf-shadow);
+    }
+    .demo-panel {
+      box-shadow: none;
+      border-radius: 18px;
+    }
+    .catalogue-visual,
+    .catalogue-visual[data-category] {
+      border-radius: 20px;
+      background: var(--nf-form);
+      color: var(--ui-accent);
+    }
+    .catalogue-category {
+      border: 1px solid var(--ui-line);
+      background: var(--ui-surface);
+      color: var(--ui-accent);
+      font-weight: 500;
+      box-shadow:
+        0 3px 0 var(--ui-accent),
+        0 7px 14px rgb(10 68 250 / 14%);
+    }
+    .price-section-title h2,
+    .price-section-title h3 {
+      font-weight: 500;
+      letter-spacing: -0.3px;
+    }
+    .step-mark {
+      border-radius: 12px;
+      background: linear-gradient(180deg, #4d7dff, #0a44fa);
+      color: #ffffff;
+      box-shadow: 0 6px 14px rgb(10 68 250 / 22%);
+    }
+    .price-controls {
+      border: 1px solid var(--ui-line);
+      border-radius: 30px;
+      background: var(--nf-form);
+    }
+    .price-controls label {
+      font-weight: 500;
+    }
+    .ui-input {
+      border-radius: 4px;
+    }
+    .price-headline {
+      border-radius: 26px;
+      background:
+        radial-gradient(ellipse at 100% 0, rgb(100 163 255 / 14%), transparent 65%),
+        linear-gradient(145deg, #003bcc, #0a44fa);
+      box-shadow: 0 16px 34px rgb(7 65 247 / 22%);
+      color: #ffffff;
+    }
+    .price-headline::after {
+      display: none;
+    }
+    .price-headline .price-number {
+      color: #ffffff;
+      font-weight: 500;
+    }
+    .price-headline .ui-note {
+      color: #ffffff;
+    }
+    .price-outcome-grid .price-total {
+      border-radius: 20px;
+      background: var(--ui-surface);
+    }
+    .price-outcome-grid .price-total:first-child {
+      background: var(--ui-tint);
+    }
+    .price-tax-surface {
+      border-top-width: 3px;
+      border-top-color: var(--ui-accent);
+    }
+    .comparison-option {
+      border-radius: 26px;
+      box-shadow: var(--nf-shadow);
+    }
+    .comparison-option h4 {
+      font-family: inherit;
+      font-weight: 500;
+    }
+    .comparison-option[data-selected='true'] {
+      box-shadow: 0 10px 28px rgb(10 68 250 / 13%);
+    }
+    .ui-button {
+      background: var(--nf-button);
+      color: var(--nf-button-text);
+      font-weight: 500;
+      box-shadow: 0 6px 16px rgb(35 31 32 / 12%);
+    }
+    .ui-button--secondary {
+      background: var(--ui-surface);
+      color: var(--ui-ink);
+      box-shadow: none;
+    }
+    .ui-button:not(:disabled):hover {
+      filter: brightness(1.1);
+      text-decoration: none;
+    }
+    .appearance-choice {
+      border-radius: 999px;
+    }
+    .site-footer {
+      margin-top: 2rem;
+      border: 0;
+      border-radius: 40px 40px 0 0;
+      background: var(--nf-footer);
+      padding-block: 1.5rem;
+    }
+    .site-footer .footer-note {
+      color: #e6e6e6;
+    }
+    @media (max-width: 36rem) {
+      .asset-hero,
+      .catalogue-intro {
+        border-radius: 20px 20px 32px 32px;
+      }
+      .asset-hero-art {
+        width: 65%;
+        margin: 1.5rem auto 0;
+      }
+      .ui-panel,
+      .price-controls {
+        border-radius: 22px;
+      }
+    }
+  }
+  :root[data-design='northfina'][data-theme='dark'] {
+    .site-header {
+      background: linear-gradient(110deg, #0c2150, #133b8b);
+    }
+    .asset-hero,
+    .catalogue-intro {
+      background:
+        radial-gradient(ellipse 55% 90% at 100% 80%, #125eae, transparent 85%),
+        linear-gradient(140deg, #0b2a72, #073bc8);
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  :root[data-design='northfina'] {
+    .site-header,
+    .asset-hero,
+    .catalogue-intro,
+    .price-headline,
+    .price-controls,
+    .catalogue-visual,
+    .ui-button,
+    .site-footer,
+    .step-mark {
+      border: 1px solid CanvasText;
+      background: Canvas;
+      color: CanvasText;
+      box-shadow: none;
+    }
+    .site-header .brand-tagline,
+    .site-footer .footer-note,
+    .asset-hero *,
+    .price-headline *,
+    .catalogue-intro * {
+      color: CanvasText;
+    }
+    .asset-hero-art::before,
+    .asset-hero-art::after {
+      display: none;
+    }
+  }
+}

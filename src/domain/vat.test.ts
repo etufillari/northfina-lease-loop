@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
-import { vatPercentOn } from './vat';
+import { mergeVatRates, vatPercentOn } from './vat';
 
 let vatRates: VatRates;
 beforeAll(async () => {
@@ -30,5 +30,47 @@ describe('vatPercentOn', () => {
 
   it('throws on a date that is not YYYY-MM-DD', () => {
     expect(() => vatPercentOn(vatRates, '5.11.2026')).toThrow(RangeError);
+  });
+});
+
+describe('mergeVatRates', () => {
+  it('returns the data pack unchanged without admin changes', () => {
+    expect(mergeVatRates(vatRates, [])).toBe(vatRates);
+  });
+
+  it('adds a later change that runs until further notice', () => {
+    const merged = mergeVatRates(vatRates, [{ validFrom: '2027-07-01', ratePercent: 27 }]);
+    expect(vatPercentOn(merged, '2027-06-30')).toBe(26);
+    expect(vatPercentOn(merged, '2027-07-01')).toBe(27);
+    expect(vatPercentOn(merged, '2035-01-01')).toBe(27);
+    expect(merged.rates.at(-2)).toMatchObject({ valid_from: '2027-01-01', valid_to: '2027-06-30' });
+  });
+
+  it('puts a change in the middle of a data pack rate, which resumes at its next date', () => {
+    const merged = mergeVatRates(vatRates, [{ validFrom: '2026-12-01', ratePercent: 30 }]);
+    expect(vatPercentOn(merged, '2026-11-30')).toBe(25.5);
+    expect(vatPercentOn(merged, '2026-12-15')).toBe(30);
+    expect(vatPercentOn(merged, '2027-01-01')).toBe(26); // the data pack's 2027 rate still starts
+  });
+
+  it('lets an admin change replace a data pack rate on the same date', () => {
+    const merged = mergeVatRates(vatRates, [{ validFrom: '2027-01-01', ratePercent: 25.5 }]);
+    expect(vatPercentOn(merged, '2027-01-01')).toBe(25.5);
+    expect(merged.rates.filter((r) => r.valid_from === '2027-01-01')).toHaveLength(1);
+  });
+
+  it('keeps the list gap-free: each rate ends the day before the next starts', () => {
+    const merged = mergeVatRates(vatRates, [
+      { validFrom: '2028-03-01', ratePercent: 24 },
+      { validFrom: '2027-07-01', ratePercent: 27 },
+    ]);
+    for (let i = 1; i < merged.rates.length; i++) {
+      const previousEnd = merged.rates[i - 1]?.valid_to;
+      const start = merged.rates[i]?.valid_from ?? '';
+      const dayAfter = new Date(`${previousEnd}T00:00:00Z`);
+      dayAfter.setUTCDate(dayAfter.getUTCDate() + 1);
+      expect(dayAfter.toISOString().slice(0, 10)).toBe(start);
+    }
+    expect(merged.rates.at(-1)).toMatchObject({ rate_percent: 24, valid_to: null });
   });
 });

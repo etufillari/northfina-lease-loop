@@ -7,7 +7,8 @@ import { connection } from 'next/server';
 import { AssetHistoryPanel } from '@/components/asset-history-panel';
 import { PriceCalculator } from '@/components/price-calculator';
 import { StatusBadge } from '@/components/status-badge';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { effectiveVatRates } from '@/server/vat';
 import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn, nextPriceChange } from '@/domain/price-list';
@@ -48,7 +49,7 @@ export default async function AssetPage({
     getAsset(db, id),
     loadPriceLists(),
     loadCoefficientTable(),
-    loadVatRates(),
+    effectiveVatRates(db),
   ]);
   if (!asset) notFound();
 

@@ -9,7 +9,8 @@ import { ContractDocument } from '@/components/contract-document';
 import { EndOfTermPanel } from '@/components/end-of-term-panel';
 import { InvoiceList } from '@/components/invoice-list';
 import { PrintButton } from '@/components/print-button';
-import { loadCustomers, loadPriceLists, loadVatRates } from '@/data/load';
+import { loadCustomers, loadPriceLists } from '@/data/load';
+import { effectiveVatRates } from '@/server/vat';
 import { contractNumber, contractStage } from '@/domain/contract';
 import { splitByDate } from '@/domain/invoicing';
 import { contractInvoices } from '@/server/invoices';
@@ -47,7 +48,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   }
   const [asset, vatRates, priceLists] = await Promise.all([
     getAsset(db, contract.assetId),
-    loadVatRates(),
+    effectiveVatRates(db),
     loadPriceLists(),
   ]);
   if (!asset) notFound();

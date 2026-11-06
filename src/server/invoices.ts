@@ -1,8 +1,9 @@
 // Invoice payments. The invoices are derived from each contract (src/domain/invoicing.ts); only
 // payments are stored. This is a DEMO payment: no money moves and no bank details are taken,
 // because handling real payments safely is out of scope for this app.
-import { loadVatRates } from '@/data/load';
+
 import type { PrismaClient } from '@/generated/prisma/client';
+import { effectiveVatRates } from './vat';
 import {
   invoiceSchedule,
   withStatus,
@@ -29,7 +30,10 @@ export async function contractInvoices(
   contract: Contract,
   today: string
 ): Promise<InvoiceWithStatus[] | null> {
-  const [vatRates, payments] = await Promise.all([loadVatRates(), listPayments(db, contract.id)]);
+  const [vatRates, payments] = await Promise.all([
+    effectiveVatRates(db),
+    listPayments(db, contract.id),
+  ]);
   const schedule = invoiceSchedule(contract, vatRates);
   return schedule.ok ? withStatus(schedule.invoices, payments, today, contract.signedDate) : null;
 }
@@ -93,9 +97,18 @@ export async function payInvoice(
         entityId: `${contract.id}#${invoice.number}`,
         details: { amountCents: invoice.totalCents, dueDate: invoice.dueDate, demo: true },
       },
+      // A payment recorded on a later date (made while time-travelling ahead) hasn't happened
+      // yet on todayIso, so paying now moves it to today instead of adding a second one.
       (tx) =>
-        tx.invoicePayment.create({
-          data: {
+        tx.invoicePayment.upsert({
+          where: {
+            contract_id_invoice_number: {
+              contract_id: contract.id,
+              invoice_number: invoice.number,
+            },
+          },
+          update: { paid_date: todayIso, amount_cents: invoice.totalCents },
+          create: {
             contract_id: contract.id,
             invoice_number: invoice.number,
             paid_date: todayIso,

@@ -99,8 +99,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         </main>
 
         <footer className="border-t border-stone-200 dark:border-stone-800 print:hidden">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
+            <p>{t('footer.note')}</p>
+            <Link
+              href={`/${locale}/admin`}
+              className="rounded-lg px-3 py-1.5 font-medium text-stone-700 ring-1 ring-stone-300 ring-inset hover:bg-stone-100 dark:text-stone-300 dark:ring-stone-700 dark:hover:bg-stone-800"
+            >
+              {t('nav.admin')}
+            </Link>
           </div>
         </footer>
       </body>

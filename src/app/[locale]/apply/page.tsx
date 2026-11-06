@@ -6,7 +6,8 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { ApplicationForm } from '@/components/application-form';
-import { loadCoefficientTable, loadPriceLists, loadQuestions, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadQuestions } from '@/data/load';
+import { effectiveVatRates } from '@/server/vat';
 import { questionContext } from '@/domain/application';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
@@ -49,7 +50,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   const [priceLists, table, vatRates, questionsFile] = await Promise.all([
     loadPriceLists(),
     loadCoefficientTable(),
-    loadVatRates(),
+    effectiveVatRates(db),
     loadQuestions(),
   ]);
   const itemHref = `/${locale}/assets/${asset.id}`;

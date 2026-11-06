@@ -4,7 +4,8 @@
 // the price or approve itself.
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { loadCoefficientTable, loadPriceLists, loadQuestions, loadVatRates } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadQuestions } from '@/data/load';
+import { effectiveVatRates } from './vat';
 import { decideApplication, questionContext } from '@/domain/application';
 import { listPriceOn } from '@/domain/price-list';
 import { quoteLease, type LeaseQuote } from '@/domain/pricing';
@@ -60,7 +61,7 @@ export async function submitApplication(
     getAsset(db, input.assetId),
     loadPriceLists(),
     loadCoefficientTable(),
-    loadVatRates(),
+    effectiveVatRates(db),
     loadQuestions(),
   ]);
   if (!asset) return { ok: false, reason: 'asset_not_found' };

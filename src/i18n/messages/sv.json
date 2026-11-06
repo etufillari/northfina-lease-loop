@@ -68,6 +68,8 @@
   "catalogue.pricesOn": "Nettolistpriser {date}",
   "catalogue.itemCount": "{count} st.",
   "catalogue.empty": "Det finns inga produkter i databasen ännu. Kör npm run db:setup och ladda om sidan.",
+  "catalogue.viewLabel": "Visa varor efter status",
+  "catalogue.noReserved": "Inga varor i den här kategorin är reserverade.",
   "category.e_bike": "Elcyklar",
   "category.laptop": "Bärbara datorer",
   "category.farm_machine": "Lantbruksmaskiner",

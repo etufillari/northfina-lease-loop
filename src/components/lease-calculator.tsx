@@ -125,7 +125,7 @@ export function LeaseCalculator({
   return (
     <section
       aria-label={`${labels.downPayment}, ${labels.termLength}`}
-      className="grid gap-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm lg:grid-cols-2 dark:border-stone-800 dark:bg-stone-900"
+      className="grid gap-8 rounded-2xl border border-ink-200 bg-white p-6 shadow-sm lg:grid-cols-2 dark:border-ink-800 dark:bg-ink-900"
     >
       <div className="flex flex-col gap-8">
         <div>
@@ -147,12 +147,12 @@ export function LeaseCalculator({
             onChange={(event) =>
               choose(limits.termOptions[Number(event.target.value)] ?? termMonths, position)
             }
-            className="mt-4 w-full accent-emerald-700"
+            className="mt-4 w-full accent-brand-700"
             aria-valuetext={monthsLabel(termMonths)}
           />
           <div
             aria-hidden="true"
-            className="mt-1 flex justify-between text-xs text-stone-600 tabular-nums dark:text-stone-400"
+            className="mt-1 flex justify-between text-xs text-ink-600 tabular-nums dark:text-ink-400"
           >
             {limits.termOptions.map((option) => (
               <span key={option}>{option}</span>
@@ -183,12 +183,12 @@ export function LeaseCalculator({
               step={1}
               value={position}
               onChange={(event) => choose(termMonths, Number(event.target.value))}
-              className="mt-4 w-full accent-emerald-700"
+              className="mt-4 w-full accent-brand-700"
               aria-valuetext={euro(downPaymentCents)}
             />
             <div
               aria-hidden="true"
-              className="mt-1 flex justify-between text-xs text-stone-600 tabular-nums dark:text-stone-400"
+              className="mt-1 flex justify-between text-xs text-ink-600 tabular-nums dark:text-ink-400"
             >
               <span>{euro(limits.minDownPaymentCents)}</span>
               <span>{euro(limits.maxDownPaymentCents)}</span>
@@ -243,7 +243,7 @@ function QuoteSummary({
 
   return (
     <>
-      <p className="text-sm text-stone-600 dark:text-stone-400">{labels.monthlyWithVat}</p>
+      <p className="text-sm text-ink-600 dark:text-ink-400">{labels.monthlyWithVat}</p>
       <p className="text-4xl font-semibold tabular-nums">
         {euro(vatPreview.monthlyGrossRentCents)}
       </p>
@@ -257,13 +257,13 @@ function QuoteSummary({
         />
         <Row label={labels.totalCost} value={euro(pricing.totalCostWithBuyoutCents)} />
       </dl>
-      <p className="mt-4 text-xs text-stone-600 dark:text-stone-400">{labels.bandNote}</p>
+      <p className="mt-4 text-xs text-ink-600 dark:text-ink-400">{labels.bandNote}</p>
       {onContinue ? (
         <button
           type="button"
           onClick={() => onContinue(quote)}
           disabled={continueDisabled}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          className="mt-6 inline-flex w-full items-center justify-center btn-primary"
         >
           {labels.continueToApplication}
           <span aria-hidden="true" className="ml-2">
@@ -278,7 +278,7 @@ function QuoteSummary({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+      <dt className="text-ink-600 dark:text-ink-400">{label}</dt>
       <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   );

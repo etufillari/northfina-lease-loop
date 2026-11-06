@@ -50,17 +50,17 @@ export default async function AssetLeasePage({
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <Link
         href={`/${locale}/catalogue/${category}`}
-        className="text-sm font-medium text-emerald-800 underline-offset-4 hover:underline dark:text-emerald-300"
+        className="text-sm font-medium text-brand-800 underline-offset-4 hover:underline dark:text-brand-300"
       >
         {t('lease.back', { category: t(`category.${category}`) })}
       </Link>
 
-      <p className="mt-6 text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{asset.model}</h1>
+      <p className="mt-6 text-sm text-ink-600 dark:text-ink-400">{asset.make}</p>
+      <h1 className="page-title">{asset.model}</h1>
 
       {offer.ok ? (
         <>
-          <p className="mt-5 mb-6 text-sm text-stone-600 dark:text-stone-400">
+          <p className="mt-5 mb-6 text-sm text-ink-600 dark:text-ink-400">
             {t(
               offer.quote.sources.priceBasis === 'market_value'
                 ? 'asset.marketValue'
@@ -125,7 +125,7 @@ export default async function AssetLeasePage({
           />
         </>
       ) : (
-        <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+        <p className="mt-8 rounded-xl border border-dashed border-ink-300 p-6 text-ink-700 dark:border-ink-700 dark:text-ink-300">
           {offerFailureMessage(offer, t)}
         </p>
       )}

@@ -1,12 +1,124 @@
 @import 'tailwindcss';
 
+/*
+ * Lease Loop theme. `brand` is the customer portal orange: 300 and 500 are the two
+ * gradient stops, 100 and 200 the badge and peach border, 600 and 800 the orange
+ * text colours. `ink` is the neutral text and surface scale.
+ *
+ * Contrast (WCAG AA needs 4.5:1): white on brand-500 is only 2.99:1, so anything on
+ * the orange gradient uses ink text (5.45:1 or better), and white text needs
+ * brand-600 or darker.
+ */
 @theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: var(--font-zalando), system-ui, -apple-system, sans-serif;
+
+  --color-brand-50: #fff7f1;
+  --color-brand-100: #ffe7d5;
+  --color-brand-200: #f8d3b8;
+  --color-brand-300: #ffaa6a;
+  --color-brand-400: #f98c55;
+  --color-brand-500: #ef6f40;
+  --color-brand-600: #c4521a;
+  --color-brand-700: #a8421a;
+  --color-brand-800: #8a3b18;
+  --color-brand-900: #6b2d13;
+  --color-brand-950: #3d1a0c;
+
+  --color-ink-50: #f8f8f8;
+  --color-ink-100: #efefef;
+  --color-ink-200: #e6e6e6;
+  --color-ink-300: #d9d9d9;
+  --color-ink-400: #a3a3a3;
+  --color-ink-500: #6e6e6e;
+  --color-ink-600: #555555;
+  --color-ink-700: #474747;
+  --color-ink-800: #2f2b2c;
+  --color-ink-900: #231f20;
+  --color-ink-950: #1b1819;
+
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.625rem;
+
+  --shadow-sm: 0 8px 24px #231f2014;
+  --shadow-md: 0 10px 30px #231f2024;
+}
+
+@layer components {
+  .brand-gradient {
+    background-image: linear-gradient(var(--color-brand-300), var(--color-brand-500));
+    color: var(--color-ink-950);
+  }
+
+  /* The coloured band at the top of a page. Stays the same in dark mode. */
+  .brand-hero {
+    background-image: linear-gradient(
+      to bottom right,
+      var(--color-brand-300),
+      var(--color-brand-500)
+    );
+    border-radius: 0 0 clamp(1.75rem, 4vw, 3.75rem) clamp(1.75rem, 4vw, 3.75rem);
+    color: var(--color-ink-950);
+  }
+
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background-image: linear-gradient(#fff, var(--color-brand-100));
+    box-shadow:
+      0 4px 0 var(--color-brand-500),
+      0 8px 16px #f0744440;
+    color: var(--color-brand-800);
+    font-weight: 500;
+    padding: 0.375rem 1.25rem;
+  }
+
+  .btn-primary {
+    border-radius: 999px;
+    background-image: linear-gradient(var(--color-brand-300), var(--color-brand-500));
+    color: var(--color-ink-950);
+    font-weight: 500;
+    padding: 0.8125rem 2rem;
+    transition: filter 0.15s;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  .btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .page-title {
+    font-size: clamp(2.125rem, 3.7vw, 3.25rem);
+    font-weight: 400;
+    letter-spacing: -0.5px;
+    line-height: 1.25;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
 }
 
 /* A visible keyboard focus everywhere, in both color schemes. */
 :focus-visible {
-  outline: 2px solid var(--color-emerald-600);
+  outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :focus-visible {
+    outline-color: var(--color-brand-300);
+  }
+}
+
+.brand-hero :focus-visible {
+  outline-color: var(--color-ink-950);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary {
+    transition: none;
+  }
 }

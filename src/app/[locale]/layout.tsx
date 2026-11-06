@@ -1,13 +1,21 @@
 // The root layout. Every page lives under /[locale] (/en, /fi, /sv, /et), so the
 // <html lang> attribute is always right for the page.
 import type { Metadata } from 'next';
+import { Zalando_Sans_SemiExpanded } from 'next/font/google';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CategoryNavigation } from '@/components/category-navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { SiteFooter } from '@/components/site-footer';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
+
+// Self-hosted by next/font. latin-ext covers the š and ž in Estonian.
+const zalando = Zalando_Sans_SemiExpanded({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-zalando',
+});
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
   const { locale } = await params;
@@ -22,24 +30,24 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const t = getT(locale);
 
   return (
-    <html lang={locale}>
-      <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
+    <html lang={locale} className={zalando.variable}>
+      <body className="flex min-h-dvh flex-col bg-white font-sans text-ink-900 antialiased dark:bg-ink-950 dark:text-ink-100">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-stone-900 focus:shadow"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-ink-900 focus:shadow"
         >
           {t('nav.skipToContent')}
         </a>
 
-        <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
+        <header className="border-b border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900">
           <div className="flex w-full flex-wrap items-center justify-between gap-4 px-4 py-4 lg:flex-nowrap">
             <Link href={`/${locale}`} className="flex min-w-0 items-center gap-3 rounded-lg">
               <LoopMark />
-              <span>
+              <span className="min-w-0">
                 <span className="block text-lg font-semibold tracking-tight">
                   {t('brand.name')}
                 </span>
-                <span className="block truncate text-sm text-stone-600 dark:text-stone-400">
+                <span className="block truncate text-sm text-ink-600 dark:text-ink-400">
                   {t('brand.tagline')}
                 </span>
               </span>
@@ -55,11 +63,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {children}
         </main>
 
-        <footer className="border-t border-stone-200 dark:border-stone-800">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
-          </div>
-        </footer>
+        <SiteFooter locale={locale} t={t} />
       </body>
     </html>
   );
@@ -71,7 +75,7 @@ function LoopMark() {
     <svg
       aria-hidden="true"
       viewBox="0 0 32 32"
-      className="size-9 shrink-0 rounded-xl bg-emerald-700 p-1.5 text-white"
+      className="brand-gradient size-9 shrink-0 rounded-xl p-1.5"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.5"

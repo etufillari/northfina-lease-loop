@@ -4,20 +4,20 @@
 // click is handled in place, like the other filters, so the list updates without a reload.
 import Link from 'next/link';
 import { assetCategorySchema, type Asset, type AssetCategory } from '@/data/schemas';
-import { catalogueSearchString, type CatalogueQuery } from '@/domain/catalogue';
+import type { CatalogueQuery } from '@/domain/catalogue';
 import type { Translate } from '@/i18n/get-t';
-import type { Locale } from '@/i18n/locales';
 
 type CategoryTabsProps = {
   query: CatalogueQuery;
   /** Items matching every filter except the category, to count each tab. */
   matching: readonly Asset[];
   onChange: (next: CatalogueQuery) => void;
-  locale: Locale;
+  /** The link for a tab: the catalogue with that category, from page 1. */
+  hrefFor: (next: CatalogueQuery) => string;
   t: Translate;
 };
 
-export function CategoryTabs({ query, matching, onChange, locale, t }: CategoryTabsProps) {
+export function CategoryTabs({ query, matching, hrefFor, onChange, t }: CategoryTabsProps) {
   const tabs: { category: AssetCategory | null; label: string; count: number }[] = [
     { category: null, label: t('filters.allCategories'), count: matching.length },
     ...assetCategorySchema.options.map((category) => ({
@@ -36,7 +36,7 @@ export function CategoryTabs({ query, matching, onChange, locale, t }: CategoryT
           return (
             <li key={category ?? 'all'}>
               <Link
-                href={`/${locale}/catalogue${catalogueSearchString(next)}`}
+                href={hrefFor(next)}
                 aria-current={active ? 'true' : undefined}
                 onClick={(event) => {
                   // Let modified clicks (new tab, new window) behave like a normal link.

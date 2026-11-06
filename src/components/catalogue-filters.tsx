@@ -3,6 +3,7 @@
 // `onChange` so the list updates live. The fields keep their `name`s, so the Search button
 // submits a normal GET form (?q=&category=&status=&sort=) that the server understands too.
 import { assetStatusSchema } from '@/data/schemas';
+import { DEFAULT_PER_PAGE } from '@/domain/catalogue-pages';
 import {
   catalogueSearchString,
   catalogueSorts,
@@ -17,6 +18,8 @@ import type { Locale } from '@/i18n/locales';
 type CatalogueFiltersProps = {
   query: CatalogueQuery;
   onChange: (next: CatalogueQuery) => void;
+  /** Kept on Search, so the page size survives a reload. */
+  perPage: number;
   locale: Locale;
   t: Translate;
 };
@@ -24,7 +27,7 @@ type CatalogueFiltersProps = {
 const fieldClass =
   'mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/30 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100';
 
-export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFiltersProps) {
+export function CatalogueFilters({ query, perPage, onChange, locale, t }: CatalogueFiltersProps) {
   // Dropdown values are strings; parsing them the same way as the URL keeps one set of rules.
   const set = (key: 'status' | 'sort', value: string) =>
     onChange({
@@ -66,6 +69,7 @@ export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFilter
 
         {/* The category is picked with the tabs above the results; this keeps it on Search. */}
         {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
+        {perPage !== DEFAULT_PER_PAGE ? <input type="hidden" name="per" value={perPage} /> : null}
 
         <label className="block text-sm font-medium">
           {t('filters.status')}

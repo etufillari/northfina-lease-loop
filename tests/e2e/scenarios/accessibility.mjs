@@ -45,6 +45,7 @@ export default async function accessibility(page, check) {
   const guestPages = [
     '/en',
     '/en/catalogue',
+    '/en/catalogue?page=2',
     '/fi',
     '/fi/catalogue',
     '/en/assets/ebike-003',

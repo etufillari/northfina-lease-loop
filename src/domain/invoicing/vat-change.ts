@@ -2,6 +2,9 @@
 // the rent invoice before it on the same contract. Other kinds are left out: a down payment or
 // a buyout is a different amount, so comparing it with a rent would explain nothing.
 import type { Invoice } from '@/data/lease-schemas';
+import type { VatRates } from '@/data/schemas';
+import { addMonths } from '../dates';
+import { toBasisPoints, vatCents, vatRateOn } from '../vat';
 
 export type VatChange = {
   from_percent: number;
@@ -10,6 +13,14 @@ export type VatChange = {
   net_change_cents: number;
   /** What the customer pays more, or less when the rate falls. */
   total_change_cents: number;
+};
+
+/** What a customer should hear before signing: the monthly total will not stay as quoted. */
+export type UpcomingVatChange = {
+  effective_on: string;
+  rate_percent: number;
+  monthly_total_cents: number;
+  monthly_change_cents: number;
 };
 
 type ComparedInvoice = Pick<
@@ -47,4 +58,37 @@ export function withVatChanges<T extends ComparedInvoice>(
     previousRent.set(invoice.contract_id, invoice);
     return { ...invoice, vat_change: previous ? vatChange(previous, invoice) : null };
   });
+}
+
+/**
+ * The first VAT change that reaches a rent of this lease, or `null` when every rent keeps the
+ * rate of the first one. A change after the last rent does not count: it would never be billed.
+ */
+export function upcomingVatChange(
+  vatRates: VatRates,
+  lease: { startOn: string; termMonths: number; monthlyNetRentCents: number }
+): UpcomingVatChange | null {
+  const { startOn, termMonths, monthlyNetRentCents } = lease;
+  const current = vatRateOn(vatRates, startOn);
+  if (!current.ok) return null;
+
+  const lastRentOn = addMonths(startOn, termMonths - 1);
+  const next = [...vatRates.rates]
+    .sort((a, b) => a.valid_from.localeCompare(b.valid_from))
+    .find(
+      (rate) =>
+        rate.valid_from > startOn &&
+        rate.valid_from <= lastRentOn &&
+        toBasisPoints(rate.rate_percent) !== current.rateBasisPoints
+    );
+  if (!next) return null;
+
+  const vatNow = vatCents(monthlyNetRentCents, current.rateBasisPoints);
+  const vatThen = vatCents(monthlyNetRentCents, toBasisPoints(next.rate_percent));
+  return {
+    effective_on: next.valid_from,
+    rate_percent: next.rate_percent,
+    monthly_total_cents: monthlyNetRentCents + vatThen,
+    monthly_change_cents: vatThen - vatNow,
+  };
 }

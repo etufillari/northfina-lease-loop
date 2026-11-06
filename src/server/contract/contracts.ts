@@ -12,14 +12,20 @@ import type { Customer, PriceList } from '@/data/schemas';
 import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/contract/contract';
 import { isHeldForSomeoneElse } from '@/domain/assets/status';
 import { choiceDeadline, endChoice, type EndChoice } from '@/domain/end-of-term/end-of-term';
-import { invoiceSchedule } from '@/domain/invoicing/invoicing';
-import { withVatChanges, type VatChange } from '@/domain/invoicing/vat-change';
+import { invoiceSchedule, invoiceTotals, type InvoiceTotals } from '@/domain/invoicing/invoicing';
+import {
+  upcomingVatChange,
+  withVatChanges,
+  type UpcomingVatChange,
+  type VatChange,
+} from '@/domain/invoicing/vat-change';
 import { listPriceOn } from '@/domain/pricing/price-list';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { getApplication } from '../application/applications';
 import { toAsset } from '../assets/assets';
 import { withAudit } from '../audit';
 import { currentDate } from '../date/app-date';
+import { toInvoice } from '../invoicing/invoices';
 
 export function toContract(row: ContractRow): Contract {
   return contractSchema.parse({
@@ -53,12 +59,14 @@ export function toContract(row: ContractRow): Contract {
  * explain the lock: "you keep the price from your quote; the list says X today". It is
  * looked up when read and is `null` for a re-listed item, which has no list price.
  * `end_choice` and `choice_deadline` tell a screen when to offer the end-of-term choice.
+ * The totals add up the contract's invoices, so they include VAT at each invoice's own rate.
  */
-export type ContractView = Contract & {
-  list_price_on_signing_cents: number | null;
-  end_choice: EndChoice;
-  choice_deadline: string;
-};
+export type ContractView = Contract &
+  InvoiceTotals & {
+    list_price_on_signing_cents: number | null;
+    end_choice: EndChoice;
+    choice_deadline: string;
+  };
 
 function listPriceOnSigning(
   contract: Omit<Contract, 'id'>,
@@ -73,9 +81,16 @@ export async function contractViews(
   db: PrismaClient,
   contracts: readonly Contract[]
 ): Promise<ContractView[]> {
-  const [priceLists, today] = await Promise.all([loadPriceLists(), currentDate(db)]);
+  const [priceLists, today, invoiceRows] = await Promise.all([
+    loadPriceLists(),
+    currentDate(db),
+    db.invoice.findMany({ where: { contract_id: { in: contracts.map(({ id }) => id) } } }),
+  ]);
+  const invoices = invoiceRows.map(toInvoice);
+
   return contracts.map((contract) => ({
     ...contract,
+    ...invoiceTotals(invoices.filter((invoice) => invoice.contract_id === contract.id)),
     list_price_on_signing_cents: listPriceOnSigning(contract, priceLists),
     end_choice: endChoice(contract, today),
     choice_deadline: choiceDeadline(contract),
@@ -127,18 +142,21 @@ function signatoryEmail(application: Application): string | null {
 export type ContractPreview = Omit<
   Contract,
   'id' | 'status' | 'actual_end_on' | 'signed_by' | 'passed_to'
-> & {
-  /** The dates assume signing on this day. Signing later moves them. */
-  calculated_on: string;
-  list_price_on_signing_cents: number | null;
-  /** `false` for a company applicant who may read the terms but not sign. */
-  can_sign: boolean;
-  signatory_email: string | null;
-  invoices: (Omit<Invoice, 'id' | 'contract_id'> & {
-    vat_rate_percent: number;
-    vat_change: VatChange | null;
-  })[];
-};
+> &
+  InvoiceTotals & {
+    /** The dates assume signing on this day. Signing later moves them. */
+    calculated_on: string;
+    /** Set when a VAT change falls within the lease, to warn the customer before they sign. */
+    upcoming_vat_change: UpcomingVatChange | null;
+    list_price_on_signing_cents: number | null;
+    /** `false` for a company applicant who may read the terms but not sign. */
+    can_sign: boolean;
+    signatory_email: string | null;
+    invoices: (Omit<Invoice, 'id' | 'contract_id'> & {
+      vat_rate_percent: number;
+      vat_change: VatChange | null;
+    })[];
+  };
 
 export type ContractPreviewResult =
   | { ok: true; preview: ContractPreview }
@@ -194,7 +212,13 @@ export async function previewContract(
     ok: true,
     preview: {
       ...terms,
+      ...invoiceTotals(invoices),
       calculated_on: contract.signed_on,
+      upcoming_vat_change: upcomingVatChange(await loadVatRates(), {
+        startOn: contract.start_on,
+        termMonths: contract.term_months,
+        monthlyNetRentCents: contract.monthly_net_rent_cents,
+      }),
       list_price_on_signing_cents: listPriceOnSigning(contract, await loadPriceLists()),
       can_sign: problem === null,
       signatory_email: signatoryEmail(application),

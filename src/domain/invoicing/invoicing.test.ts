@@ -3,7 +3,7 @@ import { invoiceSchema } from '@/data/lease-schemas';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
 import { addDays } from '../dates';
-import { invoiceSchedule } from './invoicing';
+import { invoiceSchedule, invoiceTotals } from './invoicing';
 
 let vatRates: VatRates;
 beforeAll(async () => {
@@ -183,5 +183,45 @@ describe('invoiceSchedule: records', () => {
   it('throws if the data has no VAT rate for a date, because that is a bug in the data', () => {
     const noRates: VatRates = { ...vatRates, rates: [] };
     expect(() => invoiceSchedule(card1, noRates)).toThrow(RangeError);
+  });
+});
+
+describe('invoiceTotals', () => {
+  it('adds up card 1 across the VAT change', () => {
+    expect(invoiceTotals(invoiceSchedule(card1, vatRates))).toEqual({
+      total_net_cents: 386_280,
+      total_vat_cents: 100_332,
+      total_cents: 486_612,
+    });
+  });
+
+  it('is more than the first month times the term when VAT rises', () => {
+    const invoices = invoiceSchedule(card1, vatRates);
+    const naive = (invoices[0]?.total_cents ?? 0) * card1.term_months;
+
+    expect(invoiceTotals(invoices).total_cents - naive).toBe(1_836);
+  });
+
+  it('counts the down payment and its VAT', () => {
+    const totals = invoiceTotals(
+      invoiceSchedule({ ...card1, start_on: '2027-02-01', down_payment_cents: 50_000 }, vatRates)
+    );
+
+    expect(totals.total_net_cents).toBe(50_000 + 10_730 * 36);
+    expect(totals.total_vat_cents).toBe(13_000 + 2_790 * 36);
+  });
+
+  it('leaves out a cancelled invoice', () => {
+    const issued = { status: 'issued', net_cents: 100, vat_cents: 26, total_cents: 126 } as const;
+
+    expect(invoiceTotals([issued, { ...issued, status: 'cancelled' }])).toEqual({
+      total_net_cents: 100,
+      total_vat_cents: 26,
+      total_cents: 126,
+    });
+  });
+
+  it('is zero with no invoices', () => {
+    expect(invoiceTotals([])).toEqual({ total_net_cents: 0, total_vat_cents: 0, total_cents: 0 });
   });
 });

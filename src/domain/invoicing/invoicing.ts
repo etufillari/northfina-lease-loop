@@ -11,6 +11,13 @@ type ScheduledContract = Pick<
   'id' | 'start_on' | 'term_months' | 'down_payment_cents' | 'monthly_net_rent_cents'
 >;
 
+/** What a set of invoices adds up to, VAT and all. */
+export type InvoiceTotals = {
+  total_net_cents: number;
+  total_vat_cents: number;
+  total_cents: number;
+};
+
 type InvoiceDates = Pick<Invoice, 'period_start' | 'period_end' | 'invoice_date' | 'due_date'>;
 
 function buildInvoice(
@@ -85,4 +92,21 @@ export function invoiceSchedule(
     vatRates
   );
   return [downPayment, ...rents];
+}
+
+/**
+ * Adds up what is really billed, so a total crossing a VAT change is exact. A cancelled invoice
+ * is never paid and does not count. A buyout only counts once it has been invoiced.
+ */
+export function invoiceTotals(
+  invoices: readonly Pick<Invoice, 'status' | 'net_cents' | 'vat_cents' | 'total_cents'>[]
+): InvoiceTotals {
+  const totals: InvoiceTotals = { total_net_cents: 0, total_vat_cents: 0, total_cents: 0 };
+  for (const invoice of invoices) {
+    if (invoice.status === 'cancelled') continue;
+    totals.total_net_cents += invoice.net_cents;
+    totals.total_vat_cents += invoice.vat_cents;
+    totals.total_cents += invoice.total_cents;
+  }
+  return totals;
 }

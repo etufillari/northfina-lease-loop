@@ -46,6 +46,26 @@ describe('quoteAsset', () => {
     });
   });
 
+  it('warns when VAT changes during the lease', async () => {
+    expect(await quoteAsset(db, input)).toMatchObject({
+      quote: {
+        monthly_total_cents: 13_466,
+        upcoming_vat_change: {
+          effective_on: '2027-01-01',
+          rate_percent: 26,
+          monthly_total_cents: 13_520,
+          monthly_change_cents: 54,
+        },
+      },
+    });
+  });
+
+  it('gives no warning once the new rate is in force', async () => {
+    expect(await quoteAsset(db, { ...input, date: '2027-01-05' })).toMatchObject({
+      quote: { upcoming_vat_change: null },
+    });
+  });
+
   it('uses the new price list from its first day', async () => {
     expect(await quoteAsset(db, { ...input, date: '2026-11-06' })).toMatchObject({
       ok: true,

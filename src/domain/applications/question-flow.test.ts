@@ -90,6 +90,20 @@ describe('questionFlowFor', () => {
     expect(result.decision).toBe('incomplete');
     expect(result.questionFlow.nextQuestionId).toBe('q_full_name');
   });
+
+  it('does not reject a business applicant before the business ID is answered', () => {
+    const result = evaluateApplication(questions, {
+      category: 'laptop',
+      financedAmountCents: 250_000,
+      termMonths: 24,
+      startDate: '2026-11-05',
+      monthlyGrossRentCents: 10_000,
+      answers: { q_customer_type: 'company' },
+    });
+
+    expect(result).toMatchObject({ decision: 'incomplete', reasons: [] });
+    expect(result.questionFlow.nextQuestionId).toBe('q_email');
+  });
 });
 
 describe('evaluateApplication', () => {
@@ -131,6 +145,25 @@ describe('evaluateApplication', () => {
       { code: 'unsupported_residency', questionId: 'q_country' },
       { code: 'unaffordable', questionId: 'q_monthly_income' },
     ]);
+  });
+
+  it('ends the question flow as soon as a blocking answer is given', () => {
+    const result = evaluateApplication(questions, {
+      ...consumerDeal,
+      startDate: '2026-11-05',
+      monthlyGrossRentCents: 13_466,
+      answers: {
+        q_customer_type: 'consumer',
+        q_full_name: 'Aino Virtanen',
+        q_birth_date: '1997-04-12',
+        q_email: 'aino@example.com',
+        q_country: 'other',
+      },
+    });
+
+    expect(result.decision).toBe('rejected');
+    expect(result.reasons).toEqual([{ code: 'unsupported_residency', questionId: 'q_country' }]);
+    expect(result.questionFlow.nextQuestionId).toBeNull();
   });
 
   it('rejects an invalid business ID and unauthorized company signatory', () => {

@@ -45,7 +45,14 @@ export default async function AssetPage({
           {t(`condition.${asset.condition}` as Parameters<typeof t>[0])} ·{' '}
           {t(`usage.${asset.usage_unit}` as Parameters<typeof t>[0], {
             value: formatNumber(asset.usage_value, locale),
-          })}
+          })}{' '}
+          ·{' '}
+          <Link
+            href={`/${locale}/assets/${asset.id}/passport${asOfParam ? `?asOf=${asOfParam}` : ''}`}
+            className="font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+          >
+            {t('secondLife.passportLink')}
+          </Link>
         </p>
       </div>
 

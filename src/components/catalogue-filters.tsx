@@ -1,7 +1,8 @@
-// Search box and the category, status and sort dropdowns. Every change is reported through
+// Search box and the status and sort dropdowns (the category has its own tabs, see
+// category-tabs.tsx). Every change is reported through
 // `onChange` so the list updates live. The fields keep their `name`s, so the Search button
 // submits a normal GET form (?q=&category=&status=&sort=) that the server understands too.
-import { assetCategorySchema, assetStatusSchema } from '@/data/schemas';
+import { assetStatusSchema } from '@/data/schemas';
 import {
   catalogueSearchString,
   catalogueSorts,
@@ -25,7 +26,7 @@ const fieldClass =
 
 export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFiltersProps) {
   // Dropdown values are strings; parsing them the same way as the URL keeps one set of rules.
-  const set = (key: 'category' | 'status' | 'sort', value: string) =>
+  const set = (key: 'status' | 'sort', value: string) =>
     onChange({
       ...parseCatalogueQuery({
         category: query.category ?? undefined,
@@ -45,7 +46,7 @@ export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFilter
         method="get"
         action={`/${locale}`}
         role="search"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end"
       >
         <label className="block text-sm font-medium">
           {t('filters.search')}
@@ -63,22 +64,8 @@ export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFilter
           />
         </label>
 
-        <label className="block text-sm font-medium">
-          {t('filters.category')}
-          <select
-            name="category"
-            value={query.category ?? ''}
-            onChange={(event) => set('category', event.target.value)}
-            className={fieldClass}
-          >
-            <option value="">{t('filters.allCategories')}</option>
-            {assetCategorySchema.options.map((category) => (
-              <option key={category} value={category}>
-                {t(`category.${category}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* The category is picked with the tabs above the results; this keeps it on Search. */}
+        {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
 
         <label className="block text-sm font-medium">
           {t('filters.status')}

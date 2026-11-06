@@ -11,6 +11,7 @@ import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { AssetCard } from './asset-card';
 import { CatalogueFilters } from './catalogue-filters';
+import { CategoryTabs } from './category-tabs';
 
 type CatalogueBrowserProps = {
   assets: Asset[];
@@ -31,6 +32,7 @@ export function CatalogueBrowser({
   const t = getT(locale);
   const [query, setQuery] = useState(initialQuery);
   const items = browseCatalogue(assets, priceLists, today, query);
+  const anyCategory = browseCatalogue(assets, priceLists, today, { ...query, category: null });
 
   function changeQuery(next: CatalogueQuery) {
     setQuery(next);
@@ -41,7 +43,15 @@ export function CatalogueBrowser({
     <>
       <CatalogueFilters query={query} onChange={changeQuery} locale={locale} t={t} />
 
-      <p role="status" className="mt-6 text-sm text-stone-600 dark:text-stone-400">
+      <CategoryTabs
+        query={query}
+        matching={anyCategory.map((item) => item.asset)}
+        onChange={changeQuery}
+        locale={locale}
+        t={t}
+      />
+
+      <p role="status" className="mt-4 text-sm text-stone-600 dark:text-stone-400">
         {t('catalogue.resultCount', { count: items.length })}
       </p>
 

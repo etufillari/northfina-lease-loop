@@ -8,7 +8,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { addDays, addMonthsClamped } from '@/domain/calendar';
-import { formatIsoDate } from '@/i18n/format';
+import { formatShortDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { AS_OF_COOKIE } from './as-of-cookie';
@@ -79,8 +79,8 @@ export function TimeTravel({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-amber-900 dark:text-amber-200">{t('nav.timeTravel')}</span>
-      <time dateTime={current} className="text-sm font-semibold tabular-nums">
-        {formatIsoDate(current, locale)}
+      <time dateTime={current} className="font-mono text-sm font-semibold">
+        {formatShortDate(current, locale)}
       </time>
       <div role="group" aria-label={t('demo.forward')} className="flex gap-1">
         <button

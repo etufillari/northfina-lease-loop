@@ -2,7 +2,6 @@
 
 ## Before the pitch (16:30)
 
-- [ ] **Catalogue status filter label.** Sold items are now hidden unless "Sold" is picked
-      (`src/domain/catalogue.ts`, `HIDDEN_BY_DEFAULT`), but the default option still says
-      "Any status" (`filters.anyStatus` in `src/i18n/messages/{en,fi,sv,et}.json`). Decide
-      whether to keep it or rename it (e.g. "All except sold"), in all four languages.
+- [x] **Catalogue status filter label.** Settled: the catalogue never shows sold items and
+      "Sold" is no longer a status you can pick, so "Any status" is accurate again. Sold items
+      are counted on the admin page instead (Sold items: how many, what was paid, which ones).

@@ -2,9 +2,10 @@
 // category-tabs.tsx). Every change is reported through
 // `onChange` so the list updates live. The fields keep their `name`s, so the Search button
 // submits a normal GET form (?q=&category=&status=&sort=) that the server understands too.
-import { assetStatusSchema } from '@/data/schemas';
+
 import {
   catalogueSearchString,
+  catalogueStatuses,
   catalogueSorts,
   defaultCatalogueQuery,
   MAX_SEARCH_LENGTH,
@@ -76,7 +77,7 @@ export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFilter
             className={fieldClass}
           >
             <option value="">{t('filters.anyStatus')}</option>
-            {assetStatusSchema.options.map((status) => (
+            {catalogueStatuses.map((status) => (
               <option key={status} value={status}>
                 {t(`status.${status}`)}
               </option>

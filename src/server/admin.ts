@@ -1,9 +1,10 @@
 // The admin page's overview on the app's date: how many contracts are in each stage, how the
-// applications were decided, what has been billed and paid, where the items are, the fleet's
-// circular impact, and the latest entries of the audit log.
+// applications were decided, what has been billed and paid, where the items are, which items
+// were sold, the fleet's circular impact, and the latest entries of the audit log.
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { FleetImpact } from '@/domain/co2';
 import { contractStage } from '@/domain/contract';
+import { soldTally, type Sale } from '@/domain/sold';
 import { listContracts, type Contract } from './contracts';
 import { assetsOn } from './asset-state';
 import { fleetImpactOn } from './co2';
@@ -22,6 +23,8 @@ export type AdminOverview = {
   applications: { total: number; approved: number; manual_review: number; rejected: number };
   invoices: { dueCount: number; dueCents: number; paidCount: number; paidCents: number };
   assets: { available: number; leased: number; reserved: number; returned: number; sold: number };
+  /** Items bought by their lessee: they have left the loop and the catalogue. */
+  sold: { count: number; paidCents: number; sales: (Sale & { assetName: string })[] };
   allContracts: Contract[];
   impact: FleetImpact;
   audit: { id: number; createdAt: string; actor: string; action: string; entity: string }[];
@@ -48,6 +51,8 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
   for (const item of items) byStatus[item.asset.status] = (byStatus[item.asset.status] ?? 0) + 1;
   const due = received.filter((r) => r.invoice.status === 'due');
   const paid = received.filter((r) => r.invoice.status === 'paid');
+  const names = new Map(items.map(({ asset }) => [asset.id, `${asset.make} ${asset.model}`]));
+  const sold = soldTally(contracts);
   const sum = (list: typeof received) => list.reduce((cents, r) => cents + r.invoice.totalCents, 0);
 
   return {
@@ -70,6 +75,13 @@ export async function adminOverview(db: PrismaClient, todayIso: string): Promise
       reserved: byStatus.reserved ?? 0,
       returned: byStatus.returned ?? 0,
       sold: byStatus.sold ?? 0,
+    },
+    sold: {
+      ...sold,
+      sales: sold.sales.map((sale) => ({
+        ...sale,
+        assetName: names.get(sale.assetId) ?? sale.assetId,
+      })),
     },
     allContracts: contracts,
     impact,

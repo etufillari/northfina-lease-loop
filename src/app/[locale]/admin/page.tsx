@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { SoldItemsPanel } from '@/components/sold-items-panel';
 import { VatAdmin } from '@/components/vat-admin';
 import { contractNumber, contractStage } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
@@ -124,6 +125,8 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
           </Link>
         </div>
       </Panel>
+
+      <SoldItemsPanel sold={overview.sold} locale={locale} t={t} />
 
       <Panel title={t('admin.vat.title')}>
         <VatAdmin

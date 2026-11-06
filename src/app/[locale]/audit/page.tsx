@@ -40,7 +40,9 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
       <h1 className="font-display text-3xl font-extrabold tracking-tight uppercase sm:text-4xl">
         {t('audit.title')}
       </h1>
-      <p className="mt-2 text-muted">{t('audit.intro')}</p>
+      <p className="mt-2 text-muted">
+        {t('audit.intro')} {t('audit.amountsExclVat')}
+      </p>
       {rows.length === 0 ? (
         <p className="mt-8 rounded-lg border border-dashed border-line p-6 text-muted">
           {t('audit.empty')}

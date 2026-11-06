@@ -155,6 +155,7 @@
   "audit.entity": "Post",
   "audit.details": "Detaljer",
   "audit.empty": "Inget har ändrats ännu.",
+  "audit.amountsExclVat": "Beloppen är exkl. moms.",
   "audit.allDetails": "Alla detaljer",
   "audit.action.quote.created": "Offert skapad",
   "audit.action.contract.signed": "Avtal undertecknat",

@@ -155,6 +155,7 @@
   "audit.entity": "Kohde",
   "audit.details": "Tiedot",
   "audit.empty": "Muutoksia ei ole vielä.",
+  "audit.amountsExclVat": "Summat ovat alv 0 %.",
   "audit.allDetails": "Kaikki tiedot",
   "audit.action.quote.created": "Tarjous luotu",
   "audit.action.contract.signed": "Sopimus allekirjoitettu",

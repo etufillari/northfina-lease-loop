@@ -52,7 +52,7 @@ describe('auditFacts', () => {
     ]);
   });
 
-  it('shows the effective date and gross buyout of an end-of-term buy', () => {
+  it('shows the effective date and buyout excl. VAT of an end-of-term buy', () => {
     const details = {
       assetId: 'ebike-001',
       kind: 'buy',
@@ -68,23 +68,23 @@ describe('auditFacts', () => {
     };
     expect(auditFacts('contract.ended_buy', details)).toEqual([
       { key: 'effective', value: { type: 'date', iso: '2026-11-30' } },
-      { key: 'buyout', value: { type: 'money', cents: 50200 } },
+      { key: 'buyout', value: { type: 'money', cents: 40000 } },
     ]);
   });
 
-  it('uses the price for the option taken when leaving early', () => {
+  it('uses the price excl. VAT of the option taken when leaving early', () => {
     const earlyExit = {
-      buy: { netCents: 1, vatCents: 0, grossCents: 81234, discountCents: 0 },
-      handBack: { netCents: 1, vatCents: 0, grossCents: 12345, discountCents: 0 },
+      buy: { netCents: 64800, vatCents: 16524, grossCents: 81324, discountCents: 0 },
+      handBack: { netCents: 9840, vatCents: 2509, grossCents: 12349, discountCents: 0 },
     };
     const base = { effectiveDate: '2026-12-01', earlyExit };
     expect(auditFacts('contract.ended_early_buy', { ...base, kind: 'early_buy' })).toContainEqual({
       key: 'exitPrice',
-      value: { type: 'money', cents: 81234 },
+      value: { type: 'money', cents: 64800 },
     });
     expect(
       auditFacts('contract.ended_early_hand_back', { ...base, kind: 'early_hand_back' })
-    ).toContainEqual({ key: 'exitPrice', value: { type: 'money', cents: 12345 } });
+    ).toContainEqual({ key: 'exitPrice', value: { type: 'money', cents: 9840 } });
   });
 
   it('shows only the date for a plain return', () => {

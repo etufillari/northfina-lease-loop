@@ -155,6 +155,7 @@
   "audit.entity": "Kirje",
   "audit.details": "Üksikasjad",
   "audit.empty": "Muudatusi veel pole.",
+  "audit.amountsExclVat": "Summad ilma käibemaksuta.",
   "audit.allDetails": "Kõik andmed",
   "audit.action.quote.created": "Pakkumine loodud",
   "audit.action.contract.signed": "Leping allkirjastatud",

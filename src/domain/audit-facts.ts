@@ -1,7 +1,8 @@
 // Turns an audit row's stored details into a few readable facts for the audit trail page.
 // The details are whatever was written at the time, so every field is read defensively: a
 // missing or mistyped field is skipped rather than shown wrong. Nothing is computed here; the
-// amounts are the ones recorded in the change.
+// amounts are the ones recorded in the change, all excl. VAT so they compare: rent and list
+// prices are stored net, and for a buyout or exit price the stored net amount is used.
 import { assetConditionSchema, type AssetCondition } from '@/data/schemas';
 
 export type AuditFactValue =
@@ -101,8 +102,8 @@ function endedFacts(details: Fields): AuditFact[] {
         : undefined;
   return collect([
     ['effective', date(details.effectiveDate)],
-    ['buyout', money(record(details.buyoutInvoice)?.grossCents)],
-    ['exitPrice', money(option?.grossCents)],
+    ['buyout', money(record(details.buyoutInvoice)?.netCents)],
+    ['exitPrice', money(option?.netCents)],
   ]);
 }
 

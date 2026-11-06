@@ -83,8 +83,9 @@ Smart Problems claimed: **#1 VAT, #2 early exit, #3 second life, #4 question flo
   7 2 4 8 5 10 9); a submitted invalid ID declines the application.
 - **Can't sign (card 6):** the application is approved-pending-signature and waits 7 days
   for the signatory named in it. Signing is the signatory's act alone: neither the applicant
-  nor staff can sign for them (403 `NOT_SIGNATORY`); the staff desk shows who must sign. A
-  signing link e-mailed to the signatory is not built, so in the browser card 6 ends here.
+  nor staff can sign for them (403 `NOT_SIGNATORY`). Card 6 ends with the contract sent to
+  the signatory and the application waiting for their signature; the staff desk shows who
+  must sign.
 - **One item, one contract:** a single claim rule (`src/domain/claims.ts`) guards starting,
   submitting, approving and signing, so two people can never hold or sign for the same
   physical item.

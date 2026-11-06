@@ -373,5 +373,8 @@ describe('customers and the waiting list', () => {
     const waitlist = await listWaitlist(db);
     expect(waitlist).toHaveLength(14);
     expect(waitlist[0]!.id).toBe('wait-10'); // joined 2026-09-15
+    // wait-08 wants three office laptops; everyone else wants one.
+    expect(waitlist.find((w) => w.id === 'wait-08')?.quantity).toBe(3);
+    expect(waitlist.find((w) => w.id === 'wait-06')?.quantity).toBe(1);
   });
 });

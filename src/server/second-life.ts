@@ -39,6 +39,7 @@ export function toSecondLifeRequest(row: WaitlistEntry): SecondLifeRequest {
     preferred_term_months: row.preferred_term_months,
     needed_by: row.needed_by,
     joined_on: row.joined_on,
+    quantity: row.quantity,
     who: row.who,
   });
 }

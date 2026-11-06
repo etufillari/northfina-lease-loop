@@ -139,7 +139,7 @@ export function UserSwitcher({ locale }: { locale: Locale }) {
   const applicationsHref =
     currentUser?.kind === 'customer'
       ? `/${locale}/account/applications`
-      : currentUser?.kind === 'staff'
+      : currentUser?.role === 'admin'
         ? `/${locale}/admin/applications`
         : null;
 

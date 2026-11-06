@@ -3,7 +3,8 @@
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
-import { getOptionLabel, type AnswerValue, type ApplicationQuestion } from './eligibility-question';
+import type { AnswerValue, ApplicationQuestion } from './eligibility-question';
+import { formatAnswer } from './format-answer';
 
 type Blocked = {
   reason: 'min_age' | 'residency';
@@ -34,18 +35,6 @@ export default function ApplicationReview({
   submitting,
 }: ApplicationReviewProps) {
   const t = getT(locale);
-
-  function formatAnswer(questionId: string, value: AnswerValue | undefined) {
-    if (value === undefined || value === '') return '—';
-
-    const formatOption = (option: string) => getOptionLabel(questionId, option, locale);
-
-    if (Array.isArray(value)) {
-      return value.filter(Boolean).map(formatOption).join(', ') || '—';
-    }
-
-    return typeof value === 'string' ? formatOption(value) : formatEuro(value, locale);
-  }
 
   return (
     <div className="space-y-8">
@@ -94,7 +83,7 @@ export default function ApplicationReview({
             <div key={question.id} className="space-y-1 py-3">
               <dt className="text-sm text-stone-500 dark:text-stone-400">{question.text}</dt>
               <dd className="whitespace-pre-wrap break-words text-sm font-medium text-stone-900 dark:text-stone-100">
-                {formatAnswer(question.id, answers[question.id])}
+                {formatAnswer(question.id, answers[question.id], locale)}
               </dd>
             </div>
           ))}

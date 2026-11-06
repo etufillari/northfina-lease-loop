@@ -16,7 +16,7 @@ import type { Asset, SecondLifeRequest } from '@/data/schemas';
 import { co2AvoidedKg } from '@/domain/co2';
 import { listPriceOn } from '@/domain/price-list';
 import { quoteFor, type Quote } from '@/domain/pricing';
-import type { SecondLifeDecision } from '@/domain/second-life';
+import { secondLifeDecision, type SecondLifeDecision } from '@/domain/second-life';
 import {
   allocateDesk,
   type DeskAllocation,
@@ -26,6 +26,7 @@ import {
 import type { PrismaClient } from '@/generated/prisma/client';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+import { nomineesByAsset } from './nominations';
 import { offerSet, secondLifeRent, shelfItems } from './second-life-offers';
 import { listWaitlist, toSecondLifeRequest } from './waitlist';
 
@@ -52,8 +53,10 @@ export type SecondLifePreview = {
   asOf: string;
   originalListPriceCents: number;
   decision: SecondLifeDecision;
-  /** What the desk does with it: offer (alone or as a set), list or scrap. */
-  outcome: DeskOutcome;
+  /** What the desk does with it: offer (alone or as a set), hold for a nominee, list, scrap. */
+  outcome: PreviewOutcome;
+  /** The person the last lessee nominated, who gets it ahead of the waiting list. */
+  nominee: { id: string; name: string | null } | null;
   /** Everyone the decision looked at, by id, so the desk can say who they are. */
   waiters: Record<string, SecondLifeRequest>;
   winner: SecondLifeRequest | null;
@@ -63,9 +66,14 @@ export type SecondLifePreview = {
   setPartners: Array<{ assetId: string; monthlyNetRentCents: number | null }>;
 };
 
+/** A nominated item skips the waiting list: it is held for the nominee after the work. */
+export type PreviewOutcome = DeskOutcome | { kind: 'nominee'; customerId: string };
+
 export type SecondLifeFailure = 'not_found' | 'not_returned' | 'no_v1_price';
 export type SecondLifePreviewResult =
   { ok: true; preview: SecondLifePreview } | { ok: false; reason: SecondLifeFailure };
+
+type Allocation = Omit<DeskAllocation, 'outcome'> & { outcome: PreviewOutcome };
 
 /** The desk: every asset waiting in `returned`, shared out in asset-id order. */
 export async function listReturnedDecisions(
@@ -90,15 +98,41 @@ export async function listReturnedDecisions(
     const v1 = listPriceOn(priceLists, row.id, ORIGINAL_PRICE_DATE);
     if (v1.ok) items.push({ asset: toAsset(row), originalListPriceCents: v1.priceCents });
   }
-  const shelfPrice = new Map(shelf.map((item) => [item.assetId, item.financedCents]));
-  const allocations = new Map(
-    allocateDesk(items, { asOfDate: asOf, demand, shelf }, { curves, costs, table }).map((a) => [
-      a.assetId,
-      a,
-    ])
+  const nominees = await nomineesByAsset(
+    db,
+    assetRows.map((row) => row.id),
+    asOf
   );
+  const nomineeRows = await db.customer.findMany({
+    where: { id: { in: Object.values(nominees) } },
+    select: { id: true, name: true },
+  });
+  const shelfPrice = new Map(shelf.map((item) => [item.assetId, item.financedCents]));
+  const data = { curves, costs, table };
+  const allocations = new Map<string, Allocation>(
+    allocateDesk(
+      items.filter((item) => !nominees[item.asset.id]),
+      { asOfDate: asOf, demand, shelf },
+      data
+    ).map((a) => [a.assetId, a])
+  );
+  // A nominated item gets the same work and price, with nobody from the list competing.
+  for (const item of items) {
+    const customerId = nominees[item.asset.id];
+    if (!customerId) continue;
+    const decision = secondLifeDecision(
+      { asset: item.asset, originalListPriceCents: item.originalListPriceCents, asOfDate: asOf },
+      { ...data, demand: [] }
+    );
+    allocations.set(item.asset.id, {
+      assetId: item.asset.id,
+      decision,
+      outcome:
+        decision.action === 'parts_bin' ? { kind: 'parts_bin' } : { kind: 'nominee', customerId },
+    });
+  }
 
-  const toPreview = (item: DeskItem, allocation: DeskAllocation): SecondLifePreview => {
+  const toPreview = (item: DeskItem, allocation: Allocation): SecondLifePreview => {
     const { decision } = allocation;
     const waiters: Record<string, SecondLifeRequest> = {};
     for (const verdict of decision.considered) {
@@ -119,6 +153,16 @@ export async function listReturnedDecisions(
       asOf,
       decision,
       outcome: allocation.outcome,
+      nominee:
+        allocation.outcome.kind === 'nominee'
+          ? {
+              id: allocation.outcome.customerId,
+              name:
+                nomineeRows.find(
+                  (c) => c.id === (allocation.outcome as { customerId: string }).customerId
+                )?.name ?? null,
+            }
+          : null,
       waiters,
       winner,
       winnerQuote: quoted?.ok ? quoted.quote : null,
@@ -178,7 +222,7 @@ async function endedLifeUncounted(db: Db, assetId: string): Promise<boolean> {
 }
 
 /** What the execute did. */
-export type AppliedOutcome = 'offer' | 'list_available' | 'parts_bin';
+export type AppliedOutcome = 'offer' | 'nominee' | 'list_available' | 'parts_bin';
 
 export type ExecuteSecondLifeResult =
   | { ok: true; preview: SecondLifePreview; applied: AppliedOutcome; co2AvoidedKg: number | null }
@@ -230,6 +274,7 @@ export async function executeSecondLife(
         upgrade: decision.upgrade,
         financedCents: decision.financedCents,
         winnerId: decision.winnerId,
+        nomineeId: preview.nominee?.id ?? null,
         monthlyNetRentCents: rent,
         setWith: preview.setPartners.map((p) => p.assetId),
       },
@@ -266,11 +311,16 @@ export async function executeSecondLife(
           condition: decision.upgrade?.to ?? asset.condition,
           usage_value: decision.usageAfterRefurb,
           previous_lives: previousLives,
-          status: 'available',
+          // Held for the nominee (their nomination is the reservation), else listed or offered.
+          status: applied === 'nominee' ? 'reserved' : 'available',
           // The re-price (docs/DECISIONS.md): quoted from now on instead of the list price.
           second_life_price_cents: decision.financedCents,
         },
       });
+      if (outcome.kind === 'nominee') {
+        await event('held_for_nominee', { customerId: outcome.customerId });
+        return;
+      }
       if (applied === 'list_available' || !winner) return;
       const waiter = { ...winner, customer_id: winner.customer_id ?? null };
       // A single offer is a set of one; a multi-item set adds its listed partners.

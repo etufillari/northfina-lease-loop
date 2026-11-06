@@ -13,13 +13,22 @@ import { listPriceOn, type ListPriceResult } from './price-list';
 export const catalogueSorts = ['category', 'price_asc', 'price_desc', 'newest', 'name'] as const;
 export type CatalogueSort = (typeof catalogueSorts)[number];
 
+/**
+ * The statuses the catalogue can filter by. A sold item belongs to its buyer and has left the
+ * loop, so the catalogue never shows it; the admin page keeps the tally (src/domain/sold.ts).
+ */
+export const catalogueStatuses = assetStatusSchema.options.filter(
+  (status): status is Exclude<AssetStatus, 'sold'> => status !== 'sold'
+);
+export type CatalogueStatus = (typeof catalogueStatuses)[number];
+
 export type CatalogueQuery = {
   /** Free text, trimmed. Empty means "no search". */
   search: string;
   /** `null` means every category. */
   category: AssetCategory | null;
-  /** `null` means every status. */
-  status: AssetStatus | null;
+  /** `null` means every status except sold. */
+  status: CatalogueStatus | null;
   sort: CatalogueSort;
 };
 
@@ -47,13 +56,13 @@ export function parseCatalogueQuery(params: SearchParamsInput): CatalogueQuery {
   };
 
   const category = assetCategorySchema.safeParse(first('category'));
-  const status = assetStatusSchema.safeParse(first('status'));
+  const status = first('status');
   const sort = first('sort');
 
   return {
     search: (first('q') ?? '').trim().slice(0, MAX_SEARCH_LENGTH),
     category: category.success ? category.data : null,
-    status: status.success ? status.data : null,
+    status: catalogueStatuses.find((s) => s === status) ?? null,
     sort: catalogueSorts.find((s) => s === sort) ?? defaultCatalogueQuery.sort,
   };
 }
@@ -113,13 +122,6 @@ const comparators: Record<CatalogueSort, (a: CatalogueItem, b: CatalogueItem) =>
 };
 
 /**
- * Statuses left out unless the customer picks them in the status filter. A sold item belongs to
- * someone and can never be leased again, so it is only noise while browsing. Reserved items stay:
- * the customer an item was passed on to has to find it, and others may see it come free.
- */
-const HIDDEN_BY_DEFAULT: ReadonlySet<AssetStatus> = new Set(['sold']);
-
-/**
  * Prices every asset on `isoDate` (`YYYY-MM-DD`), keeps those that match `query`, and sorts
  * them. Ties are broken by asset id, so the order never depends on the input order.
  */
@@ -130,12 +132,15 @@ export function browseCatalogue(
   query: CatalogueQuery
 ): CatalogueItem[] {
   const compare = comparators[query.sort];
-  return assets
-    .filter((asset) => query.category === null || asset.category === query.category)
-    .filter((asset) =>
-      query.status === null ? !HIDDEN_BY_DEFAULT.has(asset.status) : asset.status === query.status
-    )
-    .filter((asset) => matchesSearch(asset, query.search))
-    .map((asset) => ({ asset, price: listPriceOn(priceLists, asset.id, isoDate) }))
-    .sort((a, b) => compare(a, b) || a.asset.id.localeCompare(b.asset.id, 'en'));
+  return (
+    assets
+      .filter((asset) => query.category === null || asset.category === query.category)
+      // Never sold items (see catalogueStatuses). Reserved ones stay: the customer an item was
+      // passed on to has to find it, and others may see it come free.
+      .filter((asset) => asset.status !== 'sold')
+      .filter((asset) => query.status === null || asset.status === query.status)
+      .filter((asset) => matchesSearch(asset, query.search))
+      .map((asset) => ({ asset, price: listPriceOn(priceLists, asset.id, isoDate) }))
+      .sort((a, b) => compare(a, b) || a.asset.id.localeCompare(b.asset.id, 'en'))
+  );
 }

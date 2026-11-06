@@ -57,8 +57,16 @@ export default async function accessibility(page, check) {
     '/en/admin',
     '/en/admin/second-life',
     '/en/admin/second-life/ebike-007',
+    '/en/admin/signatures',
   ];
   for (const path of guestPages) await audit(page, check, path);
+
+  // A signature request (card 6), when an earlier scenario left one.
+  await page.open('/en/admin/signatures');
+  const request = await page.js(
+    `document.querySelector('main a[href^="/en/admin/signatures/"]')?.getAttribute('href') ?? null`
+  );
+  if (request) await audit(page, check, request, 'signature request page');
 
   await page.actAs('cust-aino');
   const contract = await leaseFor(page, 'laptop-005', 'Aino Virtanen');

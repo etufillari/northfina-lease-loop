@@ -1,5 +1,6 @@
-// End of term: a lease that has ended must be settled first; then Aino buys the item, and
-// travelling back shows the lease running again.
+// End of term: a lease that has ended must be settled first; then Aino buys the item, which
+// leaves the catalogue and shows up in the admin page's sold tally, and travelling back shows
+// the lease running again.
 import { leaseFor } from './helpers.mjs';
 
 const panel = (page) =>
@@ -27,6 +28,22 @@ export default async function endOfTerm(page, check) {
   await page.open(`/en/contracts/${contract.id}`);
   const bought = await panel(page);
   check('the contract says it was bought', bought.startsWith('The item was bought'), bought);
+
+  // A sold item has left the loop: not in the catalogue, but in the admin page's tally.
+  await page.open('/en/catalogue?per=50');
+  check(
+    'the sold item is not in the catalogue',
+    !(await page.js(`!!document.querySelector('main a[href^="/en/assets/laptop-009"]')`))
+  );
+  check(
+    'the catalogue has no "Sold" status to pick',
+    !(await page.js(`!!document.querySelector('main select[name=status] option[value=sold]')`))
+  );
+  await page.open('/en/admin');
+  const sold = await page.js(
+    `document.getElementById('sold-heading')?.closest('section')?.innerText ?? ''`
+  );
+  check('admin: the sold item is in the tally', sold.includes('laptop-009'), sold.slice(0, 300));
 
   await page.travelTo('2027-03-01');
   await page.open(`/en/contracts/${contract.id}`);

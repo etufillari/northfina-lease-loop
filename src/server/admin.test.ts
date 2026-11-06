@@ -70,6 +70,7 @@ describe('adminOverview', () => {
       bought: 0,
       passed_on: 0,
     });
+    expect(overview.sold).toEqual({ count: 0, paidCents: 0, sales: [] });
     expect(overview.applications).toEqual({
       total: 2,
       approved: 1,

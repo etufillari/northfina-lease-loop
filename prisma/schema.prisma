@@ -75,6 +75,12 @@ model Application {
   reasons_json        String // JSON array of eligibility rule ids
   answers_json        String // JSON object: question id → answer
   fleet_id            String? // shared by the applications of one fleet (several items at once)
+  // A company application waiting only for its signatory (q_signatory_email) can be signed or
+  // declined by that person (admin, Signatures). Signing creates the contract; declining is
+  // recorded here. A fleet's applications are declined together.
+  signature_declined_date String? // YYYY-MM-DD, the app's date
+  signature_declined_by   String? // the signatory's email
+  signature_decline_note  String?
 
   @@index([asset_id])
   @@index([customer_id])

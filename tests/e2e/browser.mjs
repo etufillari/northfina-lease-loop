@@ -144,12 +144,12 @@ export async function launch(baseUrl, { port = 9350 } = {}) {
       );
       await settle();
     },
-    /** Sets a select/input value the way React notices, then waits. */
+    /** Sets a select, input or textarea value the way React notices, then waits. */
     async set(selector, value, eventName = 'change') {
       await js(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)});
         if (!el) throw new Error('missing ' + ${JSON.stringify(selector)});
-        const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+        const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
         Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(value)});
         el.dispatchEvent(new Event(${JSON.stringify(eventName)}, { bubbles: true }));
       })()`);

@@ -16,9 +16,11 @@
 //   exceeds the rents that are still to come.
 //
 // Rounding rule (RULES.md): all money is integer euro cents. The present value is the only
-// non-integer step. It is computed in floating point and rounded ONCE with `Math.round` when
-// the balance is made. Every other line is an integer, and the "interest not charged" line is
-// derived (balance minus the nominal amounts), so the lines always add up to the total.
+// non-integer step, and it is computed without floating point: the annual rate becomes whole
+// basis points (7.9 % -> 790 bp), so 1 + r is the exact fraction (120 000 + bp) / 120 000 and
+// the balance is one exact BigInt fraction, rounded half up ONCE to whole cents. Every other
+// line is an integer, and the "interest not charged" line is derived (balance minus the
+// nominal amounts), so the lines always add up to the total.
 import type {
   AssetCategory,
   AssetCondition,
@@ -86,13 +88,39 @@ export function outstandingBalanceCents(input: {
     throw new RangeError(`remainingMonths must be a non-negative integer, got ${remainingMonths}`);
   }
 
-  const monthlyRate = annualInterestPercent / 12 / 100;
-  let presentValue = 0;
-  for (let i = 1; i <= remainingMonths; i += 1) {
-    presentValue += monthlyNetRentCents / (1 + monthlyRate) ** i;
+  // 1 + r = (12 × 10 000 + bp) / (12 × 10 000). Over the common denominator N^m:
+  //   balance = (Σ_{i=1..m} rent × D^i × N^(m−i)  +  buyout × D^m) / N^m
+  const bp = BigInt(percentToBasisPoints(annualInterestPercent));
+  const den = 120_000n;
+  const num = den + bp;
+  const m = remainingMonths;
+  const rent = BigInt(monthlyNetRentCents);
+
+  let numerator = BigInt(buyoutNetCents) * den ** BigInt(m);
+  for (let i = 1; i <= m; i += 1) {
+    numerator += rent * den ** BigInt(i) * num ** BigInt(m - i);
   }
-  presentValue += buyoutNetCents / (1 + monthlyRate) ** remainingMonths;
-  return Math.round(presentValue);
+  return roundHalfUp(numerator, num ** BigInt(m));
+}
+
+/**
+ * A percentage from the data pack as whole basis points (7.9 -> 790). Throws if the rate has
+ * more than two decimals, because it then cannot be stored exactly.
+ */
+function percentToBasisPoints(percent: number): number {
+  const scaled = percent * 100;
+  const bp = Math.round(scaled);
+  if (Math.abs(scaled - bp) > 1e-9) {
+    throw new RangeError(`annualInterestPercent ${percent} has more than two decimals`);
+  }
+  return bp;
+}
+
+/** `numerator / denominator` rounded half up, for non-negative numerators. */
+function roundHalfUp(numerator: bigint, denominator: bigint): number {
+  const quotient = numerator / denominator;
+  const rounded = (numerator % denominator) * 2n >= denominator ? quotient + 1n : quotient;
+  return Number(rounded);
 }
 
 /** One line of the step-by-step calculation. `key` is translated in the UI with `params`. */

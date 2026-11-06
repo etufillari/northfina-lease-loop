@@ -103,6 +103,35 @@ describe('outstandingBalanceCents', () => {
     );
     expect(() => outstandingBalanceCents({ ...ok, remainingMonths: 2.5 })).toThrow(RangeError);
   });
+
+  it('rejects a rate with more than two decimals, which has no exact basis-point value', () => {
+    expect(() =>
+      outstandingBalanceCents({ ...base, annualInterestPercent: 7.905, remainingMonths: 5 })
+    ).toThrow(RangeError);
+  });
+
+  it('rounds an exact half cent up', () => {
+    // 1200 % a year is 100 % a month, so one rent of 1 or 3 cents is worth exactly 0.5 or 1.5.
+    const half = { buyoutNetCents: 0, annualInterestPercent: 1200, remainingMonths: 1 };
+    expect(outstandingBalanceCents({ ...half, monthlyNetRentCents: 1 })).toBe(1);
+    expect(outstandingBalanceCents({ ...half, monthlyNetRentCents: 3 })).toBe(2);
+  });
+
+  it('stays within a cent of the floating-point formula for every month and band rate', () => {
+    for (const annualInterestPercent of [0, 4.9, 5.9, 6.9, 7.9, 9.9, 12.5]) {
+      const r = annualInterestPercent / 12 / 100;
+      for (let m = 0; m <= 48; m += 1) {
+        let float = 58_350 / (1 + r) ** m;
+        for (let i = 1; i <= m; i += 1) float += 10_730 / (1 + r) ** i;
+        const exact = outstandingBalanceCents({
+          ...base,
+          annualInterestPercent,
+          remainingMonths: m,
+        });
+        expect(Math.abs(exact - float)).toBeLessThanOrEqual(0.5 + 1e-6);
+      }
+    }
+  });
 });
 
 describe('calculateEarlyExit', () => {

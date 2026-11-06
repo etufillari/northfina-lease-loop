@@ -336,6 +336,10 @@ export async function executeSecondLife(
           previous_lives: previousLives,
           // Held for the nominee (their nomination is the reservation), else listed or offered.
           status: applied === 'nominee' ? 'reserved' : 'available',
+          // An upgrade sets the condition anew: wear is counted from here.
+          ...(decision.upgrade
+            ? { wear_from_condition: decision.upgrade.to, wear_from_total: asset.usage.total ?? 0 }
+            : {}),
           // The re-price (docs/DECISIONS.md): quoted from now on instead of the list price.
           second_life_price_cents: decision.financedCents,
         },

@@ -17,28 +17,28 @@ let db: Db;
 let cleanup: () => Promise<void>;
 const RETURNED = '2027-11-05';
 
-/** Leases ebike-003 (new) for a year and returns it with `km` on the clock. */
-async function returnWith(km: number) {
+/** Leases ebike-003 for a year from `from` and returns it with `km` lifetime on the clock. */
+async function returnWith(km: number, from = '2026-11-05', returned = RETURNED) {
   const state = await applyAndSubmit(db, {
     customerId: 'cust-aino',
     assetIds: ['ebike-003'],
     downPaymentCents: 0,
     termMonths: 12,
     script: ainoScript,
-    asOf: '2026-11-05',
+    asOf: from,
   });
   const signed = await signApplication(db, {
     applicationId: state.application.id,
-    startDate: '2026-11-05',
+    startDate: from,
     actor: 'cust-aino',
-    asOf: '2026-11-05',
+    asOf: from,
   });
   if (!signed.ok) throw new Error(signed.reason);
   const ended = await endOfTerm(db, {
     contractId: signed.contractId,
     action: 'return',
     actor: 'cust-aino',
-    asOf: RETURNED,
+    asOf: returned,
     usageReadings: { 'ebike-003': km },
   });
   if (!ended.ok) throw new Error(ended.reason);
@@ -133,6 +133,46 @@ describe('the return inspection', () => {
     });
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     expect(['good', 'like_new']).toContain(asset.condition); // like new only if upgraded
+  });
+
+  it('wear counts across leases: 4,900 km twice is a grade, like 9,800 km once', async () => {
+    await returnWith(4900);
+    const first = await card();
+    expect(first.inspection?.suggested).toMatchObject({
+      condition: 'like_new',
+      usedSinceBaseline: 4900,
+    });
+    const listed = await executeSecondLife(db, {
+      assetId: 'ebike-003',
+      actor: 'staff',
+      asOf: RETURNED,
+    });
+    if (!listed.ok) throw new Error(listed.reason);
+
+    // A second year with Aino: another 4,900 km.
+    await returnWith(9800, RETURNED, '2028-11-05');
+    const desk = await listReturnedDecisions(db, '2028-11-05');
+    const second = desk.find((d) => d.assetId === 'ebike-003')!;
+    if (!second.result.ok) throw new Error(second.result.reason);
+    expect(second.result.preview.inspection).toMatchObject({
+      conditionOut: 'like_new',
+      usedDuringLease: 4900,
+      baselineCondition: 'new',
+      suggested: { condition: 'good', usedSinceBaseline: 9800, gradesForUse: 1 },
+    });
+  });
+
+  it('an upgrade at the desk sets the condition anew: wear counts from there', async () => {
+    // Nobody waits any more by 2029: ebike-007 (fair) is upgraded to good to be listed.
+    const executed = await executeSecondLife(db, {
+      assetId: 'ebike-007',
+      actor: 'staff',
+      asOf: '2029-04-29',
+    });
+    if (!executed.ok) throw new Error(executed.reason);
+    expect(executed.preview.decision.upgrade).toMatchObject({ to: 'good' });
+    const row = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-007' } });
+    expect(row).toMatchObject({ wear_from_condition: 'good', wear_from_total: 18_400 });
   });
 
   it('the data pack’s returned items were graded already: no inspection', async () => {

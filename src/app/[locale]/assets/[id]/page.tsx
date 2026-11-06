@@ -127,8 +127,9 @@ export default async function AssetPage({
 
       <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-stone-600 dark:text-stone-400">{asset.make}</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{asset.model}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {asset.make} {asset.model}
+          </h1>
         </div>
         <StatusBadge status={asset.status} t={t} />
       </div>

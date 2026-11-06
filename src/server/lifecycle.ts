@@ -4,8 +4,8 @@
 import { loadCoefficientTable, loadVatRates } from '@/data/load';
 import { BUYOUT_PAYMENT_DAYS } from '@/domain/buyout';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
-import { holdUntil } from '@/domain/holds';
-import { endNominations, NOMINATION_RESERVATION, startNominationClock } from './nominations';
+import { holdUntil, UNTIL_ITEM_READY } from '@/domain/holds';
+import { endNominations, hasNomination, NOMINATION_INVITE } from './nominations';
 import {
   applyReadings,
   checkReadings,
@@ -51,6 +51,7 @@ export type ExitPreviewResult =
         | 'no_vat_rate_on_date'
         | 'unpriceable_amount'
         | 'bad_used_months'
+        | 'not_yours'
         | ReadingFailure;
     };
 
@@ -103,6 +104,7 @@ export async function executeEarlyExit(
   const { breakdown } = previewed.preview;
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
+  if (input.actor !== loaded.contract.customer_id) return { ok: false, reason: 'not_yours' };
   const readings = await checkReadings(
     db,
     loaded.contract.assets.map((link) => link.asset_id),
@@ -133,6 +135,7 @@ export async function executeEarlyExit(
         await tx.invoice.create({
           data: {
             contract_id: input.contractId,
+            customer_id: row.customer_id,
             number: row.invoices.length + 1,
             type: 'early_exit',
             due_date: addDays(input.asOf, 30),
@@ -143,10 +146,6 @@ export async function executeEarlyExit(
           },
         });
       }
-      await startNominationClock(tx, {
-        assetIds: row.assets.map((link) => link.asset_id),
-        returnedOn: input.asOf,
-      });
       await applyReadings(tx, readings.updates);
       for (const link of row.assets) {
         await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'returned' } });
@@ -174,7 +173,12 @@ export type EndOfTermResult =
   | {
       ok: false;
       reason:
-        'not_found' | 'not_active' | 'term_not_ended' | 'no_vat_rate_on_date' | ReadingFailure;
+        | 'not_found'
+        | 'not_active'
+        | 'not_yours'
+        | 'term_not_ended'
+        | 'no_vat_rate_on_date'
+        | ReadingFailure;
     };
 
 /**
@@ -195,6 +199,7 @@ export async function endOfTerm(
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
   const { contract } = loaded;
+  if (input.actor !== contract.customer_id) return { ok: false, reason: 'not_yours' };
   if (input.asOf < termEndsOn(contract)) return { ok: false, reason: 'term_not_ended' };
   const assetIds = contract.assets.map((link) => link.asset_id);
   const readings =
@@ -230,6 +235,7 @@ export async function endOfTerm(
         await tx.invoice.create({
           data: {
             contract_id: input.contractId,
+            customer_id: contract.customer_id,
             number: contract.invoices.length + 1,
             type: 'buyout',
             due_date: addDays(input.asOf, BUYOUT_PAYMENT_DAYS),
@@ -240,8 +246,9 @@ export async function endOfTerm(
           },
         });
       }
+      // A bought item cannot pass to a successor. A returned one keeps its nomination: the
+      // nominee's days start when the desk has the item ready (src/server/nominations.ts).
       if (input.action === 'buy') await endNominations(tx, assetIds);
-      else await startNominationClock(tx, { assetIds, returnedOn: input.asOf });
       await applyReadings(tx, readings.updates);
       for (const link of contract.assets) {
         await tx.asset.update({
@@ -270,17 +277,19 @@ export type NominateResult =
   | { ok: true; nomineeCustomerId: string }
   | {
       ok: false;
-      reason: 'not_found' | 'bad_status' | 'buying' | 'unknown_nominee' | 'self_nomination';
+      reason:
+        'not_found' | 'not_yours' | 'bad_status' | 'buying' | 'unknown_nominee' | 'self_nomination';
     };
 
 /**
- * "Pass it on", route (b): the customer names a successor, who may apply for a new lease
- * on the item when it comes back and skips the waiting list. The skip is explicit and
- * logged, so the FCFS fairness story stays honest (docs/DECISIONS.md).
+ * "Pass it on", route (b): the customer invites a successor, who — once they accept — gets
+ * the first claim on the item when it is ready to lease again, ahead of the waiting list.
+ * The skip is explicit and logged, so the FCFS fairness story stays honest
+ * (docs/DECISIONS.md; the steps are in src/server/nominations.ts).
  *
- * During the lease or after the return; never for an item the lessee has chosen to buy,
- * only for an existing customer other than the lessee, and one at a time: nominating again
- * replaces the earlier nomination.
+ * Any time during the lease, or after the return; never for an item the lessee has chosen
+ * to buy, only for an existing customer other than the lessee, and one at a time:
+ * nominating again replaces the earlier invitation or nomination.
  */
 export async function nominateSuccessor(
   db: Db,
@@ -291,6 +300,7 @@ export async function nominateSuccessor(
     include: { assets: true },
   });
   if (!contract) return { ok: false, reason: 'not_found' };
+  if (input.actor !== contract.customer_id) return { ok: false, reason: 'not_yours' };
   if (contract.status !== 'active' && contract.status !== 'ended_returned') {
     return { ok: false, reason: 'bad_status' };
   }
@@ -309,36 +319,29 @@ export async function nominateSuccessor(
       details: { email: input.email, nomineeCustomerId: nominee.id },
     },
     async (tx) => {
-      // The 7 days start when the item comes back (src/server/nominations.ts): during the
-      // lease this is provisional, from the term's end, and restarts on the actual return.
-      const returned = contract.status === 'ended_returned';
-      const until = holdUntil('nomination', returned ? input.asOf : termEndsOn(contract));
+      const assetIds = contract.assets.map((link) => link.asset_id);
+      // A new invitation replaces any earlier invitation or nomination.
+      await endNominations(tx, assetIds);
       for (const link of contract.assets) {
-        // A new nomination replaces an earlier one.
-        await tx.reservation.updateMany({
-          where: { asset_id: link.asset_id, kind: NOMINATION_RESERVATION, active: true },
-          data: { active: false },
-        });
+        // An invitation reserves nothing. While the item is out on lease or at the desk it
+        // can be accepted any time before it is ready; once listed, within the usual days.
+        const asset = await tx.asset.findUnique({ where: { id: link.asset_id } });
+        const notReadyYet = asset?.status === 'leased' || asset?.status === 'returned';
         await tx.reservation.create({
           data: {
             asset_id: link.asset_id,
             customer_id: nominee.id,
-            kind: NOMINATION_RESERVATION,
-            until,
+            kind: NOMINATION_INVITE,
+            until: notReadyYet ? UNTIL_ITEM_READY : holdUntil('nomination', input.asOf),
           },
         });
-        // Already through the desk and listed: it is now held for the nominee.
-        const asset = await tx.asset.findUnique({ where: { id: link.asset_id } });
-        if (returned && asset?.status === 'available') {
-          await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'reserved' } });
-        }
         await tx.assetEvent.create({
           data: {
             asset_id: link.asset_id,
             contract_id: contract.id,
             type: 'nominated',
             on_date: input.asOf,
-            details_json: JSON.stringify({ email: input.email, skipsWaitingList: true }),
+            details_json: JSON.stringify({ email: input.email, awaitsAcceptance: true }),
           },
         });
       }
@@ -348,11 +351,11 @@ export async function nominateSuccessor(
 }
 
 export type BuyoutOptionResult =
-  { ok: true } | { ok: false; reason: 'not_found' | 'not_active' | 'nominated' };
+  { ok: true } | { ok: false; reason: 'not_found' | 'not_active' | 'not_yours' | 'nominated' };
 
 /**
  * The mid-lease "I want to buy it at the end" opt-in (excluded from affordability). Not
- * while a successor is nominated: the item cannot go to both.
+ * while a successor is invited or nominated: the item cannot go to both.
  */
 export async function setBuyoutOption(
   db: Db,
@@ -360,15 +363,10 @@ export async function setBuyoutOption(
 ): Promise<BuyoutOptionResult> {
   const loaded = await loadActiveContract(db, input.contractId);
   if (loaded.error !== null) return { ok: false, reason: loaded.error };
-  if (input.optIn) {
-    const nominated = await db.reservation.count({
-      where: {
-        asset_id: { in: loaded.contract.assets.map((a) => a.asset_id) },
-        kind: 'nomination',
-        active: true,
-      },
-    });
-    if (nominated > 0) return { ok: false, reason: 'nominated' };
+  if (input.actor !== loaded.contract.customer_id) return { ok: false, reason: 'not_yours' };
+  const assetIds = loaded.contract.assets.map((a) => a.asset_id);
+  if (input.optIn && (await hasNomination(db, assetIds))) {
+    return { ok: false, reason: 'nominated' };
   }
   await withAudit(
     db,

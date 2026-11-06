@@ -11,6 +11,7 @@ import {
   startApplication,
   submitApplication,
 } from './applications';
+import { answerNomination } from './nominations';
 import { approveApplication } from './staff';
 import { seedAssets } from './assets';
 import { getContract, signApplication } from './contracts';
@@ -181,7 +182,7 @@ describe('taking over a lease', () => {
       const submitted = await submit(applied.applicationId, customerId);
       expect(submitted.ok && submitted.state.application.status).toBe('approved');
       // The summary shows what is left of the lease, not the whole term.
-      expect(submitted.ok && submitted.state.quote.takeOver?.monthsLeft).toBe(11);
+      expect(submitted.ok && submitted.state.quote.takeOver?.monthsLeft).toBe(12);
       if (customerId === 'cust-lena') lena = applied.applicationId;
       else sanna = applied.applicationId;
     }
@@ -266,9 +267,21 @@ describe('end of term: buying, nominating and the second-life desk', () => {
       expect(result.ok).toBe(true);
     }
     const active = await db.reservation.findMany({
-      where: { asset_id: 'ebike-006', kind: 'nomination', active: true },
+      where: {
+        asset_id: 'ebike-006',
+        kind: { in: ['nomination', 'nomination_invite'] },
+        active: true,
+      },
     });
     expect(active.map((r) => r.customer_id)).toEqual(['cust-sanna']);
+    // Sanna accepts, so the item will be held for her once it is ready.
+    const accepted = await answerNomination(db, {
+      assetId: 'ebike-006',
+      customerId: 'cust-sanna',
+      accept: true,
+      asOf: AS_OF,
+    });
+    expect(accepted).toEqual({ ok: true, heldNow: false });
     expect(await setBuyoutOption(db, { contractId, optIn: true, actor: 'cust-aino' })).toEqual({
       ok: false,
       reason: 'nominated',

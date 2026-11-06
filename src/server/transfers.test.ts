@@ -157,9 +157,9 @@ describe('mid-lease transfer', () => {
       asOf: AS_OF,
     });
     if (!result.ok) throw new Error(result.reason);
-    const reservations = await db.reservation.findMany({ where: { kind: 'nomination' } });
+    // An invitation: it reserves nothing until Olavi accepts, and waits for the item.
+    const reservations = await db.reservation.findMany({ where: { kind: 'nomination_invite' } });
     expect(reservations).toHaveLength(1);
-    // Provisional until the item comes back: 7 days after the term ends (2029-11-04).
-    expect(reservations[0]).toMatchObject({ until: '2029-11-11' });
+    expect(reservations[0]).toMatchObject({ customer_id: 'cust-olavi', until: '9999-12-31' });
   });
 });

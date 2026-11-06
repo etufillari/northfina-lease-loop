@@ -136,7 +136,7 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
     expect(asset?.status).toBe('reserved');
   });
 
-  it('rejects a second submission and signing with a bad start date', async () => {
+  it('rejects a second submission, and anyone but Aino signing her lease', async () => {
     const again = await submitApplication(db, {
       applicationId,
       startDate: AS_OF,
@@ -144,13 +144,13 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
       asOf: AS_OF,
     });
     expect(again).toEqual({ ok: false, reason: 'not_a_draft' });
-    const tooFar = await signApplication(db, {
+    const someoneElse = await signApplication(db, {
       applicationId,
-      startDate: '2027-02-06',
-      actor: AINO,
+      startDate: AS_OF,
+      actor: 'cust-lena',
       asOf: AS_OF,
     });
-    expect(tooFar).toEqual({ ok: false, reason: 'start_too_far_ahead' });
+    expect(someoneElse).toEqual({ ok: false, reason: 'not_yours' });
   });
 
   it('signs: locked contract, 36 invoices that add up, asset leased, passport stamped', async () => {

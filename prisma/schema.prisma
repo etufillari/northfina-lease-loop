@@ -169,6 +169,10 @@ model Invoice {
   id           String   @id @default(cuid())
   contract     Contract @relation(fields: [contract_id], references: [id])
   contract_id  String
+  // Who pays it. A take-over moves the invoices not yet due to the new lessee; the earlier
+  // ones stay with the customer who used those months. Null on rows from before this field:
+  // read as the contract's current customer.
+  customer_id  String?
   number       Int
   type         String   @default("lease") // lease | buyout | early_exit
   due_date     String

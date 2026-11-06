@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { listCustomerContracts } from '@/server/contracts';
 import { getCustomer, saveDefaults } from '@/server/customers';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 
 export const GET = handleRoute(
@@ -25,6 +26,8 @@ const putSchema = z.strictObject({
 export const PUT = handleRoute(async (request, { params }: RouteContext<'/api/customers/[id]'>) => {
   const { id } = await params;
   const body = await readJsonBody(request, putSchema);
+  // Only the customer saves their own answers.
+  if (body.actor !== id) return notYours();
   const customer = await getCustomer(db, id);
   if (!customer) return fail(404, 'CUSTOMER_NOT_FOUND', `No customer with id "${id}"`);
   return ok(await saveDefaults(db, { customerId: id, defaults: body.defaults, actor: body.actor }));

@@ -145,7 +145,7 @@ async function buildState(
         where: {
           contract_id: rows.application.transfer_contract_id,
           type: 'lease',
-          due_date: { gt: asOf },
+          due_date: { gte: asOf },
         },
         select: { net_cents: true },
       })
@@ -230,6 +230,8 @@ export async function startApplication(
     asOf: string;
   }
 ): Promise<StartResult> {
+  // A customer applies for themself only.
+  if (input.actor !== input.customerId) return { ok: false, reason: 'not_yours' };
   if (new Set(input.assetIds).size !== input.assetIds.length) {
     return { ok: false, reason: 'duplicate_assets' };
   }
@@ -279,7 +281,7 @@ export async function startApplication(
 
 export type AnswerResult =
   | { ok: true; state: ApplicationState; warning?: string }
-  | { ok: false; reason: 'not_found' | 'not_a_draft' | 'question_not_applicable' };
+  | { ok: false; reason: 'not_found' | 'not_yours' | 'not_a_draft' | 'question_not_applicable' };
 
 /** Stores one answer and drops any answers whose questions stop applying because of it. */
 export async function answerQuestion(
@@ -294,6 +296,7 @@ export async function answerQuestion(
 ): Promise<AnswerResult> {
   const rows = await loadRows(db, input.applicationId);
   if (!rows) return { ok: false, reason: 'not_found' };
+  if (input.actor !== rows.application.customer_id) return { ok: false, reason: 'not_yours' };
   if (rows.application.status !== 'draft') return { ok: false, reason: 'not_a_draft' };
 
   const { questions } = await loadQuestions();
@@ -337,6 +340,7 @@ export type SubmitResult =
       ok: false;
       reason:
         | 'not_found'
+        | 'not_yours'
         | 'not_a_draft'
         | 'incomplete'
         | 'no_vat_rate_on_date'
@@ -354,6 +358,7 @@ export async function submitApplication(
 ): Promise<SubmitResult> {
   const rows = await loadRows(db, input.applicationId);
   if (!rows) return { ok: false, reason: 'not_found' };
+  if (input.actor !== rows.application.customer_id) return { ok: false, reason: 'not_yours' };
   if (rows.application.status !== 'draft') return { ok: false, reason: 'not_a_draft' };
   // Not in the past and at most 3 months out — the same window signing enforces later.
   if (

@@ -14,7 +14,7 @@ import { lapsesOn } from '@/domain/holds';
 import { addDays } from '@/domain/calendar';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from './audit';
-import { NOMINATION_RESERVATION } from './nominations';
+import { NOMINATION_INVITE, NOMINATION_RESERVATION } from './nominations';
 import { OFFER_RESERVATION, passItemsOn } from './second-life-offers';
 import { EXPIRABLE_STATUSES, releaseExpiredHolds } from './staff-holds';
 import { expireOffer, listExpiredOffers } from './waitlist-actions';
@@ -45,7 +45,7 @@ async function nextLapseDay(
     db.reservation.findMany({
       where: {
         active: true,
-        kind: { in: [OFFER_RESERVATION, NOMINATION_RESERVATION] },
+        kind: { in: [OFFER_RESERVATION, NOMINATION_RESERVATION, NOMINATION_INVITE] },
         until: { lt: input.to },
       },
       select: { until: true },
@@ -76,7 +76,11 @@ async function runDay(db: Db, day: string, actor: string, summary: LapseSummary)
     if (result.ok) summary.offers.push({ day, entryId: offer.entry.id, assetIds: offer.assetIds });
   }
   const nominations = await db.reservation.findMany({
-    where: { active: true, kind: NOMINATION_RESERVATION, until: { lt: day } },
+    where: {
+      active: true,
+      kind: { in: [NOMINATION_RESERVATION, NOMINATION_INVITE] },
+      until: { lt: day },
+    },
     orderBy: { asset_id: 'asc' },
   });
   for (const hold of nominations) {

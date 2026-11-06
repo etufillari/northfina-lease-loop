@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { startApplication } from '@/server/applications';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
@@ -21,6 +22,7 @@ export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, bodySchema);
   const result = await startApplication(db, { ...body, asOf: asOfFrom(request) });
   if (!result.ok) {
+    if (result.reason === 'not_yours') return notYours();
     if (result.reason === 'unknown_asset') return fail(404, 'ASSET_NOT_FOUND', 'No such asset');
     if (result.reason === 'asset_unavailable') {
       return fail(409, 'ASSET_UNAVAILABLE', 'An item in this group is reserved or out on a lease');

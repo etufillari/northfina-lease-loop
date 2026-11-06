@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { createTransferLink } from '@/server/transfers';
 
@@ -18,6 +19,7 @@ export const POST = handleRoute(
       asOf: asOfFrom(request),
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
       if (result.reason === 'term_over')
         return fail(409, 'TERM_OVER', 'The term is over: buy, return or nominate a successor');

@@ -4,6 +4,7 @@
 import { holdUntil as holdUntilFor } from '@/domain/holds';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { checkClaim } from '@/server/asset-claims';
+import { isStaffActor } from '@/server/authz';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
 
@@ -78,7 +79,10 @@ export async function listStaffQueue(db: Db): Promise<StaffQueueItem[]> {
 
 export type StaffDecisionResult =
   | { ok: true; status: 'approved' | 'awaiting_signature' | 'declined'; holdUntil: string | null }
-  | { ok: false; reason: 'not_found' | 'not_reviewable' | 'self_decision' | 'asset_unavailable' };
+  | {
+      ok: false;
+      reason: 'not_found' | 'not_reviewable' | 'self_decision' | 'staff_only' | 'asset_unavailable';
+    };
 
 /**
  * A person approves a manual review. The 7-day hold restarts from the approval day, because
@@ -94,9 +98,11 @@ export async function approveApplication(
     include: { quote: true },
   });
   if (!application) return { ok: false, reason: 'not_found' };
-  if (application.status !== 'manual_review') return { ok: false, reason: 'not_reviewable' };
   // Four-eyes rule: nobody decides on their own application.
   if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
+  // Reviews are desk work: no customer persona can decide on an application.
+  if (!(await isStaffActor(db, input.actor))) return { ok: false, reason: 'staff_only' };
+  if (application.status !== 'manual_review') return { ok: false, reason: 'not_reviewable' };
 
   const answers = JSON.parse(application.answers_json) as Record<string, unknown>;
   const cannotSign = answers['q_customer_type'] === 'company' && answers['q_can_sign'] === 'no';
@@ -167,10 +173,12 @@ export async function declineApplication(
     include: { quote: true },
   });
   if (!application) return { ok: false, reason: 'not_found' };
+  if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
+  // Reviews are desk work: no customer persona can decide on an application.
+  if (!(await isStaffActor(db, input.actor))) return { ok: false, reason: 'staff_only' };
   if (!(STAFF_QUEUE_STATUSES as readonly string[]).includes(application.status)) {
     return { ok: false, reason: 'not_reviewable' };
   }
-  if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
   const assetIds = quoteAssetIds(application.quote);
 
   await withAudit(

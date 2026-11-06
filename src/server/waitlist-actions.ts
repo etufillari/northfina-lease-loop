@@ -163,6 +163,8 @@ export async function acceptOffer(
   if (!found.ok) return found;
   const { entry } = found;
   if (!entry.customer_id) return { ok: false, reason: 'no_customer' };
+  // Accepting starts an application in their name: only the customer themself can.
+  if (input.actor !== entry.customer_id) return { ok: false, reason: 'not_yours' };
   const offers = await offeredItems(db, entry.id);
   if (offers.length === 0) return { ok: false, reason: 'no_offer' };
   if (offers.some((offer) => offer.until < input.asOf)) {

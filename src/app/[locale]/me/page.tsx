@@ -9,7 +9,10 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
-import { listCustomerContracts } from '@/server/contracts';
+import { addMonthsClamped } from '@/domain/calendar';
+import { invoicesFor, listCustomerContracts } from '@/server/contracts';
+import { nominationsFor } from '@/server/nominations';
+import { NominationActions } from './nomination-actions';
 import { listCustomerOpenApplications, type NextStep } from '@/server/customer-applications';
 import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
@@ -60,9 +63,10 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
     );
   }
 
-  const [contracts, applications] = await Promise.all([
+  const [contracts, applications, nominations] = await Promise.all([
     listCustomerContracts(db, customer.id),
     listCustomerOpenApplications(db, customer.id, asOf),
+    nominationsFor(db, customer.id),
   ]);
 
   return (
@@ -121,6 +125,48 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
         </>
       ) : null}
 
+      {nominations.length > 0 ? (
+        <>
+          <h2 className="mt-8 text-xl font-semibold">{t('nomination.title')}</h2>
+          <ul className="mt-4 space-y-4">
+            {nominations.map((nomination) => (
+              <li
+                key={nomination.assetId}
+                className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 dark:border-emerald-800 dark:bg-emerald-950/40"
+              >
+                <p className="font-semibold">
+                  {nomination.make} {nomination.model}
+                </p>
+                <p className="mt-1 text-sm text-stone-700 dark:text-stone-300">
+                  {nomination.status === 'invited'
+                    ? t('nomination.invited', { name: nomination.fromName ?? '' })
+                    : nomination.status === 'accepted_waiting'
+                      ? t('nomination.waiting')
+                      : t('nomination.held', {
+                          date: formatIsoDate(nomination.until ?? asOf, locale),
+                        })}
+                </p>
+                {nomination.status === 'invited' ? (
+                  <NominationActions
+                    locale={locale}
+                    assetId={nomination.assetId}
+                    actor={customer.id}
+                    asOfParam={asOfParam}
+                  />
+                ) : nomination.status === 'held' ? (
+                  <Link
+                    href={`/${locale}/assets/${nomination.assetId}${suffix}`}
+                    className="mt-3 inline-block text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+                  >
+                    {t('nomination.apply')} →
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
       <h2 className="mt-8 text-xl font-semibold">{t('me.contracts')}</h2>
       {contracts.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
@@ -129,7 +175,14 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
       ) : (
         <ul className="mt-4 space-y-4">
           {contracts.map((contract) => {
-            const open = [...contract.invoices].filter((i) => i.due_date <= asOf).at(-1);
+            // Only this customer's invoices: after a take-over the later months are someone
+            // else's. An invoice is open from its due date until the next one is due.
+            const latestDue = invoicesFor(contract, customer.id)
+              .filter((i) => i.due_date <= asOf)
+              .at(-1);
+            const open =
+              latestDue && asOf < addMonthsClamped(latestDue.due_date, 1) ? latestDue : null;
+            const passedOn = contract.customer_id !== customer.id;
             return (
               <li
                 key={contract.id}
@@ -148,7 +201,9 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
                     </p>
                   </div>
                   <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:ring-stone-700">
-                    {t(`contract.status.${contract.status}` as MessageKey)}
+                    {passedOn
+                      ? t('me.passedOn')
+                      : t(`contract.status.${contract.status}` as MessageKey)}
                   </span>
                 </div>
                 {open ? (

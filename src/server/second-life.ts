@@ -26,7 +26,7 @@ import {
 import type { PrismaClient } from '@/generated/prisma/client';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
-import { nomineesByAsset } from './nominations';
+import { endNominations, nomineesByAsset, startNomineeClock } from './nominations';
 import { offerSet, secondLifeRent, shelfItems } from './second-life-offers';
 import { listWaitlist, toSecondLifeRequest } from './waitlist';
 
@@ -291,6 +291,8 @@ export async function executeSecondLife(
           financedCents: decision.financedCents,
         });
         await tx.asset.update({ where: { id: asset.id }, data: { status: 'sold' } });
+        // Kept for parts: nobody can be nominated for it any more.
+        await endNominations(tx, [asset.id]);
         return;
       }
 
@@ -319,8 +321,11 @@ export async function executeSecondLife(
       });
       if (outcome.kind === 'nominee') {
         await event('held_for_nominee', { customerId: outcome.customerId });
+        await startNomineeClock(tx, asset.id, asOf);
         return;
       }
+      // Not held for a nominee: an invitation nobody accepted before the item was ready ends.
+      await endNominations(tx, [asset.id]);
       if (applied === 'list_available' || !winner) return;
       const waiter = { ...winner, customer_id: winner.customer_id ?? null };
       // A single offer is a set of one; a multi-item set adds its listed partners.

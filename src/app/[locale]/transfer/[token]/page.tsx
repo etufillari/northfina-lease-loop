@@ -42,11 +42,11 @@ export default async function TransferPage({
 
   const { contract } = offer;
   const paidMonths = contract.invoices.filter(
-    (i) => i.type === 'lease' && i.due_date <= asOf
+    (i) => i.type === 'lease' && i.due_date < asOf
   ).length;
   // What the successor actually commits to: the lease invoices not yet due.
   const stillToPayNetCents = contract.invoices
-    .filter((i) => i.type === 'lease' && i.due_date > asOf)
+    .filter((i) => i.type === 'lease' && i.due_date >= asOf)
     .reduce((sum, i) => sum + i.net_cents, 0);
 
   return (

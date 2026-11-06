@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { ContractActions } from '@/components/contract-actions';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
+import { customerPersona, PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { loadVatRates } from '@/data/load';
 import { buyoutInvoicePreview } from '@/domain/buyout';
 import { addMonthsClamped } from '@/domain/calendar';
@@ -14,7 +14,7 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
-import { getContract } from '@/server/contracts';
+import { getContract, invoicesFor } from '@/server/contracts';
 import { db } from '@/server/db';
 import { termEndsOn } from '@/server/lifecycle';
 
@@ -32,8 +32,43 @@ export default async function ContractPage({
   if (!contract) notFound();
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const rawPersona = (await cookies()).get(PERSONA_COOKIE)?.value;
+  const persona = customerPersona(rawPersona);
   const endsOn = termEndsOn(contract);
+  // Who is looking: the holder acts on it; a previous lessee sees the invoices for the
+  // months they used; staff see everything read-only; anyone else sees nothing.
+  const isHolder = persona === contract.customer_id;
+  const isStaff = rawPersona === STAFF_PERSONA;
+  const myInvoices = persona ? invoicesFor(contract, persona) : [];
+  const isPreviousLessee = !isHolder && myInvoices.length > 0;
+  if (!isHolder && !isStaff && !isPreviousLessee) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight">{t('contract.title')}</h1>
+        <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+          {t('contract.notYours')}
+        </p>
+      </div>
+    );
+  }
+  const visibleInvoices = isStaff ? contract.invoices : myInvoices;
+  const someoneElsesInvoice = contract.invoices.find(
+    (i) => (i.customer_id ?? contract.customer_id) !== (persona ?? contract.customer_id)
+  );
+  // The holder's current successor invitation or nomination, to show where it stands.
+  const nominationRow = isHolder
+    ? await db.reservation.findFirst({
+        where: {
+          asset_id: { in: contract.assets.map((a) => a.asset_id) },
+          kind: { in: ['nomination', 'nomination_invite'] },
+          active: true,
+        },
+        orderBy: { id: 'desc' },
+      })
+    : null;
+  const nominee = nominationRow?.customer_id
+    ? await db.customer.findUnique({ where: { id: nominationRow.customer_id } })
+    : null;
   // Consumers see prices with VAT, businesses net (docs/DECISIONS.md, VAT).
   const holder = await db.customer.findUnique({
     where: { id: contract.customer_id },
@@ -53,7 +88,7 @@ export default async function ContractPage({
 
   // The first invoice whose VAT rate differs from the previous one gets the banner. The
   // banner names the STATUTORY change date from the rate table, not the invoice's due date.
-  const leaseInvoices = contract.invoices.filter((invoice) => invoice.type === 'lease');
+  const leaseInvoices = visibleInvoices.filter((invoice) => invoice.type === 'lease');
   const changeIndex = leaseInvoices.findIndex(
     (invoice, index) => index > 0 && invoice.vat_rate_bp !== leaseInvoices[index - 1]!.vat_rate_bp
   );
@@ -69,7 +104,7 @@ export default async function ContractPage({
   // counts as paid — including the last one, which otherwise would stay open forever.
   const invoiceState = (dueDate: string): 'paid' | 'open' | 'scheduled' => {
     if (dueDate > asOf) return 'scheduled';
-    const latestDue = [...contract.invoices].filter((i) => i.due_date <= asOf).at(-1);
+    const latestDue = [...visibleInvoices].filter((i) => i.due_date <= asOf).at(-1);
     const stillOpen = latestDue?.due_date === dueDate && asOf < addMonthsClamped(dueDate, 1);
     return stillOpen ? 'open' : 'paid';
   };
@@ -107,7 +142,18 @@ export default async function ContractPage({
         />
       </dl>
 
-      {contract.status === 'active' && persona ? (
+      {isPreviousLessee ? (
+        <p className="mt-6 rounded-xl bg-stone-100 p-4 text-sm text-stone-700 ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700">
+          {t('contract.passedOnNote')}
+        </p>
+      ) : null}
+      {isHolder && someoneElsesInvoice ? (
+        <p className="mt-6 rounded-xl bg-stone-100 p-4 text-sm text-stone-700 ring-1 ring-stone-200 ring-inset dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700">
+          {t('contract.takenOverNote')}
+        </p>
+      ) : null}
+
+      {contract.status === 'active' && isHolder && persona ? (
         <ContractActions
           locale={locale}
           contractId={contract.id}
@@ -118,6 +164,14 @@ export default async function ContractPage({
           buyoutInvoice={buyout.ok ? buyout.preview : null}
           pricesInclVat={pricesInclVat}
           purchaseAtEnd={contract.purchase_at_end}
+          nomination={
+            nominationRow
+              ? {
+                  name: nominee?.name ?? '',
+                  accepted: nominationRow.kind === 'nomination',
+                }
+              : null
+          }
           termMonthsTotal={contract.term_months}
           returnItems={leasedAssets.map((a) => ({
             id: a.id,
@@ -156,7 +210,7 @@ export default async function ContractPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-              {contract.invoices.map((invoice) => {
+              {visibleInvoices.map((invoice) => {
                 const state = invoiceState(invoice.due_date);
                 const changedHere = change?.id === invoice.id;
                 return (

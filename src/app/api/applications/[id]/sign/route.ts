@@ -7,6 +7,7 @@ import { isoDateSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { signApplication } from '@/server/contracts';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
@@ -46,6 +47,7 @@ export const POST = handleRoute(
       asOf: asOfFrom(request),
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       const [status, code, message] = failures[result.reason]!;
       return fail(status, code, message);
     }

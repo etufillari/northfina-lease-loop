@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { staffOnly } from '@/server/authz';
 import { db } from '@/server/db';
 import { executeSecondLife } from '@/server/second-life';
 import { secondLifeFailure } from '../failure';
@@ -16,6 +17,8 @@ export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/second-life/[id]/execute'>) => {
     const { id } = await params;
     const body = await readJsonBody(request, bodySchema);
+    const denied = await staffOnly(db, body.actor);
+    if (denied) return denied;
     const result = await executeSecondLife(db, {
       assetId: id,
       actor: body.actor,

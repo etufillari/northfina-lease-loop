@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { HOLD_DAYS, holdUntil, isLapsed, lapsesOn, QUOTE_VALID_DAYS } from './holds';
+import {
+  HOLD_DAYS,
+  holdUntil,
+  isLapsed,
+  lapsesOn,
+  QUOTE_VALID_DAYS,
+  UNTIL_ITEM_READY,
+} from './holds';
 
 describe('hold lengths', () => {
   it('are the documented ones', () => {
-    expect(HOLD_DAYS).toEqual({ approval: 7, signatory: 7, waitlistOffer: 3, nomination: 7 });
+    expect(HOLD_DAYS).toEqual({ approval: 7, signatory: 7, waitlistOffer: 3, nomination: 3 });
     expect(QUOTE_VALID_DAYS).toBe(1);
   });
 
@@ -18,5 +25,9 @@ describe('hold lengths', () => {
     expect(isLapsed('2026-11-12', '2026-11-13')).toBe(true);
     expect(isLapsed('2026-11-12', '2026-11-11')).toBe(false);
     expect(lapsesOn('2026-12-31')).toBe('2027-01-01');
+  });
+
+  it('a hold waiting for the item to be ready never lapses on a date', () => {
+    expect(isLapsed(UNTIL_ITEM_READY, '2099-12-31')).toBe(false);
   });
 });

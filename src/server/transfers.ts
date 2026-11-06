@@ -8,6 +8,7 @@ import { monthlyFactorFor } from '@/domain/coefficient';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withAudit } from '@/server/audit';
 import { termEndsOn } from '@/server/lifecycle';
+import { endNominations } from '@/server/nominations';
 
 type Db = PrismaClient;
 
@@ -15,7 +16,8 @@ type Db = PrismaClient;
 const OPEN_STATUSES = ['draft', 'manual_review', 'approved', 'awaiting_signature'];
 
 export type TransferLinkResult =
-  { ok: true; token: string } | { ok: false; reason: 'not_found' | 'not_active' | 'term_over' };
+  | { ok: true; token: string }
+  | { ok: false; reason: 'not_found' | 'not_active' | 'not_yours' | 'term_over' };
 
 /**
  * The lessee creates (or re-uses) the shareable link for their contract. Only while there
@@ -29,6 +31,7 @@ export async function createTransferLink(
   const contract = await db.contract.findUnique({ where: { id: input.contractId } });
   if (!contract) return { ok: false, reason: 'not_found' };
   if (contract.status !== 'active') return { ok: false, reason: 'not_active' };
+  if (input.actor !== contract.customer_id) return { ok: false, reason: 'not_yours' };
   if (input.asOf >= termEndsOn(contract)) return { ok: false, reason: 'term_over' };
   if (contract.transfer_token) return { ok: true, token: contract.transfer_token };
 
@@ -61,7 +64,7 @@ export async function getTransferOffer(db: Db, token: string) {
 
 export type TransferApplyResult =
   | { ok: true; applicationId: string }
-  | { ok: false; reason: 'not_found' | 'own_contract' | 'term_over' };
+  | { ok: false; reason: 'not_found' | 'not_yours' | 'own_contract' | 'term_over' };
 
 /**
  * The recipient starts the take-over application. The cloned quote carries the contract's
@@ -75,6 +78,8 @@ export async function startTransferApplication(
   const offer = await getTransferOffer(db, input.token);
   if (!offer) return { ok: false, reason: 'not_found' };
   const { contract } = offer;
+  // You apply for yourself only.
+  if (input.actor !== input.customerId) return { ok: false, reason: 'not_yours' };
   if (contract.customer_id === input.customerId) return { ok: false, reason: 'own_contract' };
   if (input.asOf >= termEndsOn(contract)) return { ok: false, reason: 'term_over' };
 
@@ -185,9 +190,18 @@ export async function executeTransfer(
         },
         data: { status: 'cancelled', hold_until: null },
       });
-      await tx.reservation.updateMany({
-        where: { asset_id: { in: assetIds }, kind: 'nomination', active: true },
-        data: { active: false },
+      // The old lessee's invitation or nomination was theirs: it ends with their lease.
+      await endNominations(tx, assetIds);
+      // Invoices follow the months: a period that starts before today was the old lessee's
+      // (billed in advance, they used it); from today on, every period is the new
+      // lessee's — so a hand-over on the very first day leaves the old lessee owing nothing.
+      await tx.invoice.updateMany({
+        where: { contract_id: contract.id, customer_id: null },
+        data: { customer_id: contract.customer_id },
+      });
+      await tx.invoice.updateMany({
+        where: { contract_id: contract.id, type: 'lease', due_date: { gte: input.asOf } },
+        data: { customer_id: input.newCustomerId },
       });
       for (const link of contract.assets) {
         await tx.assetEvent.create({

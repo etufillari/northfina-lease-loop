@@ -38,6 +38,7 @@ export function ContractActions({
   purchaseAtEnd,
   termMonthsTotal,
   returnItems,
+  nomination,
 }: {
   locale: Locale;
   contractId: string;
@@ -53,6 +54,8 @@ export function ContractActions({
   termMonthsTotal: number;
   /** The items a return hands back, each needing its meter reading. */
   returnItems: ReturnItem[];
+  /** The current successor invitation (not yet answered) or accepted nomination. */
+  nomination: { name: string; accepted: boolean } | null;
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -246,6 +249,13 @@ export function ContractActions({
             </span>
           ) : null}
         </div>
+        {nomination && !nominated ? (
+          <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
+            {nomination.accepted
+              ? t('passOn.accepted', { name: nomination.name })
+              : t('passOn.invited', { name: nomination.name })}
+          </p>
+        ) : null}
       </div>
 
       {preview ? (

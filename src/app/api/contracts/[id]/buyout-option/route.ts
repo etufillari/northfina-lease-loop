@@ -2,6 +2,7 @@
 // The mid-lease "I want to buy it at the end" flag. Never counted against affordability.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { setBuyoutOption } from '@/server/lifecycle';
 
@@ -20,6 +21,7 @@ export const POST = handleRoute(
       actor: body.actor,
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
       if (result.reason === 'nominated')
         return fail(409, 'NOMINATED', 'A successor is nominated for this item');

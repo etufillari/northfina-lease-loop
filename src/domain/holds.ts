@@ -10,9 +10,20 @@ export const HOLD_DAYS = {
   signatory: 7,
   /** A waiting-list offer waits this long for an answer; the item is idle meanwhile. */
   waitlistOffer: 3,
-  /** An end-of-term nomination keeps the item for the named person this long. */
-  nomination: 7,
+  /**
+   * An accepted nomination keeps the item for the nominee this long once it is ready to
+   * lease again (back and through the second-life desk). Like a waiting-list offer the item
+   * idles meanwhile, and the nominee already said yes in advance, so 3 days, not 7.
+   */
+  nomination: 3,
 } as const;
+
+/**
+ * The `until` of a hold that waits for an event rather than a date: an accepted nomination
+ * while the item is still out on lease or at the desk. ISO dates compare as strings, so it
+ * never lapses until the event sets a real date.
+ */
+export const UNTIL_ITEM_READY = '9999-12-31';
 
 export type HoldKind = keyof typeof HOLD_DAYS;
 

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { assetStatusSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { changeAssetStatus } from '@/server/assets';
+import { staffOnly } from '@/server/authz';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
@@ -16,6 +17,8 @@ export const PATCH = handleRoute(
   async (request, { params }: RouteContext<'/api/assets/[id]/status'>) => {
     const { id } = await params;
     const body = await readJsonBody(request, bodySchema);
+    const denied = await staffOnly(db, body.actor);
+    if (denied) return denied;
 
     const result = await changeAssetStatus(db, { id, status: body.status, actor: body.actor });
     if (!result.ok) return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);

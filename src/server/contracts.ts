@@ -27,7 +27,8 @@ export type SignResult =
         | 'no_vat_rate_on_date'
         | 'unpriceable_amount'
         | 'asset_unavailable'
-        | 'transfer_closed';
+        | 'transfer_closed'
+        | 'not_yours';
     };
 
 /**
@@ -46,6 +47,12 @@ export async function signApplication(
   if (application.status !== 'approved' && application.status !== 'awaiting_signature') {
     return { ok: false, reason: 'not_signable' };
   }
+  // The customer signs their own approval; a company's authorised signatory signs theirs.
+  const signer =
+    application.status === 'awaiting_signature'
+      ? application.signatory_email
+      : application.customer_id;
+  if (input.actor !== signer) return { ok: false, reason: 'not_yours' };
   if (application.hold_until && input.asOf > application.hold_until) {
     return { ok: false, reason: 'hold_expired' };
   }
@@ -78,6 +85,9 @@ export async function signApplication(
   });
   if (!claim.ok) return { ok: false, reason: 'asset_unavailable' };
 
+  // The start date chosen at submission is the one the decision was made on (the age rule
+  // uses it), so it cannot change at signing.
+  const startDate = application.start_date ?? input.startDate;
   const [table, vatRates] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
   const quote = application.quote;
   const factor = monthlyFactorFor(table, quote.financed_cents, quote.term_months);
@@ -101,7 +111,7 @@ export async function signApplication(
     quoteDate: quote.quote_date,
     priceListVersion: quote.price_list_version,
     signedDate: input.asOf,
-    startDate: input.startDate,
+    startDate: startDate,
     usagePurpose:
       answers['q_usage_purpose'] === undefined ? null : String(answers['q_usage_purpose']),
   });
@@ -109,7 +119,7 @@ export async function signApplication(
 
   const schedule = scheduleInvoices(
     {
-      startDate: input.startDate,
+      startDate: startDate,
       termMonths: quote.term_months,
       monthlyNetRentCents: quote.monthly_net_rent_cents,
       netTotalCents: quote.net_total_cents,
@@ -119,7 +129,7 @@ export async function signApplication(
   if (!schedule.ok) return { ok: false, reason: schedule.reason };
 
   const contractId = crypto.randomUUID();
-  await withAudit(
+  const audited = withAudit(
     db,
     {
       actor: input.actor,
@@ -130,10 +140,16 @@ export async function signApplication(
         applicationId: application.id,
         assetIds: quoteAssetIds(quote),
         priceListVersion: quote.price_list_version,
-        startDate: input.startDate,
+        startDate: startDate,
       },
     },
     async (tx) => {
+      // Only one signature wins: a double-click or a second tab finds it already signed.
+      const flipped = await tx.application.updateMany({
+        where: { id: application.id, status: { in: ['approved', 'awaiting_signature'] } },
+        data: { status: 'signed' },
+      });
+      if (flipped.count !== 1) throw new AlreadySigned();
       await tx.contract.create({
         data: {
           id: contractId,
@@ -142,7 +158,7 @@ export async function signApplication(
           quote_date: quote.quote_date,
           price_list_version: quote.price_list_version,
           signed_date: input.asOf,
-          start_date: input.startDate,
+          start_date: startDate,
           term_months: quote.term_months,
           financed_cents: quote.financed_cents,
           monthly_net_rent_cents: quote.monthly_net_rent_cents,
@@ -159,6 +175,7 @@ export async function signApplication(
         await tx.invoice.create({
           data: {
             contract_id: contractId,
+            customer_id: application.customer_id,
             number: invoice.number,
             due_date: invoice.dueDate,
             period_start: invoice.periodStart,
@@ -170,10 +187,6 @@ export async function signApplication(
           },
         });
       }
-      await tx.application.update({
-        where: { id: application.id },
-        data: { status: 'signed' },
-      });
       // A lease that came from a waiting-list offer closes that entry.
       const offers = await tx.reservation.findMany({
         where: {
@@ -196,7 +209,7 @@ export async function signApplication(
             asset_id: assetId,
             contract_id: contractId,
             type: 'leased',
-            on_date: input.startDate,
+            on_date: startDate,
             details_json: JSON.stringify({
               customerId: application.customer_id,
               termMonths: quote.term_months,
@@ -207,8 +220,17 @@ export async function signApplication(
       }
     }
   );
+  try {
+    await audited;
+  } catch (error) {
+    if (error instanceof AlreadySigned) return { ok: false, reason: 'not_signable' };
+    throw error;
+  }
   return { ok: true, contractId };
 }
+
+/** Thrown inside the signing transaction to roll it back when someone signed first. */
+class AlreadySigned extends Error {}
 
 /** A contract with its invoices and assets, for the contract page and the profile. */
 export function getContract(db: Db, id: string) {
@@ -218,10 +240,27 @@ export function getContract(db: Db, id: string) {
   });
 }
 
+/**
+ * A customer's contracts: the ones they hold, and the ones they passed on — they still owe
+ * (and keep the record of) the invoices for the months they used.
+ */
 export function listCustomerContracts(db: Db, customerId: string) {
   return db.contract.findMany({
-    where: { customer_id: customerId },
+    where: {
+      OR: [{ customer_id: customerId }, { invoices: { some: { customer_id: customerId } } }],
+    },
     include: { invoices: { orderBy: { number: 'asc' } }, assets: true },
     orderBy: { created_at: 'desc' },
   });
+}
+
+/**
+ * The invoices one customer pays on a contract. After a take-over the earlier months stay
+ * with the previous lessee; rows from before invoices had an owner belong to the holder.
+ */
+export function invoicesFor<T extends { customer_id: string | null }>(
+  contract: { customer_id: string; invoices: T[] },
+  customerId: string
+): T[] {
+  return contract.invoices.filter((i) => (i.customer_id ?? contract.customer_id) === customerId);
 }

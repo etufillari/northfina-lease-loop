@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { startTransferApplication } from '@/server/transfers';
 
@@ -23,6 +24,7 @@ export const POST = handleRoute(
       asOf: asOfFrom(request),
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       if (result.reason === 'own_contract') {
         return fail(409, 'OWN_CONTRACT', 'This is already your lease');
       }

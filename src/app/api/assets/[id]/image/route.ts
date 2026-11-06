@@ -3,6 +3,7 @@
 // looks like the previous life's picture. JPEG, PNG or WebP, at most 5 MB.
 import { fail, handleRoute, ok } from '@/server/api-response';
 import { MAX_IMAGE_BYTES, saveAssetImage } from '@/server/asset-images';
+import { staffOnly } from '@/server/authz';
 import { db } from '@/server/db';
 
 export const POST = handleRoute(
@@ -16,6 +17,8 @@ export const POST = handleRoute(
     if (typeof actor !== 'string' || actor.trim() === '') {
       return fail(400, 'NO_ACTOR', 'Say who is uploading as "actor"');
     }
+    const denied = await staffOnly(db, actor.trim());
+    if (denied) return denied;
 
     const result = await saveAssetImage(db, { assetId: id, file, actor: actor.trim() });
     if (!result.ok) {

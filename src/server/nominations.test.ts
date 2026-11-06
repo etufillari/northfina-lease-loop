@@ -1,7 +1,7 @@
-// End-of-term nomination, end to end against a real (test) database: Aino leases ebike-003
-// for 12 months and nominates Pekka. His 7 days start when the bike comes back; the desk
-// refurbishes and prices it as usual and holds it for him instead of the waiting list; he
-// can apply, nobody else can; unused, it goes to the waiting list.
+// Successor nominations, end to end against a real (test) database: Aino leases ebike-003
+// for 12 months and invites Pekka to take it over. Nothing is held until he accepts; once
+// accepted the bike waits for him through the return and the desk, and his 3 days start
+// when it is ready. Only he can apply; unused, it goes to the waiting list.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers, loadSecondLifeDemand } from '@/data/load';
 import { ainoScript, applyAndSubmit } from '../../tests/helpers/apply-and-submit';
@@ -11,13 +11,13 @@ import { seedAssets } from './assets';
 import { signApplication } from './contracts';
 import { seedCustomers } from './customers';
 import { expireLapsedHolds } from './hold-expiry';
-import { endOfTerm, nominateSuccessor } from './lifecycle';
+import { endOfTerm, nominateSuccessor, setBuyoutOption } from './lifecycle';
+import { answerNomination } from './nominations';
 import { executeSecondLife, listReturnedDecisions } from './second-life';
 import { seedWaitlist } from './waitlist';
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 const SIGNED = '2026-11-05';
-const TERM_ENDS = '2027-11-04';
 const RETURNED = '2027-11-10';
 
 /** Aino's signed 12-month lease of ebike-003; returns the contract id. */
@@ -48,10 +48,18 @@ async function freshDb(): Promise<TestDb> {
   return test;
 }
 
+/** The latest invitation or nomination on the bike. */
 const nomination = (db: TestDb['db']) =>
-  db.reservation.findFirstOrThrow({ where: { asset_id: 'ebike-003', kind: 'nomination' } });
+  db.reservation.findFirstOrThrow({
+    where: { asset_id: 'ebike-003', kind: { in: ['nomination', 'nomination_invite'] } },
+    orderBy: { id: 'desc' },
+  });
+const accept = (db: TestDb['db'], asOf: string, accept = true) =>
+  answerNomination(db, { assetId: 'ebike-003', customerId: 'cust-pekka', accept, asOf });
+const invitePekka = (db: TestDb['db'], contractId: string, asOf: string) =>
+  nominateSuccessor(db, { contractId, email: 'pekka@example.com', actor: 'cust-aino', asOf });
 
-describe('nominated during the lease', () => {
+describe('invited during the lease, accepted, then returned', () => {
   let test: TestDb;
   let contractId = '';
   beforeAll(async () => {
@@ -62,21 +70,39 @@ describe('nominated during the lease', () => {
     await test.cleanup();
   });
 
-  it('holds provisionally to 7 days after the term ends, and nothing lapses meanwhile', async () => {
-    const result = await nominateSuccessor(test.db, {
-      contractId,
-      email: 'pekka@example.com',
-      actor: 'cust-aino',
-      asOf: '2027-06-01',
+  it('nominating sends an invitation that reserves nothing', async () => {
+    expect(await invitePekka(test.db, contractId, '2027-06-01')).toEqual({
+      ok: true,
+      nomineeCustomerId: 'cust-pekka',
     });
-    expect(result).toEqual({ ok: true, nomineeCustomerId: 'cust-pekka' });
-    expect(await nomination(test.db)).toMatchObject({ until: '2027-11-11', active: true });
-    await expireLapsedHolds(test.db, { from: '2027-06-01', to: '2027-06-30' });
-    expect((await nomination(test.db)).active).toBe(true);
+    expect(await nomination(test.db)).toMatchObject({
+      kind: 'nomination_invite',
+      until: '9999-12-31',
+      active: true,
+    });
+    // Only Aino herself can nominate for her lease.
+    expect(
+      await nominateSuccessor(test.db, {
+        contractId,
+        email: 'lena.tamm@example.com',
+        actor: 'cust-lena',
+        asOf: '2027-06-01',
+      })
+    ).toEqual({ ok: false, reason: 'not_yours' });
   });
 
-  it('restarts the 7 days on the day the bike actually comes back', async () => {
-    expect(TERM_ENDS < RETURNED).toBe(true);
+  it('Pekka accepts: the bike waits for him through the lease, with no deadline yet', async () => {
+    expect(await accept(test.db, '2027-06-02')).toEqual({ ok: true, heldNow: false });
+    expect(await nomination(test.db)).toMatchObject({
+      kind: 'nomination',
+      until: '9999-12-31',
+      active: true,
+    });
+    // Aino can no longer choose to buy it: it is promised to Pekka.
+    expect(await setBuyoutOption(test.db, { contractId, optIn: true, actor: 'cust-aino' })).toEqual(
+      { ok: false, reason: 'nominated' }
+    );
+    // Nothing lapses while the bike is still out, or at the desk.
     const ended = await endOfTerm(test.db, {
       contractId,
       action: 'return',
@@ -85,15 +111,15 @@ describe('nominated during the lease', () => {
       usageReadings: { 'ebike-003': 4800 },
     });
     expect(ended).toEqual({ ok: true });
-    expect(await nomination(test.db)).toMatchObject({ until: '2027-11-17', active: true });
+    await expireLapsedHolds(test.db, { from: '2027-06-02', to: '2027-12-31' });
+    expect(await nomination(test.db)).toMatchObject({ kind: 'nomination', active: true });
   });
 
-  it('the desk refurbishes and prices it, then holds it for Pekka instead of the list', async () => {
+  it('the desk refurbishes and prices it, holds it for Pekka, and his 3 days start', async () => {
     const desk = await listReturnedDecisions(test.db, RETURNED);
     const card = desk.find((d) => d.assetId === 'ebike-003')!;
     if (!card.result.ok) throw new Error(card.result.reason);
     expect(card.result.preview.outcome).toEqual({ kind: 'nominee', customerId: 'cust-pekka' });
-    expect(card.result.preview.nominee).toMatchObject({ id: 'cust-pekka' });
     expect(card.result.preview.decision.considered).toEqual([]);
 
     const executed = await executeSecondLife(test.db, {
@@ -106,11 +132,7 @@ describe('nominated during the lease', () => {
     const asset = await test.db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     expect(asset.status).toBe('reserved');
     expect(asset.second_life_price_cents).toBe(card.result.preview.decision.financedCents);
-    const events = await test.db.assetEvent.findMany({
-      where: { asset_id: 'ebike-003', on_date: RETURNED },
-      orderBy: { id: 'asc' },
-    });
-    expect(events.map((e) => e.type)).toEqual(['returned', 'refurbished', 'held_for_nominee']);
+    expect(await nomination(test.db)).toMatchObject({ until: '2027-11-13', active: true });
   });
 
   it('only Pekka can apply for it', async () => {
@@ -129,43 +151,70 @@ describe('nominated during the lease', () => {
     expect(pekka.ok).toBe(true);
   });
 
-  it('unused, it lapses the day after its last day and goes on to the waiting list', async () => {
-    await expireLapsedHolds(test.db, { from: RETURNED, to: '2027-11-17' });
+  it('unused, it lapses the day after its 3rd day and goes on to the waiting list', async () => {
+    await expireLapsedHolds(test.db, { from: RETURNED, to: '2027-11-13' });
     expect((await nomination(test.db)).active).toBe(true);
-    const summary = await expireLapsedHolds(test.db, { from: '2027-11-17', to: '2027-11-18' });
-    expect(summary.nominations).toEqual([{ day: '2027-11-18', assetId: 'ebike-003' }]);
+    const summary = await expireLapsedHolds(test.db, { from: '2027-11-13', to: '2027-11-14' });
+    expect(summary.nominations).toEqual([{ day: '2027-11-14', assetId: 'ebike-003' }]);
     expect((await nomination(test.db)).active).toBe(false);
-    const asset = await test.db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     const passedOn = await test.db.assetEvent.findFirst({
       where: {
         asset_id: 'ebike-003',
         type: { in: ['offered_to_waiter', 'listed_available'] },
-        on_date: '2027-11-18',
+        on_date: '2027-11-14',
       },
     });
     expect(passedOn).not.toBeNull();
-    expect(['available', 'reserved']).toContain(asset.status);
   });
 });
 
-describe('other nomination timings', () => {
+describe('an invitation nobody accepts', () => {
   let test: TestDb;
   let contractId = '';
   beforeAll(async () => {
     test = await freshDb();
     contractId = await ainoLease(test.db);
+    await invitePekka(test.db, contractId, '2027-06-01');
+    await endOfTerm(test.db, {
+      contractId,
+      action: 'return',
+      actor: 'cust-aino',
+      asOf: RETURNED,
+      usageReadings: { 'ebike-003': 4800 },
+    });
   });
   afterAll(async () => {
     await test.cleanup();
   });
 
-  it('a buyout ends the nomination', async () => {
-    await nominateSuccessor(test.db, {
-      contractId,
-      email: 'pekka@example.com',
-      actor: 'cust-aino',
-      asOf: '2027-06-01',
-    });
+  it('gives no priority: the desk matches the waiting list as usual and ends it', async () => {
+    const desk = await listReturnedDecisions(test.db, RETURNED);
+    const card = desk.find((d) => d.assetId === 'ebike-003')!;
+    if (!card.result.ok) throw new Error(card.result.reason);
+    expect(card.result.preview.outcome.kind).not.toBe('nominee');
+
+    await executeSecondLife(test.db, { assetId: 'ebike-003', actor: 'staff', asOf: RETURNED });
+    expect((await nomination(test.db)).active).toBe(false);
+    // Too late now: accepting finds no open invitation.
+    expect(await accept(test.db, RETURNED)).toEqual({ ok: false, reason: 'no_invitation' });
+  });
+});
+
+describe('declining, buying, and inviting after the return', () => {
+  it('a declined invitation ends and holds nothing', async () => {
+    const test = await freshDb();
+    const contractId = await ainoLease(test.db);
+    await invitePekka(test.db, contractId, '2027-06-01');
+    expect(await accept(test.db, '2027-06-02', false)).toEqual({ ok: true, heldNow: false });
+    expect((await nomination(test.db)).active).toBe(false);
+    await test.cleanup();
+  });
+
+  it('a buyout ends an accepted nomination', async () => {
+    const test = await freshDb();
+    const contractId = await ainoLease(test.db);
+    await invitePekka(test.db, contractId, '2027-06-01');
+    await accept(test.db, '2027-06-02');
     const bought = await endOfTerm(test.db, {
       contractId,
       action: 'buy',
@@ -174,13 +223,11 @@ describe('other nomination timings', () => {
     });
     expect(bought).toEqual({ ok: true });
     expect((await nomination(test.db)).active).toBe(false);
+    await test.cleanup();
   });
-});
 
-describe('nominated after the return', () => {
-  let test: TestDb;
-  beforeAll(async () => {
-    test = await freshDb();
+  it('invited when the bike is already listed: accepting holds it for 3 days from then', async () => {
+    const test = await freshDb();
     const contractId = await ainoLease(test.db);
     await endOfTerm(test.db, {
       contractId,
@@ -189,19 +236,22 @@ describe('nominated after the return', () => {
       asOf: RETURNED,
       usageReadings: { 'ebike-003': 4800 },
     });
-    const nominated = await nominateSuccessor(test.db, {
-      contractId,
-      email: 'pekka@example.com',
-      actor: 'cust-aino',
-      asOf: '2027-11-12',
+    await executeSecondLife(test.db, { assetId: 'ebike-003', actor: 'staff', asOf: RETURNED });
+    // Listed for anyone, or offered to the list: invite only matters if it is free.
+    const listed = await test.db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    await invitePekka(test.db, contractId, '2027-11-12');
+    expect(await nomination(test.db)).toMatchObject({
+      kind: 'nomination_invite',
+      until: '2027-11-15',
     });
-    if (!nominated.ok) throw new Error(nominated.reason);
-  });
-  afterAll(async () => {
+    const answered = await accept(test.db, '2027-11-13');
+    if (listed.status === 'available') {
+      expect(answered).toEqual({ ok: true, heldNow: true });
+      expect(await nomination(test.db)).toMatchObject({ kind: 'nomination', until: '2027-11-16' });
+    } else {
+      // Already offered to someone on the waiting list: the invitation cannot override it.
+      expect(answered).toEqual({ ok: false, reason: 'no_longer_available' });
+    }
     await test.cleanup();
-  });
-
-  it('runs 7 days from the nomination', async () => {
-    expect(await nomination(test.db)).toMatchObject({ until: '2027-11-19', active: true });
   });
 });

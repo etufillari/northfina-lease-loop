@@ -32,7 +32,10 @@ export function canClaim(
     return { ok: false, reason: 'leased_or_sold' };
   }
   if (asset.status === 'returned') return { ok: false, reason: 'in_maintenance' };
-  const live = activeHolds.filter((hold) => !isLapsed(hold.until, asOf));
+  // A nomination invitation nobody accepted yet reserves nothing.
+  const live = activeHolds.filter(
+    (hold) => hold.kind !== 'nomination_invite' && !isLapsed(hold.until, asOf)
+  );
   if (live.some((hold) => hold.customerId !== customerId)) {
     return { ok: false, reason: 'held_for_someone_else' };
   }

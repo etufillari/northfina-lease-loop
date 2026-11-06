@@ -54,6 +54,12 @@ describe('canClaim', () => {
     );
   });
 
+  it('a nomination invitation nobody accepted yet reserves nothing', () => {
+    expect(
+      canClaim({ status: 'available' }, [hold('nomination_invite', 'sanna')], 'aino', TODAY)
+    ).toEqual({ ok: true });
+  });
+
   it('once the desk holds it for the nominee, only the nominee can claim it', () => {
     const held = [hold('nomination', 'sanna')];
     expect(canClaim({ status: 'reserved' }, held, 'sanna', TODAY)).toEqual({ ok: true });

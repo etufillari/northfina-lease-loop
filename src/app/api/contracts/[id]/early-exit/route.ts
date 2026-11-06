@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { earlyExitPreview, executeEarlyExit } from '@/server/lifecycle';
 
@@ -28,6 +29,7 @@ export const GET = handleRoute(
     const { id } = await params;
     const result = await earlyExitPreview(db, id, asOfFrom(request));
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       const [status, code, message] = failures[result.reason]!;
       return fail(status, code, message);
     }
@@ -52,6 +54,7 @@ export const POST = handleRoute(
       usageReadings: body.usageReadings,
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       const [status, code, message] = failures[result.reason]!;
       return fail(status, code, message);
     }

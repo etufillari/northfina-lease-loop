@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { answerQuestion } from '@/server/applications';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
@@ -25,6 +26,7 @@ export const PUT = handleRoute(
       asOf: asOfFrom(request),
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       if (result.reason === 'not_found')
         return fail(404, 'APPLICATION_NOT_FOUND', 'No such application');
       if (result.reason === 'not_a_draft')

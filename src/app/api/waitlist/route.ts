@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { assetCategorySchema, assetConditionSchema } from '@/data/schemas';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { joinWaitlist } from '@/server/waitlist-actions';
 import { waitlistFailure } from './failure';
@@ -27,6 +28,8 @@ const bodySchema = z
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, bodySchema);
+  // A customer joins the list for themself only.
+  if (body.actor !== body.customerId) return notYours();
   const result = await joinWaitlist(db, { ...body, asOf: asOfFrom(request) });
   if (!result.ok) return waitlistFailure(result.reason);
   return ok({ id: result.entry.id }, { status: 201 });

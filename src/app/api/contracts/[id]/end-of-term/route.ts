@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { endOfTerm } from '@/server/lifecycle';
 
@@ -27,6 +28,7 @@ export const POST = handleRoute(
       usageReadings: body.usageReadings,
     });
     if (!result.ok) {
+      if (result.reason === 'not_yours') return notYours();
       if (result.reason === 'not_found') return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
       if (result.reason === 'not_active')
         return fail(409, 'NOT_ACTIVE', 'This contract has already ended');

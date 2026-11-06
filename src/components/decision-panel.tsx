@@ -48,6 +48,7 @@ export function DecisionPanel({
   t,
   onSign,
   isSigning = false,
+  isEvaluating = false,
   signError = null,
 }: {
   decision: EligibilityDecision;
@@ -55,6 +56,7 @@ export function DecisionPanel({
   t: Translate;
   onSign?: () => void;
   isSigning?: boolean;
+  isEvaluating?: boolean;
   signError?: string | null;
 }) {
   const kind = decision.decision;
@@ -98,7 +100,7 @@ export function DecisionPanel({
           ) : null}
           <button
             type="button"
-            disabled={isSigning}
+            disabled={isSigning || isEvaluating}
             onClick={onSign}
             className="w-full rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a] dark:bg-sky-600 dark:hover:bg-sky-500 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
           >

@@ -15,16 +15,68 @@ import { QuestionField } from './question-field';
 
 type Answers = Record<string, AnswerValue>;
 
-type EvaluateData = {
+export type EvaluateData = {
   questions: Question[];
   answers: Answers;
   dropped: string[];
   decision: EligibilityDecision;
 };
 
-type EvaluateState =
+export type EvaluateState =
   { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: EvaluateData };
 
+export function shouldAcceptEvaluationResponse({
+  sequence,
+  latestSequence,
+  isAborted,
+  isSigning,
+}: {
+  sequence: number;
+  latestSequence: number;
+  isAborted: boolean;
+  isSigning: boolean;
+}): boolean {
+  if (isAborted) return false;
+  if (isSigning) return false;
+  if (sequence !== latestSequence) return false;
+  return true;
+}
+
+export function canSignApplication({
+  isSigning,
+  isEvaluating,
+  signTarget,
+  deal,
+  state,
+  latestSequence,
+  evaluatedSequence,
+}: {
+  isSigning: boolean;
+  isEvaluating: boolean;
+  signTarget?: SignTarget;
+  deal: ApplicationDeal;
+  state: EvaluateState;
+  latestSequence: number;
+  evaluatedSequence: number;
+}): boolean {
+  if (isSigning || isEvaluating) return false;
+  if (!signTarget) return false;
+  if (state.status !== 'ready') return false;
+  if (state.data.decision.decision !== 'yes') return false;
+  if (latestSequence !== evaluatedSequence) return false;
+  if (signTarget.termMonths !== deal.term_months) return false;
+  return true;
+}
+
+export function getSigningActor(answers: Answers): string {
+  const rawActor =
+    typeof answers.q_email === 'string' && answers.q_email.trim().length > 0
+      ? answers.q_email.trim()
+      : typeof answers.q_business_id === 'string' && answers.q_business_id.trim().length > 0
+        ? answers.q_business_id.trim()
+        : 'customer';
+  return rawActor.slice(0, 100);
+}
 export type ApplicationDeal = {
   category: string;
   financed_amount_cents: number;
@@ -60,15 +112,31 @@ export function ApplicationForm({
   const router = useRouter();
   const [answers, setAnswers] = useState<Answers>({});
   const [state, setState] = useState<EvaluateState>({ status: 'loading' });
+  const [isEvaluating, setIsEvaluating] = useState(true);
   const [removed, setRemoved] = useState<string[]>([]);
   const [isSigning, setIsSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
   // Question texts seen so far, so a removed answer can be named after its question is gone.
   const seen = useRef(new Map<string, Question>());
 
+  // Race condition guards
+  const latestSequenceRef = useRef(0);
+  const evaluatedSequenceRef = useRef(0);
+  const isSigningRef = useRef(false);
+  const isEvaluatingRef = useRef(true);
+  const activeAbortControllerRef = useRef<AbortController | null>(null);
+
   const { category, financed_amount_cents, term_months, monthly_rent_incl_vat_cents } = deal;
   useEffect(() => {
+    if (isSigningRef.current) return;
+
+    const sequence = ++latestSequenceRef.current;
+    isEvaluatingRef.current = true;
+    setIsEvaluating(true);
+
     const controller = new AbortController();
+    activeAbortControllerRef.current = controller;
+
     const timer = setTimeout(async () => {
       try {
         const response = await fetch('/api/applications/evaluate', {
@@ -81,7 +149,31 @@ export function ApplicationForm({
           }),
           signal: controller.signal,
         });
+
+        if (
+          !shouldAcceptEvaluationResponse({
+            sequence,
+            latestSequence: latestSequenceRef.current,
+            isAborted: controller.signal.aborted,
+            isSigning: isSigningRef.current,
+          })
+        ) {
+          return;
+        }
+
         const json = (await response.json()) as { success: boolean; data?: EvaluateData };
+
+        if (
+          !shouldAcceptEvaluationResponse({
+            sequence,
+            latestSequence: latestSequenceRef.current,
+            isAborted: controller.signal.aborted,
+            isSigning: isSigningRef.current,
+          })
+        ) {
+          return;
+        }
+
         if (!json.success || !json.data) throw new Error('evaluate failed');
 
         for (const question of json.data.questions) seen.current.set(question.id, question);
@@ -89,20 +181,41 @@ export function ApplicationForm({
           setRemoved(json.data.dropped.map((id) => seen.current.get(id)?.text[locale] ?? id));
           setAnswers(json.data.answers); // the next request confirms nothing else changes
         }
+        evaluatedSequenceRef.current = sequence;
+        isEvaluatingRef.current = false;
+        setIsEvaluating(false);
         setState({ status: 'ready', data: json.data });
       } catch {
-        if (!controller.signal.aborted) setState({ status: 'error' });
+        if (
+          !controller.signal.aborted &&
+          sequence === latestSequenceRef.current &&
+          !isSigningRef.current
+        ) {
+          isEvaluatingRef.current = false;
+          setIsEvaluating(false);
+          setState({ status: 'error' });
+        }
       }
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
       controller.abort();
+      if (activeAbortControllerRef.current === controller) {
+        activeAbortControllerRef.current = null;
+      }
     };
   }, [answers, category, financed_amount_cents, term_months, monthly_rent_incl_vat_cents, locale]);
 
   function change(id: string, value: AnswerValue | undefined) {
+    if (isSigningRef.current) return;
     setRemoved([]);
     setSignError(null);
+    latestSequenceRef.current++;
+    isEvaluatingRef.current = true;
+    setIsEvaluating(true);
+    activeAbortControllerRef.current?.abort();
+    activeAbortControllerRef.current = null;
+
     setAnswers((current) => {
       const next = { ...current };
       if (value === undefined) delete next[id];
@@ -112,49 +225,67 @@ export function ApplicationForm({
   }
 
   async function handleSign() {
-    if (!signTarget || isSigning) return;
+    if (
+      !canSignApplication({
+        isSigning: isSigningRef.current,
+        isEvaluating: isEvaluatingRef.current,
+        signTarget,
+        deal,
+        state,
+        latestSequence: latestSequenceRef.current,
+        evaluatedSequence: evaluatedSequenceRef.current,
+      })
+    ) {
+      return;
+    }
+
+    // Synchronously acquire signing lock to prevent double-clicks
+    isSigningRef.current = true;
     setIsSigning(true);
     setSignError(null);
 
-    const rawActor =
-      typeof answers.q_email === 'string' && answers.q_email.trim().length > 0
-        ? answers.q_email.trim()
-        : typeof answers.q_business_id === 'string' && answers.q_business_id.trim().length > 0
-          ? answers.q_business_id.trim()
-          : 'customer';
-    const actor = rawActor.slice(0, 100);
+    // Cancel any active evaluation so in-flight requests cannot race with signing
+    activeAbortControllerRef.current?.abort();
+    activeAbortControllerRef.current = null;
+    const priorSequence = latestSequenceRef.current;
+    latestSequenceRef.current++;
+    const actor = getSigningActor(answers);
 
     try {
-      const response = await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'reserved', actor }),
-      });
+      const response = await fetch(
+        `/api/assets/${encodeURIComponent(signTarget!.assetId)}/status`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'reserved', actor }),
+        }
+      );
       const json = (await response.json()) as { success?: boolean };
       if (!response.ok || !json.success) {
         throw new Error('sign failed');
       }
 
       const params = new URLSearchParams({
-        asset: signTarget.assetId,
-        term: String(signTarget.termMonths),
-        down: String(signTarget.downPaymentCents),
-        signedOn: signTarget.signedOn,
+        asset: signTarget!.assetId,
+        term: String(signTarget!.termMonths),
+        down: String(signTarget!.downPaymentCents),
+        signedOn: signTarget!.signedOn,
       });
       router.push(`/${locale}/invoices?${params.toString()}`);
     } catch {
-      setSignError(t('apply.signError'));
+      isSigningRef.current = false;
       setIsSigning(false);
+      latestSequenceRef.current = priorSequence;
+      setSignError(t('apply.signError'));
     }
   }
-
   const data = state.status === 'ready' ? state.data : null;
 
   return (
     <div className="grid gap-[32px] lg:grid-cols-[minmax(0,1fr)_22rem]">
       <form
         aria-labelledby="questions-heading"
-        aria-busy={state.status === 'loading'}
+        aria-busy={state.status === 'loading' || isEvaluating}
         onSubmit={(event) => event.preventDefault()}
         className="space-y-[24px] rounded-[12px] border border-[#dad9d8] bg-[#FFFFFF] p-[24px] text-[#353331] shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
       >
@@ -176,10 +307,10 @@ export function ApplicationForm({
           </div>
         ) : null}
 
-        {state.status === 'loading' ? (
+        {state.status === 'loading' || isEvaluating ? (
           <p className="text-[#615b57] dark:text-stone-400">{t('apply.checking')}</p>
         ) : null}
-        {state.status === 'error' ? (
+        {state.status === 'error' && !isEvaluating ? (
           <p role="alert" className="text-[#DC2626] dark:text-red-400">
             {t('apply.error')}
           </p>
@@ -207,6 +338,7 @@ export function ApplicationForm({
               t={t}
               onSign={signTarget ? handleSign : undefined}
               isSigning={isSigning}
+              isEvaluating={isEvaluating}
               signError={signError}
             />
           ) : null}

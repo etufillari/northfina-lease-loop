@@ -23,6 +23,7 @@ import { MAX_START_MONTHS_AHEAD } from '@/domain/contract';
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { isSentinel, previousAnswered } from './wizard-back';
 
 type WizardState = {
   application: {
@@ -100,29 +101,41 @@ export function ApplicationWizard({
   }, [applicationId, suffix]);
 
   // The browser's Back button steps back one question while the form runs, instead of
-  // leaving the page. One sentinel history entry is kept; when there is nothing left to
-  // step back to, the next Back leaves as usual.
+  // leaving the page. A sentinel history entry (same URL, marked `leaseWizard`) exists only
+  // while there IS a question to step back to, so on a decided application or the first
+  // question Back leaves at once. If the sentinel outlives that (the form was submitted),
+  // the Back that pops it leaves too, rather than doing nothing.
+  const sentinelActive = useRef(false);
   const stepBackRef = useRef<() => boolean>(() => false);
+  const browserBackSteps =
+    state !== null &&
+    state.application.status === 'draft' &&
+    previousAnswered(state, editingId) !== null;
   useEffect(() => {
-    window.history.pushState({ leaseWizard: true }, '');
+    // Arriving on a sentinel from another page (Back from the contract) counts as active.
+    sentinelActive.current = isSentinel(window.history.state);
     const onPop = () => {
-      if (stepBackRef.current()) window.history.pushState({ leaseWizard: true }, '');
+      if (isSentinel(window.history.state)) {
+        sentinelActive.current = true; // Forward onto a sentinel: nothing to undo.
+        return;
+      }
+      if (!sentinelActive.current) return; // Ordinary navigation, not ours.
+      sentinelActive.current = false;
+      if (!stepBackRef.current()) window.history.back();
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
   useEffect(() => {
+    if (browserBackSteps && !sentinelActive.current) {
+      window.history.pushState({ leaseWizard: true }, '');
+      sentinelActive.current = true;
+    }
+  });
+  useEffect(() => {
     stepBackRef.current = () => {
       if (!state || state.application.status !== 'draft') return false;
-      if (editingId) {
-        setEditingId(null);
-        setDraft('');
-        return true;
-      }
-      const activeId = editingId ?? state.nextQuestionId;
-      const previous = state.visibleQuestions
-        .filter((q) => state.application.answers[q.id] !== undefined && q.id !== activeId)
-        .at(-1);
+      const previous = previousAnswered(state, editingId);
       if (!previous) return false;
       setEditingId(previous.id);
       setDraft(String(state.application.answers[previous.id] ?? ''));
@@ -293,7 +306,7 @@ export function ApplicationWizard({
     .map((q) => ({ question: q, value: prefill[q.id]! }));
   const showBatch =
     current !== null && !editingId && batchItems.some((item) => item.question.id === current.id);
-  const canStepBack = editingId !== null || answered.length > 0;
+  const canStepBack = application.status === 'draft' && previousAnswered(state, editingId) !== null;
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">

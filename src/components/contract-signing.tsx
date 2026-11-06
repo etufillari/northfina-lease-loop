@@ -16,6 +16,8 @@ type ApiResponse<T> =
   | { success: true; data: T }
   | { success: false; error: { message: string; details?: { repriced?: Quote } } };
 
+type AccessResponse = { token: string; expiresAt: string; contractId: string };
+
 type ContractSigningProps = {
   quoteId: string;
   initialCustomerId?: string;
@@ -30,6 +32,7 @@ export function ContractSigning({ quoteId, initialCustomerId, locale }: Contract
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
   const [signed, setSigned] = useState(false);
+  const [portalUrl, setPortalUrl] = useState<string>();
 
   useEffect(() => {
     let active = true;
@@ -71,7 +74,10 @@ export function ContractSigning({ quoteId, initialCustomerId, locale }: Contract
           actor: customerId.trim(),
         }),
       });
-      const body = (await response.json()) as ApiResponse<unknown>;
+      const body = (await response.json()) as ApiResponse<{
+        contract: { id: string };
+        access: AccessResponse;
+      }>;
       if (!response.ok || !body.success) {
         const repriced = body.success ? undefined : body.error.details?.repriced;
         if (repriced) {
@@ -82,6 +88,7 @@ export function ContractSigning({ quoteId, initialCustomerId, locale }: Contract
         }
         return;
       }
+      setPortalUrl(`${window.location.origin}/${locale}/portal/${body.data.access.token}`);
       setSigned(true);
     } catch {
       setError(t('contract.signError'));
@@ -101,6 +108,19 @@ export function ContractSigning({ quoteId, initialCustomerId, locale }: Contract
       <section className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900 dark:bg-emerald-950">
         <h2 className="text-xl font-semibold">{t('contract.signedTitle')}</h2>
         <p className="mt-2 text-stone-700 dark:text-stone-300">{t('contract.signedDescription')}</p>
+        {portalUrl ? (
+          <div className="mt-5">
+            <p className="text-sm text-stone-700 dark:text-stone-300">
+              {t('contract.portalLinkDescription')}
+            </p>
+            <a
+              href={portalUrl}
+              className="mt-3 inline-flex rounded-xl bg-emerald-700 px-5 py-3 font-medium text-white transition hover:bg-emerald-800"
+            >
+              {t('contract.openPortal')}
+            </a>
+          </div>
+        ) : null}
       </section>
     );
   }

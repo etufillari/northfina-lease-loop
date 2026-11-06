@@ -89,10 +89,24 @@ model Contract {
   contract_net_total_cents Int
   price_lock_json          String // which price was locked and why
   invoices                 Invoice[]
+  access_tokens            CustomerAccessToken[]
 
   @@index([asset_id])
   @@index([customer_id])
   @@index([end_date])
+}
+
+// Passwordless customer access. Only the SHA-256 token hash is stored.
+model CustomerAccessToken {
+  id           String   @id
+  created_at   DateTime @default(now())
+  expires_at   DateTime
+  token_hash   String   @unique
+  contract_id  String
+  contract     Contract @relation(fields: [contract_id], references: [id])
+
+  @@index([contract_id])
+  @@index([expires_at])
 }
 
 // A submitted application and the decision made from its answers.

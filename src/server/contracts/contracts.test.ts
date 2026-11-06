@@ -60,6 +60,27 @@ async function createApprovedApplication() {
 }
 
 describe('createContract', () => {
+  it('keeps the first lease of a used item instead of the market value of this one', async () => {
+    const applied = await createApplication(db, {
+      ...approvedSubmission,
+      assetId: 'ebike-005',
+      date: '2026-11-06',
+    });
+    if (!applied.ok) throw new Error(`expected application, got ${applied.reason}`);
+
+    const result = await createContract(db, {
+      applicationId: applied.application.id,
+      signedOn: '2026-11-06',
+      actor: 'team-test',
+    });
+
+    expect(result).toMatchObject({ ok: true, contract: { listPriceCents: 81_416 } });
+    expect(await db.asset.findUniqueOrThrow({ where: { id: 'ebike-005' } })).toMatchObject({
+      first_leased_on: '2025-01-01',
+      original_list_price_cents: 159_000,
+    });
+  });
+
   it('creates an active contract with locked pricing and asset history', async () => {
     const application = await createApprovedApplication();
 

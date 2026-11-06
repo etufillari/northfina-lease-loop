@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { CatalogueGrid } from '@/components/catalogue-grid';
-import { loadPriceLists } from '@/data/load';
+import { loadPriceLists, loadResidualCurves } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -25,7 +25,11 @@ export default async function CategoryPage({
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db, { category }), loadPriceLists()]);
+  const [assets, priceLists, residualCurves] = await Promise.all([
+    listAssets(db, { category }),
+    loadPriceLists(),
+    loadResidualCurves(),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -58,6 +62,7 @@ export default async function CategoryPage({
             assets={assets}
             locale={locale}
             priceLists={priceLists}
+            residualCurves={residualCurves}
             today={today}
             t={t}
           />

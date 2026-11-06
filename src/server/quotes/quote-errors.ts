@@ -27,6 +27,12 @@ export function throwQuoteError(result: CreateQuoteFailure): never {
       throw new ApiError(422, 'PRICING_UNAVAILABLE', 'The requested lease cannot be priced', {
         reason,
       });
+    case 'original_price_not_found':
+    case 'invalid_lifecycle_dates':
+    case 'residual_value_unavailable':
+      throw new ApiError(422, 'PRICING_UNAVAILABLE', 'The used item cannot be valued', {
+        reason,
+      });
     case 'no_vat_rate_on_date':
       throw new ApiError(422, 'VAT_RATE_UNAVAILABLE', 'No VAT rate applies on this date');
     default:

@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow } from '@/generated/prisma/client';
+import { loadPriceLists } from '@/data/load';
 import { contractStatusSchema, isoDateSchema } from '@/data/schemas';
 import { contractDatesFor } from '@/domain/contracts/contract';
 import type { QuoteData } from '@/domain/pricing/quote';
+import { isUsedItem, lifecycleMetadataFor } from '@/domain/second-life/used-item-value';
 import { z } from 'zod';
+import { toAsset } from '../assets/assets';
 import { withAudit } from '../audit';
 import type { PrismaClient } from '../prisma-client';
 
@@ -141,6 +144,12 @@ export async function createContract(
     pricing_snapshot_json: JSON.stringify(pricingSnapshot),
   };
 
+  // A used item keeps its first lease: this lease's market value must not replace it.
+  const asset = toAsset(application.asset);
+  const earlierLease = isUsedItem(asset)
+    ? lifecycleMetadataFor(asset, await loadPriceLists())
+    : null;
+
   const contractId = randomUUID();
   try {
     const row = await withAudit(
@@ -163,9 +172,11 @@ export async function createContract(
           where: { id: application.asset_id, status: 'available' },
           data: {
             status: 'reserved',
-            first_leased_on: application.asset.first_leased_on ?? dates.startsOn,
+            first_leased_on: earlierLease?.firstLeasedOn ?? dates.startsOn,
             original_list_price_cents:
-              application.asset.original_list_price_cents ?? pricing.netListPriceCents,
+              earlierLease?.originalListPriceCents ??
+              application.asset.original_list_price_cents ??
+              pricing.netListPriceCents,
           },
         });
         if (reserved.count !== 1) {

@@ -1,5 +1,6 @@
-import type { Asset, CoefficientTable, PriceList, VatRates } from '@/data/schemas';
-import { listPriceOn } from './price-list';
+import type { Asset, CoefficientTable, PriceList, ResidualCurves, VatRates } from '@/data/schemas';
+import type { UsedItemValuation } from '../second-life/used-item-value';
+import { itemPriceOn, type PriceBasis } from './item-price';
 import { leasePriceFor } from './pricing';
 import { vatOn } from './vat';
 
@@ -28,6 +29,8 @@ export type QuoteData = {
     endOfTermBuyoutCents: number;
     totalCostWithBuyoutCents: number;
   };
+  /** How a used item's price was reached; `null` for a new item at list price. */
+  valuation: UsedItemValuation | null;
   vatPreview: {
     invoiceDate: string;
     ratePercent: number;
@@ -36,6 +39,7 @@ export type QuoteData = {
     monthlyGrossRentCents: number;
   };
   sources: {
+    priceBasis: PriceBasis;
     priceListVersion: number;
     coefficientTableId: string;
     coefficientTableVersion: number;
@@ -54,17 +58,22 @@ export type QuoteResult =
         | 'below_minimum'
         | 'above_maximum'
         | 'unknown_term'
-        | 'no_vat_rate_on_date';
+        | 'no_vat_rate_on_date'
+        | 'original_price_not_found'
+        | 'invalid_lifecycle_dates'
+        | 'residual_value_unavailable';
       status?: Asset['status'];
     };
 
 /**
  * Builds a read-only quote from the current asset and the supplied data pack.
+ * A new item is priced from its list price, a used item from its market value.
  * All money remains in integer cents; pricing and VAT retain their own rounding rules.
  */
 export function quoteFor(
   asset: Asset,
   priceLists: readonly PriceList[],
+  residualCurves: ResidualCurves,
   coefficientTable: CoefficientTable,
   vatRates: VatRates,
   input: QuoteInput
@@ -73,12 +82,12 @@ export function quoteFor(
     return { ok: false, reason: 'asset_unavailable', status: asset.status };
   }
 
-  const listPrice = listPriceOn(priceLists, input.assetId, input.date);
-  if (!listPrice.ok) return listPrice;
+  const itemPrice = itemPriceOn(asset, priceLists, residualCurves, input.date);
+  if (!itemPrice.ok) return itemPrice;
 
   const pricing = leasePriceFor(
     coefficientTable,
-    listPrice.priceCents,
+    itemPrice.priceCents,
     input.downPaymentCents,
     input.termMonths
   );
@@ -104,6 +113,7 @@ export function quoteFor(
         endOfTermBuyoutCents: pricing.endOfTermBuyoutCents,
         totalCostWithBuyoutCents: pricing.totalCostWithBuyoutCents,
       },
+      valuation: itemPrice.valuation,
       vatPreview: {
         invoiceDate: input.date,
         ratePercent: vat.ratePercent,
@@ -112,7 +122,8 @@ export function quoteFor(
         monthlyGrossRentCents: vat.grossCents,
       },
       sources: {
-        priceListVersion: listPrice.priceListVersion,
+        priceBasis: itemPrice.basis,
+        priceListVersion: itemPrice.priceListVersion,
         coefficientTableId: coefficientTable.id,
         coefficientTableVersion: coefficientTable.version,
       },

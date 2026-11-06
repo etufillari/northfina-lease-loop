@@ -4,7 +4,7 @@ import {
   type AssetCondition,
   type ResidualCurves,
 } from '@/data/schemas';
-import { addMonthsClamped } from '../calendar';
+import { addMonthsClamped, wholeMonthsBetween } from '../calendar';
 import { contractDatesFor } from '../contracts/contract';
 import { residualValueFor } from '../second-life/residual-value';
 
@@ -17,13 +17,15 @@ export type EarlyExitContract = {
   monthlyNetRentCents: number;
   buyoutCents: number;
   annualInterestBasisPoints: number;
-  listPriceCents: number;
 };
 
 export type EarlyExitAsset = {
   category: AssetCategory;
   condition: AssetCondition;
   usageValue: number;
+  /** On or before the contract start: a used item's first lease was before this contract. */
+  firstLeasedOn: string;
+  originalListPriceCents: number;
 };
 
 export type EarlyExitQuoteInput = {
@@ -79,7 +81,6 @@ function assertContract(contract: EarlyExitContract): void {
   }
   assertCents(contract.monthlyNetRentCents, 'monthlyNetRentCents');
   assertCents(contract.buyoutCents, 'buyoutCents');
-  assertCents(contract.listPriceCents, 'listPriceCents');
 
   const expectedEnd = contractDatesFor(contract.startsOn, contract.termMonths).endsOn;
   if (expectedEnd !== contract.endsOn) {
@@ -154,12 +155,17 @@ export function earlyExitQuoteFor(
   discountedBalance += input.contract.buyoutCents / Math.pow(discountedBase, remainingMonths / 12);
   const discountedBalanceCents = Math.round(discountedBalance);
 
+  if (input.asset.firstLeasedOn > input.contract.startsOn) {
+    return { ok: false, reason: 'residual_value_unavailable', detail: 'first_lease_after_start' };
+  }
+
   const residual = residualValueFor({
-    originalListPriceCents: input.contract.listPriceCents,
+    originalListPriceCents: input.asset.originalListPriceCents,
     category: input.asset.category,
     condition: input.asset.condition,
     usageValue: input.asset.usageValue,
-    ageMonths: completedMonths,
+    ageMonths:
+      wholeMonthsBetween(input.asset.firstLeasedOn, input.contract.startsOn) + completedMonths,
     curves: input.residualCurves,
   });
   if (!residual.ok) {

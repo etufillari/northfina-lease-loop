@@ -25,6 +25,17 @@ beforeEach(async () => {
 });
 
 describe('createLeaseOffer', () => {
+  it('bases the limits and the quote of a used item on its market value', async () => {
+    await expect(createLeaseOffer(db, 'ebike-005', '2026-11-06')).resolves.toMatchObject({
+      ok: true,
+      limits: { minDownPaymentCents: 0, maxDownPaymentCents: 51_416 },
+      quote: {
+        pricing: { netListPriceCents: 81_416 },
+        sources: { priceBasis: 'market_value' },
+      },
+    });
+  });
+
   it('returns the limits and the quote for the default choice', async () => {
     await expect(createLeaseOffer(db, 'ebike-003', '2026-11-05')).resolves.toMatchObject({
       ok: true,

@@ -61,8 +61,12 @@ export default async function AssetLeasePage({
       {offer.ok ? (
         <>
           <p className="mt-5 mb-6 text-sm text-stone-600 dark:text-stone-400">
-            {t('asset.listPrice')}:{' '}
-            {formatEuro(offer.quote.pricing.netListPriceCents, intlLocale[locale])}
+            {t(
+              offer.quote.sources.priceBasis === 'market_value'
+                ? 'asset.marketValue'
+                : 'asset.listPrice'
+            )}
+            : {formatEuro(offer.quote.pricing.netListPriceCents, intlLocale[locale])}
             {' · '}
             <time dateTime={today}>{formatIsoDate(today, locale)}</time>
           </p>

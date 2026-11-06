@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import type { Asset, AssetStatus } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/pricing/price-list';
+import type { ItemPriceResult } from '@/domain/pricing/item-price';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -32,7 +32,7 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
 
 type AssetCardProps = {
   asset: Asset;
-  price: ListPriceResult;
+  price: ItemPriceResult;
   locale: Locale;
   t: Translate;
 };
@@ -40,6 +40,7 @@ type AssetCardProps = {
 export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
+  const usedPrice = price.ok && price.basis === 'market_value';
 
   return (
     <article
@@ -74,8 +75,8 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
 
       <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
+          <p>{t(usedPrice ? 'asset.marketValue' : 'asset.listPrice')}</p>
+          {price.ok && !usedPrice ? (
             <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
           ) : null}
         </div>

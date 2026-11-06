@@ -1,7 +1,9 @@
 import type { Asset, Co2Factors, PriceList, ResidualCurves } from '@/data/schemas';
 import { isoDateSchema } from '@/data/schemas';
+import { wholeMonthsBetween } from '../calendar';
 import { listPriceOn } from '../pricing/price-list';
 import { residualValueFor } from './residual-value';
+import { lifecycleMetadataFor } from './used-item-value';
 
 export type CircularImpactFailureReason =
   | 'co2_factor_not_found'
@@ -66,25 +68,6 @@ function assertDate(value: string, name: string): void {
   }
 }
 
-function firstPriceListFor(priceLists: readonly PriceList[], assetId: string) {
-  const sorted = [...priceLists].sort((left, right) =>
-    left.valid_from.localeCompare(right.valid_from)
-  );
-  const first = sorted[0];
-  const priceCents = first?.prices[assetId];
-  if (!first || priceCents === undefined) return null;
-  return priceCents;
-}
-
-function monthNumber(date: string): number {
-  return Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7));
-}
-
-function wholeMonthsBetween(start: string, end: string): number {
-  const monthDifference = monthNumber(end) - monthNumber(start);
-  return monthDifference - (end.slice(8, 10) < start.slice(8, 10) ? 1 : 0);
-}
-
 function co2For(
   asset: Asset,
   factors: Co2Factors
@@ -125,13 +108,10 @@ export function circularImpactFor(
   const newPrice = listPriceOn(priceLists, asset.id, asOf);
   if (!newPrice.ok) return { ok: false, reason: 'new_price_not_found' };
 
-  const originalListPriceCents =
-    asset.original_list_price_cents ?? firstPriceListFor(priceLists, asset.id);
-  if (originalListPriceCents === null || originalListPriceCents === undefined) {
-    return { ok: false, reason: 'original_price_not_found' };
-  }
+  const metadata = lifecycleMetadataFor(asset, priceLists);
+  if (!metadata) return { ok: false, reason: 'original_price_not_found' };
 
-  const firstLeasedOn = asset.first_leased_on ?? `${asset.model_year}-01-01`;
+  const { firstLeasedOn, originalListPriceCents } = metadata;
   assertDate(firstLeasedOn, 'firstLeasedOn');
   if (firstLeasedOn > asOf) return { ok: false, reason: 'invalid_lifecycle_dates' };
 

@@ -146,7 +146,14 @@ export function ContractView({ locale, view }: ContractViewProps) {
               </div>
             </div>
             <dl className="mt-7 grid gap-3 border-t border-emerald-200 pt-5 text-sm dark:border-emerald-900 sm:grid-cols-2">
-              <DetailRow label={t('contract.listPrice')} value={euro(contract.listPriceCents)} />
+              <DetailRow
+                label={t(
+                  contract.pricingSnapshot.sources.priceBasis === 'market_value'
+                    ? 'contract.marketValue'
+                    : 'contract.listPrice'
+                )}
+                value={euro(contract.listPriceCents)}
+              />
               <DetailRow
                 label={t('contract.downPayment')}
                 value={euro(contract.downPaymentCents)}

@@ -10,6 +10,7 @@ import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
+import { loadSecondLifeDataPack } from '@/server/second-life';
 
 const inspection = {
   condition: assetConditionSchema,
@@ -22,8 +23,12 @@ const bodySchema = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('pass_on'),
     ...inspection,
-    /** A data-pack persona or the next person's email. */
-    nextLessee: z.union([z.string().regex(/^cust-[a-z0-9-]+$/), z.email().max(200)]),
+    /** A data-pack persona, someone on the waiting list (D-048) or the next person's email. */
+    nextLessee: z.union([
+      z.string().regex(/^cust-[a-z0-9-]+$/),
+      z.string().regex(/^wait-\d+$/),
+      z.email().max(200),
+    ]),
   }),
 ]);
 
@@ -31,6 +36,7 @@ const bodySchema = z.discriminatedUnion('kind', [
 const statusFor = {
   contract_not_found: 404,
   unknown_customer: 404,
+  unknown_waiting_list_entry: 404,
   already_ended: 409,
   asset_not_leased: 409,
   too_early: 409,
@@ -38,6 +44,7 @@ const statusFor = {
   usage_went_down: 422,
   condition_improved: 422,
   next_lessee_is_current: 422,
+  waiting_list_not_a_match: 422,
 } satisfies Record<EndLeaseRefusal, number>;
 
 export const POST = handleRoute(
@@ -48,12 +55,17 @@ export const POST = handleRoute(
     if (!found) return fail(404, 'CONTRACT_NOT_FOUND', `No contract with id "${id}"`);
 
     // No login in the starter: the customer on the contract makes the choice.
-    const result = await endLease(db, await loadLeaseDataPack(), {
-      contractId: found.id,
-      choice,
-      today: await asOfDate(),
-      actor: found.contract.customerId,
-    });
+    const [lease, secondLife] = await Promise.all([loadLeaseDataPack(), loadSecondLifeDataPack()]);
+    const result = await endLease(
+      db,
+      { ...lease, secondLife },
+      {
+        contractId: found.id,
+        choice,
+        today: await asOfDate(),
+        actor: found.contract.customerId,
+      }
+    );
     if (!result.ok) {
       return fail(
         statusFor[result.reason],

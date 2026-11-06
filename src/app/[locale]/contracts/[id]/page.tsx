@@ -19,6 +19,8 @@ import { earlyExitContext } from '@/server/early-exit';
 import { ageClockFor } from '@/server/item-age';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
+import { loadSecondLifeDataPack } from '@/server/second-life';
+import { secondLifeItemFor } from '@/server/second-life-item';
 
 export async function generateMetadata({
   params,
@@ -39,14 +41,19 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
 
-  const [data, vatRates, curves, assetRow, ending, clock] = await Promise.all([
+  const [data, vatRates, curves, assetRow, ending, clock, secondLife] = await Promise.all([
     loadLeaseDataPack(),
     loadVatRates(),
     loadResidualCurves(),
     db.asset.findUnique({ where: { id: contract.assetId } }),
     getContractEnding(db, found.id),
     ageClockFor(db, contract.assetId),
+    loadSecondLifeDataPack(),
   ]);
+  // Pass it on can go to someone on the waiting list, ranked for the item as it is now (D-048).
+  const passOnItem = ending
+    ? null
+    : await secondLifeItemFor(db, secondLife.priceLists, contract.assetId);
   const customer = data.customers.find((c) => c.id === contract.customerId);
   const fullSchedule = invoiceSchedule(contract, vatRates);
   // After an ending, only the invoices issued before it took effect (D-033).
@@ -273,6 +280,20 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
               : null
           }
           customers={data.customers}
+          passOn={
+            passOnItem
+              ? {
+                  data: {
+                    curves: secondLife.curves,
+                    costs: secondLife.costs,
+                    table: secondLife.table,
+                  },
+                  demand: secondLife.demand,
+                  item: passOnItem,
+                }
+              : null
+          }
+          demand={secondLife.demand}
           standalone={!(canLeaveEarly && exitContext && assetRow)}
         />
       </div>

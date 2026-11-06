@@ -7,6 +7,7 @@ import { useId, useState } from 'react';
 import {
   assetConditionSchema,
   type AssetCondition,
+  type SecondLifeRequest,
   type UsageUnit,
   type VatRates,
 } from '@/data/schemas';
@@ -19,6 +20,9 @@ import {
   type EndOfTermKind,
 } from '@/domain/end-of-term';
 import { formatEuro } from '@/domain/money';
+import { isWaitingListId, passOnMatches, passOnReadyOn } from '@/domain/pass-on';
+import type { SecondLifeData, SecondLifeItem } from '@/domain/second-life';
+import type { RankedMatch } from '@/domain/waiting-list';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -33,6 +37,8 @@ export type EndOfTermFormProps = {
   delivered: { condition: AssetCondition; usageValue: number; unit: UsageUnit };
   /** Personas who could lease it next (not the current customer). */
   personas: { id: string; name: string }[];
+  /** What it takes to rank the waiting list for this item (D-048); null when it can't be valued. */
+  passOn: { data: SecondLifeData; demand: SecondLifeRequest[]; item: SecondLifeItem } | null;
 };
 
 const KINDS: EndOfTermKind[] = ['buy', 'return', 'pass_on'];
@@ -49,15 +55,35 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
   const [kind, setKind] = useState<EndOfTermKind>('buy');
   const [condition, setCondition] = useState<AssetCondition>(delivered.condition);
   const [usage, setUsage] = useState(String(delivered.usageValue));
-  const [lessee, setLessee] = useState(props.personas[0]?.id ?? '');
+  const dates = endOfTermDates(contract);
+  const readyOn = passOnReadyOn(props.today, dates.handoverDate);
+  // The waiting list as the item will be on the day it's ready, re-ranked as the inspection changes.
+  const rank = (inspected: AssetCondition, usageValue: number | null) =>
+    props.passOn && usageValue !== null
+      ? passOnMatches(
+          props.passOn.data,
+          props.passOn.demand,
+          props.passOn.item,
+          { condition: inspected, usageValue },
+          readyOn
+        )
+      : [];
+  const [lessee, setLessee] = useState(
+    () =>
+      rank(delivered.condition, delivered.usageValue)[0]?.requestId ?? props.personas[0]?.id ?? ''
+  );
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState<'idle' | 'busy' | 'error'>('idle');
   // The code the server refused with picks the message (D-038).
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
-  const dates = endOfTermDates(contract);
   const preview = buyoutInvoice(contract, props.vatRates, dates.handoverDate);
   const usageValue = /^\d+$/.test(usage) ? Number(usage) : null;
+  const ranked = rank(condition, usageValue);
+  const requests = new Map(props.passOn?.demand.map((r) => [r.id, r]));
+  const pickedMatch = ranked.find((m) => m.requestId === lessee);
+  // A waiting-list pick that no longer fits the item as now described can't be saved.
+  const staleMatch = kind === 'pass_on' && isWaitingListId(lessee) && !pickedMatch;
   const nextLessee = lessee === 'email' ? email.trim() : lessee;
   const choice: EndOfTermChoice | null =
     kind === 'buy'
@@ -72,7 +98,7 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
     : null;
   const emailInvalid = kind === 'pass_on' && lessee === 'email' && !EMAIL.test(nextLessee);
   const problem = decided && !decided.ok ? decided : null;
-  const canSave = decided?.ok === true && !emailInvalid && saving !== 'busy';
+  const canSave = decided?.ok === true && !emailInvalid && !staleMatch && saving !== 'busy';
 
   async function save() {
     if (!choice) return;
@@ -202,14 +228,47 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
               onChange={(e) => setLessee(e.target.value)}
               className="field mt-2"
             >
-              {props.personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              {staleMatch ? (
+                <option value={lessee} disabled>
+                  {requests.get(lessee)?.who ?? lessee}
                 </option>
-              ))}
-              <option value="email">{t('end.someoneElse')}</option>
+              ) : null}
+              {ranked.length > 0 ? (
+                <optgroup label={t('end.group.waitingList')}>
+                  {ranked.map((m) => (
+                    <option key={m.requestId} value={m.requestId}>
+                      {t('end.waitingOption', {
+                        who: requests.get(m.requestId)?.who ?? m.requestId,
+                        rent: euro(m.monthlyRentCents),
+                        term: m.termMonths,
+                      })}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+              <optgroup label={t('end.group.people')}>
+                {props.personas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+                <option value="email">{t('end.someoneElse')}</option>
+              </optgroup>
             </select>
+            {ranked.length === 0 && props.passOn ? (
+              <p className="mt-1 text-xs text-muted">
+                {t('end.noWaitingMatch', { date: date(readyOn) })}
+              </p>
+            ) : null}
           </div>
+          {pickedMatch ? (
+            <WaitingFit
+              locale={locale}
+              match={pickedMatch}
+              request={requests.get(pickedMatch.requestId)}
+              readyOn={readyOn}
+            />
+          ) : null}
           {lessee === 'email' ? (
             <div>
               <label htmlFor={ids.email} className="eyebrow">
@@ -225,6 +284,12 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {staleMatch ? (
+        <p role="alert" className="mt-4 rounded-lg bg-warn-bg px-3 py-2 text-sm text-warn-fg">
+          {t('end.waitingStale')}
+        </p>
       ) : null}
 
       {problem || (emailInvalid && email !== '') ? (
@@ -249,6 +314,38 @@ export function EndOfTermForm(props: EndOfTermFormProps) {
       {saving === 'error' ? (
         <p role="alert" className="mt-2 text-sm text-warn-fg">
           {refusalText(t, refusal, 'end.error')}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Why the chosen waiting-list person fits: their needs beside what the item will cost them. */
+function WaitingFit(props: {
+  locale: Locale;
+  match: RankedMatch;
+  request: SecondLifeRequest | undefined;
+  readyOn: string;
+}) {
+  const { locale, match, request } = props;
+  const t = getT(locale);
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  return (
+    <div className="rounded-lg bg-surface-2 px-3 py-2 text-sm sm:col-span-2">
+      <p className="font-semibold">
+        {t('end.waitingRent', {
+          rent: euro(match.monthlyRentCents),
+          term: match.termMonths,
+        })}
+      </p>
+      {request ? (
+        <p className="mt-0.5 text-muted">
+          {t('end.waitingFit', {
+            condition: t(`condition.${request.min_condition}`),
+            budget: euro(request.max_monthly_net_rent_cents),
+            neededBy: formatIsoDate(request.needed_by, locale),
+            readyOn: formatIsoDate(props.readyOn, locale),
+          })}
         </p>
       ) : null}
     </div>

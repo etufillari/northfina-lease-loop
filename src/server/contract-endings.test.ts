@@ -8,17 +8,19 @@ import { seedAssets } from './assets';
 import { endLease, getContractEnding } from './contract-endings';
 import { getContract, type LeaseDataPack } from './contracts';
 import { loadLeaseDataPack } from './lease-data';
+import { loadSecondLifeDataPack } from './second-life';
 import { CorruptRowError } from './stored-row';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
-let data: LeaseDataPack;
+let data: LeaseDataPack & { secondLife: Awaited<ReturnType<typeof loadSecondLifeDataPack>> };
 let contractId: number;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  data = await loadLeaseDataPack();
+  const [lease, secondLife] = await Promise.all([loadLeaseDataPack(), loadSecondLifeDataPack()]);
+  data = { ...lease, secondLife };
 });
 afterAll(async () => {
   await cleanup();
@@ -164,5 +166,68 @@ describe('endLease', () => {
     await expect(end({ kind: 'return', condition: 'good', usageValue: 0 })).rejects.toThrow(
       CorruptRowError
     );
+  });
+});
+
+describe('endLease: pass it on to someone from the waiting list (D-048)', () => {
+  // A 12-month lease of ebike-003 signed on 2 Jan 2026 (the demo date set back): the choice opens
+  // on 2 Dec 2026 and the bike is handed over on 2 Jan 2027, before wait-04's deadline (5 Jan
+  // 2027) but after wait-01's and wait-02's.
+  let shortLease: number;
+  beforeEach(async () => {
+    await db.contract.deleteMany();
+    await db.quote.deleteMany();
+    await db.asset.deleteMany();
+    await seedAssets(db, await loadAssets());
+    const signed = await quoteAndSign(db, data, {
+      assetId: 'ebike-003',
+      customerId: 'cust-aino',
+      termMonths: 12,
+      downPaymentCents: 0,
+      answers: {
+        q_customer_type: 'consumer',
+        q_full_name: 'Aino Virtanen',
+        q_birth_date: '1997-04-12',
+        q_email: 'aino.virtanen@example.com',
+        q_country: 'FI',
+        q_employment: 'employed',
+        q_monthly_income: 320_000,
+        q_usage_purpose: 'commuting',
+      },
+      today: '2026-01-02',
+      actor: 'cust-aino',
+    });
+    if (!signed.ok) throw new Error(`setup failed: ${signed.reason}`);
+    shortLease = signed.id;
+  });
+
+  const passOn = (nextLessee: string) =>
+    endLease(db, data, {
+      contractId: shortLease,
+      choice: { kind: 'pass_on', condition: 'good', usageValue: 3_000, nextLessee },
+      today: '2026-12-15',
+      actor: 'cust-aino',
+    });
+
+  it('passes the bike to wait-04 (bakery: good, 24 months, up to 120 € a month)', async () => {
+    const result = await passOn('wait-04');
+    expect(result).toMatchObject({ ok: true, ending: { kind: 'pass_on', nextLessee: 'wait-04' } });
+    expect(await asset()).toMatchObject({ status: 'returned', condition: 'good' });
+    const [audit] = await listAuditLog(db, 1);
+    expect(audit).toMatchObject({
+      action: 'contract.ended_pass_on',
+      details: { nextLessee: 'wait-04' },
+    });
+  });
+
+  it('refuses someone the bike does not fit and writes nothing', async () => {
+    // wait-01 needed a bike by 20 Nov 2026, before the handover.
+    expect(await passOn('wait-01')).toEqual({ ok: false, reason: 'waiting_list_not_a_match' });
+    expect(await getContractEnding(db, shortLease)).toBeNull();
+    expect((await asset()).status).toBe('reserved');
+  });
+
+  it('refuses an id that is not on the waiting list', async () => {
+    expect(await passOn('wait-99')).toEqual({ ok: false, reason: 'unknown_waiting_list_entry' });
   });
 });

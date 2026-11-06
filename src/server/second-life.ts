@@ -20,7 +20,6 @@ import {
   secondLifeRentFor,
   valueSecondLife,
   type SecondLifeData,
-  type SecondLifeItem,
   type SecondLifeOption,
 } from '@/domain/second-life';
 import { inSignupOrder, matchWaitingList, type MatchResult } from '@/domain/waiting-list';
@@ -28,6 +27,7 @@ import { toAsset } from './assets';
 import { withAudit } from './audit';
 import { getContractEnding } from './contract-endings';
 import { ageClockFor } from './item-age';
+import { asSecondLifeItem } from './second-life-item';
 import type { PrismaClient } from './prisma-client';
 
 export interface SecondLifeDataPack extends SecondLifeData {
@@ -56,21 +56,6 @@ export interface SecondLifeView {
   options: SecondLifeOption[];
   /** The option the top waiting-list match needs, or the cheapest one. */
   suggested: AssetCondition;
-}
-
-function returnedItem(
-  asset: Asset,
-  priceCents: number,
-  firstLeasedNewOn: string | null
-): SecondLifeItem {
-  return {
-    category: asset.category,
-    modelYear: asset.model_year,
-    firstLeasedNewOn,
-    condition: asset.condition,
-    usage: asset.usage,
-    firstLeasePriceCents: priceCents,
-  };
 }
 
 /** The pass-on ending of the asset's latest contract, if that is how it came back. */
@@ -102,7 +87,7 @@ export async function secondLifeView(
   const first = firstLeasePrice(data.priceLists, asset.id);
   if (!first) return null;
   const clock = await ageClockFor(db, asset.id);
-  const item = returnedItem(asset, first.priceCents, clock?.firstLeasedNewOn ?? null);
+  const item = asSecondLifeItem(asset, first.priceCents, clock?.firstLeasedNewOn ?? null);
   const rentFor = secondLifeRentFor(data, item, today);
 
   // No refurbishment duration in the data: the item is ready the day it is re-listed (D-035).

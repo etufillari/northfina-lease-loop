@@ -144,7 +144,14 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
             locale={locale}
             view={secondLife}
             demand={secondLifeData.demand}
-            names={Object.fromEntries(data.customers.map((c) => [c.id, c.name]))}
+            names={Object.fromEntries([
+              ...data.customers.map((c) => [c.id, c.name]),
+              // Passed on to someone from the waiting list (D-048).
+              ...secondLifeData.demand.map((r) => [
+                r.id,
+                t('end.waitingName', { who: r.who, id: r.id }),
+              ]),
+            ])}
           />
         ) : blocked !== null || !price.ok || !vat.ok || !bounds?.ok ? (
           <UnavailableNotice

@@ -1,12 +1,18 @@
 // The end of term on the contract page: the dates, then either the recorded ending or the form.
 import Link from 'next/link';
-import type { AssetCondition, Customer, UsageUnit, VatRates } from '@/data/schemas';
+import type {
+  AssetCondition,
+  Customer,
+  SecondLifeRequest,
+  UsageUnit,
+  VatRates,
+} from '@/data/schemas';
 import { endOfTermDates, type EndedContract, type Ending } from '@/domain/end-of-term';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-import { EndOfTermForm } from './end-of-term-form';
+import { EndOfTermForm, type EndOfTermFormProps } from './end-of-term-form';
 
 export type EndOfTermSectionProps = {
   locale: Locale;
@@ -20,6 +26,10 @@ export type EndOfTermSectionProps = {
   /** The item as delivered; null when the asset row is missing. */
   asset: { condition: AssetCondition; usageValue: number; unit: UsageUnit } | null;
   customers: Customer[];
+  /** The waiting list and what it takes to rank it for this item (D-048). */
+  passOn: EndOfTermFormProps['passOn'];
+  /** The waiting list, to name a request the item was passed on to. */
+  demand: SecondLifeRequest[];
   /** True when Leave early is not beside it, so the section has the whole width. */
   standalone: boolean;
 };
@@ -43,6 +53,7 @@ export function EndOfTermSection(props: EndOfTermSectionProps) {
       personas={props.customers
         .filter((c) => c.id !== contract.customerId)
         .map((c) => ({ id: c.id, name: c.name }))}
+      passOn={props.passOn}
     />
   ) : null;
 
@@ -81,7 +92,10 @@ function EndingSummary(props: EndOfTermSectionProps & { ending: Ending }) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
-  const lessee = props.customers.find((c) => c.id === ending.nextLessee)?.name;
+  const waiting = props.demand.find((r) => r.id === ending.nextLessee);
+  const lessee =
+    props.customers.find((c) => c.id === ending.nextLessee)?.name ??
+    (waiting ? t('end.waitingName', { who: waiting.who, id: waiting.id }) : undefined);
   const early = ending.earlyExit;
   const earlyPrice = early && (ending.kind === 'early_buy' ? early.buy : early.handBack);
   const invoice =

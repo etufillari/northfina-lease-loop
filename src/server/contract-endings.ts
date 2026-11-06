@@ -5,13 +5,23 @@ import { z } from 'zod';
 import { assetConditionSchema, type Customer, type VatRates } from '@/data/schemas';
 import {
   endOfTerm,
+  endOfTermDates,
   type EndOfTermChoice,
   type EndOfTermResult,
   type Ending,
 } from '@/domain/end-of-term';
+import {
+  isWaitingListId,
+  passOnMatches,
+  passOnReadyOn,
+  waitingListChoiceProblem,
+  type WaitingListChoiceProblem,
+} from '@/domain/pass-on';
 import { withAudit } from './audit';
 import { getContract } from './contracts';
 import type { PrismaClient } from './prisma-client';
+import type { SecondLifeDataPack } from './second-life';
+import { secondLifeItemFor } from './second-life-item';
 import { parseStoredJson, parseStoredValue } from './stored-row';
 
 export interface EndLeaseInput {
@@ -27,6 +37,7 @@ export type EndLeaseRefusal =
   | 'already_ended'
   | 'unknown_customer'
   | 'asset_not_leased'
+  | WaitingListChoiceProblem
   | Extract<EndOfTermResult, { ok: false }>['reason'];
 
 export type EndLeaseResult<Refusal extends string = EndLeaseRefusal> =
@@ -37,7 +48,7 @@ class AssetChangedError extends Error {}
 
 export async function endLease(
   db: PrismaClient,
-  data: { vatRates: VatRates; customers: Customer[] },
+  data: { vatRates: VatRates; customers: Customer[]; secondLife: SecondLifeDataPack },
   input: EndLeaseInput
 ): Promise<EndLeaseResult> {
   const found = await getContract(db, input.contractId);
@@ -71,6 +82,16 @@ export async function endLease(
     input.today
   );
   if (!decided.ok) return decided;
+  if (choice.kind === 'pass_on' && isWaitingListId(choice.nextLessee)) {
+    // Someone from the waiting list must fit the item as inspected, by the day it's ready (D-048).
+    const item = await secondLifeItemFor(db, data.secondLife.priceLists, contract.assetId);
+    const readyOn = passOnReadyOn(input.today, endOfTermDates(contract).handoverDate);
+    const ranked = item
+      ? passOnMatches(data.secondLife, data.secondLife.demand, item, choice, readyOn)
+      : [];
+    const problem = waitingListChoiceProblem(data.secondLife.demand, ranked, choice.nextLessee);
+    if (problem) return { ok: false, reason: problem };
+  }
   return recordEnding(
     db,
     { contractId: input.contractId, assetId: contract.assetId, asOf: input.today },

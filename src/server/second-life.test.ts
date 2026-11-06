@@ -163,12 +163,16 @@ describe('relistAsset', () => {
     const first = await signAsAino('ebike-003', 12, '2026-11-05');
     if (!first.ok) throw new Error(first.reason);
     const before = await getContract(db, first.id);
-    const ended = await endLease(db, lease, {
-      contractId: first.id,
-      choice: { kind: 'pass_on', nextLessee: 'cust-sanna', condition: 'good', usageValue: 2_400 },
-      today: '2027-11-05',
-      actor: 'cust-aino',
-    });
+    const ended = await endLease(
+      db,
+      { ...lease, secondLife: data },
+      {
+        contractId: first.id,
+        choice: { kind: 'pass_on', nextLessee: 'cust-sanna', condition: 'good', usageValue: 2_400 },
+        today: '2027-11-05',
+        actor: 'cust-aino',
+      }
+    );
     expect(ended.ok).toBe(true);
 
     const view = await secondLifeView(db, data, 'ebike-003', '2027-11-05');

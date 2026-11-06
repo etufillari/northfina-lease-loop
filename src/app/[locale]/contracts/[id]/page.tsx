@@ -14,10 +14,12 @@ import { effectiveVatRates } from '@/server/vat';
 import { contractNumber, contractStage } from '@/domain/contract';
 import { splitByDate } from '@/domain/invoicing';
 import { contractInvoices } from '@/server/invoices';
+import { handoverForContract } from '@/server/end-of-term';
+import { formatEuro } from '@/domain/money';
 import { differentPriceOn } from '@/domain/price-list';
 import { vatPercentOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
-import { isLocale } from '@/i18n/locales';
+import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
@@ -56,6 +58,11 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const t = getT(locale);
   const { today } = await appDate();
   const invoices = (await contractInvoices(db, contract, today)) ?? [];
+  const handover =
+    contract.status === 'passed_on' ? await handoverForContract(db, contract.id) : null;
+  const passedTo = handover
+    ? ((await loadCustomers()).find((c) => c.id === handover.toCustomerId)?.name ?? null)
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 print:max-w-none print:p-0">
@@ -79,15 +86,22 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
       <EndOfTermPanel
         contractId={contract.id}
         assetId={contract.assetId}
-        signerName={contract.signerName}
         stage={contractStage(contract, today)}
         status={contract.status}
         startDate={contract.startDate}
         endDate={contract.endDate}
         returnedDate={contract.returnedDate}
+        boughtDate={contract.boughtDate}
+        boughtFor={
+          contract.buyoutPaidCents === null
+            ? null
+            : formatEuro(contract.buyoutPaidCents, intlLocale[locale])
+        }
+        passedTo={passedTo}
         monthsIssued={splitByDate(invoices, today).issued.length}
         termMonths={contract.termMonths}
         locale={locale}
+        t={t}
       />
       <InvoiceList
         invoices={invoices}

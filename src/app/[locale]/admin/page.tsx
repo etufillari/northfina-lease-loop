@@ -50,7 +50,7 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
           detail={t('admin.tile.contractsDetail', {
             active: contracts.active,
             ended: contracts.ended,
-            returned: contracts.returned,
+            closed: contracts.returned + contracts.bought + contracts.passed_on,
           })}
         />
         <Tile
@@ -78,6 +78,7 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
           available: overview.assets.available,
           reserved: overview.assets.reserved,
           returned: overview.assets.returned,
+          sold: overview.assets.sold,
         })}
       </p>
 
@@ -126,7 +127,9 @@ export default async function AdminPage({ params }: PageProps<'/[locale]/admin'>
               <tbody>
                 {overview.allContracts.map((contract) => {
                   const stage =
-                    contract.status === 'returned' ? 'returned' : contractStage(contract, today);
+                    contract.status !== 'active'
+                      ? (contract.status as 'returned' | 'bought' | 'passed_on')
+                      : contractStage(contract, today);
                   return (
                     <tr
                       key={contract.id}

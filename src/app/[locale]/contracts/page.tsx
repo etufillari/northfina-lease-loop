@@ -47,7 +47,9 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {contracts.map((contract) => {
             const stage =
-              contract.status === 'returned' ? 'returned' : contractStage(contract, today);
+              contract.status !== 'active'
+                ? (contract.status as 'returned' | 'bought' | 'passed_on')
+                : contractStage(contract, today);
             return (
               <li key={contract.id}>
                 <article className="relative h-full rounded-2xl border border-stone-200 bg-white p-5 shadow-sm hover:border-emerald-300 dark:border-stone-800 dark:bg-stone-900">

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { NotYoursNotice } from '@/components/not-yours-notice';
+import { SignatureNotice } from '@/components/signature-notice';
 import { SignContractForm } from '@/components/sign-contract-form';
 import { loadAssets, loadCustomers } from '@/data/load';
 import { checkSignable, contractNumber } from '@/domain/contract';
@@ -16,6 +17,7 @@ import { appDate } from '@/server/app-date';
 import { currentViewer } from '@/server/current-viewer';
 import { db } from '@/server/db';
 import { getFleet } from '@/server/fleets';
+import { getSignatureRequest } from '@/server/signatures';
 import { canSee } from '@/server/viewer';
 
 export default async function FleetOverviewPage({ params }: PageProps<'/[locale]/fleets/[id]'>) {
@@ -43,6 +45,8 @@ export default async function FleetOverviewPage({ params }: PageProps<'/[locale]
     ? checkSignable({ decision: fleet.decision, quoteDate: fleet.quoteDate, signDate: today })
     : null;
   const signatoryEmail = first?.answers.q_signatory_email?.trim() || null;
+  // Card 6: waiting for the company's signatory, or decided by them.
+  const signature = await getSignatureRequest(db, fleet.id, today);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
@@ -153,6 +157,8 @@ export default async function FleetOverviewPage({ params }: PageProps<'/[locale]
             locale={locale}
           />
         </>
+      ) : signature ? (
+        <SignatureNotice request={signature} locale={locale} t={t} />
       ) : (
         <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
           <p className="font-semibold">

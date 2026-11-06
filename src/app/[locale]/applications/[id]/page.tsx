@@ -23,6 +23,8 @@ import { db } from '@/server/db';
 import { currentViewer } from '@/server/current-viewer';
 import { canSee } from '@/server/viewer';
 import { NotYoursNotice } from '@/components/not-yours-notice';
+import { SignatureNotice } from '@/components/signature-notice';
+import { getSignatureRequest } from '@/server/signatures';
 import { appDate } from '@/server/app-date';
 
 export default async function ApplicationPage({
@@ -46,11 +48,13 @@ export default async function ApplicationPage({
   const signed = await getContractForApplication(db, application.id);
   if (signed && contractOn(signed, today)) redirect(`/${locale}/contracts/${signed.id}`);
 
-  const [item, table, vatRates, priceLists] = await Promise.all([
+  const [item, table, vatRates, priceLists, signature] = await Promise.all([
     assetOn(db, application.assetId, today),
     loadCoefficientTable(),
     effectiveVatRates(db),
     effectivePriceLists(db, today),
+    // Card 6: waiting for the company's signatory, or decided by them.
+    getSignatureRequest(db, application.id, today),
   ]);
   if (!item) notFound();
   const asset = item.asset;
@@ -117,6 +121,8 @@ export default async function ApplicationPage({
             locale={locale}
           />
         </>
+      ) : signature ? (
+        <SignatureNotice request={signature} locale={locale} t={t} />
       ) : (
         <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
           <p className="font-semibold">

@@ -10,6 +10,7 @@ import { useState, type FormEvent } from 'react';
 import type { Question } from '@/data/schemas';
 import { decideApplication } from '@/domain/application';
 import { isBusinessApplicant } from '@/domain/fleet';
+import { signatoryEmail, waitsOnlyForSignatory } from '@/domain/signature';
 import { formatEuro } from '@/domain/money';
 import {
   getVisibleQuestions,
@@ -99,6 +100,15 @@ export function ApplicationForm(props: ApplicationFormProps) {
   }
 
   if (submitted) {
+    // Card 6: waiting only for the company's signatory, who gets asked by email.
+    const signatory =
+      submitted.decision === 'manual_review' &&
+      waitsOnlyForSignatory(
+        submitted.decision,
+        evaluation.reasons.map((reason) => reason.ruleId)
+      )
+        ? signatoryEmail(answers)
+        : null;
     return (
       <section
         role="status"
@@ -106,15 +116,23 @@ export function ApplicationForm(props: ApplicationFormProps) {
       >
         <h2 className="text-lg font-semibold">{t('apply.successTitle')}</h2>
         <p className="mt-2">{t('apply.successMessage', { id: submitted.id.slice(0, 8) })}</p>
-        {submitted.decision !== 'rejected' ? (
+        {signatory ? (
+          <p className="mt-2">{t('apply.successNext.signatory', { email: signatory })}</p>
+        ) : submitted.decision !== 'rejected' ? (
           <p className="mt-2">{t(`apply.successNext.${submitted.decision}`)}</p>
         ) : null}
-        {submitted.decision === 'approved' || fleet ? (
+        {submitted.decision === 'approved' || submitted.decision === 'manual_review' || fleet ? (
           <Link
             href={`/${locale}/${fleet ? 'fleets' : 'applications'}/${submitted.id}`}
             className="mt-4 inline-block rounded-lg bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-emerald-800"
           >
-            {t(fleet ? 'fleet.toFleet' : 'apply.toContract')}
+            {t(
+              fleet
+                ? 'fleet.toFleet'
+                : submitted.decision === 'approved'
+                  ? 'apply.toContract'
+                  : 'apply.followApplication'
+            )}
           </Link>
         ) : null}
       </section>

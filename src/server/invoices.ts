@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import type { Contract as ContractRow, Invoice as InvoiceRow } from '@/generated/prisma/client';
-import { invoiceStatusSchema } from '@/data/schemas';
 import { loadVatRates } from '@/data/load';
 import {
   invoiceScheduleFor,
@@ -8,7 +7,9 @@ import {
   type ScheduledInvoice,
 } from '@/domain/invoicing';
 import { withAudit } from './audit';
+import { toInvoiceRecord, type InvoiceRecord, type InvoiceWithPayments } from './invoice-record';
 import type { PrismaClient } from './prisma-client';
+import { todayIso } from './today';
 import { z } from 'zod';
 
 export const invoiceGenerationRequestSchema = z.strictObject({
@@ -17,21 +18,7 @@ export const invoiceGenerationRequestSchema = z.strictObject({
 
 export type InvoiceGenerationRequest = z.infer<typeof invoiceGenerationRequestSchema>;
 
-export type InvoiceRecord = {
-  id: string;
-  contractId: string;
-  sequence: number;
-  status: 'issued' | 'paid' | 'overdue' | 'cancelled';
-  periodStart: string;
-  periodEnd: string;
-  dueOn: string;
-  netRentCents: number;
-  vatRateBasisPoints: number;
-  vatCents: number;
-  totalCents: number;
-  issuedAt: string;
-  paidAt: string | null;
-};
+export type { InvoiceRecord } from './invoice-record';
 
 export type InvoiceGenerationFailure =
   | { ok: false; reason: 'contract_not_found' }
@@ -51,28 +38,10 @@ export type InvoiceListResult =
   | { ok: false; reason: 'contract_not_found' | 'invoice_schedule_not_generated' };
 
 class InvoiceScheduleAlreadyExists extends Error {
-  constructor(readonly rows: InvoiceRow[]) {
+  constructor(readonly rows: InvoiceWithPayments[]) {
     super('The invoice schedule was created by another request');
     this.name = 'InvoiceScheduleAlreadyExists';
   }
-}
-
-function toInvoiceRecord(row: InvoiceRow): InvoiceRecord {
-  return {
-    id: row.id,
-    contractId: row.contract_id,
-    sequence: row.sequence,
-    status: invoiceStatusSchema.parse(row.status),
-    periodStart: row.period_start,
-    periodEnd: row.period_end,
-    dueOn: row.due_on,
-    netRentCents: row.net_rent_cents,
-    vatRateBasisPoints: row.vat_rate_basis_points,
-    vatCents: row.vat_cents,
-    totalCents: row.total_cents,
-    issuedAt: row.issued_at.toISOString(),
-    paidAt: row.paid_at?.toISOString() ?? null,
-  };
 }
 
 function contractForSchedule(row: ContractRow): InvoiceScheduleContract {
@@ -84,7 +53,10 @@ function contractForSchedule(row: ContractRow): InvoiceScheduleContract {
   };
 }
 
-function assertCompleteSchedule(rows: InvoiceRow[], termMonths: number): InvoiceRow[] {
+function assertCompleteSchedule(
+  rows: InvoiceWithPayments[],
+  termMonths: number
+): InvoiceWithPayments[] {
   if (rows.length !== termMonths || rows.some((row, index) => row.sequence !== index + 1)) {
     throw new Error('Stored invoice schedule is incomplete or out of sequence');
   }
@@ -114,7 +86,8 @@ async function findContract(db: PrismaClient, contractId: string): Promise<Contr
 /** Generates the complete invoice schedule from the contract's locked rent. */
 export async function generateInvoices(
   db: PrismaClient,
-  input: InvoiceGenerationRequest & { contractId: string }
+  input: InvoiceGenerationRequest & { contractId: string },
+  asOf = todayIso()
 ): Promise<InvoiceGenerationResult> {
   const contract = await findContract(db, input.contractId);
   if (!contract) return { ok: false, reason: 'contract_not_found' };
@@ -125,12 +98,15 @@ export async function generateInvoices(
   const existing = await db.invoice.findMany({
     where: { contract_id: contract.id },
     orderBy: { sequence: 'asc' },
+    include: { payments: true },
   });
   if (existing.length > 0) {
     return {
       ok: true,
       created: false,
-      invoices: assertCompleteSchedule(existing, contract.term_months).map(toInvoiceRecord),
+      invoices: assertCompleteSchedule(existing, contract.term_months).map((row) =>
+        toInvoiceRecord(row, asOf)
+      ),
     };
   }
 
@@ -157,6 +133,7 @@ export async function generateInvoices(
         const concurrent = await tx.invoice.findMany({
           where: { contract_id: contract.id },
           orderBy: { sequence: 'asc' },
+          include: { payments: true },
         });
         if (concurrent.length > 0) throw new InvoiceScheduleAlreadyExists(concurrent);
 
@@ -168,13 +145,19 @@ export async function generateInvoices(
       }
     );
 
-    return { ok: true, created: true, invoices: rows.map(toInvoiceRecord) };
+    return {
+      ok: true,
+      created: true,
+      invoices: rows.map((row) => toInvoiceRecord({ ...row, payments: [] }, asOf)),
+    };
   } catch (error) {
     if (error instanceof InvoiceScheduleAlreadyExists) {
       return {
         ok: true,
         created: false,
-        invoices: assertCompleteSchedule(error.rows, contract.term_months).map(toInvoiceRecord),
+        invoices: assertCompleteSchedule(error.rows, contract.term_months).map((row) =>
+          toInvoiceRecord(row, asOf)
+        ),
       };
     }
     throw error;
@@ -184,7 +167,8 @@ export async function generateInvoices(
 /** Returns an already-generated schedule without changing any data. */
 export async function listInvoices(
   db: PrismaClient,
-  contractId: string
+  contractId: string,
+  asOf = todayIso()
 ): Promise<InvoiceListResult> {
   const contract = await findContract(db, contractId);
   if (!contract) return { ok: false, reason: 'contract_not_found' };
@@ -192,11 +176,14 @@ export async function listInvoices(
   const rows = await db.invoice.findMany({
     where: { contract_id: contractId },
     orderBy: { sequence: 'asc' },
+    include: { payments: true },
   });
   if (rows.length === 0) return { ok: false, reason: 'invoice_schedule_not_generated' };
 
   return {
     ok: true,
-    invoices: assertCompleteSchedule(rows, contract.term_months).map(toInvoiceRecord),
+    invoices: assertCompleteSchedule(rows, contract.term_months).map((row) =>
+      toInvoiceRecord(row, asOf)
+    ),
   };
 }

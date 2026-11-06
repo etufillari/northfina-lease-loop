@@ -23,7 +23,7 @@ export const POST = handleRoute(
     });
     if (!result.ok) return secondLifeFailure(result.reason, id);
     return ok({
-      action: result.preview.decision.action,
+      applied: result.applied,
       winnerId: result.preview.decision.winnerId,
       co2AvoidedKg: result.co2AvoidedKg,
     });

@@ -79,12 +79,31 @@ export function eventDetail(locale: Locale, event: PassportEvent): string | null
       const who = str(d.who) ?? str(d.waiterId) ?? '';
       const rent = num(d.monthlyNetRentCents);
       const until = str(d.until);
-      return until && rent !== null
-        ? t('passport.detail.offer', {
-            who,
-            rent: euro(rent),
+      if (!until || rent === null) return null;
+      const values = { who, rent: euro(rent), until: formatIsoDate(until, locale) };
+      const setSize = num(d.setSize);
+      return setSize !== null && setSize > 1
+        ? t('passport.detail.offerSet', { ...values, count: setSize })
+        : t('passport.detail.offer', values);
+    }
+    case 'pooled_for_waiter': {
+      const filled = num(d.filled);
+      const quantity = num(d.quantity);
+      const until = str(d.until);
+      return filled !== null && quantity !== null && until
+        ? t('passport.detail.pooled', {
+            who: str(d.who) ?? str(d.waiterId) ?? '',
+            filled,
+            quantity,
             until: formatIsoDate(until, locale),
           })
+        : null;
+    }
+    case 'pool_released': {
+      const filled = num(d.filled);
+      const quantity = num(d.quantity);
+      return filled !== null && quantity !== null
+        ? t('passport.detail.released', { filled, quantity })
         : null;
     }
     default:

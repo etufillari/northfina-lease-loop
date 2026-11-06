@@ -108,6 +108,7 @@ describe('scenario card 9: ebike-007', () => {
       asOf: AS_OF,
     });
     if (!result.ok) throw new Error(result.reason);
+    expect(result.applied).toBe('offer');
     expect(result.co2AvoidedKg).toBeGreaterThan(0);
 
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-007' } });
@@ -145,7 +146,7 @@ describe('scenario card 9: ebike-007', () => {
     });
     expect(audit.actor).toBe('staff-desk');
     expect(JSON.parse(audit.details_json!)).toMatchObject({
-      action: 'lease_to_waiter',
+      outcome: 'offer',
       winnerId: 'wait-02',
     });
   });

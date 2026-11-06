@@ -8,10 +8,12 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { SecondLifePreview } from '@/server/second-life';
-import { ExecuteButton } from './execute-button';
+import { DeskActionButton } from './desk-action-button';
 
-const ACTION_STYLE = {
-  lease_to_waiter: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
+const OUTCOME_STYLE = {
+  offer: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
+  complete_pool: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
+  pool: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
   list_available: 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100',
   parts_bin: 'bg-stone-200 text-stone-800 dark:bg-stone-700 dark:text-stone-100',
 } as const;
@@ -30,7 +32,7 @@ export function DecisionCard({
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const condition = (c: string) => t(`condition.${c}` as MessageKey);
-  const { asset, decision, winner, winnerQuote, waiters } = preview;
+  const { asset, decision, waiters } = preview;
   const usage = t(`usage.${asset.usage.unit}` as MessageKey, {
     value: formatNumber(asset.usage.value, locale),
   });
@@ -51,9 +53,9 @@ export function DecisionCard({
           </p>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${ACTION_STYLE[decision.action]}`}
+          className={`rounded-full px-3 py-1 text-sm font-medium ${OUTCOME_STYLE[preview.outcome.kind]}`}
         >
-          {t(`secondLife.action.${decision.action}`)}
+          {t(`secondLife.outcome.${preview.outcome.kind}`)}
         </span>
       </header>
 
@@ -109,19 +111,7 @@ export function DecisionCard({
 
       <section className="mt-5">
         <h3 className="text-sm font-semibold">{t('secondLife.winnerTitle')}</h3>
-        <p className="mt-1 text-sm">
-          {winner && winnerQuote
-            ? t('secondLife.winner', {
-                id: winner.id,
-                who: winner.who,
-                joined: formatIsoDate(winner.joined_on, locale),
-                rent: euro(winnerQuote.monthlyNetRentCents),
-                term: winnerQuote.termMonths,
-              })
-            : decision.action === 'lease_to_waiter'
-              ? null
-              : t(`secondLife.reason.${decision.action}`)}
-        </p>
+        <WhoGetsIt locale={locale} preview={preview} />
       </section>
 
       {decision.action !== 'parts_bin' && (
@@ -166,14 +156,64 @@ export function DecisionCard({
         >
           {t('secondLife.passportLink')} →
         </Link>
-        <ExecuteButton
+        <DeskActionButton
           locale={locale}
-          assetId={asset.id}
+          path={`/api/second-life/${asset.id}/execute`}
+          label={t('secondLife.execute')}
           personaId={personaId}
           asOfParam={asOfParam}
         />
       </footer>
     </article>
+  );
+}
+
+/** Who gets the item, by outcome: one person, a set being collected, a full set, or nobody. */
+function WhoGetsIt({ locale, preview }: { locale: Locale; preview: SecondLifePreview }) {
+  const t = getT(locale);
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const { outcome, winner, winnerQuote } = preview;
+  if (outcome.kind === 'list_available' || outcome.kind === 'parts_bin' || !winner) {
+    return (
+      <p className="mt-1 text-sm">
+        {t(`secondLife.reason.${outcome.kind === 'parts_bin' ? 'parts_bin' : 'list_available'}`)}
+      </p>
+    );
+  }
+  const rent = winnerQuote ? euro(winnerQuote.monthlyNetRentCents) : '–';
+  const term = winnerQuote?.termMonths ?? winner.preferred_term_months;
+  if (outcome.kind === 'offer') {
+    return (
+      <p className="mt-1 text-sm">
+        {t('secondLife.winner', {
+          id: winner.id,
+          who: winner.who,
+          joined: formatIsoDate(winner.joined_on, locale),
+          rent,
+          term,
+        })}
+      </p>
+    );
+  }
+  const base = { id: winner.id, who: winner.who, quantity: outcome.quantity };
+  return (
+    <div className="mt-1 space-y-1 text-sm">
+      <p>
+        {outcome.kind === 'pool'
+          ? t('secondLife.pool.holding', {
+              ...base,
+              filled: outcome.filled,
+              date: formatIsoDate(winner.needed_by, locale),
+            })
+          : t('secondLife.pool.complete', base)}
+      </p>
+      <p>{t('secondLife.pool.rent', { rent, term })}</p>
+      {preview.pooledAssetIds.length > 0 && (
+        <p className="text-stone-600 dark:text-stone-400">
+          {t('secondLife.pool.held', { assets: preview.pooledAssetIds.join(', ') })}
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -1,13 +1,14 @@
 'use client';
 
 // The two price controls. The lease term is a slider with a button for each offered term. The
-// down payment is a slider and a field you can type into, always showing the same value: while
-// typing, the price follows any value that is already valid; when the field loses focus (or on
-// Enter) the text settles to the down payment snapped to the slider step inside its range.
+// down payment is a slider and a field you can type into, always showing the same value. The
+// slider moves in steps; the field takes any whole number of euros. While typing, the price
+// follows any value that is already valid; when the field loses focus (or on Enter) the amount
+// is clamped into the allowed range, or the field goes back to the last valid amount.
 // The rules live in src/domain/price-selection.ts.
 import { useId, useState, type KeyboardEvent } from 'react';
 import { formatEuro } from '@/domain/money';
-import { parseEuroInput, snapDownPayment } from '@/domain/price-selection';
+import { parseWholeEuroInput, settleDownPayment } from '@/domain/price-selection';
 import type { DownPaymentRange } from '@/domain/pricing';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -99,9 +100,8 @@ type DownPaymentInputProps = {
   t: Translate;
 };
 
-/** Cents as plain euros for the field: "20000", or "1234.50" when there are cents. */
-const plainEuros = (cents: number) =>
-  cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
+/** Cents as plain whole euros for the field: "20000". Down payments are whole euros. */
+const plainEuros = (cents: number) => String(Math.round(cents / 100));
 
 export function DownPaymentInput({
   range,
@@ -115,18 +115,21 @@ export function DownPaymentInput({
   const { text, setDraft } = useDraft(downPaymentCents, plainEuros);
   const fixed = range.minCents === range.maxCents;
 
+  // Text that isn't a whole number of euros (e.g. "1234,56") gets a hint while typing.
+  const invalid = text.trim() !== '' && parseWholeEuroInput(text) === null;
+
   function type(next: string) {
-    const cents = parseEuroInput(next);
+    const cents = parseWholeEuroInput(next);
     const inRange = cents !== null && cents >= range.minCents && cents <= range.maxCents;
-    const value = inRange ? snapDownPayment(cents, range) : downPaymentCents;
+    const value = inRange ? cents : downPaymentCents;
     if (value !== downPaymentCents) onChange(value);
     setDraft({ text: next, value });
   }
 
   function settle() {
-    const cents = parseEuroInput(text);
+    const cents = parseWholeEuroInput(text);
     if (cents !== null) {
-      const settled = snapDownPayment(cents, range);
+      const settled = settleDownPayment(cents, range);
       if (settled !== downPaymentCents) onChange(settled);
     }
     setDraft(null);
@@ -142,10 +145,12 @@ export function DownPaymentInput({
           <input
             id={`${id}-field`}
             type="text"
-            inputMode="decimal"
+            inputMode="numeric"
             autoComplete="off"
             value={text}
             disabled={fixed}
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? `${id}-hint` : undefined}
             onChange={(event) => type(event.target.value)}
             onBlur={settle}
             onKeyDown={blurOnEnter}
@@ -154,6 +159,15 @@ export function DownPaymentInput({
           <span className="text-stone-600 dark:text-stone-400">€</span>
         </span>
       </div>
+      {invalid ? (
+        <p
+          id={`${id}-hint`}
+          role="status"
+          className="mt-1 text-right text-xs text-amber-900 dark:text-amber-200"
+        >
+          {t('price.wholeEuros')}
+        </p>
+      ) : null}
       <input
         type="range"
         aria-labelledby={`${id}-label`}

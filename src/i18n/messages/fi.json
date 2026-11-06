@@ -63,6 +63,7 @@
   "price.term": "Sopimuskausi",
   "price.months": "{months} kk",
   "price.downPayment": "Käsiraha",
+  "price.wholeEuros": "Vain kokonaisia euroja, esimerkiksi 1500.",
   "price.minDownPayment": "Tähän tuotteeseen tarvitaan vähintään {amount} käsirahaa, koska rahoitamme enintään {max}.",
   "price.noDownPayment": "Hinta on niin lähellä vähimmäismäärää, ettei käsirahaa voi maksaa.",
   "price.breakdown": "Näin hintasi lasketaan",

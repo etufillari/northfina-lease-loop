@@ -63,6 +63,7 @@
   "price.term": "Avtalsperiod",
   "price.months": "{months} månader",
   "price.downPayment": "Handpenning",
+  "price.wholeEuros": "Endast hela euro, till exempel 1500.",
   "price.minDownPayment": "Den här artikeln kräver minst {amount} i handpenning, eftersom vi finansierar högst {max}.",
   "price.noDownPayment": "Priset ligger så nära vårt minimum att ingen handpenning är möjlig.",
   "price.breakdown": "Så räknas ditt pris ut",

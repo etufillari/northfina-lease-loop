@@ -63,6 +63,7 @@
   "price.term": "Liisingu periood",
   "price.months": "{months} kuud",
   "price.downPayment": "Sissemakse",
+  "price.wholeEuros": "Ainult täiseurod, näiteks 1500.",
   "price.minDownPayment": "Selle toote jaoks on vaja vähemalt {amount} sissemakset, sest rahastame kuni {max}.",
   "price.noDownPayment": "Hind on meie miinimumile nii lähedal, et sissemakse pole võimalik.",
   "price.breakdown": "Kuidas sinu hind arvutatakse",

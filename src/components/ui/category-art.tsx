@@ -17,11 +17,14 @@ const categoryPhotos: Record<AssetCategory, Photo> = {
 };
 
 const mtb: Photo = { src: '/images/e-bike-mtb.webp', backdrop: '#25262b' };
+const proLaptop: Photo = { src: '/images/laptop-pro.webp', backdrop: '#1c2431' };
 
 // Keyed by model name (data/assets.json), so every unit of a model shares its photo.
 const modelPhotos: Record<string, Photo> = {
   'Trail 500': mtb,
   'Gravel X': mtb,
+  'Pro 14': proLaptop,
+  'Pro 16': proLaptop,
   'Gamer 17': { src: '/images/laptop-gamer.webp', backdrop: '#202328' },
   'T-140 Tractor': {
     src: '/images/farm-machine-t140.webp',

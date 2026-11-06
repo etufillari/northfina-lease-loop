@@ -118,6 +118,7 @@ model Contract {
   buyout_cents           Int
   pricing_snapshot_json  String?
   end_of_term_action     String? // bought | returned | passed_on
+  buyout_paid_cents      Int? // net buyout settlement, only for bought contracts
   completed_on           String?
   created_at             DateTime @default(now())
   updated_at             DateTime @updatedAt
@@ -174,7 +175,7 @@ model AssetHistory {
   id           Int      @id @default(autoincrement())
   asset_id     String
   contract_id  String?
-  event_type   String // lease_started | returned | condition_assessed | refurbished | made_available | bought_out
+  event_type   String // lease_started | returned | passed_on | condition_assessed | refurbished | made_available | bought_out
   occurred_on  String
   from_status  String?
   to_status    String?

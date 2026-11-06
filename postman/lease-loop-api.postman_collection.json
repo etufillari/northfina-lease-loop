@@ -34,6 +34,10 @@
       "value": "0"
     },
     {
+      "key": "buyoutCents",
+      "value": "0"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -242,7 +246,8 @@
                   "    pm.expect(body.success).to.eql(true);",
                   "    pm.expect(body.data.contract.status).to.eql('active');",
                   "});",
-                  "pm.collectionVariables.set('contractId', body.data.contract.id);"
+                  "pm.collectionVariables.set('contractId', body.data.contract.id);",
+                  "pm.collectionVariables.set('buyoutCents', String(body.data.contract.buyoutCents));"
                 ]
               }
             }
@@ -364,6 +369,81 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "End of term examples",
+      "description": "These examples are disabled in the full runner because the current flow only pays the first invoice. Settle the complete invoice schedule, enable exactly one action, and run it.",
+      "item": [
+        {
+          "name": "Return asset",
+          "disabled": true,
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"returned\",\n  \"completedOn\": \"2029-11-05\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/end-of-term"
+          }
+        },
+        {
+          "name": "Pass asset on",
+          "disabled": true,
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"passed_on\",\n  \"completedOn\": \"2029-11-05\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/end-of-term"
+          }
+        },
+        {
+          "name": "Buy out asset",
+          "disabled": true,
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"bought\",\n  \"completedOn\": \"2029-11-05\",\n  \"buyoutPaidCents\": {{buyoutCents}},\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/end-of-term"
+          }
         }
       ]
     },

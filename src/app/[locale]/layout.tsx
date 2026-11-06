@@ -53,7 +53,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
-        <header className="z-40 border-b border-line bg-bg/80 backdrop-blur-lg sm:sticky sm:top-0">
+        <header className="z-40 border-b border-line bg-bg/90 backdrop-blur-lg sm:sticky sm:top-0">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
             <Link href={`/${locale}`} className="group flex items-center gap-3 rounded-full">
               <LoopMark className="size-9 transition-transform duration-500 group-hover:rotate-180" />

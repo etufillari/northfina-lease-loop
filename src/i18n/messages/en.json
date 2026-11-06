@@ -85,11 +85,10 @@
   "history.age": "Age",
   "history.ageNew": "This year’s model ({year})",
   "history.ageValue": "About {years} years (model year {year})",
-  "history.pastLife": "Lease {number}: completed and returned",
   "history.nextLife.available": "Lease {number}: available now",
   "history.nextLife.reserved": "Lease {number}: reserved for another customer",
   "history.nextLife.awaiting_refurbishment": "Lease {number}: after a check and refurbishment",
-  "history.noDates": "Lease and return dates aren’t in our records yet. They’ll appear here as contracts are signed in Lease Loop.",
+  "history.noDates": "The data pack only counts this item’s earliest leases, without dates. Everything after that comes from Lease Loop’s own records.",
   "apply.title": "Apply for a lease",
   "apply.intro": "We only ask what we need for this item and this amount. You’ll see our answer as soon as you’ve replied.",
   "apply.dealSummary": "Your lease",
@@ -366,5 +365,12 @@
   "asset.statusNote.reservedForYou": "This item was passed on to you and is reserved for you: you can lease it.",
   "asset.statusNote.heldFor": "This item is held for {name}, who it was passed on to.",
   "history.nextLife.leased": "Lease {number}: out on a lease now",
-  "end.unpaid": "{count} invoice(s) are still open ({total}). Whatever you choose, the lease has to be settled first."
+  "end.unpaid": "{count} invoice(s) are still open ({total}). Whatever you choose, the lease has to be settled first.",
+  "history.earlier": "Leases {from}–{to}: before Lease Loop kept records",
+  "history.earlierOne": "Lease {number}: before Lease Loop kept records",
+  "history.lease.active": "Lease {number}: {name}, from {start}, running until {end}",
+  "history.lease.returned": "Lease {number}: {name}, {start} – {end}, returned on {date}",
+  "history.lease.bought": "Lease {number}: {name}, {start} – {end}, bought on {date}",
+  "history.lease.passed_on": "Lease {number}: {name}, {start} – {end}, passed on {date}",
+  "history.refurbished": "Refurbished on {date}: {from} → {to}, new price {price}"
 }

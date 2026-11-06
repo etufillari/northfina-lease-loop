@@ -18,6 +18,9 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset, getAssetExtras } from '@/server/assets';
+import { listContractsForAsset } from '@/server/contracts';
+import { listRefurbishments } from '@/server/second-life';
+import { assetTimeline } from '@/domain/asset-timeline';
 import { currentViewer } from '@/server/current-viewer';
 import { viewerCustomerId } from '@/server/viewer';
 import { canBeLeasedBy } from '@/domain/availability';
@@ -57,12 +60,32 @@ export default async function AssetPage({
   if (!asset) notFound();
 
   const t = getT(locale);
-  const [{ today }, viewer, extras, customers] = await Promise.all([
+  const [{ today }, viewer, extras, customers, contracts, refurbishments] = await Promise.all([
     appDate(),
     currentViewer(),
     getAssetExtras(db, asset.id),
     loadCustomers(),
+    listContractsForAsset(db, asset.id),
+    listRefurbishments(db, asset.id),
   ]);
+  // The passport: the data pack's counted lives, then our own leases and refurbishments.
+  const timeline = assetTimeline(
+    asset,
+    contracts.map((c) => ({
+      startDate: c.startDate,
+      endDate: c.endDate,
+      status: c.status,
+      customerName: c.customerName,
+      closedDate: c.boughtDate ?? c.returnedDate,
+    })),
+    refurbishments.map((r) => ({
+      date: r.date,
+      conditionBefore: r.conditionBefore,
+      conditionAfter: r.conditionAfter,
+      priceCents: r.priceCents,
+    })),
+    today
+  );
   const reservedFor = extras?.reservedFor ?? null;
   const heldForName = customers.find((c) => c.id === reservedFor)?.name ?? null;
   // Available to anyone, or reserved for the viewer (an item passed on to them).
@@ -166,7 +189,7 @@ export default async function AssetPage({
         />
       ) : null}
 
-      <AssetHistoryPanel asset={asset} today={today} locale={locale} t={t} />
+      <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
     </div>
   );
 }

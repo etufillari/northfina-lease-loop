@@ -208,3 +208,15 @@ export async function signContract(
   if (!row) return { ok: false, reason: 'asset_not_available' };
   return { ok: true, contract: toContract(row) };
 }
+
+/** Every contract of one item, oldest first: its lives in Lease Loop's own records. */
+export async function listContractsForAsset(
+  db: PrismaClient,
+  assetId: string
+): Promise<Contract[]> {
+  const rows = await db.contract.findMany({
+    where: { asset_id: assetId },
+    orderBy: { start_date: 'asc' },
+  });
+  return rows.map(toContract);
+}

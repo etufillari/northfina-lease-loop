@@ -85,11 +85,10 @@
   "history.age": "Ikä",
   "history.ageNew": "Tämän vuoden malli ({year})",
   "history.ageValue": "Noin {years} vuotta (vuosimalli {year})",
-  "history.pastLife": "Vuokrakausi {number}: päättynyt ja palautettu",
   "history.nextLife.available": "Vuokrakausi {number}: saatavilla nyt",
   "history.nextLife.reserved": "Vuokrakausi {number}: varattu toiselle asiakkaalle",
   "history.nextLife.awaiting_refurbishment": "Vuokrakausi {number}: tarkastuksen ja kunnostuksen jälkeen",
-  "history.noDates": "Vuokra- ja palautuspäivät eivät vielä ole tiedoissamme. Ne näkyvät tässä, kun sopimuksia allekirjoitetaan Lease Loopissa.",
+  "history.noDates": "Datapaketti vain laskee tuotteen varhaisimmat vuokrakaudet ilman päivämääriä. Kaikki sen jälkeen tulee Lease Loopin omasta kirjanpidosta.",
   "apply.title": "Hae vuokrasopimusta",
   "apply.intro": "Kysymme vain sen, mitä tarvitsemme tätä tuotetta ja summaa varten. Näet vastauksemme heti, kun olet vastannut.",
   "apply.dealSummary": "Vuokrasopimuksesi",
@@ -366,5 +365,12 @@
   "asset.statusNote.reservedForYou": "Tämä tuote siirrettiin sinulle ja on varattu sinulle: voit vuokrata sen.",
   "asset.statusNote.heldFor": "Tämä tuote on varattu asiakkaalle {name}, jolle se siirrettiin.",
   "history.nextLife.leased": "Vuokrakausi {number}: vuokralla nyt",
-  "end.unpaid": "{count} laskua on vielä maksamatta ({total}). Valitsitpa mitä tahansa, sopimus on ensin maksettava loppuun."
+  "end.unpaid": "{count} laskua on vielä maksamatta ({total}). Valitsitpa mitä tahansa, sopimus on ensin maksettava loppuun.",
+  "history.earlier": "Vuokrakaudet {from}–{to}: ennen Lease Loopin kirjanpitoa",
+  "history.earlierOne": "Vuokrakausi {number}: ennen Lease Loopin kirjanpitoa",
+  "history.lease.active": "Vuokrakausi {number}: {name}, {start} alkaen, voimassa {end} asti",
+  "history.lease.returned": "Vuokrakausi {number}: {name}, {start} – {end}, palautettu {date}",
+  "history.lease.bought": "Vuokrakausi {number}: {name}, {start} – {end}, lunastettu {date}",
+  "history.lease.passed_on": "Vuokrakausi {number}: {name}, {start} – {end}, siirretty eteenpäin {date}",
+  "history.refurbished": "Kunnostettu {date}: {from} → {to}, uusi hinta {price}"
 }

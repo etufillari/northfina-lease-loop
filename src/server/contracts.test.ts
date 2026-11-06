@@ -4,7 +4,7 @@ import { loadAssets } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { submitApplication, type SubmitApplicationInput } from './applications';
 import { seedAssets } from './assets';
-import { getContract, listContracts, signContract } from './contracts';
+import { getContract, listContracts, listContractsForAsset, signContract } from './contracts';
 import { returnContract } from './end-of-term';
 import { payAllDue } from './invoices';
 import type { PrismaClient } from './prisma-client';
@@ -250,5 +250,16 @@ describe('contracts per customer', () => {
       'laptop-001',
     ]);
     expect(await listContracts(db, { customerId: 'cust-mikko' })).toEqual([]);
+  });
+});
+
+describe('listContractsForAsset', () => {
+  it('lists one item’s contracts only', async () => {
+    const application = await apply({}, '2026-11-05');
+    await signContract(db, { applicationId: application.id, signerName: 'Aino' }, '2026-11-05');
+    expect((await listContractsForAsset(db, 'laptop-004')).map((c) => c.assetId)).toEqual([
+      'laptop-004',
+    ]);
+    expect(await listContractsForAsset(db, 'laptop-001')).toEqual([]);
   });
 });

@@ -85,11 +85,10 @@
   "history.age": "Ålder",
   "history.ageNew": "Årets modell ({year})",
   "history.ageValue": "Cirka {years} år (årsmodell {year})",
-  "history.pastLife": "Leasing {number}: avslutad och återlämnad",
   "history.nextLife.available": "Leasing {number}: tillgänglig nu",
   "history.nextLife.reserved": "Leasing {number}: reserverad för en annan kund",
   "history.nextLife.awaiting_refurbishment": "Leasing {number}: efter kontroll och renovering",
-  "history.noDates": "Datum för leasing och återlämning finns inte i våra uppgifter ännu. De visas här när avtal skrivs under i Lease Loop.",
+  "history.noDates": "Datapaketet räknar bara artikelns tidigaste leasingar, utan datum. Allt därefter kommer från Lease Loops egna register.",
   "apply.title": "Ansök om leasing",
   "apply.intro": "Vi frågar bara det vi behöver för den här artikeln och det här beloppet. Du ser vårt svar så fort du har svarat.",
   "apply.dealSummary": "Din leasing",
@@ -366,5 +365,12 @@
   "asset.statusNote.reservedForYou": "Den här artikeln fördes vidare till dig och är reserverad för dig: du kan leasa den.",
   "asset.statusNote.heldFor": "Den här artikeln hålls för {name}, som den fördes vidare till.",
   "history.nextLife.leased": "Leasing {number}: ute på leasing nu",
-  "end.unpaid": "{count} faktura/fakturor är fortfarande obetalda ({total}). Vad du än väljer måste avtalet först vara betalt."
+  "end.unpaid": "{count} faktura/fakturor är fortfarande obetalda ({total}). Vad du än väljer måste avtalet först vara betalt.",
+  "history.earlier": "Leasing {from}–{to}: innan Lease Loop förde register",
+  "history.earlierOne": "Leasing {number}: innan Lease Loop förde register",
+  "history.lease.active": "Leasing {number}: {name}, från {start}, pågår till {end}",
+  "history.lease.returned": "Leasing {number}: {name}, {start} – {end}, återlämnad {date}",
+  "history.lease.bought": "Leasing {number}: {name}, {start} – {end}, köpt {date}",
+  "history.lease.passed_on": "Leasing {number}: {name}, {start} – {end}, förd vidare {date}",
+  "history.refurbished": "Renoverad {date}: {from} → {to}, nytt pris {price}"
 }

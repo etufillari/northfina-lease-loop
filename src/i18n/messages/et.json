@@ -85,11 +85,10 @@
   "history.age": "Vanus",
   "history.ageNew": "Selle aasta mudel ({year})",
   "history.ageValue": "Umbes {years} aastat (mudeliaasta {year})",
-  "history.pastLife": "Liising {number}: lõppenud ja tagastatud",
   "history.nextLife.available": "Liising {number}: saadaval kohe",
   "history.nextLife.reserved": "Liising {number}: broneeritud teisele kliendile",
   "history.nextLife.awaiting_refurbishment": "Liising {number}: pärast kontrolli ja korrastamist",
-  "history.noDates": "Liisingu ja tagastamise kuupäevi meie andmetes veel pole. Need ilmuvad siia, kui Lease Loopis lepinguid allkirjastatakse.",
+  "history.noDates": "Andmepakett loeb ainult toote varaseimad liisingud, ilma kuupäevadeta. Kõik hilisem pärineb Lease Loopi enda arvestusest.",
   "apply.title": "Taotle liisingut",
   "apply.intro": "Küsime ainult seda, mida selle toote ja summa jaoks vajame. Näed meie vastust kohe, kui oled vastanud.",
   "apply.dealSummary": "Sinu liising",
@@ -366,5 +365,12 @@
   "asset.statusNote.reservedForYou": "See toode anti sulle edasi ja on sulle broneeritud: saad selle liisida.",
   "asset.statusNote.heldFor": "See toode on hoitud kliendile {name}, kellele see edasi anti.",
   "history.nextLife.leased": "Liising {number}: praegu liisingul",
-  "end.unpaid": "{count} arvet on veel tasumata ({total}). Mida iganes valid, leping peab enne olema tasutud."
+  "end.unpaid": "{count} arvet on veel tasumata ({total}). Mida iganes valid, leping peab enne olema tasutud.",
+  "history.earlier": "Liisingud {from}–{to}: enne Lease Loopi arvestust",
+  "history.earlierOne": "Liising {number}: enne Lease Loopi arvestust",
+  "history.lease.active": "Liising {number}: {name}, alates {start}, kehtib kuni {end}",
+  "history.lease.returned": "Liising {number}: {name}, {start} – {end}, tagastatud {date}",
+  "history.lease.bought": "Liising {number}: {name}, {start} – {end}, välja ostetud {date}",
+  "history.lease.passed_on": "Liising {number}: {name}, {start} – {end}, edasi antud {date}",
+  "history.refurbished": "Korrastatud {date}: {from} → {to}, uus hind {price}"
 }

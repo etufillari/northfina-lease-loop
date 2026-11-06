@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import type { VatRates } from '@/data/schemas';
-import { grossCents, vatCents, vatRateOn } from './vat';
+import { grossCents, vatCents, vatRateOn, pricesIncludeVat } from './vat';
 
 let vatRates: VatRates;
 beforeAll(async () => {
@@ -52,5 +52,18 @@ describe('vatCents', () => {
   it('is exact when no rounding is needed', () => {
     expect(vatCents(200, 2550)).toBe(51);
     expect(vatCents(10000, 2600)).toBe(2600);
+  });
+});
+
+describe('pricesIncludeVat', () => {
+  it('shows gross to consumers and to anyone not signed in', () => {
+    expect(pricesIncludeVat('consumer')).toBe(true);
+    expect(pricesIncludeVat(null)).toBe(true);
+    expect(pricesIncludeVat(undefined)).toBe(true);
+  });
+
+  it('shows net to businesses: companies and sole traders', () => {
+    expect(pricesIncludeVat('company')).toBe(false);
+    expect(pricesIncludeVat('sole_trader')).toBe(false);
   });
 });

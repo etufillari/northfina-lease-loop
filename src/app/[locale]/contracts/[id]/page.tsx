@@ -10,6 +10,7 @@ import { loadVatRates } from '@/data/load';
 import { buyoutInvoicePreview } from '@/domain/buyout';
 import { addMonthsClamped } from '@/domain/calendar';
 import { formatEuro } from '@/domain/money';
+import { pricesIncludeVat } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
@@ -74,7 +75,7 @@ export default async function ContractPage({
     where: { id: contract.customer_id },
     select: { type: true },
   });
-  const pricesInclVat = holder?.type === 'consumer';
+  const pricesInclVat = pricesIncludeVat(holder?.type);
   const leasedAssets = await db.asset.findMany({
     where: { id: { in: contract.assets.map((a) => a.asset_id) } },
     select: { id: true, make: true, model: true, usage_unit: true, usage_total: true },

@@ -226,14 +226,18 @@ describe('who pays which invoice when a lease changes hands', () => {
     ]);
   });
 
-  it('on the very first day: Aino owes nothing, Lena takes every month', async () => {
+  it('on the very first day: the issued first invoice stays Aino’s, Lena takes the rest', async () => {
     const contractId = await lease('laptop-003', 'cust-aino');
     await lenaTakesOver(contractId, START);
     const contract = await db.contract.findUniqueOrThrow({
       where: { id: contractId },
-      include: { invoices: true },
+      include: { invoices: { orderBy: { number: 'asc' } } },
     });
-    expect(invoicesFor(contract, 'cust-aino')).toEqual([]);
-    expect(invoicesFor(contract, 'cust-lena')).toHaveLength(12);
+    // The month-1 invoice was issued on the start day, before the hand-over: a sent
+    // invoice never moves. The hand-over takes effect at the next billing date.
+    expect(invoicesFor(contract, 'cust-aino').map((i) => i.number)).toEqual([1]);
+    expect(invoicesFor(contract, 'cust-lena').map((i) => i.number)).toEqual([
+      2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    ]);
   });
 });

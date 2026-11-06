@@ -32,6 +32,7 @@ export function CatalogueBrowser({
   items,
   terms,
   vatRatePercent,
+  defaultWithVat,
   defaultCategory,
   personaId,
   asOfParam,
@@ -40,6 +41,8 @@ export function CatalogueBrowser({
   items: CatalogueItem[];
   terms: number[];
   vatRatePercent: number | null;
+  /** Businesses start on net prices, consumers and guests on gross (src/domain/vat.ts). */
+  defaultWithVat: boolean;
   defaultCategory: AssetCategory;
   personaId: string | null;
   asOfParam: string | null;
@@ -52,8 +55,10 @@ export function CatalogueBrowser({
   const [minCondition, setMinCondition] = useState<'any' | AssetCondition>('any');
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
-  // One switch for every price on the page, so a card never mixes net and gross.
-  const [withVat, setWithVat] = useState(true);
+  // One switch for every price on the page, so a card never mixes net and gross. The
+  // choice is per visit on purpose: the next page falls back to what the customer's type
+  // calls for, so a company never carries a gross view into the rest of the flow.
+  const [withVat, setWithVat] = useState(defaultWithVat);
 
   function pickCategory(next: AssetCategory) {
     setCategory(next);

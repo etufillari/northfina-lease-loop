@@ -9,6 +9,7 @@ import { FleetBuilder } from '@/components/fleet-builder';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadPriceLists } from '@/data/load';
 import { listPriceOn } from '@/domain/price-list';
+import { pricesIncludeVat } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
@@ -25,11 +26,12 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
   const t = getT(locale);
   const { asOf } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
-  const [assets, priceLists, secondLife, imageRows] = await Promise.all([
+  const [assets, priceLists, secondLife, imageRows, customer] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
     secondLifePrices(db),
     db.asset.findMany({ select: { id: true, image_path: true } }),
+    persona ? db.customer.findUnique({ where: { id: persona }, select: { type: true } }) : null,
   ]);
   const images = assetImageUrls(imageRows);
 
@@ -66,7 +68,13 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">{t('fleet.title')}</h1>
       <p className="mt-2 text-stone-700 dark:text-stone-300">{t('fleet.intro')}</p>
 
-      <FleetBuilder locale={locale} assets={leasable} personaId={persona} asOf={asOf} />
+      <FleetBuilder
+        locale={locale}
+        assets={leasable}
+        personaId={persona}
+        asOf={asOf}
+        pricesInclVat={pricesIncludeVat(customer?.type)}
+      />
     </div>
   );
 }

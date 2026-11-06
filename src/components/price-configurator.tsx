@@ -36,12 +36,15 @@ export function PriceConfigurator({
   assetIds,
   personaId,
   asOf,
+  pricesInclVat,
 }: {
   locale: Locale;
   /** One asset, or a fleet of distinct assets priced as one banded total. */
   assetIds: string[];
   personaId: string | null;
   asOf: string | null;
+  /** Businesses see net prices, consumers and guests gross (src/domain/vat.ts). */
+  pricesInclVat: boolean;
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -199,12 +202,23 @@ export function PriceConfigurator({
               value={`× ${(live.quote.factorPpm / 1_000_000).toFixed(6)}`}
             />
             <Row label={t('price.netRent')} value={euro(live.quote.monthlyNetRentCents)} bold />
-            <Row
-              label={`${t('price.vat')} ${live.vatRatePercent} %`}
-              value={`+ ${euro(live.monthlyRentWithVatCents - live.quote.monthlyNetRentCents)}`}
-            />
+            {pricesInclVat ? (
+              <Row
+                label={`${t('price.vat')} ${live.vatRatePercent} %`}
+                value={`+ ${euro(live.monthlyRentWithVatCents - live.quote.monthlyNetRentCents)}`}
+              />
+            ) : null}
             <Row label={t('price.buyout')} value={euro(live.quote.buyoutNetCents)} />
-            <Row label={t('price.totalCost')} value={euro(live.totalWithVatAtCurrentRateCents)} />
+            <Row
+              label={`${t('price.totalCost')} (${
+                pricesInclVat
+                  ? t('price.inclVat', { rate: live.vatRatePercent })
+                  : t('price.exclVat')
+              })`}
+              value={euro(
+                pricesInclVat ? live.totalWithVatAtCurrentRateCents : live.quote.netTotalCents
+              )}
+            />
           </dl>
         ) : (
           <p className="mt-6 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
@@ -220,14 +234,15 @@ export function PriceConfigurator({
         {live ? (
           <>
             <p className="mt-1 text-4xl font-semibold tabular-nums">
-              {euro(live.monthlyRentWithVatCents)}
+              {euro(pricesInclVat ? live.monthlyRentWithVatCents : live.quote.monthlyNetRentCents)}
               <span className="ml-1 text-base font-normal text-stone-600 dark:text-stone-400">
                 {t('common.perMonth')}
               </span>
             </p>
             <p className="text-sm text-stone-600 dark:text-stone-400">
-              {euro(live.quote.monthlyNetRentCents)} {t('price.exclVat')} ·{' '}
-              {t('price.inclVat', { rate: live.vatRatePercent })}
+              {pricesInclVat
+                ? `${euro(live.quote.monthlyNetRentCents)} ${t('price.exclVat')} · ${t('price.inclVat', { rate: live.vatRatePercent })}`
+                : t('price.exclVat')}
             </p>
 
             {live.affordability?.status === 'failed' ? (

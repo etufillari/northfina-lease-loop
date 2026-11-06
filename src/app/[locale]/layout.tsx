@@ -31,7 +31,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const asOf = asOfCookie && /^\d{4}-\d{2}-\d{2}$/.test(asOfCookie) ? asOfCookie : todayIso();
 
   return (
-    <html lang={locale}>
+    // suppressHydrationWarning: browser extensions (e.g. Storylane) add classes to <html>
+    // before React hydrates; the mismatch is theirs, not ours, and only this element's
+    // attributes are exempted.
+    <html lang={locale} suppressHydrationWarning>
       <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
         <a
           href="#main"

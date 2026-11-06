@@ -192,15 +192,16 @@ export async function executeTransfer(
       });
       // The old lessee's invitation or nomination was theirs: it ends with their lease.
       await endNominations(tx, assetIds);
-      // Invoices follow the months: a period that starts before today was the old lessee's
-      // (billed in advance, they used it); from today on, every period is the new
-      // lessee's — so a hand-over on the very first day leaves the old lessee owing nothing.
+      // An invoice that has been issued stays with the person it was issued to, paid or
+      // not — the books never move a sent invoice. The hand-over takes effect at the next
+      // billing date: the new lessee gets every invoice still to be issued (due after
+      // today), so signing on the 6th leaves the old lessee the invoice issued on the 1st.
       await tx.invoice.updateMany({
         where: { contract_id: contract.id, customer_id: null },
         data: { customer_id: contract.customer_id },
       });
       await tx.invoice.updateMany({
-        where: { contract_id: contract.id, type: 'lease', due_date: { gte: input.asOf } },
+        where: { contract_id: contract.id, type: 'lease', due_date: { gt: input.asOf } },
         data: { customer_id: input.newCustomerId },
       });
       for (const link of contract.assets) {

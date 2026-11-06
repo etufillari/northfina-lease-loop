@@ -7,6 +7,7 @@ import { AssetImage } from '@/components/asset-card';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { PriceConfigurator } from '@/components/price-configurator';
 import { formatEuro } from '@/domain/money';
+import { pricesIncludeVat } from '@/domain/vat';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
@@ -29,6 +30,9 @@ export default async function AssetPage({
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const customer = persona
+    ? await db.customer.findUnique({ where: { id: persona }, select: { type: true } })
+    : null;
   // After the desk's work a nominated item is held (reserved) for its nominee alone.
   const nominatedForMe =
     asset.status === 'reserved' &&
@@ -113,7 +117,13 @@ export default async function AssetPage({
         </p>
       ) : null}
       {asset.status === 'available' || nominatedForMe ? (
-        <PriceConfigurator locale={locale} assetIds={[asset.id]} personaId={persona} asOf={asOf} />
+        <PriceConfigurator
+          locale={locale}
+          assetIds={[asset.id]}
+          personaId={persona}
+          asOf={asOf}
+          pricesInclVat={pricesIncludeVat(customer?.type)}
+        />
       ) : (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
           {t('asset.notAvailable')}

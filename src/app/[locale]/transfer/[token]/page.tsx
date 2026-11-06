@@ -5,7 +5,9 @@ import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { TransferApply } from '@/components/transfer-apply';
+import { loadVatRates } from '@/data/load';
 import { formatEuro } from '@/domain/money';
+import { grossCents, pricesIncludeVat, vatRateOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
@@ -41,20 +43,33 @@ export default async function TransferPage({
   }
 
   const { contract } = offer;
+  // Issued invoices stay with the current lessee; the successor takes the rest.
   const paidMonths = contract.invoices.filter(
-    (i) => i.type === 'lease' && i.due_date < asOf
+    (i) => i.type === 'lease' && i.due_date <= asOf
   ).length;
-  // What the successor actually commits to: the lease invoices not yet due.
-  const stillToPayNetCents = contract.invoices
-    .filter((i) => i.type === 'lease' && i.due_date >= asOf)
-    .reduce((sum, i) => sum + i.net_cents, 0);
+  // What the successor actually commits to: the lease invoices not yet issued. Businesses
+  // see net, consumers and guests with VAT (each invoice carries its own rate).
+  const viewer = persona
+    ? await db.customer.findUnique({ where: { id: persona }, select: { type: true } })
+    : null;
+  const inclVat = pricesIncludeVat(viewer?.type);
+  const vat = vatRateOn(await loadVatRates(), asOf);
+  const showGross = inclVat && vat.ok;
+  const vatNote = showGross ? t('price.inclVat', { rate: vat.ratePercent }) : t('price.exclVat');
+  const rentCents = showGross
+    ? grossCents(contract.monthly_net_rent_cents, vat.rateBasisPoints)
+    : contract.monthly_net_rent_cents;
+  const stillToPayCents = contract.invoices
+    .filter((i) => i.type === 'lease' && i.due_date > asOf)
+    .reduce((sum, i) => sum + (showGross ? i.total_cents : i.net_cents), 0);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">{t('transfer.title')}</h1>
       <p className="mt-3 text-stone-700 dark:text-stone-300">
         {t('transfer.intro', {
-          rent: euro(contract.monthly_net_rent_cents),
+          rent: euro(rentCents),
+          vat: vatNote,
           months: contract.term_months - paidMonths,
         })}
       </p>
@@ -64,12 +79,12 @@ export default async function TransferPage({
           label={t('contract.product')}
           value={offer.assets.map((a) => `${a.make} ${a.model}`).join(', ')}
         />
-        <Fact label={t('price.netRent')} value={euro(contract.monthly_net_rent_cents)} />
+        <Fact label={`${t('price.monthly')} (${vatNote})`} value={euro(rentCents)} />
         <Fact
           label={t('transfer.monthsLeft')}
           value={t('price.months', { months: contract.term_months - paidMonths })}
         />
-        <Fact label={t('transfer.stillToPay')} value={euro(stillToPayNetCents)} />
+        <Fact label={`${t('transfer.stillToPay')} (${vatNote})`} value={euro(stillToPayCents)} />
         <Fact label={t('contract.endsOn')} value={formatIsoDate(termEndsOn(contract), locale)} />
       </dl>
 

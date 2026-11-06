@@ -152,7 +152,8 @@ async function buildState(
         where: {
           contract_id: rows.application.transfer_contract_id,
           type: 'lease',
-          due_date: { gte: asOf },
+          // Only invoices not yet issued move to the successor (see executeTransfer).
+          due_date: { gt: asOf },
         },
         select: { net_cents: true },
       })

@@ -30,3 +30,13 @@ export function vatCents(netCents: number, rateBasisPoints: number): number {
 export function grossCents(netCents: number, rateBasisPoints: number): number {
   return netCents + vatCents(netCents, rateBasisPoints);
 }
+
+/**
+ * Whether prices are SHOWN with VAT for this customer type. Consumers — and anyone not
+ * signed in — see gross amounts, the safe default under Finnish consumer rules; businesses
+ * (companies and sole traders) see net, the figure they compare. Invoices always show
+ * net, VAT and total regardless, and the total is what is paid.
+ */
+export function pricesIncludeVat(customerType: string | null | undefined): boolean {
+  return customerType !== 'company' && customerType !== 'sole_trader';
+}

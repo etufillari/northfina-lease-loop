@@ -29,10 +29,13 @@ export function FleetBuilder({
   assets,
   personaId,
   asOf,
+  pricesInclVat,
 }: {
   locale: Locale;
   assets: FleetAsset[];
   personaId: string | null;
+  /** Businesses see net prices, consumers and guests gross (src/domain/vat.ts). */
+  pricesInclVat: boolean;
   asOf: string | null;
 }) {
   const t = getT(locale);
@@ -127,6 +130,7 @@ export function FleetBuilder({
             assetIds={selected}
             personaId={personaId}
             asOf={asOf}
+            pricesInclVat={pricesInclVat}
           />
         </>
       ) : null}

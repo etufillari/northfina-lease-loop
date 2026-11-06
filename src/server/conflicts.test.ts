@@ -181,8 +181,9 @@ describe('taking over a lease', () => {
       await answerAll(applied.applicationId, customerId);
       const submitted = await submit(applied.applicationId, customerId);
       expect(submitted.ok && submitted.state.application.status).toBe('approved');
-      // The summary shows what is left of the lease, not the whole term.
-      expect(submitted.ok && submitted.state.quote.takeOver?.monthsLeft).toBe(12);
+      // The summary shows what is left of the lease, not the whole term. The first
+      // month's invoice was issued today, so it stays with the current lessee.
+      expect(submitted.ok && submitted.state.quote.takeOver?.monthsLeft).toBe(11);
       if (customerId === 'cust-lena') lena = applied.applicationId;
       else sanna = applied.applicationId;
     }

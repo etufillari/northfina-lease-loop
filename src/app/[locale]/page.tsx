@@ -11,7 +11,7 @@ import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load'
 import { assetCategorySchema, type AssetCategory } from '@/data/schemas';
 import { quoteFor } from '@/domain/pricing';
 import { listPriceOn } from '@/domain/price-list';
-import { grossCents, vatRateOn } from '@/domain/vat';
+import { grossCents, pricesIncludeVat, vatRateOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
@@ -140,6 +140,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
           items={items}
           terms={terms}
           vatRatePercent={vat.ok ? vat.ratePercent : null}
+          defaultWithVat={pricesIncludeVat(customer?.type)}
           defaultCategory={preferred}
           personaId={persona}
           asOfParam={asOfParam}

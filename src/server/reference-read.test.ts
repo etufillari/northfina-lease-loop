@@ -24,6 +24,7 @@ import {
   readCoefficientTable,
   readPriceLists,
   readQuestions,
+  readRefurbishmentCosts,
   readResidualCurves,
   readSecondLifeDemand,
   readVatRates,
@@ -72,6 +73,7 @@ describe('reference-read fallback on empty DB', () => {
     expect(await readSecondLifeDemand(db)).toEqual(pack.secondLifeDemand);
     expect(await readQuestions(db)).toEqual(pack.questions);
     expect(await readCo2Factors(db)).toEqual(pack.co2Factors);
+    expect(await readRefurbishmentCosts(db)).toEqual(pack.refurbishmentCosts);
   });
 });
 
@@ -117,6 +119,13 @@ describe('reference-read from seeded SQLite tables', () => {
   it('round-trips CO2 manufacturing factors and settings from SQLite', async () => {
     const co2 = await readCo2Factors(db);
     expect(co2).toEqual(pack.co2Factors);
+  });
+
+  it('round-trips refurbishment upgrades and fixed costs from SQLite', async () => {
+    const refurb = await readRefurbishmentCosts(db);
+    expect(refurb.e_bike).toEqual(pack.refurbishmentCosts.e_bike);
+    expect(refurb.laptop).toEqual(pack.refurbishmentCosts.laptop);
+    expect(refurb.farm_machine).toEqual(pack.refurbishmentCosts.farm_machine);
   });
 
   it('reflects database edits so callers genuinely read SQLite', async () => {

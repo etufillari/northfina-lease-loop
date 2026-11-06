@@ -178,7 +178,7 @@ describe('signContract and findPersistedContract', () => {
       downPaymentCents: 0,
       signedOn: '2026-11-05',
       exitMonth: 7,
-      condition: 'good',
+      inspection: { condition: 'good', usageValue: 0, inspectedBy: 'Workshop Vantaa' },
       actor: 'cust-aino',
     });
     expect(exitRes.ok).toBe(true);
@@ -199,7 +199,7 @@ describe('signContract and findPersistedContract', () => {
     });
     expect(closingRow).toMatchObject({
       invoice_date: '2027-05-05',
-      net_cents: 66_146,
+      net_cents: 70_646,
     });
   });
 

@@ -9,6 +9,7 @@ import {
   loadCoefficientTable,
   loadPriceLists,
   loadQuestions,
+  loadRefurbishmentCosts,
   loadResidualCurves,
   loadSecondLifeDemand,
   loadVatRates,
@@ -18,6 +19,7 @@ import {
   coefficientTableSchema,
   priceListsFileSchema,
   questionsFileSchema,
+  refurbishmentCostsSchema,
   residualCurvesSchema,
   secondLifeDemandFileSchema,
   vatRatesSchema,
@@ -25,6 +27,7 @@ import {
   type CoefficientTable,
   type PriceList,
   type QuestionsFile,
+  type RefurbishmentCosts,
   type ResidualCurves,
   type SecondLifeRequest,
   type VatRates,
@@ -253,6 +256,47 @@ export function fromCo2Rows(input: {
   });
 }
 
+export function fromRefurbishmentRows(input: {
+  upgrades: readonly {
+    category: string;
+    from_condition: string;
+    to_condition: string;
+    cost_cents: number;
+  }[];
+  fixedCosts: readonly {
+    category: string;
+    id: string;
+    cost_cents: number;
+    when_text: string;
+    resets_usage: boolean;
+    mandatory_before_next_lease: boolean;
+  }[];
+}): RefurbishmentCosts {
+  const categoryData = (cat: 'e_bike' | 'laptop' | 'farm_machine') => ({
+    condition_upgrades: Object.fromEntries(
+      input.upgrades
+        .filter((u) => u.category === cat)
+        .map((u) => [`${u.from_condition}->${u.to_condition}`, u.cost_cents])
+    ),
+    fixed: input.fixedCosts
+      .filter((f) => f.category === cat)
+      .map((f) => ({
+        id: f.id,
+        cost_cents: f.cost_cents,
+        when: f.when_text,
+        ...(f.resets_usage ? { resets_usage: true } : {}),
+        ...(f.mandatory_before_next_lease ? { mandatory_before_next_lease: true } : {}),
+      })),
+  });
+
+  return refurbishmentCostsSchema.parse({
+    note: 'Loaded from SQLite refurbishment tables',
+    e_bike: categoryData('e_bike'),
+    laptop: categoryData('laptop'),
+    farm_machine: categoryData('farm_machine'),
+  });
+}
+
 // --- Database readers with data-pack fallback --------------------------------
 
 export async function readPriceLists(db: PrismaClient): Promise<PriceList[]> {
@@ -352,4 +396,19 @@ export async function readCo2Factors(db: PrismaClient): Promise<Co2Factors> {
     // Fall back to disk JSON when DB is not initialized in unit tests
   }
   return loadCo2Factors();
+}
+
+export async function readRefurbishmentCosts(db: PrismaClient): Promise<RefurbishmentCosts> {
+  try {
+    const [upgrades, fixedCosts] = await Promise.all([
+      db.refurbishmentUpgrade.findMany(),
+      db.refurbishmentFixedCost.findMany(),
+    ]);
+    if (upgrades.length > 0 && fixedCosts.length > 0) {
+      return fromRefurbishmentRows({ upgrades, fixedCosts });
+    }
+  } catch {
+    // Fall back to disk JSON when DB is not initialized in unit tests
+  }
+  return loadRefurbishmentCosts();
 }

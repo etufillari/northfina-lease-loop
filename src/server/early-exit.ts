@@ -4,16 +4,26 @@
 // invoices page uses (`earlyExitForContract`), so the browser never sends an amount that we
 // then trust. The asset change and its audit row, which carries the whole breakdown, commit in
 // one transaction.
-import type { Asset, AssetCondition, AssetStatus } from '@/data/schemas';
+// A return needs the return inspection: the condition and usage reading found when the item
+// came back, and who inspected it. They price the credit for the item and become the asset's
+// new record. The app has no login, so this records and checks the inspection (it cannot go
+// below the reading or above the condition on record) but cannot prove who made it.
+import type { Asset, AssetStatus } from '@/data/schemas';
 import { calculateContractQuote } from '@/domain/contract-pricing';
-import { earlyExitForContract } from '@/domain/early-exit';
-import { effectiveAssetPriceOn } from '@/domain/price-list';
+import {
+  checkReturnInspection,
+  earlyExitForContract,
+  type InspectionProblem,
+  type ReturnInspection,
+} from '@/domain/early-exit';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+import { loadContractPrice } from './contract-price';
 import type { PrismaClient } from './prisma-client';
 import {
   readCoefficientTable,
   readPriceLists,
+  readRefurbishmentCosts,
   readResidualCurves,
   readVatRates,
 } from './reference-read';
@@ -28,10 +38,12 @@ export type ExecuteEarlyExitInput = {
   termMonths: number;
   downPaymentCents: number;
   signedOn: string;
+  /** The longer-term offer the contract was signed under, if any: its price is locked. */
+  token?: string;
   /** Leave on the due date of this rent row (1 = the first rent). */
   exitMonth: number;
-  /** Condition the item is in at the exit. On a return it becomes the asset's condition. */
-  condition: AssetCondition;
+  /** Required for a return; on a return it becomes the asset's condition and usage. */
+  inspection?: ReturnInspection & { inspectedBy: string };
   actor: string;
 };
 
@@ -47,7 +59,8 @@ export type EarlyExitReceipt = {
 
 export type ExecuteEarlyExitResult =
   | { ok: true; asset: Asset; receipt: EarlyExitReceipt }
-  | { ok: false; reason: 'not_found' | 'lease_ended' | 'invalid_contract' };
+  | { ok: false; reason: 'not_found' | 'lease_ended' | 'invalid_contract' }
+  | { ok: false; reason: 'invalid_inspection'; problem: InspectionProblem | 'missing' };
 
 /** A lease that was bought out or returned has already ended and cannot be exited again. */
 const ENDED_STATUSES: readonly AssetStatus[] = ['sold', 'returned'];
@@ -63,14 +76,35 @@ export async function executeEarlyExit(
   const asset = toAsset(row);
   if (ENDED_STATUSES.includes(asset.status)) return { ok: false, reason: 'lease_ended' };
 
-  const [priceLists, coefficientTable, residualCurves, vatRates] = await Promise.all([
-    readPriceLists(db),
-    readCoefficientTable(db),
-    readResidualCurves(db),
-    readVatRates(db),
-  ]);
+  const { inspection } = input;
+  if (input.choice === 'return') {
+    if (!inspection) return { ok: false, reason: 'invalid_inspection', problem: 'missing' };
+    const check = checkReturnInspection(
+      { condition: asset.condition, usageValue: asset.usage.value },
+      inspection
+    );
+    if (!check.ok) return { ok: false, reason: 'invalid_inspection', problem: check.problem };
+  }
 
-  const price = effectiveAssetPriceOn(priceLists, asset, input.signedOn);
+  const [priceLists, coefficientTable, refurbishmentCosts, residualCurves, vatRates] =
+    await Promise.all([
+      readPriceLists(db),
+      readCoefficientTable(db),
+      readRefurbishmentCosts(db),
+      readResidualCurves(db),
+      readVatRates(db),
+    ]);
+
+  // The same price the invoices page shows: the offer's locked price, if any, or effective asset price.
+  const { price, offer } = await loadContractPrice(db, {
+    assetId: asset.id,
+    asset,
+    signedOn: input.signedOn,
+    termMonths: input.termMonths,
+    downPaymentCents: input.downPaymentCents,
+    token: input.token,
+    priceLists,
+  });
   if (!price.ok) return { ok: false, reason: 'invalid_contract' };
   const quoted = calculateContractQuote({
     listPriceCents: price.priceCents,
@@ -87,8 +121,10 @@ export async function executeEarlyExit(
     quote: quoted.quote,
     signedOn: input.signedOn,
     exitMonth: input.exitMonth,
-    condition: input.condition,
+    // A buyout's price does not depend on the item, so without an inspection the record is used.
+    inspection: inspection ?? { condition: asset.condition, usageValue: asset.usage.value },
     asset,
+    refurbishmentCosts,
     residualCurves,
     vatRates,
   });
@@ -120,11 +156,24 @@ export async function executeEarlyExit(
             termMonths: input.termMonths,
             downPaymentCents: input.downPaymentCents,
             priceListVersion: quoted.quote.priceListVersion,
+            listPriceCents: quoted.quote.listPriceCents,
+            signedUnderOffer: offer !== null,
             monthlyNetRentCents: quoted.quote.monthlyNetRentCents,
             buyoutNetCents: quoted.quote.buyoutNetCents,
           },
           exitMonth: exit.billedMonths,
-          condition: input.condition,
+          ...(input.choice === 'return' && inspection
+            ? {
+                inspection: {
+                  condition: inspection.condition,
+                  usage: { unit: asset.usage.unit, value: inspection.usageValue },
+                  inspectedBy: inspection.inspectedBy,
+                },
+                recordedAtStart: { condition: asset.condition, usage: asset.usage },
+                refurbishment: exit.refurbishment,
+                returnCreditCents: exit.returnCreditCents,
+              }
+            : {}),
           balanceCents: exit.balanceCents,
           marketValueCents: exit.marketValue.valueCents,
           lines: option.lines.map(({ key, amountCents }) => ({ key, amountCents })),
@@ -136,10 +185,11 @@ export async function executeEarlyExit(
         const { count } = await tx.asset.updateMany({
           where: { id: asset.id, status: { notIn: [...ENDED_STATUSES] } },
           data:
-            input.choice === 'return'
+            input.choice === 'return' && inspection
               ? {
                   status: nextStatus,
-                  condition: input.condition,
+                  condition: inspection.condition,
+                  usage_value: inspection.usageValue,
                   previous_lives: { increment: 1 },
                 }
               : { status: nextStatus },
@@ -189,8 +239,8 @@ export async function executeEarlyExit(
             from_status: asset.status,
             to_status: nextStatus,
             contract_id: activeContract?.id ?? null,
-            condition: input.condition,
-            usage_value: asset.usage.value,
+            condition: inspection?.condition ?? asset.condition,
+            usage_value: inspection?.usageValue ?? asset.usage.value,
             amount_cents: option.netCents,
             note_key:
               input.choice === 'buyout'

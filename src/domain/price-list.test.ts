@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPriceLists } from '@/data/load';
 import type { PriceList } from '@/data/schemas';
-import { effectiveAssetPriceOn, listPriceOn } from './price-list';
+import { contractListPrice, effectiveAssetPriceOn, listPriceOn } from './price-list';
 
 let priceLists: PriceList[];
 beforeAll(async () => {
@@ -99,5 +99,29 @@ describe('effectiveAssetPriceOn', () => {
     expect(() =>
       effectiveAssetPriceOn(priceLists, { id: 'ebike-003', relist_price_cents: -10 }, '2026-11-05')
     ).toThrow(RangeError);
+  });
+});
+
+describe('contractListPrice', () => {
+  const catalogue = { ok: true, priceCents: 262_400, priceListVersion: 2 } as const;
+  const offer = { priceCents: 249_900, priceListVersion: 1 };
+
+  it('uses the price locked in the offer when the contract was signed under one', () => {
+    expect(contractListPrice({ offer, catalogue })).toEqual({
+      ok: true,
+      priceCents: 249_900,
+      priceListVersion: 1,
+    });
+  });
+
+  it('uses the catalogue price without an offer, failures included', () => {
+    expect(contractListPrice({ offer: null, catalogue })).toEqual(catalogue);
+    const missing = { ok: false, reason: 'unknown_asset' } as const;
+    expect(contractListPrice({ offer: null, catalogue: missing })).toEqual(missing);
+  });
+
+  it('keeps an offer price even when the catalogue has no price for that day', () => {
+    const missing = { ok: false, reason: 'no_price_list_on_date' } as const;
+    expect(contractListPrice({ offer, catalogue: missing })).toMatchObject({ ok: true });
   });
 });

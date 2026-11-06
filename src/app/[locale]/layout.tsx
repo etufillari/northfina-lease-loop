@@ -55,9 +55,23 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {children}
         </main>
 
-        <footer className="border-t border-stone-200 dark:border-stone-800">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
+        <footer className="border-t border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-stone-600 sm:flex-row sm:px-6 dark:text-stone-400">
+            <p>{t('footer.copyright')}</p>
+            <nav aria-label={t('footer.navLabel')} className="flex items-center gap-6">
+              <Link
+                href={`/${locale}`}
+                className="transition-colors hover:text-stone-900 hover:underline dark:hover:text-stone-100"
+              >
+                {t('footer.catalogue')}
+              </Link>
+              <Link
+                href={`/${locale}/about`}
+                className="transition-colors hover:text-stone-900 hover:underline dark:hover:text-stone-100"
+              >
+                {t('footer.about')}
+              </Link>
+            </nav>
           </div>
         </footer>
       </body>

@@ -100,6 +100,9 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
         value={month}
         onChange={(e) => setMonth(Number(e.target.value))}
         className="range mt-3 w-full"
+        style={
+          { '--fill': `${monthFillPercent(month, contract.termMonths)}%` } as React.CSSProperties
+        }
         aria-valuetext={t('early.monthValue', {
           month,
           term: contract.termMonths,
@@ -288,4 +291,9 @@ function Breakdown(props: {
       <p className="mt-3 text-sm text-muted">{zeroed ? t('early.zero') : t(`early.why.${kind}`)}</p>
     </div>
   );
+}
+
+/** How far along the month slider's track is filled: month 1 is empty, the last month full. */
+function monthFillPercent(month: number, termMonths: number): number {
+  return termMonths <= 1 ? 100 : ((month - 1) / (termMonths - 1)) * 100;
 }

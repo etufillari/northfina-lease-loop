@@ -229,7 +229,9 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           <p className="mt-1 max-w-2xl text-sm text-muted">
             {t('early.intro', { rate: formatNumber(exitContext.annualInterestPercent, locale) })}
           </p>
+          {/* Keyed by the demo date, so moving it starts the slider on the new current month. */}
           <EarlyExitPanel
+            key={today}
             locale={locale}
             contractId={found.id}
             contract={contract}

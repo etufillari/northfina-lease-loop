@@ -1,9 +1,15 @@
 import { ApiError } from './api-response';
 import type { CreateQuoteFailure } from './quotes';
 
+function assertNever(value: never): never {
+  console.error('Unhandled quote error reason:', value);
+  throw new ApiError(500, 'INTERNAL_ERROR', 'Unable to process the quote');
+}
+
 /** Maps pricing failures to the stable errors exposed by quote-related API routes. */
 export function throwQuoteError(result: CreateQuoteFailure): never {
-  switch (result.reason) {
+  const reason = result.reason;
+  switch (reason) {
     case 'asset_not_found':
       throw new ApiError(404, 'ASSET_NOT_FOUND', 'The requested asset was not found');
     case 'asset_unavailable':
@@ -19,9 +25,11 @@ export function throwQuoteError(result: CreateQuoteFailure): never {
     case 'above_maximum':
     case 'unknown_term':
       throw new ApiError(422, 'PRICING_UNAVAILABLE', 'The requested lease cannot be priced', {
-        reason: result.reason,
+        reason,
       });
     case 'no_vat_rate_on_date':
       throw new ApiError(422, 'VAT_RATE_UNAVAILABLE', 'No VAT rate applies on this date');
+    default:
+      return assertNever(reason);
   }
 }

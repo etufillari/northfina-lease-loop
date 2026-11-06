@@ -166,6 +166,12 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 
 ## Cross-cutting
 
+- **Dates look the same everywhere** (6 Nov), day first. Shown: "06 Nov 2026" (two-digit
+  day, three-letter month in the reader's language, four-digit year; never 06/11 vs 11/06
+  ambiguity). Typed: "06.11.2026" in our own field with a calendar button, because a
+  browser's built-in date input formats by the browser's language (mm/dd/yyyy on a US
+  browser) whatever the page language. Times (the audit log) add Helsinki "14:05". Stored
+  and sent as ISO everywhere (`src/i18n/format.ts`).
 - Every domain function takes an ISO date; `src/server/today.ts` supplies "today", and an
   as-of override doubles as the demo's time-travel mode. Time travel only moves forward,
   by +1 day / week / month or a jump to a later date (contracts, invoices and offers are written on their day, so going back would contradict

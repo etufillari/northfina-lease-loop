@@ -436,7 +436,7 @@
   "demo.jumpTo": "Hüppa kuupäevale",
   "demo.go": "Mine",
   "demo.reset": "Lähtesta demo",
-  "demo.confirmReset": "Kas lähtestada demo? Kõik taotlused, lepingud, arved ja järjekorra muudatused kustutatakse, andmepakett laaditakse uuesti ja kuupäev läheb tagasi 1. jaanuarile 2026.",
+  "demo.confirmReset": "Kas lähtestada demo? Kõik taotlused, lepingud, arved ja järjekorra muudatused kustutatakse, andmepakett laaditakse uuesti ja kuupäev läheb tagasi: 01 jaa 2026.",
   "waitlist.join.budget": "Kuueelarve (€, ilma käibemaksuta)",
   "waitlist.offers": "Pakkumised sulle",
   "waitlist.offersIntro": "Sobiv ese saabus. Seda hoitakse sulle näidatud kuupäevani: nõustu, et alustada taotlust, või keeldu, et see läheks järgmisele.",
@@ -505,5 +505,11 @@
   "nomination.apply": "Mine eseme juurde",
   "apply.notYours": "See taotlus kuulub teisele kliendile.",
   "apply.backToItem": "Tagasi toote juurde",
-  "apply.backToFleet": "Tagasi autopargi juurde"
+  "apply.backToFleet": "Tagasi autopargi juurde",
+  "date.placeholder": "pp.kk.aaaa",
+  "date.pick": "Vali kalendrist",
+  "date.invalid": "Kirjuta kuupäev kujul pp.kk.aaaa, nt 06.11.2026",
+  "date.between": "Vali kuupäev vahemikus {min}–{max}",
+  "date.from": "Vali {min} või hiljem",
+  "date.until": "Vali {max} või varem"
 }

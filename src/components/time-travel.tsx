@@ -8,10 +8,11 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { addDays, addMonthsClamped } from '@/domain/calendar';
-import { formatShortDate } from '@/i18n/format';
+import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { AS_OF_COOKIE } from './as-of-cookie';
+import { DateField } from './date-field';
 import { PERSONA_COOKIE, STAFF_PERSONA } from './persona-cookie';
 
 /** Long enough to outlast a demo day: an expired cookie would jump back to the real date. */
@@ -40,6 +41,7 @@ export function TimeTravel({
   const t = getT(locale);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [jumpTo, setJumpTo] = useState('');
 
   // Moving the clock runs the overnight job for the days passed (holds that lapse end, offers
   // pass on), then the whole app re-renders on the new date.
@@ -58,6 +60,7 @@ export function TimeTravel({
         return;
       }
       setCookie(AS_OF_COOKIE, iso);
+      setJumpTo('');
       router.refresh();
     } catch {
       window.alert(t('common.error'));
@@ -99,7 +102,7 @@ export function TimeTravel({
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-amber-900 dark:text-amber-200">{t('nav.timeTravel')}</span>
       <time dateTime={current} className="font-mono text-sm font-semibold">
-        {formatShortDate(current, locale)}
+        {formatIsoDate(current, locale)}
       </time>
       <div role="group" aria-label={t('demo.forward')} className="flex gap-1">
         <button
@@ -131,23 +134,23 @@ export function TimeTravel({
         className="flex items-center gap-1.5"
         onSubmit={(event) => {
           event.preventDefault();
-          const value = new FormData(event.currentTarget).get('date');
-          if (typeof value === 'string' && value) travel(value);
+          if (jumpTo) travel(jumpTo);
         }}
       >
-        <label className="flex items-center gap-1.5 text-sm">
-          <span className="text-amber-900 dark:text-amber-200">{t('demo.jumpTo')}</span>
-          <input
+        <span className="text-sm text-amber-900 dark:text-amber-200">{t('demo.jumpTo')}</span>
+        <span className="w-36">
+          <DateField
             key={current}
-            name="date"
-            type="date"
+            locale={locale}
+            value={jumpTo}
+            onChange={setJumpTo}
             min={addDays(current, 1)}
-            required
             disabled={busy}
-            className="rounded-md border border-amber-300 bg-white px-1.5 py-0.5 text-sm tabular-nums dark:border-amber-700 dark:bg-stone-900"
+            ariaLabel={t('demo.jumpTo')}
+            className="rounded-md border border-amber-300 bg-white px-1.5 py-0.5 text-sm dark:border-amber-700 dark:bg-stone-900"
           />
-        </label>
-        <button type="submit" className={step} disabled={busy}>
+        </span>
+        <button type="submit" className={step} disabled={busy || !jumpTo}>
           {t('demo.go')}
         </button>
       </form>

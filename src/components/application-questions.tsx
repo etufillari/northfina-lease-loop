@@ -4,6 +4,8 @@
 import { formatEuro } from '@/domain/money';
 import type { MessageKey, Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { formatIsoDate } from '@/i18n/format';
+import { DateField } from './date-field';
 
 export type QuestionText = { en: string; fi?: string; sv?: string; et?: string };
 export type Question = {
@@ -40,6 +42,7 @@ export function optionLabel(t: Translate, option: string): string {
 
 export function QuestionInput({
   t,
+  locale,
   question,
   draft,
   setDraft,
@@ -47,6 +50,7 @@ export function QuestionInput({
   onSubmit,
 }: {
   t: Translate;
+  locale: Locale;
   question: Question;
   draft: string;
   setDraft: (value: string) => void;
@@ -95,14 +99,27 @@ export function QuestionInput({
         else onSubmit(draft.trim());
       }}
     >
-      <input
-        type={inputType}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        required
-        min={question.type === 'money' ? 0 : undefined}
-        className="flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
-      />
+      {question.type === 'date' ? (
+        <div className="flex-1">
+          <DateField
+            locale={locale}
+            value={draft}
+            onChange={setDraft}
+            required
+            ariaLabel={question.text[locale] ?? question.text.en}
+            className="rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          />
+        </div>
+      ) : (
+        <input
+          type={inputType}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          required
+          min={question.type === 'money' ? 0 : undefined}
+          className="flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+        />
+      )}
       <button
         type="submit"
         disabled={busy}
@@ -141,9 +158,11 @@ export function AnsweredList({
               ? optionLabel(t, String(value))
               : question.type === 'money'
                 ? formatEuro(Number(value), intlLocale[locale])
-                : Array.isArray(value)
-                  ? value.join(', ')
-                  : String(value);
+                : question.type === 'date'
+                  ? formatIsoDate(String(value), locale)
+                  : Array.isArray(value)
+                    ? value.join(', ')
+                    : String(value);
           return (
             <li key={question.id} className="flex items-center justify-between gap-4 px-4 py-2.5">
               <div className="min-w-0">

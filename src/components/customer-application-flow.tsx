@@ -308,30 +308,28 @@ export function CustomerApplicationFlow({
   return (
     <section
       aria-labelledby="application-heading"
-      className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8 dark:border-stone-800 dark:bg-stone-900"
+      className="rounded-3xl border border-ink-200 bg-white p-6 shadow-sm sm:p-8 dark:border-ink-800 dark:bg-ink-900"
     >
-      <div className="flex flex-wrap items-start justify-between gap-5 border-b border-stone-200 pb-6 dark:border-stone-800">
+      <div className="flex flex-wrap items-start justify-between gap-5 border-b border-ink-200 pb-6 dark:border-ink-800">
         <div>
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-            {labels.eyebrow}
-          </p>
+          <p className="text-sm font-medium text-brand-800 dark:text-brand-300">{labels.eyebrow}</p>
           <h2 id="application-heading" className="mt-1 text-2xl font-semibold tracking-tight">
             {labels.title}
           </h2>
-          <p className="mt-2 max-w-2xl text-stone-600 dark:text-stone-400">{labels.intro}</p>
+          <p className="mt-2 max-w-2xl text-ink-600 dark:text-ink-400">{labels.intro}</p>
         </div>
         <button
           type="button"
           onClick={goBackToQuote}
           disabled={isBusy}
-          className="text-sm font-medium text-emerald-800 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+          className="text-sm font-medium text-brand-800 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-300"
         >
           ← {labels.backToQuote}
         </button>
       </div>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-        <aside className="h-fit rounded-2xl bg-stone-100 p-5 dark:bg-stone-800">
+        <aside className="h-fit rounded-2xl bg-ink-100 p-5 dark:bg-ink-800">
           <label htmlFor="applicant-profile" className="font-medium">
             {labels.applicant}
           </label>
@@ -340,7 +338,7 @@ export function CustomerApplicationFlow({
             value={selectedCustomerId}
             onChange={(event) => void changeCustomer(event.target.value)}
             disabled={isBusy}
-            className="mt-3 w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm dark:border-stone-600 dark:bg-stone-900"
+            className="mt-3 w-full rounded-xl border border-ink-300 bg-white px-3 py-2.5 text-sm dark:border-ink-600 dark:bg-ink-900"
           >
             {customerOptions.map((option) => (
               <option key={option.id} value={option.id}>
@@ -348,11 +346,11 @@ export function CustomerApplicationFlow({
               </option>
             ))}
           </select>
-          <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
+          <p className="mt-3 text-sm leading-6 text-ink-600 dark:text-ink-300">
             {labels.applicantHint}
           </p>
           {deal ? (
-            <dl className="mt-5 space-y-3 border-t border-stone-200 pt-4 text-sm dark:border-stone-700">
+            <dl className="mt-5 space-y-3 border-t border-ink-200 pt-4 text-sm dark:border-ink-700">
               <SummaryRow
                 label={t('catalogue.termLength')}
                 value={`${deal.termMonths} ${t('catalogue.months')}`}
@@ -367,22 +365,22 @@ export function CustomerApplicationFlow({
 
         <div aria-live="polite" aria-busy={isBusy}>
           {isBusy && !currentQuestion && !preview ? (
-            <p className="rounded-2xl bg-emerald-50 p-5 text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-100">
+            <p className="rounded-2xl bg-brand-50 p-5 text-brand-950 dark:bg-brand-950/50 dark:text-brand-100">
               {labels.loading}
             </p>
           ) : currentQuestion && preview ? (
             <div>
               <div className="flex items-baseline justify-between gap-4">
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                <p className="text-sm font-medium text-brand-800 dark:text-brand-300">
                   {labels.questionnaire}
                 </p>
-                <p className="text-sm text-stone-600 tabular-nums dark:text-stone-400">
+                <p className="text-sm text-ink-600 tabular-nums dark:text-ink-400">
                   {labels.questionCount
                     .replace('{current}', String(questionIndex + 1))
                     .replace('{total}', String(preview.application.activeQuestions.length))}
                 </p>
               </div>
-              <div className="mt-4 rounded-2xl border border-stone-200 p-5 dark:border-stone-700">
+              <div className="mt-4 rounded-2xl border border-ink-200 p-5 dark:border-ink-700">
                 <ApplicationQuestion
                   question={currentQuestion}
                   answer={answers[currentQuestion.id]}
@@ -402,7 +400,7 @@ export function CustomerApplicationFlow({
                   type="button"
                   onClick={() => void continueQuestionnaire()}
                   disabled={isBusy}
-                  className="mt-6 inline-flex items-center rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  className="mt-6 inline-flex items-center btn-primary"
                 >
                   {isBusy ? labels.loading : labels.next}
                   <span aria-hidden="true" className="ml-2">
@@ -454,7 +452,7 @@ function DecisionPanel({
 }: DecisionPanelProps) {
   const approved = decision === 'approved';
   const tone = approved
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100'
+    ? 'border-green-200 bg-green-50 text-green-950 dark:border-green-900 dark:bg-green-950/50 dark:text-green-100'
     : 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-100';
   const message = approved
     ? labels.ready
@@ -473,7 +471,7 @@ function DecisionPanel({
             type="button"
             onClick={onSubmit}
             disabled={isBusy}
-            className="mt-6 inline-flex items-center rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+            className="mt-6 inline-flex items-center btn-primary"
           >
             {isBusy ? labels.submitting : labels.submit}
             <span aria-hidden="true" className="ml-2">
@@ -506,7 +504,7 @@ function DecisionPanel({
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-stone-600 dark:text-stone-400">{label}</dt>
+      <dt className="text-ink-600 dark:text-ink-400">{label}</dt>
       <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   );

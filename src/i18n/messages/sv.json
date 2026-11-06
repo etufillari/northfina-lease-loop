@@ -188,5 +188,8 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
-  "footer.skeleton": "Startskelett — byt ut mig"
+  "footer.browse": "Bläddra",
+  "footer.customerService": "Kundservice",
+  "footer.hours": "Vardagar 9–17",
+  "footer.copyright": "© 2026 Lease Loop. Alla rättigheter förbehållna."
 }

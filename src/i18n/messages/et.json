@@ -188,5 +188,8 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
-  "footer.skeleton": "Algmall — asenda mind"
+  "footer.browse": "Sirvi",
+  "footer.customerService": "Klienditeenindus",
+  "footer.hours": "Tööpäeviti 9–17",
+  "footer.copyright": "© 2026 Lease Loop. Kõik õigused kaitstud."
 }

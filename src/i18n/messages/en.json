@@ -188,5 +188,8 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
-  "footer.skeleton": "Starter skeleton — replace me"
+  "footer.browse": "Browse",
+  "footer.customerService": "Customer service",
+  "footer.hours": "Weekdays 9–17",
+  "footer.copyright": "© 2026 Lease Loop. All rights reserved."
 }

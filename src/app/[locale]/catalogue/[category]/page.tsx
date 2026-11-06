@@ -34,13 +34,11 @@ export default async function CategoryPage({
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="max-w-2xl">
-        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+        <p className="text-sm font-medium text-brand-800 dark:text-brand-300">
           {t('catalogue.title')}
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t(`category.${category}`)}
-        </h1>
-        <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+        <h1 className="page-title mt-2">{t(`category.${category}`)}</h1>
+        <p className="mt-5 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-900 ring-1 ring-brand-200 ring-inset dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-800">
           <time dateTime={today}>
             {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
           </time>
@@ -48,13 +46,13 @@ export default async function CategoryPage({
       </div>
 
       {assets.length === 0 ? (
-        <p className="mt-10 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+        <p className="mt-10 rounded-xl border border-dashed border-ink-300 p-6 text-ink-700 dark:border-ink-700 dark:text-ink-300">
           {t('catalogue.empty')}
         </p>
       ) : (
         <section aria-labelledby="category-assets" className="mt-12">
-          <div className="mb-6 flex items-baseline justify-between gap-4 border-b border-stone-200 pb-3 dark:border-stone-800">
-            <p className="text-sm text-stone-600 dark:text-stone-400">
+          <div className="mb-6 flex items-baseline justify-between gap-4 border-b border-ink-200 pb-3 dark:border-ink-800">
+            <p className="text-sm text-ink-600 dark:text-ink-400">
               {t('catalogue.itemCount', { count: assets.length })}
             </p>
           </div>

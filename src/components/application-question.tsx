@@ -29,7 +29,7 @@ export function ApplicationQuestion({
   const text = question.text[locale];
   const value = draft ?? draftForAnswer(question, answer);
   const inputClass =
-    'mt-3 w-full rounded-xl border border-stone-300 bg-white px-3 py-3 text-base dark:border-stone-600 dark:bg-stone-950';
+    'mt-3 w-full rounded-xl border border-ink-300 bg-white px-3 py-3 text-base dark:border-ink-600 dark:bg-ink-950';
 
   return (
     <div>
@@ -40,7 +40,7 @@ export function ApplicationQuestion({
             {question.options?.map((option) => (
               <label
                 key={option}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-3 transition has-checked:border-emerald-600 has-checked:bg-emerald-50 dark:border-stone-700 dark:has-checked:border-emerald-500 dark:has-checked:bg-emerald-950/50"
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-ink-200 p-3 transition has-checked:border-brand-600 has-checked:bg-brand-50 dark:border-ink-700 dark:has-checked:border-brand-500 dark:has-checked:bg-brand-950/50"
               >
                 <input
                   type="radio"
@@ -48,7 +48,7 @@ export function ApplicationQuestion({
                   value={option}
                   checked={value === option}
                   onChange={(event) => onChange(event.target.value)}
-                  className="size-4 accent-emerald-700"
+                  className="size-4 accent-brand-700"
                 />
                 <span>{optionLabel(t, question.id, option)}</span>
               </label>
@@ -58,7 +58,7 @@ export function ApplicationQuestion({
       ) : question.type === 'list' ? (
         <label htmlFor={question.id} className="block text-lg font-semibold">
           {text}
-          <span className="mt-2 block text-sm font-normal text-stone-600 dark:text-stone-400">
+          <span className="mt-2 block text-sm font-normal text-ink-600 dark:text-ink-400">
             {labels.listHint}
           </span>
           <textarea
@@ -73,7 +73,7 @@ export function ApplicationQuestion({
         <label htmlFor={question.id} className="block text-lg font-semibold">
           {text}
           {question.type === 'money' ? (
-            <span className="mt-2 block text-sm font-normal text-stone-600 dark:text-stone-400">
+            <span className="mt-2 block text-sm font-normal text-ink-600 dark:text-ink-400">
               {labels.moneyHint}
             </span>
           ) : null}
@@ -89,8 +89,8 @@ export function ApplicationQuestion({
           />
         </label>
       )}
-      <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-400">
-        <span className="font-medium text-stone-800 dark:text-stone-200">{labels.whyWeAsk}:</span>{' '}
+      <p className="mt-3 text-sm leading-6 text-ink-600 dark:text-ink-400">
+        <span className="font-medium text-ink-800 dark:text-ink-200">{labels.whyWeAsk}:</span>{' '}
         {question.why_we_ask[locale]}
       </p>
       {emailError ? (
@@ -99,7 +99,7 @@ export function ApplicationQuestion({
         </p>
       ) : null}
       {question.validation ? (
-        <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+        <p className="mt-2 text-xs text-ink-500 dark:text-ink-400">
           {question.validation.hint[locale]}
         </p>
       ) : null}

@@ -188,5 +188,8 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
-  "footer.skeleton": "Aloituspohja — korvaa minut"
+  "footer.browse": "Selaa",
+  "footer.customerService": "Asiakaspalvelu",
+  "footer.hours": "Arkisin 9–17",
+  "footer.copyright": "© 2026 Lease Loop. Kaikki oikeudet pidätetään."
 }

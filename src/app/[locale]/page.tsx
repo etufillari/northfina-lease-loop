@@ -19,54 +19,56 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   const assets = await listAssets(db);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t('catalogue.title')}
-        </h1>
-        <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
-      </div>
+    <>
+      <section className="brand-hero">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+          <h1 className="page-title max-w-2xl">{t('catalogue.title')}</h1>
+          <p className="mt-5 max-w-2xl text-[17px] leading-[1.4]">{t('catalogue.intro')}</p>
+        </div>
+      </section>
 
-      {assets.length === 0 ? (
-        <p className="mt-10 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
-          {t('catalogue.empty')}
-        </p>
-      ) : (
-        <section aria-labelledby="category-choices" className="mt-12">
-          <h2 id="category-choices" className="text-xl font-semibold">
-            {t('catalogue.chooseCategory')}
-          </h2>
-          <p className="mt-2 max-w-2xl text-stone-600 dark:text-stone-400">
-            {t('catalogue.categoryIntro')}
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        {assets.length === 0 ? (
+          <p className="mt-10 rounded-xl border border-dashed border-ink-300 p-6 text-ink-700 dark:border-ink-700 dark:text-ink-300">
+            {t('catalogue.empty')}
           </p>
-          <ul className="mt-6 grid gap-4 md:grid-cols-3">
-            {assetCategorySchema.options.map((category) => {
-              const count = assets.filter((asset) => asset.category === category).length;
-              return (
-                <li key={category}>
-                  <Link
-                    href={`/${locale}/catalogue/${category}`}
-                    className="group block h-full rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 dark:hover:border-emerald-700"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <h3 className="text-lg font-semibold">{t(`category.${category}`)}</h3>
-                      <span
-                        aria-hidden="true"
-                        className="text-xl text-emerald-700 transition-transform group-hover:translate-x-1 dark:text-emerald-400"
-                      >
-                        →
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
-                      {t('catalogue.itemCount', { count })}
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-    </div>
+        ) : (
+          <section aria-labelledby="category-choices">
+            <h2 id="category-choices" className="text-xl font-semibold">
+              {t('catalogue.chooseCategory')}
+            </h2>
+            <p className="mt-2 max-w-2xl text-ink-600 dark:text-ink-400">
+              {t('catalogue.categoryIntro')}
+            </p>
+            <ul className="mt-6 grid gap-4 md:grid-cols-3">
+              {assetCategorySchema.options.map((category) => {
+                const count = assets.filter((asset) => asset.category === category).length;
+                return (
+                  <li key={category}>
+                    <Link
+                      href={`/${locale}/catalogue/${category}`}
+                      className="group block h-full rounded-2xl border border-ink-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-ink-800 dark:bg-ink-900 dark:hover:border-brand-700"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <h3 className="text-lg font-semibold">{t(`category.${category}`)}</h3>
+                        <span
+                          aria-hidden="true"
+                          className="text-xl text-brand-700 transition-transform group-hover:translate-x-1 dark:text-brand-400"
+                        >
+                          →
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-ink-600 dark:text-ink-400">
+                        {t('catalogue.itemCount', { count })}
+                      </p>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
+    </>
   );
 }

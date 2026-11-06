@@ -49,7 +49,7 @@ const quote = {
   total_if_returned_cents: 360000,
   total_if_bought_cents: 378990,
   down_payment_limits: {
-    min_cents: 5000,
+    min_cents: 0,
     max_cents: 50000,
   },
 };
@@ -243,6 +243,27 @@ describe('AssetQuotePanel', () => {
     await flushDebounce();
 
     expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+
+  it('raises the down payment when a successful quote has a higher minimum', async () => {
+    const fetchMock = mockFetch({
+      ...successResponse,
+      data: { ...quote, down_payment_limits: { min_cents: 5000, max_cents: 50000 } },
+    });
+
+    renderPanel();
+
+    await flushDebounce();
+    await flushDebounce();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/assets/asset-001/quote?term=36&down=5000&quantity=1',
+      expect.any(Object)
+    );
+    expect(
+      screen.getByText(formatEuro(quote.monthly_total_cents, intlLocale[locale]))
+    ).toBeInTheDocument();
   });
 
   it('automatically adjusts down payment when it is below the minimum', async () => {

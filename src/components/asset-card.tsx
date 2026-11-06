@@ -1,7 +1,7 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/pricing/price-list';
+import type { AssetPriceResult } from '@/domain/pricing/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -12,13 +12,14 @@ import Link from 'next/link';
 
 type AssetCardProps = {
   asset: Asset;
-  price: ListPriceResult;
+  price: AssetPriceResult;
   leasePrice: number;
   locale: Locale;
   t: Translate;
 };
 
 export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProps) {
+  const isRelisted = price.ok && price.priceListVersion === null;
   const headingId = `asset-${asset.id}`;
   const fallbackImage = categoryFallbackImages[asset.category];
 
@@ -62,17 +63,13 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
           />
         </dl>
 
-        {/* List price */}
+        {/* Price: a re-listed item has no price list */}
         <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
           <div className="flex items-end justify-between gap-3 px-3">
             <div className="text-xs text-stone-600 dark:text-stone-400">
-              <p>{t('asset.listPrice')}</p>
-              {price.ok ? (
-                <p>
-                  {t('asset.priceListVersion', {
-                    version: price.priceListVersion,
-                  })}
-                </p>
+              <p>{isRelisted ? t('asset.price') : t('asset.listPrice')}</p>
+              {price.ok && price.priceListVersion !== null ? (
+                <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
               ) : null}
             </div>
 

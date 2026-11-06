@@ -72,7 +72,9 @@
       "value": 1200
     },
     "previous_lives": 1,
-    "status": "available"
+    "status": "available",
+    "first_leased_on": "2025-03-03",
+    "first_lease_price_cents": 159000
   },
   {
     "id": "ebike-006",
@@ -102,7 +104,9 @@
       "value": 18400
     },
     "previous_lives": 1,
-    "status": "returned"
+    "status": "returned",
+    "first_leased_on": "2023-04-11",
+    "first_lease_price_cents": 549000
   },
   {
     "id": "ebike-008",
@@ -117,7 +121,9 @@
       "value": 9800
     },
     "previous_lives": 2,
-    "status": "returned"
+    "status": "returned",
+    "first_leased_on": "2022-03-07",
+    "first_lease_price_cents": 179900
   },
   {
     "id": "ebike-009",
@@ -162,7 +168,9 @@
       "value": 22100
     },
     "previous_lives": 1,
-    "status": "returned"
+    "status": "returned",
+    "first_leased_on": "2024-02-19",
+    "first_lease_price_cents": 499000
   },
   {
     "id": "ebike-012",
@@ -267,7 +275,9 @@
       "value": 310
     },
     "previous_lives": 1,
-    "status": "returned"
+    "status": "returned",
+    "first_leased_on": "2024-05-06",
+    "first_lease_price_cents": 119900
   },
   {
     "id": "laptop-007",
@@ -282,7 +292,9 @@
       "value": 780
     },
     "previous_lives": 2,
-    "status": "returned"
+    "status": "returned",
+    "first_leased_on": "2023-01-16",
+    "first_lease_price_cents": 349000
   },
   {
     "id": "laptop-008",
@@ -312,7 +324,9 @@
       "value": 45
     },
     "previous_lives": 1,
-    "status": "available"
+    "status": "available",
+    "first_leased_on": "2025-02-10",
+    "first_lease_price_cents": 99000
   },
   {
     "id": "laptop-010",
@@ -387,7 +401,9 @@
       "value": 140
     },
     "previous_lives": 1,
-    "status": "available"
+    "status": "available",
+    "first_leased_on": "2025-04-07",
+    "first_lease_price_cents": 4100000
   },
   {
     "id": "farm-005",
@@ -402,7 +418,9 @@
       "value": 4200
     },
     "previous_lives": 1,
-    "status": "returned"
+    "status": "returned",
+    "first_leased_on": "2021-05-03",
+    "first_lease_price_cents": 8900000
   },
   {
     "id": "farm-006",

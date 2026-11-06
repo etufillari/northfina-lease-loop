@@ -68,6 +68,14 @@ describe('data pack', () => {
     }
   });
 
+  it('gives every used item a first lease, and no new item one', async () => {
+    for (const asset of await loadAssets()) {
+      const hasFirstLease =
+        asset.first_leased_on !== undefined && asset.first_lease_price_cents !== undefined;
+      expect(hasFirstLease, asset.id).toBe(asset.previous_lives > 0);
+    }
+  });
+
   it('reports which file and field is wrong when data does not match', async () => {
     const strict = z.array(z.strictObject({ id: z.number() }));
     await expect(loadDataFile('assets.json', strict)).rejects.toThrow(

@@ -46,6 +46,7 @@ const t = ((key: string, params?: Record<string, unknown>) => {
     'asset.usage': 'Usage',
     'asset.previousLives': 'Previous lives',
     'asset.listPrice': 'List price excl. VAT',
+    'asset.price': 'Price excl. VAT',
     'asset.estimatedLeasePrice': 'Estimated lease price excl. VAT',
     'asset.month': 'month',
     'asset.noPrice': 'No price available',
@@ -76,6 +77,22 @@ describe('AssetCard', () => {
 
     expect(screen.getByText('List price excl. VAT')).toBeInTheDocument();
     expect(screen.getByText('€2,499.00')).toBeInTheDocument();
+  });
+
+  it('shows a re-listed price without a price list', () => {
+    render(
+      <AssetCard
+        asset={asset}
+        price={{ ok: true, priceCents: 34_482, priceListVersion: null }}
+        leasePrice={21500}
+        locale={'en' as Locale}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('Price excl. VAT')).toBeInTheDocument();
+    expect(screen.queryByText('List price excl. VAT')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Price list/)).not.toBeInTheDocument();
   });
 
   it('renders the estimated lease price and duration', () => {

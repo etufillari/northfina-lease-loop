@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPriceLists } from '@/data/load';
 import type { PriceList } from '@/data/schemas';
-import { listPriceOn } from './price-list';
+import { assetPriceOn, listPriceOn } from './price-list';
 
 let priceLists: PriceList[];
 beforeAll(async () => {
@@ -63,5 +63,31 @@ describe('listPriceOn', () => {
 
   it('throws on a date that is not YYYY-MM-DD, because that is a bug in the caller', () => {
     expect(() => listPriceOn(priceLists, 'ebike-001', '6.11.2026')).toThrow(RangeError);
+  });
+});
+
+describe('assetPriceOn', () => {
+  it('uses the list for an item with no re-list price', () => {
+    expect(assetPriceOn(priceLists, { id: 'ebike-003' }, '2026-11-05')).toMatchObject({
+      ok: true,
+      priceCents: 389_000,
+      priceListVersion: 1,
+    });
+  });
+
+  it('uses the re-list price, which has no price list', () => {
+    const asset = { id: 'ebike-003', relist_price_cents: 123_400 };
+    expect(assetPriceOn(priceLists, asset, '2026-11-05')).toEqual({
+      ok: true,
+      priceCents: 123_400,
+      priceListVersion: null,
+    });
+  });
+
+  it('passes on a list failure', () => {
+    expect(assetPriceOn(priceLists, { id: 'nope' }, '2026-11-05')).toEqual({
+      ok: false,
+      reason: 'unknown_asset',
+    });
   });
 });

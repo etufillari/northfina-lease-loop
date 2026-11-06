@@ -4,7 +4,7 @@ import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
 import { loadPriceLists } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
-import { listPriceOn } from '@/domain/pricing/price-list';
+import { assetPriceOn } from '@/domain/pricing/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -68,7 +68,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
               <li key={asset.id}>
                 <AssetCard
                   asset={asset}
-                  price={listPriceOn(priceLists, asset.id, today)}
+                  price={assetPriceOn(priceLists, asset, today)}
                   leasePrice={21500} // TODO: Replace with actual lease price calculation
                   locale={locale}
                   t={t}

@@ -100,6 +100,28 @@ describe('changeAssetStatus', () => {
   });
 });
 
+describe('seedAssets on an older database', () => {
+  it('fills in missing first-lease data, and never overwrites it', async () => {
+    await seedAssets(db, dataPack);
+    await db.asset.update({
+      where: { id: 'ebike-007' },
+      data: { first_leased_on: null, first_lease_price_cents: null },
+    });
+    await db.asset.update({
+      where: { id: 'ebike-008' },
+      data: { first_leased_on: '2000-01-01' },
+    });
+
+    await seedAssets(db, dataPack);
+    expect(await db.asset.findUniqueOrThrow({ where: { id: 'ebike-007' } })).toMatchObject({
+      first_leased_on: '2023-04-11',
+      first_lease_price_cents: 549_000,
+    });
+    const untouched = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-008' } });
+    expect(untouched.first_leased_on).toBe('2000-01-01');
+  });
+});
+
 describe('toAsset', () => {
   it('rejects a row with a value the schema does not allow', () => {
     const [first] = dataPack;

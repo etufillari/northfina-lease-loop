@@ -70,7 +70,7 @@ model ContractEnding {
   id             Int      @id @default(autoincrement())
   created_at     DateTime @default(now())
   contract_id    Int      @unique
-  kind           String // buy | return | pass_on
+  kind           String // buy | return | pass_on | early_buy | early_hand_back
   decided_on     String // ISO date
   effective_date String // ISO date
   ending_json    String

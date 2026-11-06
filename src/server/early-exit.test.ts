@@ -66,7 +66,7 @@ describe('endLeaseEarly', () => {
     const before = await getContract(db, contractId);
     const result = await endLeaseEarly(db, exitData, {
       contractId,
-      choice: { kind: 'early_buy' },
+      choice: { kind: 'early_buy', month: 7 },
       today: '2027-05-20',
       actor: 'cust-aino',
     });
@@ -89,7 +89,7 @@ describe('endLeaseEarly', () => {
   it('hands the item back with its inspection', async () => {
     const result = await endLeaseEarly(db, exitData, {
       contractId,
-      choice: { kind: 'early_hand_back', condition: 'good', usageValue: 1_200 },
+      choice: { kind: 'early_hand_back', month: 7, condition: 'good', usageValue: 1_200 },
       today: '2027-05-20',
       actor: 'cust-aino',
     });
@@ -108,7 +108,7 @@ describe('endLeaseEarly', () => {
   it('refuses after the term and a second ending, writing nothing', async () => {
     const late = await endLeaseEarly(db, exitData, {
       contractId,
-      choice: { kind: 'early_buy' },
+      choice: { kind: 'early_buy', month: 36 },
       today: '2029-11-05',
       actor: 'cust-aino',
     });
@@ -118,7 +118,7 @@ describe('endLeaseEarly', () => {
 
     const input = {
       contractId,
-      choice: { kind: 'early_buy' } as const,
+      choice: { kind: 'early_buy', month: 7 } as const,
       today: '2027-05-20',
       actor: 'cust-aino',
     };
@@ -132,10 +132,34 @@ describe('endLeaseEarly', () => {
   it('refuses a missing contract', async () => {
     const result = await endLeaseEarly(db, exitData, {
       contractId: 999_999,
-      choice: { kind: 'early_buy' },
+      choice: { kind: 'early_buy', month: 7 },
       today: '2027-05-20',
       actor: 'x',
     });
     expect(result).toEqual({ ok: false, reason: 'contract_not_found' });
+  });
+
+  it('refuses a price shown for an earlier month, writing nothing (D-045)', async () => {
+    // Month 6 was shown; 20 May 2027 is in month 7 (card 8).
+    const result = await endLeaseEarly(db, exitData, {
+      contractId,
+      choice: { kind: 'early_buy', month: 6 },
+      today: '2027-05-20',
+      actor: 'cust-aino',
+    });
+    expect(result).toEqual({ ok: false, reason: 'month_changed' });
+    expect(await getContractEnding(db, contractId)).toBeNull();
+    expect((await asset()).status).toBe('reserved');
+  });
+
+  it('refuses when the coefficient table is not the one the contract was signed on', async () => {
+    const newerTable = { ...exitData.coefficientTable, id: 'ct-2027-1' };
+    const result = await endLeaseEarly(
+      db,
+      { ...exitData, coefficientTable: newerTable },
+      { contractId, choice: { kind: 'early_buy', month: 7 }, today: '2027-05-20', actor: 'x' }
+    );
+    expect(result).toEqual({ ok: false, reason: 'table_changed' });
+    expect(await getContractEnding(db, contractId)).toBeNull();
   });
 });

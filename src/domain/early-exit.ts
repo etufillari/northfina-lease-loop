@@ -87,6 +87,22 @@ export function bandInterestPercent(table: CoefficientTable, band: string): numb
   return table.bands.find((b) => b.band === band)?.annual_interest_percent ?? null;
 }
 
+export type ContractRateResult =
+  { ok: true; percent: number } | { ok: false; reason: 'table_changed' | 'unknown_band' };
+
+/**
+ * The band's annual interest from the coefficient table the contract was signed on (D-019, D-045).
+ * Only one table is loaded, so a contract signed on any other table is refused, not repriced.
+ */
+export function contractInterestPercent(
+  table: CoefficientTable,
+  contract: { coefficientTableId: string; band: string }
+): ContractRateResult {
+  if (table.id !== contract.coefficientTableId) return { ok: false, reason: 'table_changed' };
+  const percent = bandInterestPercent(table, contract.band);
+  return percent === null ? { ok: false, reason: 'unknown_band' } : { ok: true, percent };
+}
+
 /** The invoice month `date` falls in, counted from the start like the schedule (D-016). */
 export function exitMonthOn(contract: BilledContract, date: string): ExitMonthResult {
   // ISO dates compare as strings (D-015).
@@ -166,19 +182,27 @@ export function earlyExitQuote(
   };
 }
 
-export type EarlyExitChoice = { kind: 'early_buy' } | ({ kind: 'early_hand_back' } & Inspection);
+/** `month` is the exit month the price was shown for; it must still be the current one (D-045). */
+export type EarlyExitChoice =
+  { kind: 'early_buy'; month: number } | ({ kind: 'early_hand_back'; month: number } & Inspection);
 
 export type EndEarlyResult =
   | { ok: true; ending: Ending }
   | {
       ok: false;
       reason:
-        'not_started' | 'term_over' | 'no_vat_rate' | 'usage_went_down' | 'condition_improved';
+        | 'not_started'
+        | 'term_over'
+        | 'no_vat_rate'
+        | 'usage_went_down'
+        | 'condition_improved'
+        | 'month_changed';
     };
 
 /**
  * Decides an early exit made on `today`. A handed-back item is valued in the state it was
- * inspected in, which can't be better than at delivery (the same check as D-029).
+ * inspected in, which can't be better than at delivery (the same check as D-029). If `today` is
+ * no longer in the month the customer saw the price for, nothing is decided (D-045).
  */
 export function endEarly(
   contract: ExitContract,
@@ -198,6 +222,7 @@ export function endEarly(
   const priced = earlyExitOn(contract, { ...context, item }, today);
   if (!priced.ok) return priced;
   const { quote } = priced;
+  if (quote.exitMonth !== choice.month) return { ok: false, reason: 'month_changed' };
   return {
     ok: true,
     ending: {

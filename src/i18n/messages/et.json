@@ -113,6 +113,8 @@
   "refusal.too_early": "Valimiseks on veel liiga vara. Saad valida alates viimase kuu algusest.",
   "refusal.condition_improved": "Seisukord ei saa olla parem kui toote kättesaamisel.",
   "refusal.unknown_band": "Me ei leia selle liisingu intressimäära, seega ennetähtaegset lõpetamist ei saa hinnastada.",
+  "refusal.month_changed": "Pärast seda, kui leht hinna näitas, on alanud uus kuu. Kontrolli selle kuu hinda ja kinnita uuesti.",
+  "refusal.table_changed": "Liising sõlmiti intressitabeliga, mida meil enam ei ole, seega ennetähtaegset lõpetamist ei saa hinnastada.",
   "refusal.not_started": "Liising pole veel alanud, seega ei saa seda ennetähtaegselt lõpetada.",
   "refusal.term_over": "Liising on viimases kuus või läbi, seega kasuta selle asemel perioodi lõpu valikut.",
   "refusal.asset_not_returned": "Uuesti müüki saab panna ainult tagastatud toote ja see ei oota uut elu. Laadi leht uuesti, et olekut näha.",

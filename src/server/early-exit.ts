@@ -10,8 +10,9 @@ import {
 import type { Contract } from '@/domain/contract';
 import { itemAgeOn, type AgeClock } from '@/domain/item-age';
 import {
-  bandInterestPercent,
+  contractInterestPercent,
   endEarly,
+  type ContractRateResult,
   type EarlyExitChoice,
   type EndEarlyResult,
   type ExitContext,
@@ -36,30 +37,37 @@ export interface ExitAssetRow {
   usage_value: number;
 }
 
+export type ExitContextResult =
+  { ok: true; context: ExitContext } | Extract<ContractRateResult, { ok: false }>;
+
 /**
- * Everything the early-exit price needs besides the contract, or null when the contract's band is
- * missing from the table. The asset row still holds the item as delivered while it is leased.
+ * Everything the early-exit price needs besides the contract, with the rate from the table the
+ * contract was signed on (D-045). The asset row still holds the item as delivered while it is leased.
  */
 export function earlyExitContext(
   data: EarlyExitData,
   contract: Contract,
   asset: ExitAssetRow,
   clock: AgeClock
-): ExitContext | null {
-  const annualInterestPercent = bandInterestPercent(data.coefficientTable, contract.band);
-  if (annualInterestPercent === null) return null;
+): ExitContextResult {
+  const rate = contractInterestPercent(data.coefficientTable, contract);
+  if (!rate.ok) return rate;
+  const annualInterestPercent = rate.percent;
   const where = { table: 'asset', id: contract.assetId };
   const condition = parseStoredValue(assetConditionSchema, asset.condition, where);
   return {
-    vatRates: data.vatRates,
-    curves: data.curves,
-    annualInterestPercent,
-    item: {
-      category: parseStoredValue(assetCategorySchema, asset.category, where),
-      // The same age rule as second life and the passport (D-042).
-      ageAtStartMonths: itemAgeOn(clock, contract.startDate),
-      condition,
-      usageValue: asset.usage_value,
+    ok: true,
+    context: {
+      vatRates: data.vatRates,
+      curves: data.curves,
+      annualInterestPercent,
+      item: {
+        category: parseStoredValue(assetCategorySchema, asset.category, where),
+        // The same age rule as second life and the passport (D-042).
+        ageAtStartMonths: itemAgeOn(clock, contract.startDate),
+        condition,
+        usageValue: asset.usage_value,
+      },
     },
   };
 }
@@ -69,7 +77,7 @@ export type EndEarlyRefusal =
   | 'contract_not_found'
   | 'already_ended'
   | 'asset_not_leased'
-  | 'unknown_band'
+  | Extract<ExitContextResult, { ok: false }>['reason']
   | Extract<EndEarlyResult, { ok: false }>['reason'];
 
 export interface EndEarlyInput {
@@ -94,8 +102,9 @@ export async function endLeaseEarly(
   if (!asset || asset.status !== 'reserved') return { ok: false, reason: 'asset_not_leased' };
   const clock = await ageClockFor(db, contract.assetId);
   if (!clock) return { ok: false, reason: 'asset_not_leased' };
-  const context = earlyExitContext(data, contract, asset, clock);
-  if (!context) return { ok: false, reason: 'unknown_band' };
+  const priced = earlyExitContext(data, contract, asset, clock);
+  if (!priced.ok) return priced;
+  const { context } = priced;
 
   const decided = endEarly(
     contract,

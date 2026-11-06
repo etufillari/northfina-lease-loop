@@ -47,6 +47,8 @@ const fromRoutes = [
   'CONDITION_IMPROVED',
   'NEXT_LESSEE_IS_CURRENT',
   'UNKNOWN_BAND',
+  'TABLE_CHANGED',
+  'MONTH_CHANGED',
   'NOT_STARTED',
   'TERM_OVER',
   // POST /api/assets/:id/relist

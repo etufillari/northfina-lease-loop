@@ -57,11 +57,12 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
   const priced = earlyExitQuote(contract, { ...context, item }, month);
   const quote = priced.ok ? priced.quote : null;
 
+  // The month the price is shown for goes along, so the server refuses it if a new month began (D-045).
   const choice: EarlyExitChoice | null = !handingBack
-    ? { kind }
+    ? { kind, month }
     : usageValue === null
       ? null
-      : { kind, condition, usageValue };
+      : { kind, month, condition, usageValue };
   const decided = choice ? endEarly(contract, context, delivered, choice, props.today) : null;
   const isCurrentMonth = current.ok && current.month === month;
   const problem = isCurrentMonth && decided && !decided.ok ? decided.reason : null;
@@ -85,6 +86,8 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
     }
     setRefusal(body?.error?.code);
     setSaving('error');
+    // A new month began: reload the as-of date so the slider and price catch up.
+    if (body?.error?.code === 'MONTH_CHANGED') router.refresh();
   }
 
   return (
@@ -199,7 +202,9 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
         <p role="alert" className="mt-4 rounded-lg bg-warn-bg px-3 py-2 text-sm text-warn-fg">
           {problem === 'usage_went_down' || problem === 'condition_improved'
             ? t(`end.reason.${problem}`, { condition: t(`condition.${delivered.condition}`) })
-            : t(`early.reason.${problem}`)}
+            : problem === 'month_changed'
+              ? t('refusal.month_changed')
+              : t(`early.reason.${problem}`)}
         </p>
       ) : null}
 

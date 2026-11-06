@@ -113,6 +113,8 @@
   "refusal.too_early": "It's too early to choose. You can choose from the start of your final month.",
   "refusal.condition_improved": "The condition can't be better than when you received the item.",
   "refusal.unknown_band": "We can't find the interest rate for this lease, so the early exit can't be priced.",
+  "refusal.month_changed": "A new month has started since this page showed the price. Check this month's price and confirm again.",
+  "refusal.table_changed": "This lease was signed on an interest table we no longer have, so the early exit can't be priced.",
   "refusal.not_started": "The lease hasn't started yet, so it can't be ended early.",
   "refusal.term_over": "The lease is in its final month or over, so please use the end-of-term choice instead.",
   "refusal.asset_not_returned": "Only a returned item can be re-listed, and this one isn't waiting for a new life. Reload the page to see its status.",

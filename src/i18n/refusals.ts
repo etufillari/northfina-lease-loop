@@ -67,6 +67,8 @@ const messageKeys = {
   condition_improved: 'refusal.condition_improved',
   next_lessee_is_current: 'end.reason.next_lessee_is_current',
   unknown_band: 'refusal.unknown_band',
+  table_changed: 'refusal.table_changed',
+  month_changed: 'refusal.month_changed',
   not_started: 'refusal.not_started',
   term_over: 'refusal.term_over',
   // re-listing

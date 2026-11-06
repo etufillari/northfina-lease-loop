@@ -5,6 +5,7 @@ import { loadCoefficientTable, loadResidualCurves, loadVatRates } from '@/data/l
 import type { CoefficientTable, ResidualCurves, VatRates } from '@/data/schemas';
 import {
   bandInterestPercent,
+  contractInterestPercent,
   earlyExitOn,
   earlyExitQuote,
   endEarly,
@@ -220,11 +221,36 @@ describe('bandInterestPercent', () => {
   });
 });
 
+describe('contractInterestPercent', () => {
+  // Contracts are frozen snapshots (D-019): the rate comes from the table they were signed on.
+  it('reads the band’s rate from the table the contract was signed on', () => {
+    const signed = { coefficientTableId: 'ct-2026-1', band: 'B' };
+    // coefficient-table.json: ct-2026-1, band B, annual_interest_percent 7.9.
+    expect(contractInterestPercent(table, signed)).toEqual({ ok: true, percent: 7.9 });
+  });
+
+  it('refuses when today’s table is not the one the contract was signed on', () => {
+    const older = { coefficientTableId: 'ct-2025-9', band: 'B' };
+    expect(contractInterestPercent(table, older)).toEqual({ ok: false, reason: 'table_changed' });
+  });
+
+  it('refuses a band the table does not have', () => {
+    const odd = { coefficientTableId: 'ct-2026-1', band: 'Z' };
+    expect(contractInterestPercent(table, odd)).toEqual({ ok: false, reason: 'unknown_band' });
+  });
+});
+
 describe('endEarly', () => {
   const delivered = { condition: 'new', usageValue: 0 } as const;
 
   it('buys out early in month 7 (card 8): the ending keeps every line of the price', () => {
-    const result = endEarly(aino, ainoContext(), delivered, { kind: 'early_buy' }, '2027-05-20');
+    const result = endEarly(
+      aino,
+      ainoContext(),
+      delivered,
+      { kind: 'early_buy', month: 7 },
+      '2027-05-20'
+    );
     expect(result).toMatchObject({
       ok: true,
       ending: { kind: 'early_buy', decidedOn: '2027-05-20', effectiveDate: '2027-06-05' },
@@ -237,7 +263,7 @@ describe('endEarly', () => {
       aino,
       ainoContext(),
       delivered,
-      { kind: 'early_hand_back', condition: 'good', usageValue: 1_200 },
+      { kind: 'early_hand_back', month: 7, condition: 'good', usageValue: 1_200 },
       '2027-05-20'
     );
     // 1 200 km = 1 step, −2 %. Now: 389 000 × 0.80 × 0.85 × 0.98 = 259 229.6 → 259 230.
@@ -252,7 +278,7 @@ describe('endEarly', () => {
   });
 
   it('refuses readings that are better than at delivery', () => {
-    const better = { kind: 'early_hand_back', condition: 'good', usageValue: 0 } as const;
+    const better = { kind: 'early_hand_back', month: 7, condition: 'good', usageValue: 0 } as const;
     const worn = { condition: 'good', usageValue: 500 } as const;
     expect(endEarly(aino, ainoContext(), worn, better, '2027-05-20')).toEqual({
       ok: false,
@@ -261,9 +287,25 @@ describe('endEarly', () => {
   });
 
   it('refuses outside the term', () => {
-    expect(endEarly(aino, ainoContext(), delivered, { kind: 'early_buy' }, '2029-11-05')).toEqual({
+    expect(
+      endEarly(aino, ainoContext(), delivered, { kind: 'early_buy', month: 36 }, '2029-11-05')
+    ).toEqual({
       ok: false,
       reason: 'term_over',
+    });
+  });
+
+  it('refuses when the month the price was shown for is no longer the current month', () => {
+    // The page priced month 6 (5 Apr – 4 May 2027); by 20 May 2027 it is month 7 (card 8).
+    const seen = { kind: 'early_buy', month: 6 } as const;
+    expect(endEarly(aino, ainoContext(), delivered, seen, '2027-05-20')).toEqual({
+      ok: false,
+      reason: 'month_changed',
+    });
+    // The same check on the last day of month 6 (4 May 2027) goes through.
+    expect(endEarly(aino, ainoContext(), delivered, seen, '2027-05-04')).toMatchObject({
+      ok: true,
+      ending: { effectiveDate: '2027-05-05' },
     });
   });
 });

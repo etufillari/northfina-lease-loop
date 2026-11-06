@@ -55,7 +55,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
     : fullSchedule;
   const today = await asOfDate();
   // Leaving early is offered until the lease ends, unless it has already been ended (D-033).
-  const exitContext =
+  const exitPriced =
     assetRow && clock && !ending
       ? earlyExitContext(
           { vatRates, curves, coefficientTable: data.coefficientTable },
@@ -64,6 +64,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           clock
         )
       : null;
+  const exitContext = exitPriced?.ok ? exitPriced.context : null;
   const exitMonth = exitMonthOn(contract, today);
   const canLeaveEarly = exitContext !== null && (exitMonth.ok || exitMonth.reason !== 'term_over');
   // The headline: the next invoice still to come, or (once ended or all billed) the total.

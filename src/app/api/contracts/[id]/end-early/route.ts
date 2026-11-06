@@ -1,5 +1,6 @@
-// POST /api/contracts/:id/end-early   body: { kind: 'early_buy' }
-//                                          | { kind: 'early_hand_back', condition, usageValue }
+// POST /api/contracts/:id/end-early   body: { kind: 'early_buy', month }
+//                                          | { kind: 'early_hand_back', month, condition, usageValue }
+// `month` is the exit month the price was shown for; a stale one is refused (D-045).
 // Leaves the lease in the current month (D-033): records the ending with every line of its
 // price, sells or takes back the asset, audited together.
 import { z } from 'zod';
@@ -12,10 +13,12 @@ import { endLeaseEarly, type EndEarlyRefusal } from '@/server/early-exit';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { asOfDate } from '@/server/as-of';
 
+const monthSchema = z.number().int().min(1).max(1_200);
 const bodySchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('early_buy') }),
+  z.strictObject({ kind: z.literal('early_buy'), month: monthSchema }),
   z.strictObject({
     kind: z.literal('early_hand_back'),
+    month: monthSchema,
     condition: assetConditionSchema,
     usageValue: z.number().int().nonnegative().max(10_000_000),
   }),
@@ -29,6 +32,8 @@ const statusFor = {
   not_started: 409,
   term_over: 409,
   unknown_band: 422,
+  table_changed: 422,
+  month_changed: 409,
   no_vat_rate: 422,
   usage_went_down: 422,
   condition_improved: 422,

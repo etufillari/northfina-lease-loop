@@ -113,6 +113,8 @@
   "refusal.too_early": "On vielä liian aikaista valita. Voit valita viimeisen kuukautesi alusta alkaen.",
   "refusal.condition_improved": "Kunto ei voi olla parempi kuin silloin, kun sait tuotteen.",
   "refusal.unknown_band": "Emme löydä tämän sopimuksen korkoa, joten ennenaikaista päättämistä ei voi hinnoitella.",
+  "refusal.month_changed": "Uusi kuukausi on alkanut sen jälkeen, kun sivu näytti hinnan. Tarkista tämän kuukauden hinta ja vahvista uudelleen.",
+  "refusal.table_changed": "Sopimus tehtiin korkotaulukolla, jota meillä ei enää ole, joten ennenaikaista päättämistä ei voi hinnoitella.",
   "refusal.not_started": "Sopimus ei ole vielä alkanut, joten sitä ei voi päättää ennenaikaisesti.",
   "refusal.term_over": "Sopimus on viimeisellä kuukaudellaan tai päättynyt, joten käytä sopimuskauden päättymisen valintaa.",
   "refusal.asset_not_returned": "Vain palautetun tuotteen voi palauttaa myyntiin, eikä tämä odota uutta elämää. Lataa sivu uudelleen nähdäksesi tilan.",

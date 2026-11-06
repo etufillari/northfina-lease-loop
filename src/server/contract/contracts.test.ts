@@ -143,6 +143,7 @@ describe('signContract: card 1', () => {
       monthly_net_rent_cents: 10_730,
       asset_status: { from: 'available', to: 'leased' },
       life_number: 1,
+      invoice_count: 36,
     });
   });
 
@@ -286,6 +287,7 @@ describe('signContract: one item, one contract', () => {
     const results = await Promise.all([sign(first.id), sign(second.id)]);
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     expect(await db.contract.count()).toBe(1);
+    expect(await db.invoice.count()).toBe(36);
     expect(await db.assetLife.count()).toBe(1);
   });
 
@@ -295,6 +297,7 @@ describe('signContract: one item, one contract', () => {
 
     expect(await sign(application.id)).toEqual({ ok: false, reason: 'asset_not_available' });
     expect(await db.contract.count()).toBe(0);
+    expect(await db.invoice.count()).toBe(0);
     expect(await db.assetLife.count()).toBe(0);
     expect(await assetStatus('ebike-003')).toBe('reserved');
   });

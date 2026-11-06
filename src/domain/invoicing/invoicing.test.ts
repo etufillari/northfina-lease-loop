@@ -1,0 +1,139 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { invoiceSchema } from '@/data/lease-schemas';
+import { loadVatRates } from '@/data/load';
+import type { VatRates } from '@/data/schemas';
+import { addDays } from '../dates';
+import { invoiceSchedule } from './invoicing';
+
+let vatRates: VatRates;
+beforeAll(async () => {
+  vatRates = await loadVatRates();
+});
+
+const card1 = {
+  id: 'con-1',
+  start_on: '2026-11-05',
+  term_months: 36,
+  monthly_net_rent_cents: 10_730,
+};
+const card3 = { ...card1, start_on: '2026-09-15', term_months: 24, monthly_net_rent_cents: 6_957 };
+const card4 = { ...card1, start_on: '2026-01-31', monthly_net_rent_cents: 3_432 };
+
+const invoice = (contract: typeof card1, sequence: number) => {
+  const found = invoiceSchedule(contract, vatRates).find((i) => i.sequence === sequence);
+  if (!found) throw new Error(`no invoice ${sequence}`);
+  return found;
+};
+
+describe('invoiceSchedule: amounts', () => {
+  it('gives the first invoice of card 1', () => {
+    expect(invoice(card1, 1)).toEqual({
+      contract_id: 'con-1',
+      sequence: 1,
+      period_start: '2026-11-05',
+      period_end: '2026-12-04',
+      invoice_date: '2026-11-05',
+      due_date: '2026-11-05',
+      net_cents: 10_730,
+      vat_rate_basis_points: 2_550,
+      vat_cents: 2_736,
+      total_cents: 13_466,
+      status: 'issued',
+    });
+  });
+
+  it('keeps the net rent and changes the VAT from January (card 1)', () => {
+    expect(invoice(card1, 2)).toMatchObject({ net_cents: 10_730, total_cents: 13_466 });
+    expect(invoice(card1, 3)).toMatchObject({
+      invoice_date: '2027-01-05',
+      net_cents: 10_730,
+      vat_rate_basis_points: 2_600,
+      vat_cents: 2_790,
+      total_cents: 13_520,
+    });
+  });
+
+  it('shows December and January either side of the VAT change (card 3)', () => {
+    expect(invoice(card3, 4)).toMatchObject({
+      invoice_date: '2026-12-15',
+      vat_rate_basis_points: 2_550,
+      vat_cents: 1_774,
+      total_cents: 8_731,
+    });
+    expect(invoice(card3, 5)).toMatchObject({
+      invoice_date: '2027-01-15',
+      vat_rate_basis_points: 2_600,
+      vat_cents: 1_809,
+      total_cents: 8_766,
+    });
+  });
+
+  it('uses the rate on the invoice date for the last day before a change', () => {
+    const contract = { ...card1, start_on: '2026-12-31', term_months: 2 };
+    expect(invoiceSchedule(contract, vatRates).map((i) => i.vat_rate_basis_points)).toEqual([
+      2_550, 2_600,
+    ]);
+  });
+
+  it('adds up exactly to rent × term', () => {
+    const invoices = invoiceSchedule(card1, vatRates);
+    expect(invoices.reduce((sum, i) => sum + i.net_cents, 0)).toBe(386_280);
+  });
+
+  it('has each total equal to its net plus its VAT', () => {
+    for (const i of invoiceSchedule(card1, vatRates)) {
+      expect(i.total_cents).toBe(i.net_cents + i.vat_cents);
+    }
+  });
+});
+
+describe('invoiceSchedule: dates', () => {
+  it.each([12, 24, 36, 48])('creates one invoice per month of a %i month term', (term) => {
+    const invoices = invoiceSchedule({ ...card1, term_months: term }, vatRates);
+    expect(invoices.map((i) => i.sequence)).toEqual(Array.from({ length: term }, (_, i) => i + 1));
+  });
+
+  it('dues on the last day of February, in normal and leap years (card 4)', () => {
+    expect(invoice(card4, 2).due_date).toBe('2026-02-28');
+    expect(invoice(card4, 26).due_date).toBe('2028-02-29');
+  });
+
+  it('returns to the 31st after a short month (card 4)', () => {
+    expect(invoice(card4, 3).invoice_date).toBe('2026-03-31');
+    expect(invoice(card4, 4).invoice_date).toBe('2026-04-30');
+    expect(invoice(card4, 5).invoice_date).toBe('2026-05-31');
+  });
+
+  it('dates the first invoice on the start date', () => {
+    expect(invoice(card3, 1).invoice_date).toBe('2026-09-15');
+  });
+
+  it.each([
+    ['card 1', card1],
+    ['card 3', card3],
+    ['a month-end start', card4],
+  ])('leaves no gaps or overlaps between periods: %s', (_name, contract) => {
+    const invoices = invoiceSchedule(contract, vatRates);
+    invoices.slice(1).forEach((current, i) => {
+      expect(current.period_start).toBe(addDays(invoices[i]?.period_end ?? '', 1));
+    });
+  });
+
+  it('ends the last period on the end date of the contract', () => {
+    const invoices = invoiceSchedule(card1, vatRates);
+    expect(invoices.at(-1)?.period_end).toBe('2029-11-04');
+  });
+});
+
+describe('invoiceSchedule: records', () => {
+  it('produces records that match the invoice schema once they have ids', () => {
+    for (const [i, draft] of invoiceSchedule(card1, vatRates).entries()) {
+      expect(invoiceSchema.safeParse({ id: `inv-${i}`, ...draft }).success).toBe(true);
+    }
+  });
+
+  it('throws if the data has no VAT rate for a date, because that is a bug in the data', () => {
+    const noRates: VatRates = { ...vatRates, rates: [] };
+    expect(() => invoiceSchedule(card1, noRates)).toThrow(RangeError);
+  });
+});

@@ -34,6 +34,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await db.assetLife.deleteMany();
+  await db.invoice.deleteMany();
   await db.contract.deleteMany();
   await db.application.deleteMany();
   await db.asset.updateMany({ where: { id: 'ebike-003' }, data: { status: 'available' } });

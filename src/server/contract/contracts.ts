@@ -1,10 +1,11 @@
-// Signing and reading contracts. Signing is one transaction: the asset becomes leased, the
-// contract is created and a new life opens, or none of it happens.
+// Signing and reading contracts. Signing is one transaction: the asset becomes leased, and the
+// contract, its invoices and a new life are created, or none of it happens.
 import { randomUUID } from 'node:crypto';
 import { contractSchema, type Contract } from '@/data/lease-schemas';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/contract/contract';
+import { invoiceSchedule } from '@/domain/invoicing/invoicing';
 import { listPriceOn } from '@/domain/pricing/price-list';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { getApplication } from '../application/applications';
@@ -131,6 +132,7 @@ export async function signContract(
     select: { life_number: true, first_lease_price_cents: true },
   });
   const life = openLife(contract, toAsset(assetRow), latestLife);
+  const invoices = invoiceSchedule(contract, await loadVatRates());
 
   try {
     await withAudit(
@@ -149,6 +151,7 @@ export async function signContract(
           start_on: contract.start_on,
           asset_status: { from: 'available', to: 'leased' },
           life_number: life.life_number,
+          invoice_count: invoices.length,
         },
       },
       async (tx) => {
@@ -159,6 +162,7 @@ export async function signContract(
         if (taken.count === 0) throw new AssetNotAvailable();
 
         await tx.contract.create({ data: contract });
+        await tx.invoice.createMany({ data: invoices });
         await tx.assetLife.create({ data: life });
       }
     );

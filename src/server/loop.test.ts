@@ -8,6 +8,7 @@ import { setDemoDate } from './date/app-date';
 import { submitApplication } from './application/applications';
 import { seedAssets } from './assets/assets';
 import { signContract } from './contract/contracts';
+import { listInvoices } from './invoicing/invoices';
 import type { PrismaClient } from './prisma-client';
 import { quoteAsset } from './pricing/quotes';
 
@@ -85,5 +86,13 @@ describe('the lease loop', () => {
     });
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     expect(asset.status).toBe('leased');
+    if (!signed.ok) throw new Error(signed.reason);
+
+    // 4. Invoices
+    const invoices = await listInvoices(db, { contractId: signed.contract.id });
+    expect(invoices).toHaveLength(36);
+    expect(invoices.slice(0, 3).map((invoice) => invoice.total_cents)).toEqual([
+      13_466, 13_466, 13_520,
+    ]);
   });
 });

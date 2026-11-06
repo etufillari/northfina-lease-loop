@@ -32,6 +32,7 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 | `dates.ts`                     | `addDays` and `addMonths` on ISO dates. `addMonths` clamps to short months.                                                                                                                                    |
 | `assets/status.ts`             | `canChangeStatusByHand` keeps `leased` and `sold` under the control of contracts.                                                                                                                              |
 | `contract/contract.ts`         | `signingProblem` says who may sign, `lockedQuote` keeps the quoted price, `buildContract` builds the contract, and `openLife` opens the asset's next life.                                                     |
+| `invoicing/invoicing.ts`       | `invoiceSchedule` gives every invoice of a contract, each with the VAT rate on its own date.                                                                                                                   |
 | `application/question-flow.ts` | `questionsToAsk` works out which questions apply and drops answers that no longer do. `invalidAnswers` checks each answer fits its question type. `blockingAnswer` finds an answer that stops the application. |
 | `application/age.ts`           | `ageOn` gives an age in whole years on a date, and `eligibleFrom` gives the date someone reaches an age.                                                                                                       |
 | `application/business-id.ts`   | `isValidBusinessId` checks the format and check digit of a Finnish Y-tunnus.                                                                                                                                   |
@@ -42,6 +43,5 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 Create these as you need them. Do not commit empty files.
 
-- `invoicing`: the monthly invoices for a contract, including a VAT rate change mid-contract.
 - `end-of-term`: return, buy out or extend, and the value of the returned item.
 - `second-life`: refurbishment cost, matching a returned item to the waiting list, CO2 saved.

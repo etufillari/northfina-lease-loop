@@ -6,17 +6,19 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
 import { SecondLifeSection } from '@/components/second-life-section';
+import { UnavailableNotice } from '@/components/unavailable-notice';
 import { CategoryArt } from '@/components/ui/category-art';
 import { LivesMeter } from '@/components/ui/lives-meter';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { listPriceOn } from '@/domain/price-list';
 import { formatEuro } from '@/domain/money';
 import { downPaymentBounds } from '@/domain/pricing';
+import { similarAvailable } from '@/domain/similar-items';
 import { vatRateOn } from '@/domain/vat';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
-import { toAsset } from '@/server/assets';
+import { listAssets, toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { loadLeaseDataPack } from '@/server/lease-data';
 import { latestListing, priceListsWithListings } from '@/server/listed-prices';
@@ -60,6 +62,15 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
   if (asset.status !== 'available') blocked = `lease.notLeasable.${asset.status}`;
   else if (!price.ok || !vat.ok) blocked = 'lease.notLeasable.no_price';
   else if (!bounds?.ok) blocked = 'lease.notLeasable.below_minimum';
+
+  // Where the calculator would be, an item that can't be leased points at ones that can.
+  const similar =
+    blocked !== null && !secondLife
+      ? similarAvailable(await listAssets(db, { category: asset.category }), asset).map((a) => ({
+          asset: a,
+          price: listPriceOn(priceLists, a.id, today),
+        }))
+      : [];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
@@ -136,9 +147,12 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
             names={Object.fromEntries(data.customers.map((c) => [c.id, c.name]))}
           />
         ) : blocked !== null || !price.ok || !vat.ok || !bounds?.ok ? (
-          <p className="rounded-lg border border-dashed border-line p-6 text-muted">
-            {t(blocked ?? 'lease.notLeasable.no_price')}
-          </p>
+          <UnavailableNotice
+            reason={t(blocked ?? 'lease.notLeasable.no_price')}
+            similar={similar}
+            locale={locale}
+            t={t}
+          />
         ) : (
           <LeaseCalculator
             locale={locale}

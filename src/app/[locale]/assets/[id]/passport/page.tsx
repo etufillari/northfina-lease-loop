@@ -74,23 +74,42 @@ export default async function PassportPage({
         >
           {t('passport.co2Title')}
         </h2>
-        <p className="relative mt-2 font-display text-4xl font-extrabold text-stage-accent sm:text-5xl">
-          {t('passport.kg', { kg: formatNumber(passport.avoidedKg, locale) })}
-        </p>
-        <p className="relative mt-1 text-sm text-stage-muted">
-          {t('passport.co2Counted', { count: formatNumber(counted, locale) })}
-        </p>
+        {counted === 0 ? (
+          // Nothing counted yet: say why, rather than lead with a bare "0 kg".
+          <>
+            <p className="relative mt-2 max-w-2xl font-display text-3xl leading-tight font-extrabold text-balance text-stage-accent sm:text-4xl">
+              {t(
+                passport.lives.length > 0
+                  ? 'passport.zero.next'
+                  : passport.earlierLives.length > 0
+                    ? 'passport.zero.noneHere'
+                    : 'passport.zero.none'
+              )}
+            </p>
+            <p className="relative mt-3 max-w-xl text-sm leading-relaxed text-stage-muted">
+              {t(
+                passport.earlierLives.length > 0
+                  ? 'passport.zero.reuseNote'
+                  : 'passport.zero.firstNote'
+              )}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="relative mt-2 font-display text-4xl font-extrabold text-stage-accent sm:text-5xl">
+              {t('passport.kg', { kg: formatNumber(passport.avoidedKg, locale) })}
+            </p>
+            <p className="relative mt-1 text-sm text-stage-muted">
+              {t('passport.co2Counted', { count: formatNumber(counted, locale) })}
+            </p>
+          </>
+        )}
       </section>
 
       <section aria-labelledby="lives" className="mt-10">
         <h2 id="lives" className="font-display text-xl font-bold tracking-tight uppercase">
           {t('passport.livesTitle')}
         </h2>
-        {passport.earlierLives.length === 0 && passport.lives.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-line p-6 text-muted">
-            {t('passport.noLives')}
-          </p>
-        ) : null}
         {/* A timeline: a line down the left, each life a numbered stop on it. */}
         <ol className="mt-6 ml-4 flex flex-col gap-4 border-l-2 border-line pl-8">
           {passport.earlierLives.map((life) => (
@@ -127,6 +146,20 @@ export default async function PassportPage({
                 price: euro(passport.nextListing.listPriceCents),
               })}
             </li>
+          ) : passport.lives.length === 0 && passport.earlierLives.length === 0 ? (
+            // No lease yet: the timeline still shows where the first one will go.
+            <li className="relative flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-line p-4 text-sm text-muted">
+              <LifeStop number={nextNumber} next />
+              {t('passport.noLives')}
+              {asset.status === 'available' ? (
+                <Link
+                  href={`/${locale}/assets/${asset.id}`}
+                  className="font-semibold text-fg underline underline-offset-4 hover:text-accent-text"
+                >
+                  {t('passport.leaseFirst')} <span aria-hidden="true">→</span>
+                </Link>
+              ) : null}
+            </li>
           ) : null}
         </ol>
       </section>
@@ -135,7 +168,7 @@ export default async function PassportPage({
         <h2 id="method" className="font-display text-lg font-bold tracking-tight uppercase">
           {t('passport.methodTitle')}
         </h2>
-        <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted">
+        <p className="mt-3 gap-8 text-sm leading-relaxed text-pretty text-muted sm:columns-2">
           {t('passport.method')}
         </p>
       </section>

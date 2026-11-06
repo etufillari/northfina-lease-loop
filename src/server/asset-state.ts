@@ -7,16 +7,20 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { assetStateOn, hasEventsAfter, type AssetEvent } from '@/domain/state-on';
 import { toAsset } from './assets';
 
-/** Every dated record of every item (or one item): leases, endings, pass-ons, refurbishments. */
+/**
+ * Every dated record of every item (or one item): leases, endings, pass-ons, holds and holds let
+ * go, refurbishments.
+ */
 export async function assetEvents(
   db: PrismaClient,
   assetId?: string
 ): Promise<Map<string, AssetEvent[]>> {
   const where = assetId ? { asset_id: assetId } : {};
-  const [contracts, handovers, refurbishments] = await Promise.all([
+  const [contracts, handovers, refurbishments, holds] = await Promise.all([
     db.contract.findMany({ where }),
     db.handover.findMany({ where: { ...where, status: 'accepted' } }),
     db.refurbishment.findMany({ where }),
+    db.holdRequest.findMany({ where: { ...where, held_date: { not: null } } }),
   ]);
   const events = new Map<string, AssetEvent[]>();
   const add = (id: string, event: AssetEvent) => events.set(id, [...(events.get(id) ?? []), event]);
@@ -29,6 +33,20 @@ export async function assetEvents(
   for (const h of handovers) {
     if (h.decided_date) {
       add(h.asset_id, { date: h.decided_date, kind: 'held_for', customerId: h.to_customer_id });
+    }
+    if (h.released_date) {
+      add(h.asset_id, { date: h.released_date, kind: 'released', customerId: h.to_customer_id });
+    }
+  }
+  for (const hold of holds) {
+    if (!hold.held_date) continue;
+    add(hold.asset_id, { date: hold.held_date, kind: 'held_for', customerId: hold.customer_id });
+    if (hold.withdrawn_date) {
+      add(hold.asset_id, {
+        date: hold.withdrawn_date,
+        kind: 'released',
+        customerId: hold.customer_id,
+      });
     }
   }
   for (const r of refurbishments) {
@@ -125,7 +143,7 @@ export async function hasLaterHistory(
   assetId: string,
   today: string
 ): Promise<boolean> {
-  const [contracts, handovers, refurbishments] = await Promise.all([
+  const [contracts, handovers, refurbishments, holds] = await Promise.all([
     db.contract.count({
       where: {
         asset_id: assetId,
@@ -139,10 +157,24 @@ export async function hasLaterHistory(
     db.handover.count({
       where: {
         asset_id: assetId,
-        OR: [{ passed_date: { gt: today } }, { decided_date: { gt: today } }],
+        OR: [
+          { passed_date: { gt: today } },
+          { decided_date: { gt: today } },
+          { released_date: { gt: today } },
+        ],
       },
     }),
     db.refurbishment.count({ where: { asset_id: assetId, refurbished_date: { gt: today } } }),
+    db.holdRequest.count({
+      where: {
+        asset_id: assetId,
+        OR: [
+          { requested_date: { gt: today } },
+          { held_date: { gt: today } },
+          { withdrawn_date: { gt: today } },
+        ],
+      },
+    }),
   ]);
-  return contracts + handovers + refurbishments > 0;
+  return contracts + handovers + refurbishments + holds > 0;
 }

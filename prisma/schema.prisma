@@ -162,6 +162,8 @@ model Handover {
   status         String // pending | accepted | declined
   passed_date    String // YYYY-MM-DD
   decided_date   String?
+  // The recipient accepted, then changed their mind: the hold ends on this day.
+  released_date  String?
 
   @@index([to_customer_id])
 }
@@ -201,4 +203,25 @@ model InvoiceIssue {
   total_cents      Int
 
   @@unique([contract_id, invoice_number])
+}
+
+// A customer asks for an item that isn't free yet (leased, or back and waiting for its check)
+// to be held for them, with what they need from it. When the item is refurbished, staff can
+// hold it for one of them (admin, Second life). The customer can withdraw at any time, which
+// also ends the hold. Each change is dated, so time travel replays it.
+model HoldRequest {
+  id                String   @id @default(uuid())
+  created_at        DateTime @default(now())
+  asset_id          String
+  customer_id       String // a data pack customer
+  requested_date    String // YYYY-MM-DD
+  term_months       Int // the lease term they want
+  max_monthly_cents Int // their budget: the monthly rent incl. VAT
+  min_condition     String // poor | fair | good | like_new | new
+  status            String // waiting | held | withdrawn
+  held_date         String? // YYYY-MM-DD staff held the item for them
+  withdrawn_date    String? // YYYY-MM-DD they withdrew (ends the hold if it was held)
+
+  @@index([asset_id])
+  @@index([customer_id])
 }

@@ -76,6 +76,12 @@ export default async function NotificationsPage({ params }: PageProps<'/[locale]
               >
                 {t('notifications.leaseIt')}
               </Link>
+              <Link
+                href={`/${locale}/assets/${assetId}#hold-heading`}
+                className="mt-3 ml-4 inline-block text-sm font-medium text-violet-800 underline underline-offset-4 dark:text-violet-300"
+              >
+                {t('notifications.changedMind')}
+              </Link>
             </Card>
           ))}
         </Section>

@@ -31,6 +31,10 @@ import { assetTimeline } from '@/domain/asset-timeline';
 import { currentViewer } from '@/server/current-viewer';
 import { viewerCustomerId } from '@/server/viewer';
 import { canBeLeasedBy } from '@/domain/availability';
+import { canRequestHold } from '@/domain/holds';
+import { leaseTerms } from '@/domain/pricing';
+import { HoldPanel } from '@/components/hold-panel';
+import { listHoldRequests } from '@/server/holds';
 import { db } from '@/server/db';
 import { appDate } from '@/server/app-date';
 
@@ -104,6 +108,21 @@ export default async function AssetPage({
   const leasable =
     !item.laterHistory &&
     canBeLeasedBy({ status: asset.status, reservedFor }, viewerCustomerId(viewer));
+  // A customer can ask for an item that isn't free yet, see their request, or let go of an item
+  // held for them. Not while looking at the past (time travel).
+  const customerId = viewer.kind === 'customer' ? viewer.customer.id : null;
+  const myRequest =
+    customerId && !item.laterHistory
+      ? (await listHoldRequests(db, { assetId: asset.id, customerId }, today))[0]
+      : undefined;
+  const holdPanel =
+    !customerId || item.laterHistory ? null : reservedFor === customerId ? (
+      <HoldPanel mode="held" assetId={asset.id} locale={locale} />
+    ) : myRequest ? (
+      <HoldPanel mode="waiting" assetId={asset.id} locale={locale} request={myRequest} />
+    ) : canRequestHold({ status: asset.status, reservedFor }, customerId) ? (
+      <HoldPanel mode="request" assetId={asset.id} locale={locale} terms={leaseTerms(table)} />
+    ) : null;
   const price = listPriceOn(priceLists, asset.id, today);
   const change = nextPriceChange(priceLists, asset.id, today);
   const vatPercent = vatPercentOn(vatRates, today);
@@ -172,6 +191,7 @@ export default async function AssetPage({
   // The panels set their own top margin; in the layout the gap does that job.
   const bottom = (
     <div className="space-y-6 [&>*]:mt-0">
+      {holdPanel}
       <AssetHistoryPanel asset={asset} entries={timeline} today={today} locale={locale} t={t} />
       <Co2Panel impact={impact} isEbike={asset.category === 'e_bike'} locale={locale} t={t} />
     </div>

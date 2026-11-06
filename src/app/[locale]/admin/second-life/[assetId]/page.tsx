@@ -23,6 +23,7 @@ import { TimeTravelNotice } from '@/components/time-travel-notice';
 import { contractOn } from '@/domain/state-on';
 import { listContractsForAsset } from '@/server/contracts';
 import { db } from '@/server/db';
+import { listHoldRequests } from '@/server/holds';
 import { listRefurbishments, originalListPrice } from '@/server/second-life';
 import { effectiveVatRates } from '@/server/vat';
 
@@ -51,6 +52,16 @@ export default async function WorkbenchPage({
       listContractsForAsset(db, asset.id),
       listRefurbishments(db, asset.id),
     ]);
+  // Customers who asked for it while it wasn't free, and are still waiting.
+  const holdOptions = (await listHoldRequests(db, { assetId: asset.id }, today))
+    .filter((request) => request.status === 'waiting')
+    .map((request) => ({
+      id: request.id,
+      customerName: customers.find((c) => c.id === request.customerId)?.name ?? request.customerId,
+      termMonths: request.termMonths,
+      maxMonthlyCents: request.maxMonthlyCents,
+      minCondition: request.minCondition,
+    }));
   const vatPercent = vatPercentOn(vatRates, today);
   const timeline = assetTimeline(
     asset,
@@ -108,6 +119,7 @@ export default async function WorkbenchPage({
             vatPercent={vatPercent}
             today={today}
             heldForName={customers.find((c) => c.id === item.reservedFor)?.name ?? null}
+            holdOptions={holdOptions}
             locale={locale}
           />
         ) : (

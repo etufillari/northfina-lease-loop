@@ -1,8 +1,9 @@
 // Time travel that goes both ways: what an item and a contract looked like on a given date.
 //
 // Every change to an item is a dated record: a lease starting, a lease ending (returned,
-// passed on or bought), a pass-on accepted, a refurbishment. To see the item on a date we
-// start from how the data pack describes it and replay only the records up to that date.
+// passed on or bought), a hold (a pass-on accepted, or staff holding it for someone who asked),
+// a hold let go, a refurbishment. To see the item on a date we start from how the data pack
+// describes it and replay only the records up to that date.
 // Contracts signed later don't exist yet; leases that ended later are still running.
 //
 // Writing to the past is not allowed: an item with records dated after the app's date can't be
@@ -22,6 +23,8 @@ export type AssetEvent =
   | { date: string; kind: 'leased' }
   | { date: string; kind: 'closed'; to: 'returned' | 'sold' }
   | { date: string; kind: 'held_for'; customerId: string }
+  /** The customer it was held for let it go: a refurbished item is free for anyone again. */
+  | { date: string; kind: 'released'; customerId: string }
   | {
       date: string;
       kind: 'refurbished';
@@ -30,12 +33,16 @@ export type AssetEvent =
       priceCents: number;
     };
 
-/** Same-day order: a lease ends, then a pass-on is accepted, then the refurbishment, then a new lease. */
+/**
+ * Same-day order: a lease ends, a hold starts (a pass-on accepted, or staff holding it at its
+ * refurbishment), the refurbishment, a hold is let go, then a new lease.
+ */
 const SAME_DAY_ORDER: Record<AssetEvent['kind'], number> = {
   closed: 0,
   held_for: 1,
   refurbished: 2,
-  leased: 3,
+  released: 3,
+  leased: 4,
 };
 
 export function hasEventsAfter(events: readonly AssetEvent[], today: string): boolean {
@@ -64,6 +71,15 @@ export function assetStateOn(
         break;
       case 'held_for':
         state = { ...state, reservedFor: event.customerId };
+        break;
+      case 'released':
+        if (state.reservedFor === event.customerId) {
+          state = {
+            ...state,
+            reservedFor: null,
+            status: state.status === 'reserved' ? 'available' : state.status,
+          };
+        }
         break;
       case 'refurbished':
         state = {

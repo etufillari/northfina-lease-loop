@@ -9,6 +9,7 @@ import { leasableCondition, refurbishmentPlan } from '@/domain/second-life';
 import { assetsOn, hasLaterHistory } from './asset-state';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+import { listHoldRequests } from './holds';
 
 /** One line of a refurbishment: a required job, a standard repair, or a custom repair. */
 export type RefurbishmentLine = {
@@ -113,6 +114,8 @@ export type RefurbishInput = {
   priceCents: number;
   notes: string | null;
   actor: string;
+  /** Hold the item for a customer who asked for it (a waiting hold request for this item). */
+  holdRequestId?: string | null;
 };
 
 export type RefurbishResult =
@@ -128,7 +131,9 @@ export type RefurbishResult =
         | 'cannot_reach_new'
         | 'condition_too_low'
         | 'invalid_repairs'
-        | 'invalid_price';
+        | 'invalid_price'
+        | 'invalid_hold'
+        | 'already_held';
     };
 
 /**
@@ -188,7 +193,19 @@ export async function refurbishItem(
     })),
   ];
   const costCents = plan.costCents + repairs.costCents;
-  const status = row.reserved_for ? 'reserved' : 'available';
+  // Hold it for a customer who asked for it while it wasn't free (src/domain/holds.ts). An item
+  // a pass-on recipient accepted is already held for them, so it can't be held for anyone else.
+  let holdFor: { requestId: string; customerId: string } | null = null;
+  if (input.holdRequestId) {
+    if (row.reserved_for) return { ok: false, reason: 'already_held' };
+    const waiting = (await listHoldRequests(db, { assetId: asset.id }, todayIso)).find(
+      (request) => request.id === input.holdRequestId && request.status === 'waiting'
+    );
+    if (!waiting) return { ok: false, reason: 'invalid_hold' };
+    holdFor = { requestId: waiting.id, customerId: waiting.customerId };
+  }
+  const reservedFor = holdFor?.customerId ?? row.reserved_for;
+  const status = reservedFor ? 'reserved' : 'available';
 
   await withAudit(
     db,
@@ -204,6 +221,7 @@ export async function refurbishItem(
         costCents,
         priceCents: input.priceCents,
         status,
+        ...(holdFor ? { heldFor: holdFor.customerId } : {}),
       },
     },
     async (tx) => {
@@ -229,8 +247,15 @@ export async function refurbishItem(
           usage_value: plan.usageAfter,
           second_life_price_cents: input.priceCents,
           status,
+          reserved_for: reservedFor,
         },
       });
+      if (holdFor) {
+        await tx.holdRequest.update({
+          where: { id: holdFor.requestId },
+          data: { status: 'held', held_date: todayIso },
+        });
+      }
     }
   );
   return { ok: true, status, costCents };

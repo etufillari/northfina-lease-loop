@@ -21,6 +21,8 @@ const bodySchema = z.strictObject({
     .max(20),
   priceCents: z.number().int().positive().max(100_000_000),
   notes: z.string().trim().max(2000).nullable(),
+  /** Hold it for a customer who asked for it (optional). */
+  holdRequestId: z.string().max(64).nullable().optional(),
 });
 
 const failures = {
@@ -45,6 +47,12 @@ const failures = {
     'Needs at least good, or fair if someone waiting accepts fair',
   ],
   invalid_price: [422, 'INVALID_PRICE', 'The price must be a positive amount'],
+  invalid_hold: [409, 'INVALID_HOLD', 'That customer’s request is no longer waiting'],
+  already_held: [
+    409,
+    'ALREADY_HELD',
+    'This item is already held for the customer it was passed on to',
+  ],
 } as const;
 
 export const POST = handleRoute(

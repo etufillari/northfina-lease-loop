@@ -74,6 +74,52 @@ describe('assetStateOn', () => {
   });
 });
 
+describe('assetStateOn: letting a hold go', () => {
+  const held: AssetEvent[] = [
+    ...life,
+    { date: '2027-09-20', kind: 'held_for', customerId: 'cust-lena' },
+  ];
+
+  it('frees a refurbished item when the customer changes their mind, from that day on', () => {
+    const released: AssetEvent[] = [
+      ...held,
+      { date: '2027-10-10', kind: 'released', customerId: 'cust-lena' },
+    ];
+    expect(assetStateOn(fresh, released, '2027-10-05')).toMatchObject({
+      status: 'reserved',
+      reservedFor: 'cust-lena',
+    });
+    expect(assetStateOn(fresh, released, '2027-10-10')).toMatchObject({
+      status: 'available',
+      reservedFor: null,
+    });
+  });
+
+  it('lets go before the refurbishment: it is refurbished for anyone', () => {
+    const released: AssetEvent[] = [
+      ...held,
+      { date: '2027-09-25', kind: 'released', customerId: 'cust-lena' },
+    ];
+    expect(assetStateOn(fresh, released, '2027-09-26')).toMatchObject({
+      status: 'returned',
+      reservedFor: null,
+    });
+    expect(assetStateOn(fresh, released, '2027-10-01').status).toBe('available');
+  });
+
+  it('holds and refurbishes on the same day, and ignores a release by someone else', () => {
+    const sameDay: AssetEvent[] = [
+      ...life,
+      { date: '2027-10-01', kind: 'held_for', customerId: 'cust-aino' },
+      { date: '2027-10-01', kind: 'released', customerId: 'cust-lena' },
+    ];
+    expect(assetStateOn(fresh, sameDay, '2027-10-01')).toMatchObject({
+      status: 'reserved',
+      reservedFor: 'cust-aino',
+    });
+  });
+});
+
 describe('hasEventsAfter', () => {
   it('knows when the item has history later than the date', () => {
     expect(hasEventsAfter(life, '2027-09-30')).toBe(true);

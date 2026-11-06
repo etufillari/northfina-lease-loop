@@ -34,6 +34,7 @@ import {
 import { formatNumber } from '@/i18n/format';
 import { getT, messages, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { HoldForPicker, type HoldOption } from './hold-for-picker';
 
 type WorkbenchProps = {
   asset: Asset;
@@ -47,6 +48,8 @@ type WorkbenchProps = {
   today: string;
   /** Who it was passed on to, if anyone: it goes back reserved for them. */
   heldForName: string | null;
+  /** Customers who asked for it while it wasn't free; staff may hold it for one of them. */
+  holdOptions: HoldOption[];
   locale: Locale;
 };
 
@@ -95,6 +98,7 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
   const [custom, setCustom] = useState<CustomLine[]>([]);
   const [notes, setNotes] = useState('');
   const [priceEuros, setPriceEuros] = useState<string | null>(null); // null = the suggestion
+  const [holdId, setHoldId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,6 +137,16 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
     );
     return quote.ok ? quote.quote.monthlyNetCents : null;
   };
+  const monthlyGrossFor = (termMonths: number) => {
+    const quote = quoteLease(
+      { listPriceCents: priceCents, downPaymentCents: 0, termMonths, vatPercent },
+      table
+    );
+    return quote.ok ? quote.quote.monthlyGrossCents : null;
+  };
+  // Who it goes back reserved for: the pass-on recipient, or the customer picked below.
+  const heldForName =
+    props.heldForName ?? props.holdOptions.find((o) => o.id === holdId)?.customerName ?? null;
   const leasable = leasableCondition(conditionAfter, asset.category, demand, today);
   const ranked = rankWaitingList(
     { category: asset.category, condition: conditionAfter },
@@ -165,6 +179,7 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
           customRepairs,
           priceCents,
           notes: notes.trim() || null,
+          holdRequestId: props.heldForName ? null : holdId,
         }),
       });
       if (!response.ok) throw new Error('refused');
@@ -426,10 +441,21 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
             price: euro(priceCents),
             cost: euro(costCents),
           })}{' '}
-          {props.heldForName
-            ? t('secondLife.confirmReserved', { name: props.heldForName })
+          {heldForName
+            ? t('secondLife.confirmReserved', { name: heldForName })
             : t('secondLife.confirmAvailable')}
         </p>
+        {!props.heldForName && props.holdOptions.length > 0 ? (
+          <HoldForPicker
+            options={props.holdOptions}
+            selected={holdId}
+            onSelect={setHoldId}
+            conditionAfter={conditionAfter}
+            monthlyGrossFor={monthlyGrossFor}
+            euro={euro}
+            t={t}
+          />
+        ) : null}
         {blocked ? (
           <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">{blocked}</p>
         ) : null}
@@ -439,8 +465,8 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
           onClick={() => void putBack()}
           className="mt-4 rounded-lg bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {props.heldForName
-            ? t('secondLife.reserveFor', { name: props.heldForName, price: euro(priceCents) })
+          {heldForName
+            ? t('secondLife.reserveFor', { name: heldForName, price: euro(priceCents) })
             : t('secondLife.putBack', { price: euro(priceCents) })}
         </button>
         {error ? (

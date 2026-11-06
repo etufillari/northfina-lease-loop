@@ -17,6 +17,10 @@ describe('contractDatesFor', () => {
     expect(contractDatesFor('2028-01-31', 1).endsOn).toBe('2028-02-29');
   });
 
+  it('keeps a month-end start on month-end after clamping', () => {
+    expect(contractDatesFor('2026-04-30', 1).endsOn).toBe('2026-05-31');
+  });
+
   it('supports dynamic terms', () => {
     expect(contractDatesFor('2026-03-15', 3).endsOn).toBe('2026-06-15');
   });

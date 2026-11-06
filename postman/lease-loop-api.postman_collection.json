@@ -22,6 +22,10 @@
       "value": "application-id-from-previous-response"
     },
     {
+      "key": "contractId",
+      "value": "contract-id-from-previous-response"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -186,6 +190,42 @@
               }
             },
             "url": "{{baseUrl}}/api/contracts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "description": "Invoice schedules use the contract's locked net rent and invoice-date VAT.",
+      "item": [
+        {
+          "name": "Generate invoice schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices"
+          }
+        },
+        {
+          "name": "List contract invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/contracts/{{contractId}}/invoices"
           }
         }
       ]

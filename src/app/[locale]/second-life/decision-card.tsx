@@ -101,6 +101,7 @@ export function DecisionCard({
                   gain: euro(decision.valueFinalCents - decision.valueAsIsCents),
                   value: euro(decision.valueFinalCents),
                   work: euro(decision.workTotalCents),
+                  mandatory: euro(decision.requiredTotalCents),
                 })}
           </p>
         </section>
@@ -175,7 +176,11 @@ export function DecisionCard({
           <DeskActionButton
             locale={locale}
             path={`/api/second-life/${asset.id}/execute`}
-            label={t('secondLife.execute')}
+            label={t(
+              preview.outcome.kind === 'parts_bin'
+                ? 'secondLife.executeParts'
+                : 'secondLife.execute'
+            )}
             personaId={personaId}
             asOfParam={asOfParam}
           />

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import type { MessageKey } from '@/i18n/get-t';
+import { formatMonth } from '@/i18n/format';
 import { intlLocale, type Locale } from '@/i18n/locales';
 
 type LiveQuote = {
@@ -27,7 +28,13 @@ type LiveQuote = {
   vatRatePercent: number;
   monthlyRentWithVatCents: number;
   totalWithVatAtCurrentRateCents: number;
-  affordability: { status: string; limitCents?: number } | null;
+  affordability: {
+    status: string;
+    limitCents?: number;
+    month?: string;
+    totalCents?: number;
+    existingCents?: number;
+  } | null;
   suggestion: { termMonths: number; downPaymentCents: number } | null;
 };
 
@@ -265,10 +272,19 @@ export function PriceConfigurator({
             {live.affordability?.status === 'failed' ? (
               <div className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
                 <p>
-                  {t('affordability.failed', {
-                    rent: euro(live.monthlyRentWithVatCents),
-                    limit: euro(live.affordability.limitCents ?? 0),
-                  })}
+                  {t(
+                    (live.affordability.existingCents ?? 0) > 0
+                      ? 'affordability.failedExisting'
+                      : 'affordability.failed',
+                    {
+                      month: live.affordability.month
+                        ? formatMonth(live.affordability.month, locale)
+                        : '',
+                      total: euro(live.affordability.totalCents ?? 0),
+                      existing: euro(live.affordability.existingCents ?? 0),
+                      limit: euro(live.affordability.limitCents ?? 0),
+                    }
+                  )}
                 </p>
                 {live.suggestion ? (
                   <button

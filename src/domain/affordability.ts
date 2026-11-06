@@ -29,6 +29,74 @@ export function checkAffordability(input: {
     : { status: 'failed', limitCents };
 }
 
+/** One payment a customer makes: an invoice total incl. VAT on its due date. */
+export type Payment = { dueDate: string; totalCents: number };
+
+export type TermAffordabilityResult =
+  | {
+      status: 'passed';
+      limitCents: number;
+      /** The heaviest month, new lease and existing ones together. */
+      peakMonth: string;
+      peakCents: number;
+    }
+  | {
+      status: 'failed';
+      limitCents: number;
+      /** The first month over the limit (YYYY-MM) and what is due in it. */
+      month: string;
+      totalCents: number;
+      newCents: number;
+      existingCents: number;
+    }
+  | { status: 'not_assessed'; reason: 'income_not_asked' | 'not_a_consumer' };
+
+/**
+ * The 30 % rule over the WHOLE lease, not just its first month: every calendar month the new
+ * lease bills, what is due in it — the new lease's invoice (VAT at that date's rate, so the
+ * January 2027 rise counts) plus every invoice the customer already pays on their other
+ * leases — must stay within 30 % of monthly net income. One month over is a decline, and the
+ * reason names the month. Income is asked from €2,000 up; below that it is not assessed.
+ */
+export function checkAffordabilityOverTerm(input: {
+  newPayments: readonly Payment[];
+  existingPayments: readonly Payment[];
+  monthlyNetIncomeCents: number | null;
+  isConsumer: boolean;
+}): TermAffordabilityResult {
+  if (!input.isConsumer) return { status: 'not_assessed', reason: 'not_a_consumer' };
+  if (input.monthlyNetIncomeCents === null) {
+    return { status: 'not_assessed', reason: 'income_not_asked' };
+  }
+  const limitCents = divideHalfUp(input.monthlyNetIncomeCents * AFFORDABILITY_MAX_PERCENT, 100);
+  const byMonth = (payments: readonly Payment[]) => {
+    const months = new Map<string, number>();
+    for (const p of payments) {
+      const month = p.dueDate.slice(0, 7);
+      months.set(month, (months.get(month) ?? 0) + p.totalCents);
+    }
+    return months;
+  };
+  const fresh = byMonth(input.newPayments);
+  const existing = byMonth(input.existingPayments);
+
+  let peakMonth = '';
+  let peakCents = -1;
+  for (const month of [...fresh.keys()].sort()) {
+    const newCents = fresh.get(month)!;
+    const existingCents = existing.get(month) ?? 0;
+    const totalCents = newCents + existingCents;
+    if (totalCents > limitCents) {
+      return { status: 'failed', limitCents, month, totalCents, newCents, existingCents };
+    }
+    if (totalCents > peakCents) {
+      peakMonth = month;
+      peakCents = totalCents;
+    }
+  }
+  return { status: 'passed', limitCents, peakMonth, peakCents: Math.max(peakCents, 0) };
+}
+
 export type AffordableSuggestion = {
   termMonths: number;
   downPaymentCents: number;
@@ -49,6 +117,8 @@ export function suggestAffordableParameters(input: {
   monthlyNetIncomeCents: number;
   vatRateBasisPoints: number;
   table: CoefficientTable;
+  /** The most the customer already pays in one month on other leases (incl. VAT). */
+  existingMonthlyCents?: number;
 }): AffordableSuggestion | null {
   const terms = Object.keys(input.table.end_of_term_buyout_percent_of_financed)
     .map(Number)
@@ -82,7 +152,7 @@ export function suggestAffordableParameters(input: {
       input.vatRateBasisPoints
     );
     const check = checkAffordability({
-      monthlyRentWithVatCents,
+      monthlyRentWithVatCents: monthlyRentWithVatCents + (input.existingMonthlyCents ?? 0),
       monthlyNetIncomeCents: input.monthlyNetIncomeCents,
       isConsumer: true,
     });

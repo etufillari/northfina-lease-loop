@@ -8,6 +8,7 @@
 import { launch } from './browser.mjs';
 import { startServer } from './server.mjs';
 import accessibility from './scenarios/accessibility.mjs';
+import cataloguePages from './scenarios/catalogue-pages.mjs';
 import earlyExit from './scenarios/early-exit.mjs';
 import endOfTerm from './scenarios/end-of-term.mjs';
 import fleet from './scenarios/fleet.mjs';
@@ -18,6 +19,7 @@ import secondLife from './scenarios/second-life.mjs';
 
 const SCENARIOS = {
   home,
+  'catalogue-pages': cataloguePages,
   login,
   invoices,
   'end-of-term': endOfTerm,

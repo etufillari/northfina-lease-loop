@@ -11,7 +11,8 @@ import { StatusBadge } from '@/components/status-badge';
 import { loadCoefficientTable, loadCustomers } from '@/data/load';
 import { effectivePriceLists } from '@/server/second-life';
 import { effectiveVatRates } from '@/server/vat';
-import { catalogueSearchString, parseCatalogueQuery } from '@/domain/catalogue';
+import { parseCatalogueQuery } from '@/domain/catalogue';
+import { catalogueSearch, parseCataloguePaging } from '@/domain/catalogue-pages';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn, nextPriceChange } from '@/domain/price-list';
 import { parsePriceSelection } from '@/domain/price-selection';
@@ -49,10 +50,10 @@ export default async function AssetPage({
 }: PageProps<'/[locale]/assets/[id]'>) {
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
-  // The catalogue passes its filters along (?q=&category=…). They survive a language switch,
-  // so "Back to catalogue" returns to the same search in the language you are using now.
+  // The catalogue passes its filters and page along (?q=&category=…&page=). They survive a
+  // language switch, so "Back to catalogue" returns to the same page in the language you use now.
   const search = await searchParams;
-  const backHref = `/${locale}/catalogue${catalogueSearchString(parseCatalogueQuery(search))}`;
+  const backHref = `/${locale}/catalogue${catalogueSearch(parseCatalogueQuery(search), parseCataloguePaging(search))}`;
 
   // Render on every request: the price depends on today's date and the item on the database.
   await connection();

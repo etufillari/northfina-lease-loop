@@ -43,16 +43,28 @@ export function usageAdjustmentPercent(
   return Math.max(adjustment.max_total_percent, steps * adjustment.percent_per_step) + 0;
 }
 
-export function marketValueCents(
-  input: {
-    originalListPriceCents: number;
-    category: AssetCategory;
-    condition: AssetCondition;
-    usageValue: number;
-    ageMonths: number;
-  },
+export type MarketValueInput = {
+  originalListPriceCents: number;
+  category: AssetCategory;
+  condition: AssetCondition;
+  usageValue: number;
+  ageMonths: number;
+};
+
+/** The three factors of a market value, as shown on the desk card, and the value itself. */
+export type MarketValueFactors = {
+  /** The age curve's percent of the original price. */
+  agePercent: number;
+  conditionMultiplier: number;
+  /** The usage deduction in percent (≤ 0, capped). */
+  usagePercent: number;
+  valueCents: number;
+};
+
+export function marketValueFactors(
+  input: MarketValueInput,
   curves: ResidualCurves
-): number {
+): MarketValueFactors {
   const points = curves.curves[input.category];
   if (!points) throw new RangeError(`no residual curve for ${input.category}`);
   const agePercent = curvePercentAt(points, input.ageMonths);
@@ -65,5 +77,9 @@ export function marketValueCents(
     conditionMultiplier *
     (1 + usagePercent / 100);
   // The single rounding to whole cents, half-up.
-  return Math.floor(value + 0.5);
+  return { agePercent, conditionMultiplier, usagePercent, valueCents: Math.floor(value + 0.5) };
+}
+
+export function marketValueCents(input: MarketValueInput, curves: ResidualCurves): number {
+  return marketValueFactors(input, curves).valueCents;
 }

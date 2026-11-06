@@ -98,6 +98,16 @@ export function eventDetail(locale: Locale, event: PassportEvent): string | null
         ? t('passport.detail.offerSet', { ...values, count: setSize })
         : t('passport.detail.offer', values);
     }
+    case 'inspected': {
+      const graded = str(d.condition);
+      const suggested = str(d.suggested);
+      return graded && suggested
+        ? t('passport.detail.inspected', {
+            condition: t(`condition.${graded}` as MessageKey),
+            suggested: t(`condition.${suggested}` as MessageKey),
+          })
+        : null;
+    }
     case 'offer_accepted':
       return t('passport.detail.accepted', { who: str(d.who) ?? str(d.waiterId) ?? '' });
     case 'offer_ended':

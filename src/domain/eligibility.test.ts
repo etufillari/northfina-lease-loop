@@ -21,7 +21,7 @@ const aino = (): EligibilityInput => ({
   applicationDate: '2026-11-05',
   financedCents: 389_000,
   termMonths: 36,
-  monthlyRentWithVatCents: 13_466,
+  newPayments: [{ dueDate: '2026-11-05', totalCents: 13_466 }],
   table,
 });
 
@@ -85,7 +85,7 @@ describe('evaluateEligibility', () => {
       applicationDate: '2026-11-10',
       financedCents: 12_500_000,
       termMonths: 48,
-      monthlyRentWithVatCents: 330_000,
+      newPayments: [{ dueDate: '2026-11-10', totalCents: 330_000 }],
       table,
     });
     expect(result.decision).toBe('manual_review');
@@ -98,7 +98,10 @@ describe('evaluateEligibility', () => {
   });
 
   it('declines an unaffordable deal, with the limit in the reason', () => {
-    const result = evaluateEligibility({ ...aino(), monthlyRentWithVatCents: 96_001 });
+    const result = evaluateEligibility({
+      ...aino(),
+      newPayments: [{ dueDate: '2026-11-05', totalCents: 96_001 }],
+    });
     expect(result.decision).toBe('declined');
     expect(result.reasons).toEqual(
       expect.arrayContaining([
@@ -138,7 +141,7 @@ describe('evaluateEligibility', () => {
     const result = evaluateEligibility({
       ...aino(),
       pepAnswer: 'yes',
-      monthlyRentWithVatCents: 96_001,
+      newPayments: [{ dueDate: '2026-11-05', totalCents: 96_001 }],
     });
     expect(result.decision).toBe('declined');
   });

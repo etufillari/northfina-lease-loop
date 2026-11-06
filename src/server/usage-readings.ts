@@ -13,6 +13,8 @@ export type UsageUpdate = {
   added: number;
   total: number;
   sinceReset: number;
+  /** The condition it went out in: the return inspection starts from it. */
+  conditionOut: string;
 };
 
 export type ReadingFailure = 'usage_reading_missing' | 'usage_reading_below_total';
@@ -37,6 +39,7 @@ export async function checkReadings(
       added: result.added,
       total: result.total,
       sinceReset: result.sinceReset,
+      conditionOut: row.condition,
     });
   }
   return { ok: true, updates };
@@ -55,5 +58,7 @@ export async function applyReadings(tx: TransactionClient, updates: readonly Usa
 /** The passport detail for one item's reading. */
 export function readingDetails(updates: readonly UsageUpdate[], assetId: string) {
   const update = updates.find((u) => u.assetId === assetId);
-  return update ? { usageReading: update.reading, usageAdded: update.added } : {};
+  return update
+    ? { usageReading: update.reading, usageAdded: update.added, conditionOut: update.conditionOut }
+    : {};
 }

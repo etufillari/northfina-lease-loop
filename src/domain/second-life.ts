@@ -12,7 +12,7 @@ import type {
   SecondLifeRequest,
 } from '@/data/schemas';
 import { quoteFor } from './pricing';
-import { ageInMonths, marketValueCents } from './residual';
+import { ageInMonths, marketValueCents, marketValueFactors } from './residual';
 import { serviceInterval, valueUsage } from './usage';
 
 // Worst to best; a waiter's min_condition is met by anything at or above it.
@@ -161,6 +161,39 @@ export type UpgradeReason =
   /** Listable already, but the value it adds is more than it costs. */
   | 'pays_for_itself';
 
+/** One market value's factors: the condition and usage it was taken at, and their effect. */
+export type ValueFactors = {
+  condition: AssetCondition;
+  /** The usage figure the value reads (since the last battery, or lifetime engine hours). */
+  usage: number;
+  agePercent: number;
+  conditionMultiplier: number;
+  usagePercent: number;
+};
+
+/** Why no condition upgrade was taken, with the numbers that decided it. */
+export type UpgradeSkipped =
+  /** A waiter accepts the item as it is: nothing to gain from an upgrade. */
+  | { why: 'waiter_takes_as_is' }
+  /** Already the best condition. */
+  | { why: 'top_condition' }
+  /** The refurbishment price list has no price for the next step up. */
+  | { why: 'not_priced'; to: AssetCondition }
+  /** Listable already, and the value the upgrade adds is not more than it costs. */
+  | { why: 'gain_below_cost'; to: AssetCondition; costCents: number; gainCents: number }
+  /** Not listable as it is; even upgraded it would not be worth more than all the work. */
+  | {
+      why: 'not_worth_work';
+      to: AssetCondition;
+      costCents: number;
+      valueCents: number;
+      workTotalCents: number;
+    }
+  /** Not listable as it is; even upgraded it would be worth less than the €300 minimum. */
+  | { why: 'below_minimum'; to: AssetCondition; costCents: number; valueCents: number }
+  /** The upgrade would pay, but the condition it reaches still cannot be listed. */
+  | { why: 'still_not_listable'; to: AssetCondition; costCents: number };
+
 export type SecondLifeDecision = {
   requiredItems: RefurbishmentItem[];
   requiredTotalCents: number;
@@ -185,6 +218,14 @@ export type SecondLifeDecision = {
    * new battery (once in the higher value and again as a cost).
    */
   financedCents: number;
+  /** When no upgrade was taken: why not (null when one was). */
+  upgradeSkipped: UpgradeSkipped | null;
+  /** How the values were worked out: age, condition and usage, as returned and at the end. */
+  valueFactors: {
+    ageMonths: number;
+    asReturned: ValueFactors;
+    final: ValueFactors;
+  };
   action: 'lease_to_waiter' | 'list_available' | 'parts_bin';
   winnerId: string | null;
   considered: WaiterVerdict[];
@@ -205,7 +246,7 @@ export type SecondLifeDecision = {
  *    A worthwhile upgrade serves a waiter first, else the catalogue.
  * 4. Anything else that can be listed is; the rest goes to parts.
  */
-export function secondLifeDecision(
+function decideCore(
   input: { asset: Asset; originalListPriceCents: number; asOfDate: string },
   data: {
     curves: ResidualCurves;
@@ -213,7 +254,7 @@ export function secondLifeDecision(
     demand: readonly SecondLifeRequest[];
     table: CoefficientTable;
   }
-): SecondLifeDecision {
+): DecisionCore {
   const { asset, originalListPriceCents, asOfDate } = input;
   const required = requiredRefurbishments(asset, data.costs);
   const usageAfterRefurb = required.resetsUsage ? 0 : asset.usage.value;
@@ -252,8 +293,9 @@ export function secondLifeDecision(
     workTotalCents: required.totalCents,
     financedCents: valueAsIsCents,
   };
-  const parts: SecondLifeDecision = {
+  const parts: DecisionCore = {
     ...asIs,
+    upgradeSkipped: null,
     action: 'parts_bin',
     winnerId: null,
     considered: [],
@@ -270,6 +312,7 @@ export function secondLifeDecision(
   if (asIsMatch?.winner) {
     return {
       ...asIs,
+      upgradeSkipped: { why: 'waiter_takes_as_is' },
       action: 'lease_to_waiter',
       winnerId: asIsMatch.winner.id,
       considered: asIsMatch.considered,
@@ -281,15 +324,34 @@ export function secondLifeDecision(
   const upgradeCost = to
     ? data.costs[asset.category].condition_upgrades[`${asset.condition}->${to}`]
     : undefined;
+  let skipped: UpgradeSkipped = to === null ? { why: 'top_condition' } : { why: 'not_priced', to };
   if (to && upgradeCost !== undefined) {
     const valueUpgraded = valueAt(to, usageAfterRefurb);
     const workTotalCents = required.totalCents + upgradeCost;
     const pays = listableAsIs
       ? valueUpgraded - valueAsIsCents > upgradeCost
       : valueUpgraded > workTotalCents && valueUpgraded >= MIN_FINANCED_CENTS;
+    skipped = listableAsIs
+      ? {
+          why: 'gain_below_cost',
+          to,
+          costCents: upgradeCost,
+          gainCents: valueUpgraded - valueAsIsCents,
+        }
+      : valueUpgraded < MIN_FINANCED_CENTS
+        ? { why: 'below_minimum', to, costCents: upgradeCost, valueCents: valueUpgraded }
+        : {
+            why: 'not_worth_work',
+            to,
+            costCents: upgradeCost,
+            valueCents: valueUpgraded,
+            workTotalCents,
+          };
     if (pays) {
+      skipped = { why: 'still_not_listable', to, costCents: upgradeCost };
       const upgraded = {
         ...base,
+        upgradeSkipped: null,
         valueFinalCents: valueUpgraded,
         workTotalCents,
         financedCents: valueUpgraded,
@@ -321,12 +383,58 @@ export function secondLifeDecision(
   if (listableAsIs) {
     return {
       ...asIs,
+      upgradeSkipped: skipped,
       action: 'list_available',
       winnerId: null,
       considered: asIsMatch?.considered ?? [],
     };
   }
-  return parts;
+  return { ...parts, upgradeSkipped: skipped };
+}
+
+type DecisionCore = Omit<SecondLifeDecision, 'valueFactors'>;
+
+/** See `decideCore` for the rules; this adds how each value was worked out, for the desk. */
+export function secondLifeDecision(
+  input: { asset: Asset; originalListPriceCents: number; asOfDate: string },
+  data: {
+    curves: ResidualCurves;
+    costs: RefurbishmentCosts;
+    demand: readonly SecondLifeRequest[];
+    table: CoefficientTable;
+  }
+): SecondLifeDecision {
+  const core = decideCore(input, data);
+  const { asset } = input;
+  const ageMonths = ageInMonths(asset.model_year, input.asOfDate);
+  const factorsAt = (condition: AssetCondition, sinceReset: number): ValueFactors => {
+    const usage = valueUsage(asset, data.costs, sinceReset);
+    const f = marketValueFactors(
+      {
+        originalListPriceCents: input.originalListPriceCents,
+        category: asset.category,
+        condition,
+        usageValue: usage,
+        ageMonths,
+      },
+      data.curves
+    );
+    return {
+      condition,
+      usage,
+      agePercent: f.agePercent,
+      conditionMultiplier: f.conditionMultiplier,
+      usagePercent: f.usagePercent,
+    };
+  };
+  return {
+    ...core,
+    valueFactors: {
+      ageMonths,
+      asReturned: factorsAt(asset.condition, asset.usage.value),
+      final: factorsAt(core.upgrade?.to ?? asset.condition, core.usageAfterRefurb),
+    },
+  };
 }
 
 /**

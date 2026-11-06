@@ -2,7 +2,7 @@
 // decision screen can show WHY. Decision: any failed rule → declined; otherwise any manual
 // flag → manual_review (a PEP is never auto-approved); otherwise approved.
 import type { CoefficientTable } from '@/data/schemas';
-import { checkAffordability } from './affordability';
+import { checkAffordabilityOverTerm, type Payment } from './affordability';
 import { validateFinnishBusinessId } from './business-id';
 import { birthdayAt, yearsOld } from './calendar';
 import { monthlyFactorFor } from './coefficient';
@@ -29,7 +29,12 @@ export type EligibilityInput = {
   applicationDate: string;
   financedCents: number;
   termMonths: number;
-  monthlyRentWithVatCents: number;
+  /**
+   * Every invoice the new lease bills (incl. VAT at each due date), and every invoice the
+   * customer already pays on their other leases: the 30 % rule is checked month by month.
+   */
+  newPayments: readonly Payment[];
+  existingPayments?: readonly Payment[];
   table: CoefficientTable;
 };
 
@@ -90,9 +95,11 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityDecisio
     });
   }
 
-  // affordability: consumers only; unknown income passes because the bank chose not to ask.
-  const affordability = checkAffordability({
-    monthlyRentWithVatCents: input.monthlyRentWithVatCents,
+  // affordability: consumers only, every month of the lease, together with the leases they
+  // already have; unknown income passes because the bank chose not to ask.
+  const affordability = checkAffordabilityOverTerm({
+    newPayments: input.newPayments,
+    existingPayments: input.existingPayments ?? [],
     monthlyNetIncomeCents: input.monthlyNetIncomeCents,
     isConsumer: input.customerType === 'consumer',
   });
@@ -106,10 +113,20 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityDecisio
     reasons.push({
       rule: 'affordability',
       outcome: affordability.status,
-      params: {
-        limitCents: affordability.limitCents,
-        monthlyRentWithVatCents: input.monthlyRentWithVatCents,
-      },
+      params:
+        affordability.status === 'failed'
+          ? {
+              limitCents: affordability.limitCents,
+              month: affordability.month,
+              totalCents: affordability.totalCents,
+              newCents: affordability.newCents,
+              existingCents: affordability.existingCents,
+            }
+          : {
+              limitCents: affordability.limitCents,
+              month: affordability.peakMonth,
+              totalCents: affordability.peakCents,
+            },
     });
   }
 

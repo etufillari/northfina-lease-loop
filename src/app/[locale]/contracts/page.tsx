@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { contractNumber, contractStage } from '@/domain/contract';
+import { DemoNote } from '@/components/demo-note';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -38,6 +39,9 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
           : t(`contracts.showing.${viewer.kind}`)}{' '}
         {t('contracts.intro')}
       </p>
+      <div className="mt-4 max-w-2xl">
+        <DemoNote t={t}>{t('contracts.demoTip')}</DemoNote>
+      </div>
 
       {contracts.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

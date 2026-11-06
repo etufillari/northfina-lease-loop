@@ -37,7 +37,10 @@
         "et": "Kes liisib?"
       },
       "why_we_ask": {
-        "en": "Everything else depends on this."
+        "en": "Everything else depends on this.",
+        "fi": "Kaikki muu riippuu tästä.",
+        "sv": "Allt annat beror på detta.",
+        "et": "Kõik muu sõltub sellest."
       },
       "ask_when": [],
       "options": [
@@ -56,7 +59,10 @@
         "et": "Sinu täisnimi"
       },
       "why_we_ask": {
-        "en": "The contract is made in your name."
+        "en": "The contract is made in your name.",
+        "fi": "Sopimus tehdään sinun nimissäsi.",
+        "sv": "Avtalet upprättas i ditt namn.",
+        "et": "Leping sõlmitakse teie nimel."
       },
       "ask_when": [
         {
@@ -79,7 +85,10 @@
         "et": "Sünnikuupäev"
       },
       "why_we_ask": {
-        "en": "You must be 18 or older to sign a lease."
+        "en": "You must be 18 or older to sign a lease.",
+        "fi": "Leasing-sopimuksen allekirjoittajan on oltava vähintään 18-vuotias.",
+        "sv": "Du måste vara minst 18 år för att teckna ett leasingavtal.",
+        "et": "Liisingulepingu sõlmimiseks peate olema vähemalt 18-aastane."
       },
       "ask_when": [
         {
@@ -108,7 +117,10 @@
         "et": "E-posti aadress"
       },
       "why_we_ask": {
-        "en": "Invoices and the contract are sent here."
+        "en": "Invoices and the contract are sent here.",
+        "fi": "Laskut ja sopimus lähetetään tähän osoitteeseen.",
+        "sv": "Fakturor och avtalet skickas hit.",
+        "et": "Arved ja leping saadetakse siia."
       },
       "ask_when": []
     },
@@ -122,7 +134,10 @@
         "et": "Elukoha riik"
       },
       "why_we_ask": {
-        "en": "We can lease only to residents of Finland, Sweden and Estonia."
+        "en": "We can lease only to residents of Finland, Sweden and Estonia.",
+        "fi": "Voimme leasing-vuokrata vain Suomessa, Ruotsissa ja Virossa asuville.",
+        "sv": "Vi kan endast leasa till personer bosatta i Finland, Sverige eller Estland.",
+        "et": "Liisime ainult Soomes, Rootsis ja Eestis elavatele inimestele."
       },
       "ask_when": [
         {
@@ -159,7 +174,10 @@
         "et": "Tööalane staatus"
       },
       "why_we_ask": {
-        "en": "Helps us check the rent fits your budget."
+        "en": "Helps us check the rent fits your budget.",
+        "fi": "Näin varmistamme, että vuokra sopii budjettiisi.",
+        "sv": "Det hjälper oss att kontrollera att hyran ryms i din budget.",
+        "et": "See aitab meil kontrollida, kas liisingumakse sobib teie eelarvesse."
       },
       "ask_when": [
         {
@@ -188,7 +206,10 @@
         "et": "Igakuine netosissetulek (EUR)"
       },
       "why_we_ask": {
-        "en": "Rent may be at most 30 % of net income for consumers."
+        "en": "Rent may be at most 30 % of net income for consumers.",
+        "fi": "Kuluttajan vuokra saa olla enintään 30 % nettotuloista.",
+        "sv": "För privatpersoner får hyran vara högst 30 % av nettoinkomsten.",
+        "et": "Eraisiku liisingumakse võib olla kuni 30% netosissetulekust."
       },
       "ask_when": [
         {
@@ -215,7 +236,10 @@
         "et": "Ettevõtte registrikood (FI Y-tunnus)"
       },
       "why_we_ask": {
-        "en": "Identifies the business that signs the contract."
+        "en": "Identifies the business that signs the contract.",
+        "fi": "Tunnistaa sopimuksen allekirjoittavan yrityksen.",
+        "sv": "Identifierar företaget som tecknar avtalet.",
+        "et": "Tuvastab lepingu sõlmiva ettevõtte."
       },
       "ask_when": [
         {
@@ -229,7 +253,7 @@
       ],
       "validation": {
         "format": "finnish_business_id",
-        "hint": "1234567-8 with a valid check digit"
+        "hint": "0112038-9 with a valid check digit"
       }
     },
     {
@@ -242,7 +266,10 @@
         "et": "Ettevõtte nimi"
       },
       "why_we_ask": {
-        "en": "Printed on the contract and invoices."
+        "en": "Printed on the contract and invoices.",
+        "fi": "Yrityksen nimi näkyy sopimuksessa ja laskuissa.",
+        "sv": "Företagsnamnet står på avtalet och fakturorna.",
+        "et": "Ettevõtte nimi trükitakse lepingule ja arvetele."
       },
       "ask_when": [
         {
@@ -264,7 +291,10 @@
         "et": "Kas saad ettevõtte nimel lepinguid allkirjastada?"
       },
       "why_we_ask": {
-        "en": "Only an authorised signatory can make the contract binding."
+        "en": "Only an authorised signatory can make the contract binding.",
+        "fi": "Vain nimenkirjoitusoikeutettu henkilö voi tehdä sopimuksesta sitovan.",
+        "sv": "Endast en behörig firmatecknare kan göra avtalet bindande.",
+        "et": "Lepingu saab siduvaks muuta ainult volitatud allkirjastaja."
       },
       "ask_when": [
         {
@@ -290,7 +320,10 @@
         "et": "Allkirjaõigusliku isiku e-post"
       },
       "why_we_ask": {
-        "en": "We send the contract to them for signing."
+        "en": "We send the contract to them for signing.",
+        "fi": "Lähetämme sopimuksen hänelle allekirjoitettavaksi.",
+        "sv": "Vi skickar avtalet till personen för underskrift.",
+        "et": "Saadame lepingu talle allkirjastamiseks."
       },
       "ask_when": [
         {
@@ -319,7 +352,10 @@
         "et": "Kas ettevõte on käibemaksukohustuslane?"
       },
       "why_we_ask": {
-        "en": "Changes how we show prices: with or without VAT."
+        "en": "Changes how we show prices: with or without VAT.",
+        "fi": "Tämä vaikuttaa siihen, näytetäänkö hinnat arvonlisäverollisina vai ilman arvonlisäveroa.",
+        "sv": "Det påverkar om priserna visas med eller utan moms.",
+        "et": "See määrab, kas hinnad kuvatakse käibemaksuga või ilma."
       },
       "ask_when": [
         {
@@ -346,7 +382,10 @@
         "et": "Milleks elektrijalgratast kasutad?"
       },
       "why_we_ask": {
-        "en": "Delivery use wears the bike faster and changes the end-of-term check."
+        "en": "Delivery use wears the bike faster and changes the end-of-term check.",
+        "fi": "Jakelukäyttö kuluttaa pyörää nopeammin ja vaikuttaa sopimuskauden lopun tarkastukseen.",
+        "sv": "Leveransanvändning sliter på cykeln snabbare och påverkar kontrollen vid avtalstidens slut.",
+        "et": "Kullerikasutus kulutab ratast kiiremini ja mõjutab lepingu lõpu kontrolli."
       },
       "ask_when": [
         {
@@ -373,7 +412,10 @@
         "et": "Põllumajandusettevõtte registrinumber"
       },
       "why_we_ask": {
-        "en": "Farm machines are leased to registered farms or contractors."
+        "en": "Farm machines are leased to registered farms or contractors.",
+        "fi": "Maatalouskoneita leasing-vuokrataan rekisteröidyille tiloille tai urakoitsijoille.",
+        "sv": "Lantbruksmaskiner leasas till registrerade lantbruk eller entreprenörer.",
+        "et": "Põllumajandusmasinaid liisitakse registreeritud taludele või töövõtjatele."
       },
       "ask_when": [
         {
@@ -395,7 +437,10 @@
         "et": "Aastane käive (EUR)"
       },
       "why_we_ask": {
-        "en": "Required for leases of 50,000 EUR or more."
+        "en": "Required for leases of 50,000 EUR or more.",
+        "fi": "Tarvitaan vähintään 50 000 euron leasing-sopimuksiin.",
+        "sv": "Krävs för leasingavtal på 50 000 euro eller mer.",
+        "et": "Nõutav vähemalt 50 000 euro suuruste liisingute puhul."
       },
       "ask_when": [
         {
@@ -422,7 +467,10 @@
         "et": "Üle 25 % omanikud"
       },
       "why_we_ask": {
-        "en": "Anti-money-laundering law requires us to know who owns the business."
+        "en": "Anti-money-laundering law requires us to know who owns the business.",
+        "fi": "Rahanpesulaki edellyttää, että tiedämme yrityksen omistajat.",
+        "sv": "Penningtvättslagen kräver att vi känner till företagets ägare.",
+        "et": "Rahapesuvastane seadus nõuab, et teaksime ettevõtte omanikke."
       },
       "ask_when": [
         {
@@ -449,7 +497,10 @@
         "et": "Kas sina (või omanik) oled riikliku taustaga isik?"
       },
       "why_we_ask": {
-        "en": "Required by anti-money-laundering law for leases of 10,000 EUR or more."
+        "en": "Required by anti-money-laundering law for leases of 10,000 EUR or more.",
+        "fi": "Rahanpesulaki edellyttää tätä vähintään 10 000 euron leasing-sopimuksissa.",
+        "sv": "Penningtvättslagen kräver detta för leasingavtal på 10 000 euro eller mer.",
+        "et": "Rahapesuvastane seadus nõuab seda vähemalt 10 000 euro suuruste liisingute puhul."
       },
       "ask_when": [
         {
@@ -473,7 +524,10 @@
         "et": "Milline ametikoht ja alates millal?"
       },
       "why_we_ask": {
-        "en": "A politically exposed person needs a manual check by a person, not a rule."
+        "en": "A politically exposed person needs a manual check by a person, not a rule.",
+        "fi": "Poliittisesti vaikutusvaltainen henkilö tarvitsee ihmisen tekemän manuaalisen tarkistuksen.",
+        "sv": "En person i politiskt utsatt ställning behöver granskas manuellt av en person.",
+        "et": "Riikliku taustaga isik vajab reegli asemel inimese tehtavat käsikontrolli."
       },
       "ask_when": [
         {

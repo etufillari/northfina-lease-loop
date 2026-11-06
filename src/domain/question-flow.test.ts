@@ -139,4 +139,28 @@ describe('resolveQuestionFlow', () => {
 
     expect(result.blockingReasons).toMatchObject([{ questionId: 'q_country', rule: 'answer_in' }]);
   });
+
+  it('reports an invalid Finnish business ID', () => {
+    const result = resolveQuestionFlow(questions, {
+      customerType: 'company',
+      answers: { q_business_id: '1234567-8' },
+    });
+
+    expect(result.blockingReasons).toEqual([
+      {
+        questionId: 'q_business_id',
+        rule: 'invalid_business_id',
+        message: 'Enter a valid Finnish business ID.',
+      },
+    ]);
+  });
+
+  it('accepts the valid business ID example from the question data', () => {
+    const result = resolveQuestionFlow(questions, {
+      customerType: 'company',
+      answers: { q_business_id: '0112038-9' },
+    });
+
+    expect(result.blockingReasons).toEqual([]);
+  });
 });

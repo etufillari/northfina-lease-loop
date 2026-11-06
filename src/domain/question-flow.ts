@@ -1,4 +1,5 @@
 import type { AskWhenCondition, Question, QuestionsFile } from '@/data/schemas';
+import { isValidFinnishBusinessId } from './application';
 
 export type ApplicationAnswers = Record<string, unknown>;
 
@@ -12,7 +13,7 @@ export type QuestionFlowContext = {
 
 export type BlockingReason = {
   questionId: string;
-  rule: 'age_under' | 'answer_in';
+  rule: 'age_under' | 'answer_in' | 'invalid_business_id';
   message: string;
 };
 
@@ -87,6 +88,25 @@ function blockingReasonsFor(
   });
 }
 
+function validationBlockingReason(question: Question, answer: unknown): BlockingReason[] {
+  if (
+    answer === undefined ||
+    question.validation?.format !== 'finnish_business_id' ||
+    typeof answer !== 'string' ||
+    isValidFinnishBusinessId(answer)
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      questionId: question.id,
+      rule: 'invalid_business_id',
+      message: 'Enter a valid Finnish business ID.',
+    },
+  ];
+}
+
 /**
  * Resolves the data-driven application questions in source order.
  * Questions only depend on earlier answers, so answers to questions that stop
@@ -114,6 +134,7 @@ export function resolveQuestionFlow(
 
     applicableQuestions.push(question);
     blockingReasons.push(...blockingReasonsFor(question, answers[question.id], contractStartDate));
+    blockingReasons.push(...validationBlockingReason(question, answers[question.id]));
   }
 
   return { applicableQuestions, answers, removedAnswerIds, blockingReasons };

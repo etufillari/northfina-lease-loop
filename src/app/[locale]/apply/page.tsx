@@ -3,6 +3,7 @@ import { ApplicationQuestion } from '@/components/application-question';
 import { loadQuestions } from '@/data/load';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { todayIso } from '@/server/today';
 
 export default async function ApplicationPage({ params }: PageProps<'/[locale]/apply'>) {
   const { locale } = await params;
@@ -25,7 +26,12 @@ export default async function ApplicationPage({ params }: PageProps<'/[locale]/a
         <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('application.intro')}</p>
       </header>
 
-      <ApplicationQuestion question={firstQuestion} locale={locale} />
+      <ApplicationQuestion
+        question={firstQuestion}
+        questionsFile={questions}
+        contractStartDate={todayIso()}
+        locale={locale}
+      />
     </div>
   );
 }

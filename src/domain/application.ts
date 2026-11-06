@@ -37,9 +37,10 @@ function ageOnDate(birthDate: string, date: string): number {
  * The weighted remainder 1 is invalid; other non-zero remainders use 11 - remainder.
  */
 export function isValidFinnishBusinessId(value: string): boolean {
-  if (!/^\d{7}-\d$/.test(value)) return false;
+  const normalized = value.trim();
+  if (!/^\d{7}-\d$/.test(normalized)) return false;
 
-  const digits = `${value.slice(0, 7)}${value.slice(8)}`.split('').map(Number);
+  const digits = `${normalized.slice(0, 7)}${normalized.slice(8)}`.split('').map(Number);
   const checkDigit = digits.at(-1);
   if (checkDigit === undefined) return false;
 

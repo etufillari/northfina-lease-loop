@@ -4,6 +4,7 @@ import { evaluateApplication, isValidFinnishBusinessId } from './application';
 describe('isValidFinnishBusinessId', () => {
   it('accepts a valid Finnish business ID', () => {
     expect(isValidFinnishBusinessId('0112038-9')).toBe(true);
+    expect(isValidFinnishBusinessId(' 0112038-9 ')).toBe(true);
   });
 
   it('rejects a wrong check digit and malformed value', () => {

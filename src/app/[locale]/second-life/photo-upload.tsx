@@ -19,10 +19,12 @@ export function PhotoUpload({
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function upload(file: File) {
     if (!personaId) return;
     setBusy(true);
+    setResult(null);
     try {
       const form = new FormData();
       form.set('file', file);
@@ -32,10 +34,14 @@ export function PhotoUpload({
         body: form,
       });
       const body = await response.json();
-      if (body.success) router.refresh();
-      else window.alert(body.error?.message ?? t('common.error'));
+      if (body.success) {
+        setResult({ ok: true, text: t('secondLife.photoUploaded', { name: file.name }) });
+        router.refresh();
+      } else {
+        setResult({ ok: false, text: body.error?.message ?? t('common.error') });
+      }
     } catch {
-      window.alert(t('common.error'));
+      setResult({ ok: false, text: t('common.error') });
     } finally {
       setBusy(false);
       if (input.current) input.current.value = '';
@@ -44,7 +50,18 @@ export function PhotoUpload({
 
   if (!personaId) return null;
   return (
-    <>
+    <span className="flex flex-wrap items-center gap-3">
+      {result ? (
+        <span
+          role="status"
+          className={`text-sm ${
+            result.ok ? 'text-emerald-800 dark:text-emerald-300' : 'text-red-700 dark:text-red-400'
+          }`}
+        >
+          {result.ok ? '✓ ' : ''}
+          {result.text}
+        </span>
+      ) : null}
       <input
         ref={input}
         type="file"
@@ -63,6 +80,6 @@ export function PhotoUpload({
       >
         {busy ? t('common.loading') : t('secondLife.uploadPhoto')}
       </button>
-    </>
+    </span>
   );
 }

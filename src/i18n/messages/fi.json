@@ -203,7 +203,6 @@
   "secondLife.priceTitle": "Uusi hinta",
   "secondLife.v1Price": "Alkuperäinen hinta (hinnasto v1)",
   "secondLife.valueAsIs": "Markkina-arvo pakollisten töiden jälkeen",
-  "secondLife.valueFinal": "Markkina-arvo noston jälkeen",
   "secondLife.financed": "Uusi rahoitettava summa (markkina-arvo töiden jälkeen)",
   "secondLife.action.lease_to_waiter": "Tarjotaan jonosta",
   "secondLife.action.list_available": "Luetteloon kaikille",
@@ -401,7 +400,6 @@
   "passport.detail.listed": "Kukaan jonossa ei sovi, joten se on kaikkien saatavilla",
   "secondLife.expiredLineAccepted": "{id} ({who}) hyväksyi tarjouksen ({assets}), mutta ei viimeistellyt hakemusta; varaus päättyi {date}.",
   "secondLife.valueAsReturned": "Markkina-arvo palautettuna",
-  "secondLife.workNote": "Northfina maksaa {work} työt itse: asiakas maksaa tuotteen arvosta, ei korjaamon laskusta.",
   "secondLife.upgrade.serve_waiter": "Nosto {from} → {to} hintaan {cost}: ilman sitä kukaan jonossa ei voi ottaa tuotetta, ja noston jälkeen se on {value} arvoinen, enemmän kuin siihen käytetyt {work}.",
   "secondLife.upgrade.reach_listing": "Nosto {from} → {to} hintaan {cost}: sellaisenaan sitä ei voi listata; noston jälkeen se on {value} arvoinen, enemmän kuin siihen käytetyt {work}, joten se on parempi kuin varaosiksi.",
   "secondLife.upgrade.pays_for_itself": "Nosto {from} → {to} hintaan {cost}: se lisää arvoa {gain}, enemmän kuin maksaa.",
@@ -473,5 +471,6 @@
   "staff.audit.newer": "Uudemmat",
   "staff.audit.older": "Vanhemmat",
   "staff.audit.type.waitlist_entry": "Jonotuslista",
-  "staff.audit.action.demo.reset": "Nollasi demon"
+  "staff.audit.action.demo.reset": "Nollasi demon",
+  "secondLife.photoUploaded": "Ladattu {name}"
 }

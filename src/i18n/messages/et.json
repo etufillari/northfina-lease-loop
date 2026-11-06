@@ -203,7 +203,6 @@
   "secondLife.priceTitle": "Uus hind",
   "secondLife.v1Price": "Algne hind (hinnakiri v1)",
   "secondLife.valueAsIs": "Turuväärtus pärast kohustuslikke töid",
-  "secondLife.valueFinal": "Turuväärtus pärast tõstmist",
   "secondLife.financed": "Uus finantseeritav summa (turuväärtus pärast töid)",
   "secondLife.action.lease_to_waiter": "Pakutakse ootejärjekorrale",
   "secondLife.action.list_available": "Kataloogi kõigile",
@@ -401,7 +400,6 @@
   "passport.detail.listed": "Keegi järjekorras ei sobi, seega on see kõigile avatud",
   "secondLife.expiredLineAccepted": "{id} ({who}) nõustus ({assets}), kuid ei lõpetanud taotlust; hoid lõppes {date}.",
   "secondLife.valueAsReturned": "Turuväärtus tagastatuna",
-  "secondLife.workNote": "Northfina maksab {work} tööd ise: klient maksab eseme väärtuse eest, mitte töökoja arve eest.",
   "secondLife.upgrade.serve_waiter": "Tõstmine {from} → {to} hinnaga {cost}: ilma selleta ei saa keegi ootejärjekorrast eset võtta ning pärast seda on see väärt {value}, rohkem kui sellele kulutatud {work}.",
   "secondLife.upgrade.reach_listing": "Tõstmine {from} → {to} hinnaga {cost}: sellisena ei saa seda kataloogi panna; pärast on see väärt {value}, rohkem kui kulutatud {work}, seega parem kui varuosadeks.",
   "secondLife.upgrade.pays_for_itself": "Tõstmine {from} → {to} hinnaga {cost}: see lisab väärtust {gain}, rohkem kui maksab.",
@@ -473,5 +471,6 @@
   "staff.audit.newer": "Uuemad",
   "staff.audit.older": "Vanemad",
   "staff.audit.type.waitlist_entry": "Ootejärjekord",
-  "staff.audit.action.demo.reset": "Lähtestas demo"
+  "staff.audit.action.demo.reset": "Lähtestas demo",
+  "secondLife.photoUploaded": "Üles laaditud {name}"
 }

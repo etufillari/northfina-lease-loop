@@ -112,15 +112,13 @@ export function DecisionCard({
               label={t('secondLife.valueAsReturned')}
               value={euro(decision.valueAsReturnedCents)}
             />
-            <Row label={t('secondLife.valueAsIs')} value={euro(decision.valueAsIsCents)} />
-            {decision.upgrade && (
-              <Row label={t('secondLife.valueFinal')} value={euro(decision.valueFinalCents)} />
+            {/* The financed amount IS the value after all the work, so the value before the
+                upgrade is worth a line only when an upgrade makes it differ. */}
+            {decision.valueAsIsCents !== decision.financedCents && (
+              <Row label={t('secondLife.valueAsIs')} value={euro(decision.valueAsIsCents)} />
             )}
             <Row label={t('secondLife.financed')} value={euro(decision.financedCents)} strong />
           </dl>
-          <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
-            {t('secondLife.workNote', { work: euro(decision.workTotalCents) })}
-          </p>
         </section>
       </div>
 

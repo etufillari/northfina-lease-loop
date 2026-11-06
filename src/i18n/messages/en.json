@@ -224,7 +224,6 @@
   "secondLife.priceTitle": "New price",
   "secondLife.v1Price": "Original price (price list v1)",
   "secondLife.valueAsIs": "Market value after the mandatory work",
-  "secondLife.valueFinal": "Market value after the upgrade",
   "secondLife.financed": "New financed amount (market value after the work)",
   "secondLife.action.lease_to_waiter": "Offer to the waiting list",
   "secondLife.action.list_available": "List in the catalogue",
@@ -428,7 +427,6 @@
   "passport.detail.listed": "Nobody on the waiting list fits, so it is open to anyone",
   "secondLife.expiredLineAccepted": "{id} ({who}) accepted {assets} but did not finish the application; the hold ended on {date}.",
   "secondLife.valueAsReturned": "Market value as returned",
-  "secondLife.workNote": "Northfina pays the {work} of work itself: the customer pays for what the item is worth, not for the workshop bill.",
   "secondLife.upgrade.serve_waiter": "Upgrade {from} → {to} for {cost}: without it nobody on the waiting list can take the item, and after it the item is worth {value}, more than the {work} spent on it.",
   "secondLife.upgrade.reach_listing": "Upgrade {from} → {to} for {cost}: it cannot be listed as it is; after the upgrade it is worth {value}, more than the {work} spent on it, so it beats sending it to parts.",
   "secondLife.upgrade.pays_for_itself": "Upgrade {from} → {to} for {cost}: it adds {gain} of value, more than it costs.",
@@ -473,5 +471,6 @@
   "staff.audit.newer": "Newer",
   "staff.audit.older": "Older",
   "staff.audit.type.waitlist_entry": "Waiting list",
-  "staff.audit.action.demo.reset": "Reset the demo"
+  "staff.audit.action.demo.reset": "Reset the demo",
+  "secondLife.photoUploaded": "Uploaded {name}"
 }

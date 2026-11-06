@@ -1,17 +1,20 @@
 # Lease Loop: product and engineering decisions
 
-Merged from three team design docs on 5 Nov 2026. This is the source of truth; if code
-and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 early exit,
-#3 second life, #4 question flow, #5 money**.
+Merged from three team design docs on 5 Nov 2026 and kept current since (dated entries mark
+later changes). This is the source of truth; if code and this file disagree, fix one of them.
+Smart Problems claimed: **#1 VAT, #2 early exit, #3 second life, #4 question flow,
+#5 money**; #6 (price breakdown) and #7 (CO₂ per life) are touched, not claimed.
 
 ## Pricing
 
 - **Terms:** 12 / 24 / 36 / 48 months only — exactly what `data/coefficient-table.json` prices.
 - **Down payment:** 0–30 % of the net list price, and the financed amount must stay ≥ €300
   (band A minimum). UI: slider in 1 % steps plus a free euro input, both validated.
-- **Too cheap / too expensive:** items outside the €300–€250,000 financed range stay in the
-  catalogue, greyed out with the reason ("below the €300 lease minimum"), checked against the
-  price list valid on the as-of date.
+- **Too cheap / too expensive:** an item priced under the €300 minimum is not listed (it
+  cannot be leased alone; it still counts toward a fleet's total). An item over the €250,000
+  maximum shows the smallest down payment that makes it leasable; one that stays over the
+  maximum even at the 30 % cap is not offered. Checked against the price list valid on the
+  as-of date.
 - **Rounding (the one rule):** the monthly factor is held as integer parts per million
   (0.027584 → 27584). Contract net total = financed × factor_ppm × term / 1,000,000, kept
   exact in cents and rounded **half-up once**. The monthly net rent is rounded half-up; the
@@ -44,13 +47,15 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   calendar day (card 2: quoted Thu 5 Nov on v1, signed Fri 6 Nov → the v1 price is locked,
   and the app says why).
 - **Holds** (one table, `src/domain/holds.ts`): approved application awaiting signature 7
-  days, waiting for the company's signatory 7 days, end-of-term nomination 7 days,
-  waiting-list offer **3** days (the item sits idle while others wait). A hold is valid
+  days, waiting for the company's signatory 7 days, waiting-list offer **3** days and an
+  accepted nomination **3** days once the item is ready (the item sits idle while others
+  wait). A hold is valid
   through its `until` day and lapses the day after. A quote's price is not a hold: valid on
   its day and the next (card 2).
 - **Holds lapse by themselves** (6 Nov): an overnight job ends what lapsed — an unsigned
   approval expires and frees its items, an unanswered offer passes to the next person in
-  line (whose offer can lapse in turn), an unused nomination ends. In the demo the clock is
+  line (whose offer can lapse in turn), an unused nomination ends, and an item `reserved`
+  with no hold at all (ebike-009 in the data pack) is freed. In the demo the clock is
   the time-travel bar, so moving it forward runs that job for each day on which something
   lapses, in date order, logged as `system`. Staff can still release by hand.
 - **Start date:** chosen by the customer, at most 3 months ahead.
@@ -76,16 +81,23 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   (longer term first, then a larger down payment); it never hard-rejects before an application.
 - **Business ID:** check digit validated as the field is typed (mod-11 rule, weights
   7 2 4 8 5 10 9); a submitted invalid ID declines the application.
-- **Can't sign:** the application is approved-pending-signature, the contract goes to the
-  signatory's e-mail, and staff can "sign as signatory" (audit-logged). 7-day hold.
+- **Can't sign (card 6):** the application is approved-pending-signature and waits 7 days
+  for the signatory named in it. Signing is the signatory's act alone: neither the applicant
+  nor staff can sign for them (403 `NOT_SIGNATORY`); the staff desk shows who must sign. A
+  signing link e-mailed to the signatory is not built, so in the browser card 6 ends here.
+- **One item, one contract:** a single claim rule (`src/domain/claims.ts`) guards starting,
+  submitting, approving and signing, so two people can never hold or sign for the same
+  physical item.
 - **Fleets:** assets are unique physical items, so a fleet is a group of DISTINCT assets of
   one category, picked on the fleet page and priced as ONE contract banded on the total
   (that total is what band and question thresholds see). Duplicates and mixed categories
   are refused. Card 6's "4 × ebike-004" is a typo in the challenge: the event hosts confirmed
   it means one ebike-004 (6 Nov), and that is what the scenario test runs.
-- **Profiles:** persona picker in the header (data customers + staff + "new customer"); the
-  selected id is the audit actor. Answers can be saved as defaults; prefill is confirmed in
-  groups — basics in one batch, income/employment and PEP each separately.
+- **Profiles:** the persona picker in the demo bar (data customers + staff + "new customer")
+  stands in for a login; who is signed in comes from `currentUser()` (Cross-cutting) and is
+  the audit actor. Answers can be saved as defaults; prefill is confirmed in groups — basics
+  in one batch, income/employment and PEP each separately; a prefilled value that would not
+  pass the answer check is asked instead.
 
 ## Contract and lifecycle
 
@@ -110,11 +122,11 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   item's wear baseline (the condition last set by the data pack or an upgrade at the desk,
   and the lifetime usage then), so two leases of 4,900 km cost a grade like one of 9,800 km;
   the suggestion is also never better than it went out, so a grade lowered for damage
-  stays lowered. Staff may correct it, as
-  it went out or worse, never better; carrying the card out without inspecting accepts the
-  suggestion. The decision (and so the price) uses the graded condition, and the card shows
-  how each value was worked out (age %, condition multiplier, usage deduction). Data-pack
-  items that arrive already returned were graded by the data pack.
+  stays lowered. Staff may correct it, as it went out or worse, never better; carrying the
+  card out without inspecting accepts the suggestion. The decision (and so the price) uses
+  the graded condition, and the card shows how each value was worked out (age %, condition
+  multiplier, usage deduction). Data-pack items that arrive already returned were graded by
+  the data pack.
 - **Return inspection — wear charge (designed, deferred — not in the code):** the usage
   purpose from `q_usage_purpose` is locked on the contract at signing, and the monthly price
   is never adjusted for a self-declared purpose. Wear is internalized through second-life
@@ -124,16 +136,18 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   only for abnormal use (expected residual value, age curve × "good" × normal usage, versus
   actual), **delivery use** doubling the allowed usage, battery wear counted as
   refurbishment and never a customer charge — is designed but not implemented.
-- **Pass it on:** (a) mid-lease transfer — the lessee shares a link; the recipient goes
-  through the normal question flow against the remaining schedule (no down payment, locked
-  rent carries over) and the contract transfers on approval; (b) end-of-term nomination —
-  the named person may apply for a new lease on that item, skipping the waiting list, and
-  the skip is logged as "nominated by previous lessee". Their 7 days start when the item
-  **comes back** (6 Nov): nominated during the lease, the hold is provisional to 7 days
-  after the term ends and restarts on the actual return day (end of term or early exit);
-  nominated after the return, 7 days from then; a buyout ends it. The item still goes
-  through the second-life desk (mandatory work, re-price), which then holds it for the
-  nominee instead of matching the waiting list. Unused, it goes to the waiting list.
+- **Pass it on:** (a) **hand the lease over now** — the lessee shares a link; the
+  recipient goes through the normal question flow against the remaining schedule (no down
+  payment, locked rent carries over) and signs; the contract moves to them, invoices not
+  yet due move with it (each invoice records who pays it) and issued ones stay with the
+  giver. A laptop is handed over through the store, after the mandatory certified data
+  wipe. (b) **nominate a successor for when the lease ends** (`src/server/nominations.ts`)
+  — an invitation that reserves nothing until the nominee accepts on My page. Once
+  accepted, buying or ending the lease early is refused (the item is promised); when the
+  item is back and through the second-life desk (inspection, mandatory work, re-price),
+  the desk holds it for the nominee instead of matching the waiting list, and their 3 days
+  start. The skip is logged. Unused, it goes to the waiting list; buying, passing the lease
+  on or scrapping the item ends the nomination.
 
 ## Second life
 
@@ -182,11 +196,14 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   ("fits, but wants a set") and it goes to the next person in line at once. When a declined
   set is passed on, its own items count, so it can go whole to the next person who wants
   that many. The budget is compared with the rent of ONE item.
-- **Matching:** filter by category, minimum condition, budget ≥ new rent, deadline not past;
-  then **first come, first served** on `joined_on` (field added to the data for this).
+- **Matching:** filter by category, minimum condition, rent within the waiter's budget
+  range, deadline not past; then **first come, first served** on `joined_on` (field added
+  to the data for this). Every waiter gets a verdict with its reason on the desk card.
 - **Passport:** every lifecycle change appends an AssetEvent; the asset page shows the full
   history and the CO₂ avoided per life:
-  `manufacturing_new_kg × (1 − refurbishment_share_of_new) × remaining-value fraction`.
+  `manufacturing_new_kg × (1 − refurbishment_share_of_new) × remaining-value fraction` — a
+  nearly worn-out item saves less. A first life avoids nothing (a new item was made for it).
+  The credit goes to the customer whose lease started that life; My page totals it.
 
 ## Cross-cutting
 
@@ -209,14 +226,17 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   browser's built-in date input formats by the browser's language (mm/dd/yyyy on a US
   browser) whatever the page language. Times (the audit log) add Helsinki "14:05". Stored
   and sent as ISO everywhere (`src/i18n/format.ts`).
-- Every domain function takes an ISO date; `src/server/today.ts` supplies "today", and an
-  as-of override doubles as the demo's time-travel mode. Time travel only moves forward,
-  by +1 day / week / month or a jump to a later date (contracts, invoices and offers are written on their day, so going back would contradict
-  the records); "Reset demo" rebuilds the database from the data pack in one audited
-  transaction and restarts on 1 Jan 2026, the first day of price list v1, so every scenario
-  card can be replayed going forward. The demo controls sit in their own bar above the nav.
+- Every domain function takes an ISO date; the server supplies "today". In demo mode that
+  is the shared demo clock (one `DemoClock` row, so every browser and persona is on the same
+  day; `?asOf=` still wins). Time travel only moves forward, by +1 day / week / month or a
+  jump to a later date — contracts, invoices and offers are written on their day, so going
+  back would contradict the records. "Reset demo" rebuilds the database from the data pack
+  in one audited transaction and restarts on 1 Jan 2026, the first day of price list v1, so
+  every scenario card can be replayed going forward. The demo controls sit in their own bar
+  above the nav.
 - App-side asset states add `leased`; every `reserved` is backed by a Reservation row
-  (who, why, until when).
+  (who, why, until when). A `returned` item is in maintenance: off the catalogue, and not
+  leasable until the second-life desk clears it.
 - All the repo rules in RULES.md apply: pure tested domain code, integer cents, API
   envelope, `withAudit()` for every write, 4 locales, files under 600 lines, conventional
   commits, `npm run check:all` green.

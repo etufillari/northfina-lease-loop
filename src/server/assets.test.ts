@@ -3,7 +3,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  listAssets,
+  releaseAsset,
+  reserveAsset,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -87,6 +95,43 @@ describe('changeAssetStatus', () => {
     const result = await changeAssetStatus(db, { id: 'nope', status: 'reserved', actor: 'x' });
     expect(result).toEqual({ ok: false, reason: 'not_found' });
     expect(await db.auditLog.count()).toBe(0);
+  });
+});
+
+describe('reservation lifecycle', () => {
+  it('releases an active reservation immediately and audits the change', async () => {
+    await seedAssets(db, dataPack);
+    const reserved = await reserveAsset(db, {
+      id: 'ebike-001',
+      actor: 'team-test',
+      now: new Date('2026-11-06T10:00:00.000Z'),
+    });
+    expect(reserved.ok).toBe(true);
+
+    const released = await releaseAsset(db, { id: 'ebike-001', actor: 'team-test' });
+    expect(released).toMatchObject({
+      ok: true,
+      asset: { id: 'ebike-001', status: 'available' },
+    });
+    expect(await db.auditLog.count({ where: { action: 'asset.reservation_released' } })).toBe(1);
+    expect(await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).toMatchObject({
+      status: 'available',
+      reserved_by: null,
+      reserved_until: null,
+    });
+  });
+
+  it('does not release another actor’s reservation', async () => {
+    await seedAssets(db, dataPack);
+    await reserveAsset(db, {
+      id: 'ebike-001',
+      actor: 'team-test',
+      now: new Date('2026-11-06T10:00:00.000Z'),
+    });
+    expect(await releaseAsset(db, { id: 'ebike-001', actor: 'someone-else' })).toEqual({
+      ok: false,
+      reason: 'not_reserved_by_actor',
+    });
   });
 });
 

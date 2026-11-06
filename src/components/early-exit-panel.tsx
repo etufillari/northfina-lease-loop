@@ -50,6 +50,18 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
   // The code the server refused with picks the message (D-038).
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
+  // A new demo date moves the slider to the new current month. Done while rendering rather than by
+  // remounting, so a "new month has started" refusal stays on screen after the refresh (D-046).
+  const [shownFor, setShownFor] = useState(props.today);
+  if (shownFor !== props.today) {
+    setShownFor(props.today);
+    setMonth(current.ok ? current.month : 1);
+    if (refusal !== 'MONTH_CHANGED') {
+      setSaving('idle');
+      setRefusal(undefined);
+    }
+  }
+
   const usageValue = /^\d+$/.test(usage) ? Number(usage) : null;
   const handingBack = kind === 'early_hand_back';
   const item =
@@ -86,7 +98,7 @@ export function EarlyExitPanel(props: EarlyExitPanelProps) {
     }
     setRefusal(body?.error?.code);
     setSaving('error');
-    // A new month began: reload the as-of date so the slider and price catch up.
+    // A new month began: reload the as-of date so the slider and price catch up; the message stays.
     if (body?.error?.code === 'MONTH_CHANGED') router.refresh();
   }
 

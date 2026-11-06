@@ -3,6 +3,7 @@ import type { Customer, Staff } from '@/data/schemas';
 import {
   actingCustomerId,
   can,
+  canViewContract,
   findIdentity,
   identityId,
   identityName,
@@ -116,10 +117,9 @@ describe('findIdentity', () => {
 });
 
 describe('can', () => {
-  it('lets a client submit, sign and view their own contracts, but nothing staff-only', () => {
+  it('lets a client submit, sign and end a contract, but nothing staff-only', () => {
     expect(can('client', 'application.submit')).toBe(true);
     expect(can('client', 'contract.sign')).toBe(true);
-    expect(can('client', 'contract.view_own')).toBe(true);
     expect(can('client', 'contract.end_term')).toBe(true);
     expect(can('client', 'contract.view_all')).toBe(false);
     expect(can('client', 'asset.change_status')).toBe(false);
@@ -130,7 +130,6 @@ describe('can', () => {
     expect(can('dealer', 'contract.view_all')).toBe(true);
     expect(can('dealer', 'contract.end_term')).toBe(true);
     expect(can('dealer', 'asset.change_status')).toBe(true);
-    expect(can('dealer', 'item.view_history')).toBe(true);
     expect(can('dealer', 'second_life.refurbish')).toBe(true);
     expect(can('dealer', 'audit_log.view')).toBe(true);
     expect(can('dealer', 'application.decide_manual_review')).toBe(false);
@@ -206,5 +205,40 @@ describe('signatories', () => {
     expect(PERMISSIONS.filter((permission) => can('signatory', permission))).toEqual([
       'contract.sign',
     ]);
+  });
+});
+
+describe('canViewContract', () => {
+  const ceo = {
+    id: 'sign-norvi-ceo',
+    name: 'Anna Norvi',
+    email: 'ceo@norvi.example.com',
+    company_id: 'cust-norvi',
+    story: '',
+  };
+  const identity = (id: string) => {
+    const found = findIdentity([aino], [dealer, admin], id, [ceo]);
+    if (!found) throw new Error(`no identity ${id}`);
+    return found;
+  };
+
+  it('lets a customer see their own contract', () => {
+    expect(canViewContract(identity('cust-aino'), 'cust-aino')).toBe(true);
+  });
+
+  it("keeps a customer out of someone else's contract", () => {
+    expect(canViewContract(identity('cust-aino'), 'cust-lena')).toBe(false);
+  });
+
+  it.each(['staff-dealer', 'staff-admin'])('lets %s see any contract', (id) => {
+    expect(canViewContract(identity(id), 'cust-aino')).toBe(true);
+  });
+
+  it("keeps a signatory out, even of their own company's contract", () => {
+    expect(canViewContract(identity('sign-norvi-ceo'), 'cust-norvi')).toBe(false);
+  });
+
+  it('gives a customer nothing when the owner is unknown', () => {
+    expect(canViewContract(identity('cust-aino'), undefined)).toBe(false);
   });
 });

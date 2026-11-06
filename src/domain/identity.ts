@@ -105,16 +105,12 @@ export const PERMISSIONS = [
   'application.submit',
   /** Sign a contract as the customer on it. */
   'contract.sign',
-  /** See a contract and its invoices when they belong to you. */
-  'contract.view_own',
   /** See every contract, not only your own. */
   'contract.view_all',
   /** End a contract at the end of its term: buy out, return or pass on. */
   'contract.end_term',
   /** Change an asset's status, e.g. available → reserved → returned. */
   'asset.change_status',
-  /** View the full history (passport) of an item across all its lives. */
-  'item.view_history',
   /** Refurbish a returned asset and re-list it for a second life. */
   'second_life.refurbish',
   /** Approve or reject an application sent to manual review. */
@@ -132,13 +128,12 @@ const DEALER_PERMISSIONS: readonly Permission[] = [
   'contract.view_all',
   'contract.end_term',
   'asset.change_status',
-  'item.view_history',
   'second_life.refurbish',
   'audit_log.view',
 ];
 
 const GRANTS: Record<Role, readonly Permission[]> = {
-  client: ['application.submit', 'contract.sign', 'contract.view_own', 'contract.end_term'],
+  client: ['application.submit', 'contract.sign', 'contract.end_term'],
   signatory: ['contract.sign'],
   dealer: DEALER_PERMISSIONS,
   admin: [...DEALER_PERMISSIONS, 'application.decide_manual_review', 'demo.configure'],
@@ -147,4 +142,13 @@ const GRANTS: Record<Role, readonly Permission[]> = {
 /** Whether `role` may ever perform `permission`. */
 export function can(role: Role, permission: Permission): boolean {
   return GRANTS[role].includes(permission);
+}
+
+/**
+ * Whether this identity may see a contract and its invoices: a customer their own, and staff
+ * any. A signatory signs for a company but does not get to read its contracts.
+ */
+export function canViewContract(identity: Identity, ownerId: string | undefined): boolean {
+  const isOwner = identity.kind === 'customer' && identity.customer.id === ownerId;
+  return isOwner || can(identity.role, 'contract.view_all');
 }

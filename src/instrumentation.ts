@@ -5,12 +5,8 @@ export async function register() {
 
   const { db } = await import('./server/db');
   const { currentDate } = await import('./server/date/app-date');
-  const { closeDueContracts } = await import('./server/end-of-term/contract-end');
+  const { runDueWork } = await import('./server/due-work');
   const { startContractScheduler } = await import('./server/end-of-term/scheduler');
-  const { refreshFutureVat } = await import('./server/invoicing/future-vat');
 
-  startContractScheduler(async () => {
-    await closeDueContracts(db);
-    await refreshFutureVat(db, await currentDate(db));
-  });
+  startContractScheduler(async () => runDueWork(db, await currentDate(db)));
 }

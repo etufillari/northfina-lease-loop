@@ -8,8 +8,14 @@ import {
   type Invoice,
 } from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
-import type { Customer, PriceList } from '@/data/schemas';
-import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/contract/contract';
+import type { Customer } from '@/data/schemas';
+import {
+  buildContract,
+  listPriceOnSigning,
+  lockedQuote,
+  openLife,
+  signingProblem,
+} from '@/domain/contract/contract';
 import { isHeldForSomeoneElse } from '@/domain/assets/status';
 import { choiceDeadline, endChoice, type EndChoice } from '@/domain/end-of-term/end-of-term';
 import { invoiceSchedule, invoiceTotals, type InvoiceTotals } from '@/domain/invoicing/invoicing';
@@ -19,7 +25,6 @@ import {
   type UpcomingVatChange,
   type VatChange,
 } from '@/domain/invoicing/vat-change';
-import { listPriceOn } from '@/domain/pricing/price-list';
 import type { Contract as ContractRow, PrismaClient } from '@/generated/prisma/client';
 import { getApplication } from '../application/applications';
 import { toAsset } from '../assets/assets';
@@ -55,9 +60,7 @@ export function toContract(row: ContractRow): Contract {
 }
 
 /**
- * A contract as the screens see it. The list price on the signing date is what lets the UI
- * explain the lock: "you keep the price from your quote; the list says X today". It is
- * looked up when read and is `null` for a re-listed item, which has no list price.
+ * A contract as the screens see it. The list price on the signing date is looked up when read.
  * `end_choice` and `choice_deadline` tell a screen when to offer the end-of-term choice.
  * The totals add up the contract's invoices, so they include VAT at each invoice's own rate.
  */
@@ -67,15 +70,6 @@ export type ContractView = Contract &
     end_choice: EndChoice;
     choice_deadline: string;
   };
-
-function listPriceOnSigning(
-  contract: Omit<Contract, 'id'>,
-  priceLists: readonly PriceList[]
-): number | null {
-  const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
-  const isListed = contract.price_list_version !== null && listPrice.ok;
-  return isListed ? listPrice.priceCents : null;
-}
 
 export async function contractViews(
   db: PrismaClient,

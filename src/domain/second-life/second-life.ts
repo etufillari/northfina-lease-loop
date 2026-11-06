@@ -129,3 +129,14 @@ export function relistProblem(
   if (condition === 'fair' || condition === 'poor') return 'condition_too_low';
   return downPaymentLimits(table, priceCents).ok ? null : 'below_minimum';
 }
+
+/**
+ * How many lives an item has had once it is back on the market. The asset's own count can lag
+ * behind the lives on record, because the data pack starts it before any contract exists here.
+ */
+export function livesAfterReturn(
+  previousLives: number,
+  latestLifeNumber: number | undefined
+): number {
+  return Math.max(previousLives, latestLifeNumber ?? 0);
+}

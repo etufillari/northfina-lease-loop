@@ -4,9 +4,8 @@
 // GET /api/contracts
 //   A client gets their own contracts. Staff get everyone's.
 import { z } from 'zod';
-import { can } from '@/domain/identity';
-import { ApiError, fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
-import { requireActor, requireCustomerOrSignatory } from '@/server/auth/actor';
+import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { requireContractListScope, requireCustomerOrSignatory } from '@/server/auth/actor';
 import { contractViews, listContracts, signContract } from '@/server/contract/contracts';
 import { db } from '@/server/db';
 
@@ -36,10 +35,6 @@ export const POST = handleRoute(async (request) => {
 });
 
 export const GET = handleRoute(async () => {
-  const actor = await requireActor();
-  const customerId = actor.kind === 'customer' ? actor.customer.id : undefined;
-  if (customerId === undefined && !can(actor.role, 'contract.view_all')) {
-    throw new ApiError(403, 'FORBIDDEN', 'You are not allowed to do this.');
-  }
+  const customerId = await requireContractListScope();
   return ok(await contractViews(db, await listContracts(db, { customerId })));
 });

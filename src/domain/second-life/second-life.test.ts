@@ -5,6 +5,7 @@ import {
   ageInMonths,
   curveBasisPoints,
   firstLease,
+  livesAfterReturn,
   marketValue,
   relistProblem,
   usageBasisPoints,
@@ -170,5 +171,19 @@ describe('relistProblem', () => {
   it('refuses a price nobody could lease at', () => {
     expect(relistProblem('good', 29_999, table)).toBe('below_minimum');
     expect(relistProblem('good', 30_000, table)).toBeNull();
+  });
+});
+
+describe('livesAfterReturn', () => {
+  it('catches up with the lives on record', () => {
+    expect(livesAfterReturn(1, 3)).toBe(3);
+  });
+
+  it('keeps the count from the data pack when it is ahead', () => {
+    expect(livesAfterReturn(2, 1)).toBe(2);
+  });
+
+  it('keeps the count when no life is on record', () => {
+    expect(livesAfterReturn(2, undefined)).toBe(2);
   });
 });

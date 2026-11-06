@@ -5,6 +5,7 @@ import type { Asset, AssetCondition } from '@/data/schemas';
 import {
   ageInMonths,
   firstLease,
+  livesAfterReturn,
   marketValue,
   relistProblem,
   type MarketValue,
@@ -130,7 +131,7 @@ export async function relistAsset(
             condition,
             usage_value: usageValue,
             relist_price_cents: preview.market_value_cents,
-            previous_lives: Math.max(asset.previous_lives, latest?.life_number ?? 0),
+            previous_lives: livesAfterReturn(asset.previous_lives, latest?.life_number),
           },
         });
         if (changed.count === 0) throw new NoLongerReturned();

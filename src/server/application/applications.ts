@@ -12,8 +12,9 @@ import {
   blockingAnswer,
   invalidAnswers,
   questionsToAsk,
+  toBlocked,
   type AnswerError,
-  type BlockingAnswer,
+  type Blocked,
   type Deal,
 } from '@/domain/application/question-flow';
 import type { Application as ApplicationRow, PrismaClient } from '@/generated/prisma/client';
@@ -35,8 +36,6 @@ export type RequestFailureReason = Exclude<
   'below_minimum' | 'above_maximum'
 >;
 
-export type Blocked = { reason: 'min_age' | 'residency'; eligible_from: string | null };
-
 type Prepared = {
   /** The server's date: it is both the quote date and the planned start date. */
   date: string;
@@ -54,19 +53,6 @@ type Prepared = {
   invalid: AnswerError[];
   blocked: Blocked | null;
 };
-
-function toBlocked(block: BlockingAnswer | null, answers: Answers): Blocked | null {
-  if (block === null) return null;
-  if (block.rule === 'age_under') {
-    const birthDate = answers[block.question_id];
-    return {
-      reason: 'min_age',
-      eligible_from: typeof birthDate === 'string' ? eligibleFrom(birthDate, block.min_age) : null,
-    };
-  }
-  // The only `answer_in` rule in the data is the country question.
-  return { reason: 'residency', eligible_from: null };
-}
 
 async function prepare(
   db: PrismaClient,

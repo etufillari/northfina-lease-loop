@@ -82,7 +82,7 @@
   "apply.confirmAll": "Vahvista nämä",
   "apply.confirm": "Vahvista",
   "apply.businessIdWarning": "Tarkistusmerkki ei täsmää. Voit korjata sen tai lähettää silti.",
-  "apply.blockedAge": "Emme voi vielä tehdä sopimusta kanssasi. Tervetuloa hakemaan {date} alkaen.",
+  "apply.blockedAge": "Vuokrasopimuksen voi tehdä vain henkilö, joka on täyttänyt 18 vuotta sopimuksen alkamispäivänä. Täytät 18 vuotta {date}, joten emme voi vielä tehdä sopimusta kanssasi – olet lämpimästi tervetullut hakemaan siitä päivästä alkaen.",
   "apply.blockedCountry": "Voimme tällä hetkellä tehdä sopimuksia vain Suomessa, Ruotsissa ja Virossa asuville.",
   "decision.approved.title": "Hyväksytty!",
   "decision.approved.text": "Voit allekirjoittaa nyt. Pidämme tuotteen varattuna sinulle {date} asti.",
@@ -202,9 +202,6 @@
   "secondLife.v1Price": "Alkuperäinen hinta (hinnasto v1)",
   "secondLife.valueAsIs": "Markkina-arvo pakollisten töiden jälkeen",
   "secondLife.financed": "Uusi rahoitettava summa (markkina-arvo töiden jälkeen)",
-  "secondLife.action.lease_to_waiter": "Tarjotaan jonosta",
-  "secondLife.action.list_available": "Luetteloon kaikille",
-  "secondLife.action.parts_bin": "Varaosiksi",
   "secondLife.reason.list_available": "Kukaan jonossa ei sovi, joten tuote palaa luetteloon kaikille.",
   "secondLife.reason.parts_bin": "Se tuottaisi tappiota: töiden jälkeen se olisi vähemmän arvoinen kuin työt maksavat tai alle 300 €:n vuokrarajan, edes yhdellä nostolla — joten se jää varaosiksi.",
   "secondLife.winnerTitle": "Kuka sen saa",
@@ -257,8 +254,6 @@
   "passport.noCo2": "Hinnastossa v1 ei ole hintaa, joten jäljellä olevaa arvoa ei voi mitata.",
   "persona.staff": "Henkilökunta",
   "persona.staffDesk": "Työjono",
-  "price.quantity": "Määrä",
-  "price.quantityNote": "yksi sopimus, hintaluokka kokonaissummasta",
   "staff.title": "Henkilökunnan työpöytä",
   "staff.intro": "Hakemukset, jotka tarvitsevat ihmisen: käsin tarkistettavat ja yritykset, jotka odottavat allekirjoittajaansa.",
   "staff.actingAs": "Toimit käyttäjänä {actor}",
@@ -508,5 +503,7 @@
   "nomination.accept": "Hyväksy",
   "nomination.decline": "Hylkää",
   "nomination.apply": "Siirry tuotteeseen",
-  "apply.notYours": "Tämä hakemus kuuluu toiselle asiakkaalle."
+  "apply.notYours": "Tämä hakemus kuuluu toiselle asiakkaalle.",
+  "apply.backToItem": "Takaisin tuotteeseen",
+  "apply.backToFleet": "Takaisin kalustoon"
 }

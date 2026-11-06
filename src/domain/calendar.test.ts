@@ -7,6 +7,7 @@ import {
   nextDay,
   previousDay,
   yearsOld,
+  birthdayAt,
 } from './calendar';
 
 describe('isLeapYear', () => {
@@ -99,5 +100,19 @@ describe('previousDay', () => {
     expect(previousDay('2026-03-01')).toBe('2026-02-28');
     expect(previousDay('2028-03-01')).toBe('2028-02-29');
     expect(previousDay('2026-01-01')).toBe('2025-12-31');
+  });
+});
+
+describe('birthdayAt', () => {
+  it('is the day yearsOld first reaches the age', () => {
+    expect(birthdayAt('2009-03-10', 18)).toBe('2027-03-10');
+    expect(yearsOld('2009-03-10', birthdayAt('2009-03-10', 18))).toBe(18);
+  });
+
+  it('a 29 February birthday falls on 1 March in a year without one', () => {
+    expect(birthdayAt('2008-02-29', 18)).toBe('2026-03-01');
+    expect(yearsOld('2008-02-29', '2026-02-28')).toBe(17);
+    expect(yearsOld('2008-02-29', '2026-03-01')).toBe(18);
+    expect(birthdayAt('2012-02-29', 16)).toBe('2028-02-29'); // a leap year keeps the 29th
   });
 });

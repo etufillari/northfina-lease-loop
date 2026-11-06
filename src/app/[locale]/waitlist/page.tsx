@@ -4,6 +4,7 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { BackToCatalogue } from '@/components/back-to-catalogue';
 import { customerPersona, PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -42,7 +43,8 @@ export default async function WaitlistPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">{t('waitlist.title')}</h1>
+      <BackToCatalogue locale={locale} label={t('asset.backToCatalogue')} asOfParam={asOfParam} />
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight">{t('waitlist.title')}</h1>
       <p className="mt-2 max-w-3xl text-stone-700 dark:text-stone-300">{t('waitlist.intro')}</p>
 
       {customer ? (

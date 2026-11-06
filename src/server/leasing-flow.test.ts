@@ -150,7 +150,7 @@ describe('the spine, server-side (scenario card 1 + card 8)', () => {
       actor: 'cust-lena',
       asOf: AS_OF,
     });
-    expect(someoneElse).toEqual({ ok: false, reason: 'not_yours' });
+    expect(someoneElse).toEqual({ ok: false, reason: 'not_applicant' });
   });
 
   it('signs: locked contract, 36 invoices that add up, asset leased, passport stamped', async () => {

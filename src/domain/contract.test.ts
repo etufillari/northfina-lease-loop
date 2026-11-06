@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { lockContract } from './contract';
+import { lockContract, signingStartDate } from './contract';
 import type { Quote } from './pricing';
 import { quoteFor } from './pricing';
 
@@ -82,5 +82,43 @@ describe('lockContract', () => {
       usagePurpose: 'delivery',
     });
     expect(result).toMatchObject({ ok: true, contract: { usagePurpose: 'delivery' } });
+  });
+});
+
+describe('signingStartDate', () => {
+  it('keeps the approved start date, whatever the request asks for', () => {
+    expect(
+      signingStartDate({
+        approved: '2026-12-01',
+        requested: '2027-01-20',
+        signedDate: '2026-11-06',
+      })
+    ).toBe('2026-12-01');
+  });
+
+  it('starts on the signing day when the approved day has already passed', () => {
+    expect(
+      signingStartDate({
+        approved: '2026-11-05',
+        requested: '2026-11-05',
+        signedDate: '2026-11-06',
+      })
+    ).toBe('2026-11-06');
+  });
+
+  it('keeps an approved start date that is the signing day itself', () => {
+    expect(
+      signingStartDate({
+        approved: '2026-11-06',
+        requested: '2026-11-09',
+        signedDate: '2026-11-06',
+      })
+    ).toBe('2026-11-06');
+  });
+
+  it('uses the requested date when nothing was approved', () => {
+    expect(
+      signingStartDate({ approved: null, requested: '2026-11-09', signedDate: '2026-11-06' })
+    ).toBe('2026-11-09');
   });
 });

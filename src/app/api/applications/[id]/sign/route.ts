@@ -7,7 +7,6 @@ import { isoDateSchema } from '@/data/schemas';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { signApplication } from '@/server/contracts';
-import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 
 const bodySchema = z.strictObject({
@@ -18,6 +17,12 @@ const bodySchema = z.strictObject({
 const failures: Record<string, [number, string, string]> = {
   not_found: [404, 'APPLICATION_NOT_FOUND', 'No such application'],
   not_signable: [409, 'NOT_SIGNABLE', 'Only an approved application can be signed'],
+  not_signatory: [
+    403,
+    'NOT_SIGNATORY',
+    'Only the person authorised to sign for the company can sign this lease',
+  ],
+  not_applicant: [403, 'NOT_APPLICANT', 'Only the applicant can sign this lease'],
   hold_expired: [409, 'HOLD_EXPIRED', 'The 7-day hold on this approval has run out'],
   quote_expired: [409, 'QUOTE_EXPIRED', 'The quoted price is no longer valid'],
   start_before_signing: [422, 'BAD_START_DATE', 'The lease cannot start before signing'],
@@ -47,7 +52,6 @@ export const POST = handleRoute(
       asOf: asOfFrom(request),
     });
     if (!result.ok) {
-      if (result.reason === 'not_yours') return notYours();
       const [status, code, message] = failures[result.reason]!;
       return fail(status, code, message);
     }

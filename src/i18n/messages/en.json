@@ -98,7 +98,7 @@
   "apply.confirmAll": "Confirm these",
   "apply.confirm": "Confirm",
   "apply.businessIdWarning": "The check digit does not match. You can correct it or submit anyway.",
-  "apply.blockedAge": "We cannot lease to you yet. You are welcome to apply from {date}.",
+  "apply.blockedAge": "A lease can only be made with someone who is 18 or older on the day it starts. You turn 18 on {date}, so we cannot make one with you yet — you are very welcome to apply from that day.",
   "apply.blockedCountry": "We can currently lease only to residents of Finland, Sweden and Estonia.",
   "decision.approved.title": "Approved!",
   "decision.approved.text": "You can sign now. We hold the item for you until {date}.",
@@ -223,9 +223,6 @@
   "secondLife.v1Price": "Original price (price list v1)",
   "secondLife.valueAsIs": "Market value after the mandatory work",
   "secondLife.financed": "New financed amount (market value after the work)",
-  "secondLife.action.lease_to_waiter": "Offer to the waiting list",
-  "secondLife.action.list_available": "List in the catalogue",
-  "secondLife.action.parts_bin": "Keep for parts",
   "secondLife.reason.list_available": "Nobody on the waiting list fits, so the item goes back to the catalogue for anyone.",
   "secondLife.reason.parts_bin": "It would lose money: after the work it would be worth less than the work costs, or less than the €300 lease minimum, even with one upgrade — so it is kept for parts.",
   "secondLife.winnerTitle": "Who gets it",
@@ -279,8 +276,6 @@
   "passport.noCo2": "No price in price list v1, so the remaining value cannot be measured.",
   "persona.staff": "Staff",
   "persona.staffDesk": "Staff desk",
-  "price.quantity": "Quantity",
-  "price.quantityNote": "one contract, banded on the total",
   "staff.title": "Staff desk",
   "staff.intro": "Applications that need a person: manual reviews, and companies waiting for their signatory.",
   "staff.actingAs": "Acting as {actor}",
@@ -508,5 +503,7 @@
   "nomination.accept": "Accept",
   "nomination.decline": "Decline",
   "nomination.apply": "Go to the item",
-  "apply.notYours": "This application belongs to another customer."
+  "apply.notYours": "This application belongs to another customer.",
+  "apply.backToItem": "Back to the item",
+  "apply.backToFleet": "Back to the fleet"
 }

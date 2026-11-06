@@ -9,6 +9,22 @@ import type { Quote } from './pricing';
 /** A lease may start at most this many months after signing. */
 export const MAX_START_MONTHS_AHEAD = 3;
 
+/**
+ * The day a lease starts. The start date approved at submission stands (the decision, e.g. the
+ * age rule, was made on it), and a signing request cannot pick another one. Only when that day
+ * has already passed by the time the customer signs (quoted Thursday, signed Friday) does the
+ * lease start on the signing day, the earliest it can. Applications without an approved date
+ * (none in practice) use the requested one.
+ */
+export function signingStartDate(input: {
+  approved: string | null;
+  requested: string;
+  signedDate: string;
+}): string {
+  if (input.approved === null) return input.requested;
+  return input.approved < input.signedDate ? input.signedDate : input.approved;
+}
+
 export type Contract = {
   quote: Quote;
   /** The day the quote was made; its price list is the one that is locked. */

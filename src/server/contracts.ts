@@ -1,7 +1,7 @@
 // Signing turns an approved application into a locked Contract with its whole invoice
 // schedule, flips the asset to leased and stamps the passport — one audited transaction.
 import { loadCoefficientTable, loadVatRates } from '@/data/load';
-import { lockContract } from '@/domain/contract';
+import { lockContract, signingStartDate } from '@/domain/contract';
 import { scheduleInvoices } from '@/domain/invoicing';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import type { Answers } from '@/domain/question-flow';
@@ -20,6 +20,8 @@ export type SignResult =
       reason:
         | 'not_found'
         | 'not_signable'
+        | 'not_signatory'
+        | 'not_applicant'
         | 'hold_expired'
         | 'quote_expired'
         | 'start_before_signing'
@@ -27,8 +29,7 @@ export type SignResult =
         | 'no_vat_rate_on_date'
         | 'unpriceable_amount'
         | 'asset_unavailable'
-        | 'transfer_closed'
-        | 'not_yours';
+        | 'transfer_closed';
     };
 
 /**
@@ -47,12 +48,16 @@ export async function signApplication(
   if (application.status !== 'approved' && application.status !== 'awaiting_signature') {
     return { ok: false, reason: 'not_signable' };
   }
-  // The customer signs their own approval; a company's authorised signatory signs theirs.
-  const signer =
-    application.status === 'awaiting_signature'
-      ? application.signatory_email
-      : application.customer_id;
-  if (input.actor !== signer) return { ok: false, reason: 'not_yours' };
+  // Only the right person signs (card 6): a company applicant who may not sign waits for the
+  // authorised signatory; an approved application is signed by the applicant themselves.
+  if (application.status === 'awaiting_signature') {
+    const signatory = (application.signatory_email ?? '').trim().toLowerCase();
+    if (!signatory || input.actor.trim().toLowerCase() !== signatory) {
+      return { ok: false, reason: 'not_signatory' };
+    }
+  } else if (input.actor !== application.customer_id) {
+    return { ok: false, reason: 'not_applicant' };
+  }
   if (application.hold_until && input.asOf > application.hold_until) {
     return { ok: false, reason: 'hold_expired' };
   }
@@ -85,9 +90,11 @@ export async function signApplication(
   });
   if (!claim.ok) return { ok: false, reason: 'asset_unavailable' };
 
-  // The start date chosen at submission is the one the decision was made on (the age rule
-  // uses it), so it cannot change at signing.
-  const startDate = application.start_date ?? input.startDate;
+  const startDate = signingStartDate({
+    approved: application.start_date,
+    requested: input.startDate,
+    signedDate: input.asOf,
+  });
   const [table, vatRates] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
   const quote = application.quote;
   const factor = monthlyFactorFor(table, quote.financed_cents, quote.term_months);

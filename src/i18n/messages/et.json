@@ -82,7 +82,7 @@
   "apply.confirmAll": "Kinnita need",
   "apply.confirm": "Kinnita",
   "apply.businessIdWarning": "Kontrollnumber ei klapi. Võid selle parandada või siiski esitada.",
-  "apply.blockedAge": "Me ei saa veel sinuga lepingut sõlmida. Oled oodatud taotlema alates {date}.",
+  "apply.blockedAge": "Rendilepingu saab sõlmida ainult inimesega, kes on lepingu alguspäeval vähemalt 18-aastane. Sa saad 18-aastaseks {date}, seega me ei saa veel sinuga lepingut sõlmida – oled väga oodatud taotlema alates sellest päevast.",
   "apply.blockedCountry": "Saame praegu sõlmida lepinguid ainult Soome, Rootsi ja Eesti elanikega.",
   "decision.approved.title": "Heaks kiidetud!",
   "decision.approved.text": "Saad kohe allkirjastada. Hoiame eset sinu jaoks kuni {date}.",
@@ -202,9 +202,6 @@
   "secondLife.v1Price": "Algne hind (hinnakiri v1)",
   "secondLife.valueAsIs": "Turuväärtus pärast kohustuslikke töid",
   "secondLife.financed": "Uus finantseeritav summa (turuväärtus pärast töid)",
-  "secondLife.action.lease_to_waiter": "Pakutakse ootejärjekorrale",
-  "secondLife.action.list_available": "Kataloogi kõigile",
-  "secondLife.action.parts_bin": "Varuosadeks",
   "secondLife.reason.list_available": "Keegi ootejärjekorras ei sobi, seega ese läheb tagasi kataloogi kõigile.",
   "secondLife.reason.parts_bin": "See tooks kahjumit: pärast töid oleks see väärt vähem kui tööd maksavad või alla 300 € liisingumiinimumi, isegi ühe tõstmisega — seega jääb see varuosadeks.",
   "secondLife.winnerTitle": "Kes selle saab",
@@ -257,8 +254,6 @@
   "passport.noCo2": "Hinnakirjas v1 pole hinda, seega järelejäänud väärtust ei saa mõõta.",
   "persona.staff": "Töötajad",
   "persona.staffDesk": "Töölaud",
-  "price.quantity": "Kogus",
-  "price.quantityNote": "üks leping, hinnaklass kogusumma järgi",
   "staff.title": "Töötajate töölaud",
   "staff.intro": "Taotlused, mis vajavad inimest: käsitsi kontrollid ja ettevõtted, kes ootavad oma allkirjastajat.",
   "staff.actingAs": "Tegutsed kasutajana {actor}",
@@ -508,5 +503,7 @@
   "nomination.accept": "Nõustu",
   "nomination.decline": "Keeldu",
   "nomination.apply": "Mine eseme juurde",
-  "apply.notYours": "See taotlus kuulub teisele kliendile."
+  "apply.notYours": "See taotlus kuulub teisele kliendile.",
+  "apply.backToItem": "Tagasi toote juurde",
+  "apply.backToFleet": "Tagasi autopargi juurde"
 }

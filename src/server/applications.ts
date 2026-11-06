@@ -17,6 +17,7 @@ import {
   type DealContext,
 } from '@/domain/question-flow';
 import { grossCents, vatRateOn } from '@/domain/vat';
+import { checkAnswer } from '@/domain/answer-check';
 import { loadCoefficientTable } from '@/data/load';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { checkClaim } from '@/server/asset-claims';
@@ -136,7 +137,13 @@ async function buildState(
   };
   const prefill = Object.fromEntries(
     visible
-      .filter((q) => answers[q.id] === undefined && defaults[q.id] !== undefined)
+      // Only values the question would accept: a stale or empty profile field is asked for.
+      .filter(
+        (q) =>
+          answers[q.id] === undefined &&
+          defaults[q.id] !== undefined &&
+          checkAnswer(q, defaults[q.id]).ok
+      )
       .map((q) => [q.id, defaults[q.id]!])
   );
 
@@ -281,7 +288,11 @@ export async function startApplication(
 
 export type AnswerResult =
   | { ok: true; state: ApplicationState; warning?: string }
-  | { ok: false; reason: 'not_found' | 'not_yours' | 'not_a_draft' | 'question_not_applicable' };
+  | {
+      ok: false;
+      reason:
+        'not_found' | 'not_yours' | 'not_a_draft' | 'question_not_applicable' | 'invalid_answer';
+    };
 
 /** Stores one answer and drops any answers whose questions stop applying because of it. */
 export async function answerQuestion(
@@ -306,6 +317,7 @@ export async function answerQuestion(
     (q) => q.id === input.questionId
   );
   if (!question) return { ok: false, reason: 'question_not_applicable' };
+  if (!checkAnswer(question, input.answer).ok) return { ok: false, reason: 'invalid_answer' };
 
   // The field hint of card "broken business ID": warn as typed, decline only at submission.
   let warning: string | undefined;

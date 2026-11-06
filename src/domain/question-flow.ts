@@ -2,7 +2,7 @@
 // nothing is hard-coded. A question is visible when all its ask_when conditions hold; the
 // customer type itself is the answer to q_customer_type, so the flow is self-contained.
 import type { AskWhenCondition, AssetCategory, Question } from '@/data/schemas';
-import { yearsOld } from './calendar';
+import { birthdayAt, yearsOld } from './calendar';
 
 export type AnswerValue = string | number | string[];
 export type Answers = Record<string, AnswerValue>;
@@ -100,7 +100,7 @@ export function firstBlockedAnswer(
       if (rule.rule === 'age_under') {
         const birthDate = String(answer);
         if (yearsOld(birthDate, startDate) < rule.value) {
-          const eligibleFrom = `${Number(birthDate.slice(0, 4)) + rule.value}${birthDate.slice(4)}`;
+          const eligibleFrom = birthdayAt(birthDate, rule.value);
           return { questionId: question.id, rule: 'age_under', eligibleFrom };
         }
       } else if (rule.value.includes(String(answer))) {

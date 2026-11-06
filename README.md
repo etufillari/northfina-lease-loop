@@ -93,7 +93,7 @@ All ten work. Each one is covered by unit or database tests, and most also by th
 **Also covered:**
 
 - **4 · Question flow** ([`question-flow.ts`](src/domain/question-flow.ts)): questions are targeted by customer type, item, amount and earlier answers. Changing an earlier answer drops the answers that no longer apply, and the decision is yes, no or a person with reasons.
-- **5 · Money that adds up:** integer cents, rounded once, half up. The invoices add up exactly, which is tested across all terms and a wide range of rents.
+- **5 · Money that adds up:** integer cents, rounded once, half up, everywhere: factors are kept to 12 decimals (in BigInt), so even an interpolated second-life value is rounded only to the cent. The invoices add up exactly, which is tested across all terms and a wide range of rents. The down payment comes off the net price, so VAT is added to it at signing (card 7: 20,000 € down + 5,100 € VAT), and the whole-lease total counts each invoice at the VAT on its own date, including a change already planned.
 - **6 · Explain my price:** every number in the breakdown has a plain-language line.
 
 ## Wildcards
@@ -101,6 +101,8 @@ All ten work. Each one is covered by unit or database tests, and most also by th
 - **Time travel that goes both ways:** state is replayed from dated records. See [`src/domain/state-on.ts`](src/domain/state-on.ts).
 - **Fleet leasing:** 2–20 items, with one decision and one all-or-nothing signature.
 - **Demo login** and **pass-on** to another customer, who must accept.
+- **Holds, and changing your mind:** a customer can ask for an item that is still leased or waiting for its check, with a term, a monthly budget and a lowest condition. At refurbishment, staff can hold it for one of them and see whether it fits what they asked for. A customer can withdraw, or let go of an item held for them (from a request or a pass-on), at any time. See [`src/domain/holds.ts`](src/domain/holds.ts).
+- **Signing is you:** the typed signature must match the full name given in the application (ignoring case and extra spaces), checked in the form and on the server.
 - **Printable contract and invoices** (Print → PDF).
 - **Four languages** (en, fi, sv, et). Switching language never loses what you've typed.
 - **Accessibility-first:** WCAG 2.1 AA, checked automatically with axe-core in light and dark mode. See [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), including how to test with a screen reader.
@@ -109,16 +111,16 @@ All ten work. Each one is covered by unit or database tests, and most also by th
 
 ## Engineering
 
-| Rule                      | How we keep it                                                                                                                                                       |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pure, tested domain logic | Every business rule is in [`src/domain/`](src/domain/) as a pure function with its own test                                                                          |
-| Tests                     | 430 unit and database tests (Vitest, a real SQLite test DB) plus 44 browser checks (`npm run test:e2e`: headless Chrome, scenario cards and axe-core). All run in CI |
-| Money in cents            | Integers everywhere. [`money.ts`](src/domain/money.ts) rounds once, half up                                                                                          |
-| API envelope              | Every route goes through `handleRoute` / `ok` / `fail` ([`api-response.ts`](src/server/api-response.ts))                                                             |
-| Audit log                 | Every change to data goes through `withAudit`, so the change and its audit row are written in one transaction. Issuing an invoice is audited too                     |
-| Files under 600 lines     | `npm run check:file-size`                                                                                                                                            |
-| Hooks and commits         | Husky pre-commit and pre-push, conventional commits, never `--no-verify`                                                                                             |
-| CI                        | Format, lint, types, file size, no-AI check, coverage, build and browser tests                                                                                       |
+| Rule                      | How we keep it                                                                                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure, tested domain logic | Every business rule is in [`src/domain/`](src/domain/) as a pure function with its own test                                                                           |
+| Tests                     | 509 unit and database tests (Vitest, a real SQLite test DB) plus 127 browser checks (`npm run test:e2e`: headless Chrome, scenario cards and axe-core). All run in CI |
+| Money in cents            | Integers everywhere. [`money.ts`](src/domain/money.ts) rounds once, half up                                                                                           |
+| API envelope              | Every route goes through `handleRoute` / `ok` / `fail` ([`api-response.ts`](src/server/api-response.ts))                                                              |
+| Audit log                 | Every change to data goes through `withAudit`, so the change and its audit row are written in one transaction. Issuing an invoice is audited too                      |
+| Files under 600 lines     | `npm run check:file-size`                                                                                                                                             |
+| Hooks and commits         | Husky pre-commit and pre-push, conventional commits, never `--no-verify`                                                                                              |
+| CI                        | Format, lint, types, file size, no-AI check, coverage, build and browser tests                                                                                        |
 
 ```
 src/domain/    rules: pricing, invoicing, early exit, second life, CO₂, fleet, time travel…

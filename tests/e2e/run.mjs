@@ -11,11 +11,13 @@ import accessibility from './scenarios/accessibility.mjs';
 import earlyExit from './scenarios/early-exit.mjs';
 import endOfTerm from './scenarios/end-of-term.mjs';
 import fleet from './scenarios/fleet.mjs';
+import home from './scenarios/home.mjs';
 import invoices from './scenarios/invoices.mjs';
 import login from './scenarios/login.mjs';
 import secondLife from './scenarios/second-life.mjs';
 
 const SCENARIOS = {
+  home,
   login,
   invoices,
   'end-of-term': endOfTerm,

@@ -7,7 +7,7 @@ export default async function fleet(page, check) {
   await page.actAs('cust-norvi');
   // 5 Nov 2026: price list v1 (laptops are 8 % cheaper from the 6th).
   await page.travelTo('2026-11-05');
-  await page.open('/en');
+  await page.open('/en/catalogue');
   check(
     'the catalogue links to fleet leasing',
     await page.js(`!!document.querySelector('main a[href="/en/fleet"]')`)

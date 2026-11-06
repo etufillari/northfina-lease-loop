@@ -36,7 +36,7 @@ export function CatalogueBrowser({
 
   function changeQuery(next: CatalogueQuery) {
     setQuery(next);
-    window.history.replaceState(null, '', `/${locale}${catalogueSearchString(next)}`);
+    window.history.replaceState(null, '', `/${locale}/catalogue${catalogueSearchString(next)}`);
   }
 
   return (

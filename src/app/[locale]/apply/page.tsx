@@ -42,7 +42,7 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
     return (
       <Shell locale={locale} t={t}>
         <Notice title={t('apply.chooseItemTitle')} text={t('apply.chooseItemText')}>
-          <Link href={`/${locale}`} className={buttonClass}>
+          <Link href={`/${locale}/catalogue`} className={buttonClass}>
             {t('apply.toCatalogue')}
           </Link>
         </Notice>

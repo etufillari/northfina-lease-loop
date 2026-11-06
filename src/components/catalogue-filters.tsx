@@ -44,7 +44,7 @@ export function CatalogueFilters({ query, onChange, locale, t }: CatalogueFilter
     >
       <form
         method="get"
-        action={`/${locale}`}
+        action={`/${locale}/catalogue`}
         role="search"
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end"
       >

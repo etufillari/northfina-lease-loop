@@ -1,0 +1,73 @@
+// The catalogue at /[locale]/catalogue (the home page is /[locale]): every asset with today's
+// net list price in one list, searchable, filterable and sortable. The first render uses the
+// filters in the URL (?q=&category=&status=&sort=); after that, CatalogueBrowser updates the
+// list live in the browser.
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
+import { CatalogueBrowser } from '@/components/catalogue-browser';
+
+import { parseCatalogueQuery } from '@/domain/catalogue';
+import { formatIsoDate } from '@/i18n/format';
+import { getT } from '@/i18n/get-t';
+import { isLocale } from '@/i18n/locales';
+import { assetsOn } from '@/server/asset-state';
+import { db } from '@/server/db';
+import { effectivePriceLists } from '@/server/second-life';
+import { appDate } from '@/server/app-date';
+
+export default async function CataloguePage({
+  params,
+  searchParams,
+}: PageProps<'/[locale]/catalogue'>) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+
+  // Render on every request: prices depend on today's date and on the database.
+  await connection();
+
+  const t = getT(locale);
+  // The page decides what "today" is (the real date, or the time-travel date); domain code
+  // never reads the clock.
+  const { today } = await appDate();
+  const query = parseCatalogueQuery(await searchParams);
+  // Items and prices as they were on the app's date (time travel goes both ways).
+  const [items, priceLists] = await Promise.all([
+    assetsOn(db, today),
+    effectivePriceLists(db, today),
+  ]);
+  const assets = items.map((item) => item.asset);
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="max-w-2xl">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          {t('catalogue.title')}
+        </h1>
+        <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
+        <p className="mt-2 text-stone-700 dark:text-stone-300">
+          {t('fleet.catalogueHint')}{' '}
+          <Link
+            href={`/${locale}/fleet`}
+            className="font-medium text-emerald-800 underline underline-offset-4 dark:text-emerald-300"
+          >
+            {t('fleet.catalogueLink')}
+          </Link>
+        </p>
+        <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+          <time dateTime={today}>
+            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+          </time>
+        </p>
+      </div>
+
+      <CatalogueBrowser
+        assets={assets}
+        priceLists={priceLists}
+        today={today}
+        initialQuery={query}
+        locale={locale}
+      />
+    </div>
+  );
+}

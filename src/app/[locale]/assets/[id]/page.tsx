@@ -4,18 +4,23 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetFacts } from '@/components/asset-facts';
 import { LeaseUnavailable } from '@/components/lease-unavailable';
+import { PricingDate } from '@/components/pricing-date';
 import { PriceSliders } from '@/components/price-sliders';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import { isoDateSchema } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
-import { leaseOffer } from '@/domain/quote-options';
+import { initialSelection, leaseOffer } from '@/domain/quote-options';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
-export default async function AssetPricePage({ params }: PageProps<'/[locale]/assets/[id]'>) {
+export default async function AssetPricePage({
+  params,
+  searchParams,
+}: PageProps<'/[locale]/assets/[id]'>) {
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
 
@@ -27,13 +32,16 @@ export default async function AssetPricePage({ params }: PageProps<'/[locale]/as
 
   const t = getT(locale);
   const today = todayIso();
+  const query = await searchParams;
+  // `on` replays another day, as the scenario cards do. A bad date in the URL means today.
+  const onDate = isoDateSchema.safeParse(query.on).data ?? today;
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const [priceLists, table, vatRates] = await Promise.all([
     loadPriceLists(),
     loadCoefficientTable(),
     loadVatRates(),
   ]);
-  const price = listPriceOn(priceLists, asset.id, today);
+  const price = listPriceOn(priceLists, asset.id, onDate);
   const offer = leaseOffer(table, asset.status, price);
 
   return (
@@ -49,6 +57,13 @@ export default async function AssetPricePage({ params }: PageProps<'/[locale]/as
         <p className="text-stone-600 dark:text-stone-400">{asset.make}</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{asset.model}</h1>
       </header>
+
+      <PricingDate
+        onDate={onDate}
+        today={today}
+        earliest={priceLists.map((list) => list.valid_from).sort()[0] ?? today}
+        locale={locale}
+      />
 
       <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900">
         <AssetFacts asset={asset} locale={locale} t={t} />
@@ -67,8 +82,11 @@ export default async function AssetPricePage({ params }: PageProps<'/[locale]/as
 
       {offer.ok ? (
         <PriceSliders
+          key={onDate}
           assetId={asset.id}
-          onDate={today}
+          category={asset.category}
+          onDate={onDate}
+          initial={initialSelection(table, offer.range, query)}
           offer={offer}
           table={table}
           vatRates={vatRates}

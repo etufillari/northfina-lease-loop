@@ -1,4 +1,5 @@
 // The result of the sliders: the monthly rent, what it adds up to, and anything worth a warning.
+import Link from 'next/link';
 import { formatEuro } from '@/domain/money';
 import type { PricedQuote } from '@/domain/quote-costs';
 import type { LowerRentOption } from '@/domain/quote-options';
@@ -10,10 +11,17 @@ type PriceSummaryProps = {
   quote: PricedQuote;
   lowerRent: LowerRentOption | null;
   onUseLowerRent: (downPaymentCents: number) => void;
+  applyHref: string;
   locale: Locale;
 };
 
-export function PriceSummary({ quote, lowerRent, onUseLowerRent, locale }: PriceSummaryProps) {
+export function PriceSummary({
+  quote,
+  lowerRent,
+  onUseLowerRent,
+  applyHref,
+  locale,
+}: PriceSummaryProps) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const percent = (value: number) => formatNumber(value, locale);
@@ -81,6 +89,13 @@ export function PriceSummary({ quote, lowerRent, onUseLowerRent, locale }: Price
           </button>
         </div>
       ) : null}
+
+      <Link
+        href={applyHref}
+        className="mt-5 block rounded-lg bg-emerald-700 px-4 py-2.5 text-center font-medium text-white hover:bg-emerald-800"
+      >
+        {t('price.continue')}
+      </Link>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import {
   clampDownPayment,
   downPaymentRange,
   downPaymentToPosition,
+  initialSelection,
   leaseOffer,
   lowerRentOption,
   offeredTerms,
@@ -227,6 +228,41 @@ describe('slider positions', () => {
       const cents = positionToDownPayment(range, position);
       expect(downPaymentToPosition(range, cents)).toBe(position);
     }
+  });
+});
+
+describe('initialSelection', () => {
+  const range = { minCents: 1_000_000, maxCents: 25_970_000, stepCents: 50_000 };
+
+  it('starts on the middle term and the smallest down payment', () => {
+    expect(initialSelection(table, range, {})).toEqual({
+      termMonths: 36,
+      downPaymentCents: 1_000_000,
+    });
+  });
+
+  it('reads a term and a down payment in euros', () => {
+    expect(initialSelection(table, range, { term: '12', down: '20000' })).toEqual({
+      termMonths: 12,
+      downPaymentCents: 2_000_000,
+    });
+  });
+
+  it.each(['13', '0', 'abc', '', ['12', '24']])('ignores the term %j', (term) => {
+    expect(initialSelection(table, range, { term }).termMonths).toBe(36);
+  });
+
+  it.each(['-5', '12.50', 'abc', '', '1e6', ['20000']])('ignores the down payment %j', (down) => {
+    expect(initialSelection(table, range, { down }).downPaymentCents).toBe(1_000_000);
+  });
+
+  it('pulls a down payment under the minimum into the range', () => {
+    expect(initialSelection(table, range, { down: '5' }).downPaymentCents).toBe(1_000_000);
+  });
+
+  it('pulls a huge down payment into the range', () => {
+    const down = '9'.repeat(400);
+    expect(initialSelection(table, range, { down }).downPaymentCents).toBe(25_970_000);
   });
 });
 

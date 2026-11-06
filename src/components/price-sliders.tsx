@@ -2,8 +2,8 @@
 
 // The term and down payment sliders. Runs the same pure pricing functions as the server, so the
 // price updates on every move with no request to wait for or fail. Saving repeats the sum.
-import { useId, useState } from 'react';
-import type { CoefficientTable, VatRates } from '@/data/schemas';
+import { useEffect, useId, useState } from 'react';
+import type { AssetCategory, CoefficientTable, VatRates } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import { priceLeaseChoice } from '@/domain/quote-costs';
 import {
@@ -14,16 +14,21 @@ import {
   positionToDownPayment,
   sliderPositions,
   type LeaseOffer,
+  type LeaseSelection,
 } from '@/domain/quote-options';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { PriceSummary } from './price-summary';
 
 const CENTS_PER_EURO = 100;
+/** Browsers limit URL changes per minute, and dragging a slider would easily go over. */
+const URL_UPDATE_DELAY_MS = 200;
 
 type PriceSlidersProps = {
   assetId: string;
+  category: AssetCategory;
   onDate: string;
+  initial: LeaseSelection;
   offer: Extract<LeaseOffer, { ok: true }>;
   table: CoefficientTable;
   vatRates: VatRates;
@@ -32,7 +37,9 @@ type PriceSlidersProps = {
 
 export function PriceSliders({
   assetId,
+  category,
   onDate,
+  initial,
   offer,
   table,
   vatRates,
@@ -43,8 +50,8 @@ export function PriceSliders({
   const terms = offeredTerms(table);
   const { range } = offer;
 
-  const [termIndex, setTermIndex] = useState(Math.floor(terms.length / 2));
-  const [downPaymentCents, setDownPaymentCents] = useState(range.minCents);
+  const [termIndex, setTermIndex] = useState(terms.indexOf(initial.termMonths));
+  const [downPaymentCents, setDownPaymentCents] = useState(initial.downPaymentCents);
   // What is typed in the box. An amount can be out of range mid-typing, so it stays as typed
   // until the box loses focus, while the price already uses the nearest allowed amount.
   const [typed, setTyped] = useState<string | null>(null);
@@ -55,6 +62,18 @@ export function PriceSliders({
   const hintId = useId();
 
   const termMonths = terms[termIndex] ?? 0;
+
+  // Keeps the choice in the URL, so a reload, a shared link or a language switch keeps it too.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      params.set('term', String(termMonths));
+      params.set('down', String(downPaymentCents / CENTS_PER_EURO));
+      window.history.replaceState(null, '', `?${params}`);
+    }, URL_UPDATE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [termMonths, downPaymentCents]);
+
   const result = priceLeaseChoice(table, vatRates, {
     assetId,
     onDate,
@@ -161,6 +180,14 @@ export function PriceSliders({
             setTyped(null);
             setDownPaymentCents(cents);
           }}
+          applyHref={`/${locale}/apply?${new URLSearchParams({
+            category,
+            financedAmountCents: String(result.quote.financedCents),
+            assetId,
+            termMonths: String(termMonths),
+            downPaymentCents: String(downPaymentCents),
+            onDate,
+          })}`}
           locale={locale}
         />
       ) : (

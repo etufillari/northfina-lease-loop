@@ -106,6 +106,28 @@ export function downPaymentToPosition(range: DownPaymentRange, cents: number): n
   return Math.round((cents - range.minCents) / range.stepCents);
 }
 
+export type LeaseSelection = { termMonths: number; downPaymentCents: number };
+
+/**
+ * Where the sliders start, from values read off a URL (`term`, and `down` in whole euros). A URL
+ * can say anything, so a term we don't offer falls back to the middle one, and a down payment is
+ * pulled into the range. The term starts in the middle and the down payment as low as allowed.
+ */
+export function initialSelection(
+  table: CoefficientTable,
+  range: DownPaymentRange,
+  query: { term?: unknown; down?: unknown }
+): LeaseSelection {
+  const terms = offeredTerms(table);
+  const middleTerm = terms[Math.floor(terms.length / 2)] ?? 0;
+  const term = Number(query.term);
+  const hasDown = typeof query.down === 'string' && /^\d+$/.test(query.down);
+  return {
+    termMonths: terms.includes(term) ? term : middleTerm,
+    downPaymentCents: hasDown ? clampDownPayment(range, Number(query.down) * EURO) : range.minCents,
+  };
+}
+
 export type LowerRentOption = { downPaymentCents: number; monthlyNetRentCents: number };
 
 /**

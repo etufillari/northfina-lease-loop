@@ -171,6 +171,19 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
 
 ## Cross-cutting
 
+- **Who is signed in comes from one function** (6 Nov, `src/server/current-user.ts`):
+  `currentUser()` returns `{ actorId, customerId, isStaff, name }`. Every page and API route
+  asks it — nothing reads a cookie or trusts an `actor`/`customerId` sent by the browser, and
+  request bodies that carry one are refused. Routes guard with `requireUser()`,
+  `requireCustomer()` or `requireStaff()` (401/403); server functions get the actor (and, for
+  desk work, the `isStaff` flag) as arguments and decide ownership themselves. In the demo
+  the persona picker is a cookie read there; a real login replaces only that function's
+  body. Staff sign for a company's signatory at the desk under the signatory's e-mail as
+  stored on the application.
+- **Demo mode** (`DEMO_MODE`, on unless "off"): the persona picker, time travel (`?asOf=`
+  and the demo bar) and Reset. Off, "today" is always the real date — an override would let
+  anyone backdate quotes, holds and age checks — nobody is signed in until a real login,
+  and the demo routes are 404. Holds then need a nightly job calling `expireLapsedHolds`.
 - **Dates look the same everywhere** (6 Nov), day first. Shown: "06 Nov 2026" (two-digit
   day, three-letter month in the reader's language, four-digit year; never 06/11 vs 11/06
   ambiguity). Typed: "06.11.2026" in our own field with a calendar button, because a

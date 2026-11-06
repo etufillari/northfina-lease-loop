@@ -4,15 +4,14 @@
 // application is shown only to the customer it belongs to — it holds their personal answers.
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
 import { ApplicationWizard } from '@/components/application-wizard';
 import { BackLink } from '@/components/back-to-catalogue';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { quoteAssetIds } from '@/server/quotes';
+import { currentUser } from '@/server/current-user';
 
 export default async function ApplyPage({
   params,
@@ -23,7 +22,7 @@ export default async function ApplyPage({
   await connection();
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const persona = (await currentUser())?.customerId ?? null;
   const application = await db.application.findUnique({
     where: { id },
     include: { quote: true },

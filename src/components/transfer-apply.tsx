@@ -26,7 +26,7 @@ export function TransferApply({
     const response = await fetch(`/api/transfers/${token}/apply?asOf=${asOf}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ customerId: personaId, actor: personaId }),
+      body: JSON.stringify({}),
     });
     const body = await response.json();
     setBusy(false);

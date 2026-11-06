@@ -4,9 +4,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
 import { CatalogueBrowser, type CatalogueItem } from '@/components/catalogue-browser';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { assetCategorySchema, type AssetCategory } from '@/data/schemas';
 import { quoteFor } from '@/domain/pricing';
@@ -19,6 +17,7 @@ import { assetImageUrls } from '@/server/asset-images';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { secondLifePrices } from '@/server/quotes';
+import { currentUser } from '@/server/current-user';
 
 /**
  * Statuses a customer can still get. A `returned` item is functionally in maintenance —
@@ -38,7 +37,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   // The page decides what "today" is (the time-travel control or ?asOf=); domain code
   // never reads the clock.
   const { asOf: today, asOfParam } = await asOfFromPage(await searchParams);
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const persona = (await currentUser())?.customerId ?? null;
   const [assets, priceLists, secondLife, table, vatRates, imageRows, customer] = await Promise.all([
     listAssets(db),
     loadPriceLists(),

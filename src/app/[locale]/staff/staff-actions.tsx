@@ -88,16 +88,14 @@ const button =
 export function ReviewActions({
   locale,
   applicationId,
-  actor,
 }: {
   locale: Locale;
   applicationId: string;
-  actor: string;
 }) {
   const { t, busy, done, message, run, refresh } = useAction(locale);
   const [note, setNote] = useState('');
   const noteId = `note-${applicationId}`;
-  const body = { actor, ...(note.trim() ? { note: note.trim() } : {}) };
+  const body = note.trim() ? { note: note.trim() } : {};
 
   return (
     <div>
@@ -187,8 +185,8 @@ export function SignAsSignatory({
           onClick={() =>
             run<{ contractId: string }>(
               `/api/applications/${applicationId}/sign`,
-              // The signatory is the actor: the audit log shows who really signed.
-              { startDate, actor: signatoryEmail },
+              // The server signs for the signatory stored on the application.
+              { startDate },
               (data) => {
                 setContractId(data.contractId);
                 return t('staff.done.signed');
@@ -216,12 +214,10 @@ export function SignAsSignatory({
 /** One button for every hold that ran out; each release is audited on its own. */
 export function ReleaseExpiredHolds({
   locale,
-  actor,
   count,
   asOf,
 }: {
   locale: Locale;
-  actor: string;
   count: number;
   /** The date the page listed the holds for, so the release uses the very same "today". */
   asOf: string;
@@ -237,7 +233,7 @@ export function ReleaseExpiredHolds({
         onClick={() =>
           run<{ released: Array<{ releasedAssetIds: string[] }> }>(
             `/api/staff/holds/release?asOf=${asOf}`,
-            { actor },
+            {},
             (data) =>
               t('staff.done.released', {
                 applications: data.released.length,

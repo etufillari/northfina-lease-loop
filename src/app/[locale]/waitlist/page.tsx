@@ -1,11 +1,9 @@
 // The second-life waiting list. A customer joins it, sees what they are waiting for and
 // answers offers in their own section (accepting starts the normal application). Staff see
 // the whole list in queue order, category by category.
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { BackToCatalogue } from '@/components/back-to-catalogue';
-import { customerPersona, PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
@@ -14,6 +12,7 @@ import { db } from '@/server/db';
 import { customerWaitlist, staffWaitlist } from '@/server/waitlist-views';
 import { EntryCard } from './entry-card';
 import { JoinForm, type JoinPrefill } from './join-form';
+import { currentUser } from '@/server/current-user';
 
 export default async function WaitlistPage({
   params,
@@ -36,10 +35,10 @@ export default async function WaitlistPage({
     minCondition: single(query.minCondition),
     term: single(query.term),
   };
-  const raw = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
-  const customerId = customerPersona(raw);
+  const user = await currentUser();
+  const customerId = user?.customerId ?? null;
   const customer = customerId ? await getCustomer(db, customerId) : null;
-  const isStaff = raw === STAFF_PERSONA;
+  const isStaff = user?.isStaff ?? false;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
@@ -127,13 +126,7 @@ async function CustomerSection({
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {t('waitlist.join.intro')}
         </p>
-        <JoinForm
-          locale={locale}
-          customerId={customerId}
-          asOf={asOf}
-          asOfParam={asOfParam}
-          prefill={prefill}
-        />
+        <JoinForm locale={locale} asOf={asOf} asOfParam={asOfParam} prefill={prefill} />
       </section>
     </>
   );

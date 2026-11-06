@@ -1,24 +1,26 @@
-// POST /api/contracts/:id/buyout-option  body: { optIn, actor }
+// POST /api/contracts/:id/buyout-option  body: { optIn }
 // The mid-lease "I want to buy it at the end" flag. Never counted against affordability.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { setBuyoutOption } from '@/server/lifecycle';
+import { requireCustomer } from '@/server/current-user';
 
 const bodySchema = z.strictObject({
   optIn: z.boolean(),
-  actor: z.string().trim().min(1).max(100),
 });
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/buyout-option'>) => {
     const { id } = await params;
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
     const result = await setBuyoutOption(db, {
       contractId: id,
       optIn: body.optIn,
-      actor: body.actor,
+      actor: user.actorId,
     });
     if (!result.ok) {
       if (result.reason === 'not_yours') return notYours();

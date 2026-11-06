@@ -1,4 +1,4 @@
-// PUT /api/applications/:id/answers  body: { questionId, answer, actor }
+// PUT /api/applications/:id/answers  body: { questionId, answer }
 // Stores one answer (changing an earlier one drops every answer that stops applying) and
 // returns the fresh state. An invalid business ID comes back as a warning, not a decline.
 import { z } from 'zod';
@@ -7,22 +7,24 @@ import { answerQuestion } from '@/server/applications';
 import { asOfFrom } from '@/server/as-of';
 import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
+import { requireCustomer } from '@/server/current-user';
 
 const bodySchema = z.strictObject({
   questionId: z.string().regex(/^q_[a-z0-9_]+$/),
   answer: z.union([z.string(), z.number(), z.array(z.string())]),
-  actor: z.string().trim().min(1).max(100),
 });
 
 export const PUT = handleRoute(
   async (request, { params }: RouteContext<'/api/applications/[id]/answers'>) => {
     const { id } = await params;
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
     const result = await answerQuestion(db, {
       applicationId: id,
       questionId: body.questionId,
       answer: body.answer,
-      actor: body.actor,
+      actor: user.actorId,
       asOf: asOfFrom(request),
     });
     if (!result.ok) {

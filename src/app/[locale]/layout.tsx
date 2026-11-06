@@ -6,13 +6,14 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { AS_OF_COOKIE } from '@/components/as-of-cookie';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { PersonaPicker } from '@/components/persona-picker';
 import { TimeTravel } from '@/components/time-travel';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { todayIso } from '@/server/today';
 import '../globals.css';
+import { currentUser } from '@/server/current-user';
+import { demoMode } from '@/server/demo-mode';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
   const { locale } = await params;
@@ -26,7 +27,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
   const cookieStore = await cookies();
-  const persona = cookieStore.get(PERSONA_COOKIE)?.value ?? null;
+  const user = await currentUser();
+  // The demo picker shows who is chosen; everything else asks currentUser().
+  const persona = user?.actorId ?? null;
   const asOfCookie = cookieStore.get(AS_OF_COOKIE)?.value;
   const asOf = asOfCookie && /^\d{4}-\d{2}-\d{2}$/.test(asOfCookie) ? asOfCookie : todayIso();
 
@@ -43,19 +46,21 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
-        {/* Demo-only controls, kept apart from the product's own navigation. */}
-        <aside
-          aria-label={t('demo.label')}
-          className="border-b border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"
-        >
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2 sm:px-6">
-            <span className="rounded-full bg-amber-700 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-white uppercase">
-              {t('demo.badge')}
-            </span>
-            <TimeTravel locale={locale} current={asOf} actor={persona} />
-            <PersonaPicker key={persona ?? ''} locale={locale} initialId={persona} />
-          </div>
-        </aside>
+        {/* Demo-only controls, kept apart from the product's own navigation (DEMO_MODE). */}
+        {demoMode() ? (
+          <aside
+            aria-label={t('demo.label')}
+            className="border-b border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"
+          >
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2 sm:px-6">
+              <span className="rounded-full bg-amber-700 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-white uppercase">
+                {t('demo.badge')}
+              </span>
+              <TimeTravel locale={locale} current={asOf} actor={persona} />
+              <PersonaPicker key={persona ?? ''} locale={locale} initialId={persona} />
+            </div>
+          </aside>
+        ) : null}
 
         <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
@@ -71,7 +76,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               </span>
             </Link>
             <div className="flex flex-wrap items-center gap-4">
-              {persona === STAFF_PERSONA ? (
+              {user?.isStaff ? (
                 <Link
                   href={`/${locale}/second-life`}
                   className="text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
@@ -87,10 +92,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               </Link>
               {persona ? (
                 <Link
-                  href={`/${locale}/${persona === STAFF_PERSONA ? 'staff' : 'me'}`}
+                  href={`/${locale}/${user?.isStaff ? 'staff' : 'me'}`}
                   className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
                 >
-                  {persona === STAFF_PERSONA ? t('persona.staffDesk') : t('persona.myPage')}
+                  {user?.isStaff ? t('persona.staffDesk') : t('persona.myPage')}
                 </Link>
               ) : null}
               <LanguageSwitcher current={locale} label={t('nav.language')} />

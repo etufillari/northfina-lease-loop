@@ -75,7 +75,6 @@ export function ApplicationWizard({
   const router = useRouter();
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const suffix = asOf ? `?asOf=${asOf}` : '';
-  const actor = personaId ?? 'anonymous';
   // Conflicts a customer can actually run into get a translated text; anything else falls
   // back to the API's own message.
   const apiError = (error: { code?: string; message?: string } | undefined) => {
@@ -176,7 +175,7 @@ export function ApplicationWizard({
     const response = await fetch(`/api/applications/${applicationId}/answers${suffix}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ questionId, answer, actor }),
+      body: JSON.stringify({ questionId, answer }),
     });
     const body = await response.json();
     setBusy(false);
@@ -199,7 +198,7 @@ export function ApplicationWizard({
       const response = await fetch(`/api/applications/${applicationId}/answers${suffix}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ questionId: item.id, answer: item.value, actor }),
+        body: JSON.stringify({ questionId: item.id, answer: item.value }),
       });
       const body = await response.json();
       if (!body.success) {
@@ -219,13 +218,13 @@ export function ApplicationWizard({
       await fetch(`/api/customers/${personaId}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ defaults: application.answers, actor }),
+        body: JSON.stringify({ defaults: application.answers }),
       });
     }
     const response = await fetch(`/api/applications/${applicationId}/submit${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ startDate, actor }),
+      body: JSON.stringify({ startDate }),
     });
     const body = await response.json();
     setBusy(false);
@@ -239,7 +238,7 @@ export function ApplicationWizard({
     const response = await fetch(`/api/applications/${applicationId}/sign${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ startDate: application.startDate ?? startDate, actor }),
+      body: JSON.stringify({ startDate: application.startDate ?? startDate }),
     });
     const body = await response.json();
     setBusy(false);
@@ -258,7 +257,7 @@ export function ApplicationWizard({
     const response = await fetch(`/api/applications/${applicationId}/cancel${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ actor }),
+      body: JSON.stringify({}),
     });
     const body = await response.json();
     setBusy(false);

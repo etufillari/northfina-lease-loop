@@ -37,13 +37,11 @@ function pick<T extends readonly (string | number)[]>(
 
 export function JoinForm({
   locale,
-  customerId,
   asOf,
   asOfParam,
   prefill = {},
 }: {
   locale: Locale;
-  customerId: string;
   asOf: string;
   asOfParam: string | null;
   prefill?: JoinPrefill;
@@ -82,7 +80,6 @@ export function JoinForm({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          customerId,
           category,
           maxMonthlyNetRentCents: maxCents,
           minMonthlyNetRentCents: minCents,
@@ -90,7 +87,6 @@ export function JoinForm({
           preferredTermMonths: term,
           neededBy,
           quantity,
-          actor: customerId,
         }),
       });
       const body = await response.json();

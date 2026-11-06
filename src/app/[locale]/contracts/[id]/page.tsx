@@ -3,9 +3,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
 import { ContractActions } from '@/components/contract-actions';
-import { customerPersona, PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { loadVatRates } from '@/data/load';
 import { buyoutInvoicePreview } from '@/domain/buyout';
 import { addMonthsClamped } from '@/domain/calendar';
@@ -18,6 +16,7 @@ import { asOfFromPage } from '@/server/as-of';
 import { getContract, invoicesFor } from '@/server/contracts';
 import { db } from '@/server/db';
 import { termEndsOn } from '@/server/lifecycle';
+import { currentUser } from '@/server/current-user';
 
 export default async function ContractPage({
   params,
@@ -33,13 +32,13 @@ export default async function ContractPage({
   if (!contract) notFound();
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const rawPersona = (await cookies()).get(PERSONA_COOKIE)?.value;
-  const persona = customerPersona(rawPersona);
+  const user = await currentUser();
+  const persona = user?.customerId ?? null;
   const endsOn = termEndsOn(contract);
   // Who is looking: the holder acts on it; a previous lessee sees the invoices for the
   // months they used; staff see everything read-only; anyone else sees nothing.
   const isHolder = persona === contract.customer_id;
-  const isStaff = rawPersona === STAFF_PERSONA;
+  const isStaff = user?.isStaff ?? false;
   const myInvoices = persona ? invoicesFor(contract, persona) : [];
   const isPreviousLessee = !isHolder && myInvoices.length > 0;
   if (!isHolder && !isStaff && !isPreviousLessee) {
@@ -158,7 +157,6 @@ export default async function ContractPage({
         <ContractActions
           locale={locale}
           contractId={contract.id}
-          personaId={persona}
           asOf={asOf}
           endsOn={endsOn}
           today={asOf}

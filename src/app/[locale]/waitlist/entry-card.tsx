@@ -138,7 +138,6 @@ export function EntryCard({
           <EntryActions
             locale={locale}
             entryId={entry.id}
-            actor={actor}
             asOfParam={asOfParam}
             actions={
               entry.status === 'waiting'

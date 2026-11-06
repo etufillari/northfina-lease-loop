@@ -1,22 +1,19 @@
-// POST /api/applications/:id/cancel  body: { actor }  [?asOf=]
+// POST /api/applications/:id/cancel  body:   [?asOf=]
 // The customer walks away before signing: holds released, items back to available.
-import { z } from 'zod';
-import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { fail, handleRoute, ok } from '@/server/api-response';
 import { cancelApplication } from '@/server/applications';
 import { asOfFrom } from '@/server/as-of';
 import { db } from '@/server/db';
-
-const bodySchema = z.strictObject({
-  actor: z.string().trim().min(1).max(100),
-});
+import { requireCustomer } from '@/server/current-user';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/applications/[id]/cancel'>) => {
     const { id } = await params;
-    const body = await readJsonBody(request, bodySchema);
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const result = await cancelApplication(db, {
       applicationId: id,
-      actor: body.actor,
+      actor: user.actorId,
       asOf: asOfFrom(request),
     });
     if (!result.ok) {

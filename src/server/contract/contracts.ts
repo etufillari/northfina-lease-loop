@@ -1,9 +1,14 @@
 // Signing and reading contracts. Signing is one transaction: the asset becomes leased, and the
 // contract, its invoices and a new life are created, or none of it happens.
 import { randomUUID } from 'node:crypto';
-import { contractSchema, type Contract } from '@/data/lease-schemas';
+import {
+  contractSchema,
+  type Application,
+  type Contract,
+  type Invoice,
+} from '@/data/lease-schemas';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
-import type { Customer } from '@/data/schemas';
+import type { Customer, PriceList } from '@/data/schemas';
 import { buildContract, lockedQuote, openLife, signingProblem } from '@/domain/contract/contract';
 import { choiceDeadline, endChoice, type EndChoice } from '@/domain/end-of-term/end-of-term';
 import { invoiceSchedule } from '@/domain/invoicing/invoicing';
@@ -52,21 +57,26 @@ export type ContractView = Contract & {
   choice_deadline: string;
 };
 
+function listPriceOnSigning(
+  contract: Omit<Contract, 'id'>,
+  priceLists: readonly PriceList[]
+): number | null {
+  const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
+  const isListed = contract.price_list_version !== null && listPrice.ok;
+  return isListed ? listPrice.priceCents * contract.quantity : null;
+}
+
 export async function contractViews(
   db: PrismaClient,
   contracts: readonly Contract[]
 ): Promise<ContractView[]> {
   const [priceLists, today] = await Promise.all([loadPriceLists(), currentDate(db)]);
-  return contracts.map((contract) => {
-    const listPrice = listPriceOn(priceLists, contract.asset_id, contract.signed_on);
-    const isListed = contract.price_list_version !== null && listPrice.ok;
-    return {
-      ...contract,
-      list_price_on_signing_cents: isListed ? listPrice.priceCents * contract.quantity : null,
-      end_choice: endChoice(contract, today),
-      choice_deadline: choiceDeadline(contract),
-    };
-  });
+  return contracts.map((contract) => ({
+    ...contract,
+    list_price_on_signing_cents: listPriceOnSigning(contract, priceLists),
+    end_choice: endChoice(contract, today),
+    choice_deadline: choiceDeadline(contract),
+  }));
 }
 
 export async function getContract(db: PrismaClient, id: string): Promise<Contract | null> {
@@ -83,6 +93,87 @@ export async function listContracts(
     orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
   });
   return rows.map(toContract);
+}
+
+/** The contract an approved application becomes today, and its invoices. Saves nothing. */
+async function draftContract(db: PrismaClient, application: Application, id: string) {
+  const locked = lockedQuote(await loadCoefficientTable(), application);
+  if (!locked.ok) {
+    throw new Error(`approved application ${application.id} cannot be priced: ${locked.reason}`);
+  }
+
+  const contract: Contract = {
+    id,
+    ...buildContract(application, locked.quote, await currentDate(db)),
+  };
+  return { contract, invoices: invoiceSchedule(contract, await loadVatRates()) };
+}
+
+function signatoryEmail(application: Application): string | null {
+  const email = application.answers.q_signatory_email;
+  return typeof email === 'string' ? email : null;
+}
+
+export type ContractPreview = Omit<Contract, 'id' | 'status' | 'actual_end_on'> & {
+  /** The dates assume signing on this day. Signing later moves them. */
+  calculated_on: string;
+  list_price_on_signing_cents: number | null;
+  /** `false` for a company applicant who may read the terms but not sign. */
+  can_sign: boolean;
+  signatory_email: string | null;
+  invoices: (Omit<Invoice, 'id' | 'contract_id'> & { vat_rate_percent: number })[];
+};
+
+export type ContractPreviewResult =
+  | { ok: true; preview: ContractPreview }
+  | {
+      ok: false;
+      reason: 'application_not_found' | 'not_approved' | 'already_signed' | 'asset_not_available';
+    };
+
+/** Exactly what signing today would create, so the customer can read it first. Saves nothing. */
+export async function previewContract(
+  db: PrismaClient,
+  input: { applicationId: string; customer: Customer }
+): Promise<ContractPreviewResult> {
+  const { applicationId, customer } = input;
+
+  const application = await getApplication(db, applicationId);
+  if (!application) return { ok: false, reason: 'application_not_found' };
+
+  const problem = signingProblem(application, customer);
+  if (problem === 'not_owner') return { ok: false, reason: 'application_not_found' };
+  if (problem === 'not_approved') return { ok: false, reason: 'not_approved' };
+
+  const existing = await db.contract.findUnique({
+    where: { application_id: applicationId },
+    select: { id: true },
+  });
+  if (existing) return { ok: false, reason: 'already_signed' };
+
+  const asset = await db.asset.findUniqueOrThrow({
+    where: { id: application.asset_id },
+    select: { status: true },
+  });
+  if (asset.status !== 'available') return { ok: false, reason: 'asset_not_available' };
+
+  const { contract, invoices } = await draftContract(db, application, 'preview');
+  const { id: _id, status: _status, actual_end_on: _end, ...terms } = contract;
+
+  return {
+    ok: true,
+    preview: {
+      ...terms,
+      calculated_on: contract.signed_on,
+      list_price_on_signing_cents: listPriceOnSigning(contract, await loadPriceLists()),
+      can_sign: problem === null,
+      signatory_email: signatoryEmail(application),
+      invoices: invoices.map(({ contract_id: _contract, ...invoice }) => ({
+        ...invoice,
+        vat_rate_percent: invoice.vat_rate_basis_points / 100,
+      })),
+    },
+  };
 }
 
 export type SignResult =
@@ -111,11 +202,10 @@ export async function signContract(
   if (problem === 'not_owner') return { ok: false, reason: 'application_not_found' };
   if (problem === 'not_approved') return { ok: false, reason: 'not_approved' };
   if (problem === 'signatory_required') {
-    const email = application.answers.q_signatory_email;
     return {
       ok: false,
       reason: 'signatory_required',
-      signatory_email: typeof email === 'string' ? email : null,
+      signatory_email: signatoryEmail(application),
     };
   }
 
@@ -125,16 +215,8 @@ export async function signContract(
   });
   if (existing) return { ok: false, reason: 'already_signed' };
 
-  const locked = lockedQuote(await loadCoefficientTable(), application);
-  if (!locked.ok) {
-    throw new Error(`approved application ${applicationId} cannot be priced: ${locked.reason}`);
-  }
-
   const id = `con-${randomUUID()}`;
-  const contract: Contract = {
-    id,
-    ...buildContract(application, locked.quote, await currentDate(db)),
-  };
+  const { contract, invoices } = await draftContract(db, application, id);
 
   const assetRow = await db.asset.findUniqueOrThrow({ where: { id: contract.asset_id } });
   const latestLife = await db.assetLife.findFirst({
@@ -143,7 +225,6 @@ export async function signContract(
     select: { life_number: true, first_lease_price_cents: true },
   });
   const life = openLife(contract, toAsset(assetRow), latestLife);
-  const invoices = invoiceSchedule(contract, await loadVatRates());
 
   try {
     await withAudit(

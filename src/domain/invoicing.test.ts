@@ -6,6 +6,7 @@ import {
   splitByDate,
   sumInvoices,
   invoiceLabel,
+  leaseTotalCents,
   upcomingVatChange,
   withStatus,
   type Invoice,
@@ -97,6 +98,19 @@ describe('invoiceSchedule', () => {
     expect(
       invoiceSchedule({ startDate: '2012-12-15', termMonths: 2, monthlyNetCents: 100 }, vatRates)
     ).toEqual({ ok: false, reason: 'no_vat_rate', dueDate: '2012-12-15' });
+  });
+});
+
+describe('leaseTotalCents', () => {
+  it('card 1: counts the 26 % VAT from Jan 2027 on every invoice from then on', () => {
+    const invoices = schedule('2026-11-05', 36, 10_730);
+    // 2 invoices × 134.66 € at 25.5 % + 34 × 135.20 € at 26 %
+    expect(leaseTotalCents(0, invoices)).toBe(2 * 13_466 + 34 * 13_520);
+  });
+
+  it('adds the down payment incl. VAT', () => {
+    const invoices = schedule('2026-11-05', 12, 10_000);
+    expect(leaseTotalCents(62_750, invoices)).toBe(62_750 + sumInvoices(invoices).totalCents);
   });
 });
 

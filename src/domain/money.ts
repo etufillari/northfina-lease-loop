@@ -38,12 +38,22 @@ export function percentOfCents(cents: number, percent: number): number {
   return divideHalfUp(cents * basisPoints, 10_000);
 }
 
+const FACTOR_SCALE = 1_000_000_000_000n; // 12 decimals
+
 /**
- * `cents` × `factor`, rounded half up. The factor may have up to six decimals, as in the
- * coefficient table (0.027584). 389000 × 0.027584 = 10730.176 → 10730.
+ * `cents` × `factor`, rounded once, half up. 389000 × 0.027584 = 10730.176 → 10730.
+ *
+ * The factor is scaled to an integer with 12 decimals and multiplied in BigInt, so no product
+ * can overflow. That is exact for the coefficient table's six decimals and for factors such as
+ * 0.2405 (so half cents are exact), and for any other factor (an interpolated age curve times
+ * condition times usage) the scaling is off by under 0.00002 cent even on 260,000 €, so the
+ * one rounding to a cent is the only one that matters.
  */
 export function multiplyCents(cents: number, factor: number): number {
   assertWholeCents(cents);
-  const micros = Math.round(factor * 1_000_000);
-  return divideHalfUp(cents * micros, 1_000_000);
+  if (!Number.isFinite(factor) || factor < 0) {
+    throw new RangeError(`factor must be a finite, non-negative number, got ${factor}`);
+  }
+  const scaled = BigInt(Math.round(factor * 1e12));
+  return Number((BigInt(cents) * scaled * 2n + FACTOR_SCALE) / (2n * FACTOR_SCALE));
 }

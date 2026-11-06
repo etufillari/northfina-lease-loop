@@ -13,7 +13,8 @@ import { questionContext } from '@/domain/application';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
 import { parsePriceSelection } from '@/domain/price-selection';
-import { leaseTotalCents, quoteLease } from '@/domain/pricing';
+import { invoiceSchedule, leaseTotalCents } from '@/domain/invoicing';
+import { quoteLease } from '@/domain/pricing';
 import { addDays, addMonths, QUOTE_VALID_DAYS } from '@/domain/contract';
 import { nextVatChange, vatPercentOn } from '@/domain/vat';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
@@ -92,11 +93,19 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   // A VAT change already planned before the lease would end (e.g. 26 % from 1 Jan 2027).
   const vatChange = nextVatChange(vatRates, today, addMonths(today, quote.termMonths));
+  // Every invoice at the VAT on its own date, so a planned change is in the total.
+  const schedule = invoiceSchedule(
+    { startDate: today, termMonths: quote.termMonths, monthlyNetCents: quote.monthlyNetCents },
+    vatRates
+  );
+  const totalCents = schedule.ok
+    ? leaseTotalCents(quote.downPaymentGrossCents, schedule.invoices)
+    : quote.downPaymentGrossCents + quote.totalGrossRentCents;
   const dealHref = `${itemHref}?term=${quote.termMonths}&down=${quote.downPaymentCents}`;
   const summary: [string, string][] = [
     [t('apply.item'), `${asset.make} ${asset.model}`],
     [t('apply.term'), t('apply.termValue', { months: quote.termMonths })],
-    [t('apply.downPayment'), euro(quote.downPaymentCents)],
+    [t('apply.downPayment'), euro(quote.downPaymentGrossCents)],
     [
       t('apply.monthly'),
       t('apply.monthlyValue', {
@@ -136,16 +145,16 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
               {t('apply.total')}
             </dt>
             <dd className="mt-1">
-              <span className="text-lg font-semibold tabular-nums">
-                {euro(leaseTotalCents(quote))}
-              </span>
-              <span className="block text-sm text-stone-700 dark:text-stone-300">
-                {t('apply.totalValue', {
-                  down: euro(quote.downPaymentCents),
-                  count: quote.termMonths,
-                  monthly: euro(quote.monthlyGrossCents),
-                })}
-              </span>
+              <span className="text-lg font-semibold tabular-nums">{euro(totalCents)}</span>
+              {vatChange ? null : (
+                <span className="block text-sm text-stone-700 dark:text-stone-300">
+                  {t('apply.totalValue', {
+                    down: euro(quote.downPaymentGrossCents),
+                    count: quote.termMonths,
+                    monthly: euro(quote.monthlyGrossCents),
+                  })}
+                </span>
+              )}
               <span className="mt-2 block text-xs text-stone-600 dark:text-stone-400">
                 {vatChange
                   ? t('apply.totalVatPlanned', {

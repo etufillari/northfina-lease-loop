@@ -72,7 +72,11 @@ export type ValueInput = {
   usage: number;
 };
 
-/** What the item is worth on the market, in net cents, rounded once. */
+/**
+ * What the item is worth on the market, in net cents: price × age % × condition × usage,
+ * rounded once, half up (multiplyCents keeps the combined factor to 12 decimals, so it isn't
+ * rounded a second time in any way that shows).
+ */
 export function marketValueCents(input: ValueInput, curves: ResidualCurves): number {
   const curve = curves.curves[input.category] ?? [];
   const percent = residualPercent(curve, input.ageMonths);

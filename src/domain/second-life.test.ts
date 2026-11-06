@@ -135,6 +135,31 @@ describe('marketValueCents and the second-life price', () => {
     expect(ebike007('good', 0)).toBe(172_661); // 172660.5 → half up
   });
 
+  it('rounds once: a €145,000 machine is within a cent of the exact value', () => {
+    for (const ageMonths of [7, 19, 37, 53]) {
+      for (const usage of [0, 1_234, 5_000]) {
+        const value = marketValueCents(
+          {
+            originalNetCents: 14_500_000,
+            category: 'farm_machine',
+            ageMonths,
+            condition: 'like_new',
+            usage,
+          },
+          curves
+        );
+        const curve = curves.curves.farm_machine ?? [];
+        const exact =
+          (14_500_000 *
+            residualPercent(curve, ageMonths) *
+            (curves.condition_multiplier.like_new ?? 0) *
+            (1 + usagePercent(curves, 'farm_machine', usage) / 100)) /
+          100;
+        expect(Math.abs(value - exact)).toBeLessThanOrEqual(0.5 + 1e-6); // the reference is a float
+      }
+    }
+  });
+
   it('suggests a price in whole euros', () => {
     expect(roundToEuros(132_035)).toBe(132_000);
     expect(roundToEuros(172_661)).toBe(172_700);

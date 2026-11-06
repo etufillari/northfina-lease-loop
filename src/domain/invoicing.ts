@@ -64,6 +64,18 @@ export function invoiceSchedule(
   return { ok: true, invoices };
 }
 
+/**
+ * What the whole lease costs the customer: the down payment incl. VAT (paid at signing) plus
+ * every invoice, each at the VAT rate on its own date, so a VAT change already planned during
+ * the lease is counted. Buying the item at the end is not included: it is a choice.
+ */
+export function leaseTotalCents(
+  downPaymentGrossCents: number,
+  invoices: readonly Invoice[]
+): number {
+  return downPaymentGrossCents + sumInvoices(invoices).totalCents;
+}
+
 export type InvoiceTotals = { netCents: number; vatCents: number; totalCents: number };
 
 export function sumInvoices(invoices: readonly Invoice[]): InvoiceTotals {

@@ -51,7 +51,10 @@ export function downPaymentRange(
 
 export type LeaseQuote = {
   listPriceCents: number;
+  /** Net, like the list price it comes off. VAT is added on top when it is paid, at signing. */
   downPaymentCents: number;
+  downPaymentVatCents: number;
+  downPaymentGrossCents: number;
   /** List price − down payment: the amount the rent is calculated from. */
   financedCents: number;
   termMonths: number;
@@ -110,12 +113,16 @@ export function quoteLease(input: QuoteInput, table: CoefficientTable): QuoteRes
   const monthlyNetCents = multiplyCents(financedCents, factorResult.factor);
   const monthlyVatCents = percentOfCents(monthlyNetCents, vatPercent);
   const monthlyGrossCents = monthlyNetCents + monthlyVatCents;
+  // The down payment is part of the (net) price, so it carries VAT too, paid at signing.
+  const downPaymentVatCents = percentOfCents(downPaymentCents, vatPercent);
 
   return {
     ok: true,
     quote: {
       listPriceCents,
       downPaymentCents,
+      downPaymentVatCents,
+      downPaymentGrossCents: downPaymentCents + downPaymentVatCents,
       financedCents,
       termMonths,
       band: factorResult.band.band,
@@ -131,16 +138,4 @@ export function quoteLease(input: QuoteInput, table: CoefficientTable): QuoteRes
       buyoutNetCents: percentOfCents(financedCents, buyoutPercent),
     },
   };
-}
-
-/**
- * What the whole lease costs the customer at today's VAT rate: the down payment plus every
- * monthly rent incl. VAT. Buying the item at the end is not included (it is a choice). If VAT
- * changes during the lease, each invoice uses the rate on its own date, so this total moves
- * with it while the rent before VAT stays locked.
- */
-export function leaseTotalCents(
-  quote: Pick<LeaseQuote, 'downPaymentCents' | 'totalGrossRentCents'>
-): number {
-  return quote.downPaymentCents + quote.totalGrossRentCents;
 }

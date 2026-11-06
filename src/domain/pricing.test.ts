@@ -2,13 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import type { CoefficientTable, PriceList } from '@/data/schemas';
 import { listPriceOn } from './price-list';
-import {
-  downPaymentRange,
-  leaseTerms,
-  leaseTotalCents,
-  quoteLease,
-  type QuoteInput,
-} from './pricing';
+import { downPaymentRange, leaseTerms, quoteLease, type QuoteInput } from './pricing';
 
 let table: CoefficientTable;
 let priceLists: PriceList[];
@@ -44,6 +38,8 @@ describe('quoteLease', () => {
       quote: {
         listPriceCents: 389_000,
         downPaymentCents: 0,
+        downPaymentVatCents: 0,
+        downPaymentGrossCents: 0,
         financedCents: 389_000,
         termMonths: 36,
         band: 'B',
@@ -197,20 +193,33 @@ describe('downPaymentRange', () => {
   });
 });
 
-describe('leaseTotalCents', () => {
-  it('card 1: no down payment, 36 × 134.66 € = 4,847.76 € at 25.5 % VAT', () => {
+describe('down payment VAT', () => {
+  it('adds VAT to the (net) down payment, rounded once; the rent is unchanged', () => {
+    const result = quoteLease(
+      { listPriceCents: 389_000, downPaymentCents: 50_000, termMonths: 36, vatPercent: 25.5 },
+      table
+    );
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.quote.financedCents).toBe(339_000);
+    expect(result.quote.downPaymentVatCents).toBe(12_750);
+    expect(result.quote.downPaymentGrossCents).toBe(62_750);
+  });
+
+  it('card 7: 20,000 € down on farm-002 carries 5,100 € VAT', () => {
+    const result = quoteLease(
+      { listPriceCents: 14_500_000, downPaymentCents: 2_000_000, termMonths: 48, vatPercent: 25.5 },
+      table
+    );
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.quote.downPaymentVatCents).toBe(510_000);
+  });
+
+  it('no down payment, no VAT on it', () => {
     const result = quoteLease(
       { listPriceCents: 389_000, downPaymentCents: 0, termMonths: 36, vatPercent: 25.5 },
       table
     );
     if (!result.ok) throw new Error(result.reason);
-    expect(result.quote.monthlyGrossCents).toBe(13_466);
-    expect(leaseTotalCents(result.quote)).toBe(484_776);
-  });
-
-  it('adds the down payment to the monthly payments', () => {
-    expect(leaseTotalCents({ downPaymentCents: 50_000, totalGrossRentCents: 400_000 })).toBe(
-      450_000
-    );
+    expect(result.quote.downPaymentGrossCents).toBe(0);
   });
 });

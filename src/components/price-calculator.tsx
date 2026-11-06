@@ -193,6 +193,14 @@ function Breakdown({ quote, locale, t }: { quote: LeaseQuote; locale: Locale; t:
       euro(quote.monthlyVatCents),
     ],
     [t('price.monthlyGross'), euro(quote.monthlyGrossCents), true],
+    ...(quote.downPaymentCents > 0
+      ? [
+          [
+            t('price.downPaymentGross', { percent: formatNumber(quote.vatPercent, locale) }),
+            euro(quote.downPaymentGrossCents),
+          ] as [string, string],
+        ]
+      : []),
     [
       t('price.totalGross'),
       t('price.paymentsValue', {

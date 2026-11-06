@@ -69,8 +69,17 @@ describe('multiplyCents', () => {
     expect(multiplyCents(25_000_000, 0.053335)).toBe(1_333_375);
   });
 
+  it('keeps a factor with more than six decimals (an interpolated curve), so it rounds once', () => {
+    // 14,500,000 × 0.3356789 = 4,867,344.05: six decimals (0.335679) would give 4,867,345.5 → 4,867,346
+    expect(multiplyCents(14_500_000, 0.3356789)).toBe(4_867_344);
+    // 549,000 × 0.2405 = 132,034.5 exactly → half up
+    expect(multiplyCents(549_000, 0.37 * 0.65)).toBe(132_035);
+  });
+
   it('throws on fractions of a cent and negative amounts', () => {
     expect(() => multiplyCents(0.5, 0.03)).toThrow(RangeError);
+    expect(() => multiplyCents(100, -0.1)).toThrow(RangeError);
+    expect(() => multiplyCents(100, Number.NaN)).toThrow(RangeError);
     expect(() => multiplyCents(-100, 0.03)).toThrow(RangeError);
   });
 });

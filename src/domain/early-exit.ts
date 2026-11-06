@@ -17,7 +17,11 @@
 //   rent, paid at signing, covers it.
 //
 // Open invoices must be paid first, as at the normal end of term. VAT is added at today's rate.
-// Each amount is rounded once, half up, to a whole cent.
+//
+// Rounding: discounting needs powers of (1 + r), so it is done in floating point and rounded
+// once, half up, at the end: "still owed" is the rounded sum. The two lines shown under it are
+// the rounded buyout part and the rest, so they always add up to it exactly. VAT is then
+// rounded once on the net amount.
 import { addMonths } from './contract';
 import { percentOfCents } from './money';
 
@@ -60,9 +64,10 @@ export function earlyExitQuote(input: EarlyExitInput): EarlyExitQuote {
   const r = input.annualInterestPercent / 100 / 12;
   let presentRents = 0;
   for (let i = 1; i <= remainingMonths; i++) presentRents += input.monthlyNetCents / (1 + r) ** i;
-  const presentRentsCents = Math.round(presentRents);
-  const presentBuyoutCents = Math.round(input.buyoutCents / (1 + r) ** remainingMonths);
-  const stillOwedCents = presentRentsCents + presentBuyoutCents;
+  const presentBuyout = input.buyoutCents / (1 + r) ** remainingMonths;
+  const stillOwedCents = Math.round(presentRents + presentBuyout);
+  const presentBuyoutCents = Math.round(presentBuyout);
+  const presentRentsCents = stillOwedCents - presentBuyoutCents;
   const coolingOff = input.today < addMonths(input.startDate, 1);
   const returnNet = coolingOff ? 0 : Math.max(0, stillOwedCents - input.marketValueCents);
   return {

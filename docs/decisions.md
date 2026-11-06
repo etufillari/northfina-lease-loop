@@ -50,6 +50,7 @@ Every product, domain and engineering decision, in the order it was made. It is 
 | D-040 | 2026-11-05 | Application | An empty form with a customer's email or business ID is held to their record       |
 | D-041 | 2026-11-06 | UI          | A typed down payment snaps to the slider; band edges show a cheaper band           |
 | D-042 | 2026-11-06 | Valuation   | One age rule for every valuation: a new item’s clock starts at its first lease     |
+| D-043 | 2026-11-06 | Docs        | The public README says what the app is and how to run it, nothing more             |
 
 ---
 
@@ -436,3 +437,10 @@ Every product, domain and engineering decision, in the order it was made. It is 
 - **Why:** One item on one day must have one value, or the bank pays out one number and re-lists at another. A new item's age starts when someone starts using it.
 - **Consequences:** Early exit is unchanged for an item's first lease. A new item's second life is valued younger, so it's dearer and avoids more CO₂: the passport test's 2026 e-bike re-leased on 12 Nov 2027 is 12 months old (70 %), not 22 (55 %), and avoids 78 kg instead of 61. Used data-pack items are unchanged.
 - **Evidence:** 8 domain tests for `itemAgeOn` and `firstLeasedNewOn` (anniversaries, 31 Jan → 28 Feb, never below zero; the model-year cases moved from the old tests). Server tests against SQLite: `ageClockFor` for ebike-003 before and after its first lease, ebike-007 and an unknown item; the whole-loop second-life test now values ebike-003 at 12 months a year after it was leased new (22 before the fix). The passport test's ages are 0 and 12.
+
+## D-043 · The public README only says what the app is and how to run it
+
+- **Context:** The fork is public until the deadline, and other teams can read it. #41 had put a walkthrough for every scenario card, the Smart Problems mapped to decisions, and the architecture into the README.
+- **Decision:** The README keeps the product line, how to run it, the commands and the license. The walkthrough and the architecture notes are kept in the team's own notes, for the pitch and the submission PR.
+- **Alternatives:** Keep the full README (it hands our approach to anyone browsing forks). Delete the walkthrough altogether (we need it for the demo and the PR body).
+- **Consequences:** Judges get the demo steps from the submission PR and the live demo, not from the README.

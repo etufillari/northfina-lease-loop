@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CustomerReturnRequest } from '@/components/customer-return-request';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -83,6 +84,7 @@ export default async function CustomerPortalPage({
           ))}
         </ul>
       </section>
+      <CustomerReturnRequest token={token} locale={locale} />
       <Link
         href={`/${locale}`}
         className="mt-8 inline-flex rounded-xl border border-stone-300 px-5 py-3 font-medium text-stone-700 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"

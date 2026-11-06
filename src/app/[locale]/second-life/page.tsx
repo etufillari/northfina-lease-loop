@@ -10,7 +10,9 @@ import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { listReturnedDecisions } from '@/server/second-life';
+import { listPools } from '@/server/second-life-pools';
 import { DecisionCard } from './decision-card';
+import { PoolsSection } from './pools-section';
 
 export default async function SecondLifePage({
   params,
@@ -23,7 +25,7 @@ export default async function SecondLifePage({
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
-  const desk = await listReturnedDecisions(db, asOf);
+  const [desk, pools] = await Promise.all([listReturnedDecisions(db, asOf), listPools(db, asOf)]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -32,6 +34,8 @@ export default async function SecondLifePage({
       <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
         {t('secondLife.asOf', { date: formatIsoDate(asOf, locale) })}
       </p>
+
+      <PoolsSection locale={locale} pools={pools} personaId={persona} asOfParam={asOfParam} />
 
       {desk.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

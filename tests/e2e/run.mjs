@@ -16,6 +16,7 @@ import home from './scenarios/home.mjs';
 import invoices from './scenarios/invoices.mjs';
 import login from './scenarios/login.mjs';
 import secondLife from './scenarios/second-life.mjs';
+import signatures from './scenarios/signatures.mjs';
 import theme from './scenarios/theme.mjs';
 
 const SCENARIOS = {
@@ -27,6 +28,7 @@ const SCENARIOS = {
   'second-life': secondLife,
   'early-exit': earlyExit,
   fleet,
+  signatures,
   theme,
   a11y: accessibility,
 };

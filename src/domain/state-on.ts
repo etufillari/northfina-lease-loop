@@ -94,7 +94,14 @@ export function contractOn<T extends DatedContract>(contract: T, today: string):
   if (contract.signedDate > today) return null;
   const closedOn = contract.boughtDate ?? contract.returnedDate;
   if (contract.status !== 'active' && closedOn !== null && closedOn > today) {
-    return { ...contract, status: 'active', returnedDate: null, boughtDate: null };
+    // Undo the ending, including an early exit's date if the contract records one.
+    return {
+      ...contract,
+      status: 'active',
+      returnedDate: null,
+      boughtDate: null,
+      ...('exitedEarlyDate' in contract ? { exitedEarlyDate: null } : {}),
+    };
   }
   return contract;
 }

@@ -37,6 +37,11 @@ export async function contractInvoices(
   ]);
   const schedule = invoiceSchedule(contract, vatRates);
   if (!schedule.ok) return null;
+  // Ended early: invoices after the exit day are cancelled (once that day is reached).
+  const exited = contract.exitedEarlyDate;
+  if (exited && exited <= today) {
+    schedule.invoices = schedule.invoices.filter((invoice) => invoice.dueDate <= exited);
+  }
   await issueDueInvoices(db, contract, schedule.invoices, today);
   return withStatus(schedule.invoices, payments, today, contract.signedDate);
 }

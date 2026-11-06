@@ -36,6 +36,9 @@ export type Contract = {
   returnedDate: string | null;
   boughtDate: string | null;
   buyoutPaidCents: number | null;
+  /** Set when the lease was ended before its last day; invoices after it are cancelled. */
+  exitedEarlyDate: string | null;
+  exitFeeCents: number | null;
 };
 
 export function toContract(row: ContractRow): Contract {
@@ -64,6 +67,8 @@ export function toContract(row: ContractRow): Contract {
     returnedDate: row.returned_date,
     boughtDate: row.bought_date,
     buyoutPaidCents: row.buyout_paid_cents,
+    exitedEarlyDate: row.exited_early_date,
+    exitFeeCents: row.exit_fee_cents,
   };
 }
 

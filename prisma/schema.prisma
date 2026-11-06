@@ -108,6 +108,10 @@ model Contract {
   returned_date      String? // YYYY-MM-DD the item came back at the end of the term
   bought_date        String? // YYYY-MM-DD the customer bought the item at the end
   buyout_paid_cents  Int? // what they paid for it, incl. VAT
+  // Early exit: the day the lease was ended before its last day, and the exit fee (incl. VAT)
+  // when the item was returned. Invoices after that day are cancelled.
+  exited_early_date  String?
+  exit_fee_cents     Int?
 
   @@index([asset_id])
   @@index([customer_id])

@@ -16,7 +16,10 @@ export function DashboardSidebar({
 }) {
   const t = getT(locale);
   const links = companyMode
-    ? [{ href: `/${locale}/circular?view=returned`, label: t('nav.returned'), icon: '↩' }]
+    ? [
+        { href: `/${locale}/circular?view=returned`, label: t('nav.returned'), icon: '↩' },
+        { href: `/${locale}/circular?view=all`, label: t('circular.allOperations'), icon: '▣' },
+      ]
     : [
         { href: `/${locale}`, label: t('nav.catalogue'), icon: '▦' },
         { href: `/${locale}/leases`, label: t('nav.leases'), icon: '▣' },

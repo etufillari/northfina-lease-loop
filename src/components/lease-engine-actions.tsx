@@ -60,7 +60,7 @@ export function LeaseEngineActions({ contractId, leaseId, status, pendingPeriods
           type="button"
           disabled={busy}
           onClick={() => void run('activate')}
-          className="rounded bg-emerald-700 px-3 py-2 text-white disabled:opacity-50"
+          className="ui-primary"
         >
           {busy ? labels.busy : labels.activate}
         </button>
@@ -70,7 +70,7 @@ export function LeaseEngineActions({ contractId, leaseId, status, pendingPeriods
           type="button"
           disabled={busy}
           onClick={() => void run('generate')}
-          className="rounded bg-emerald-700 px-3 py-2 text-white disabled:opacity-50"
+          className="ui-primary"
         >
           {busy ? labels.busy : labels.generate}
         </button>
@@ -80,13 +80,13 @@ export function LeaseEngineActions({ contractId, leaseId, status, pendingPeriods
           type="button"
           disabled={busy}
           onClick={() => void run('complete')}
-          className="rounded border border-stone-400 px-3 py-2 disabled:opacity-50"
+          className="ui-secondary"
         >
           {busy ? labels.busy : labels.complete}
         </button>
       )}
       {error && (
-        <p role="alert" className="w-full text-sm text-red-700">
+        <p role="alert" className="w-full text-sm text-red-700 dark:text-red-300">
           {labels.error}
         </p>
       )}

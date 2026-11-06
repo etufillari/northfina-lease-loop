@@ -1,3 +1,4 @@
+import { createOperatorSession } from '@/server/circular/operator-session';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ customer: vi.fn(), lease: vi.fn() }));
 vi.mock('@/server/active-user', () => ({ getActiveUser: mocks.customer }));
@@ -5,6 +6,7 @@ vi.mock('@/server/db', () => ({ db: { engineLease: { findUnique: mocks.lease } }
 import { demoCustomer, demoLeasePrincipal } from './demo-access';
 beforeEach(() => {
   vi.stubEnv('NODE_ENV', 'development');
+  vi.stubEnv('LEASE_LOOP_OPERATOR_PASSWORD', 'test-operator-password');
   mocks.customer.mockResolvedValue({ id: 'cust-aino' });
   mocks.lease.mockResolvedValue({ customerId: 'cust-aino' });
 });
@@ -37,9 +39,15 @@ describe('development-only engine controls', () => {
     });
     expect(await demoCustomer(request)).toMatchObject({ id: 'cust-aino' });
   });
-  it('limits issuing privileges to the selected customer own lease', async () => {
-    expect(await demoLeasePrincipal(post(), 'lease', true)).toEqual({
-      actorId: 'demo:cust-aino',
+  it('requires operator sign-in for issuing and scopes customer reads to owned leases', async () => {
+    await expect(demoLeasePrincipal(post(), 'lease', true)).rejects.toMatchObject({ status: 403 });
+    const request = post();
+    request.headers.set(
+      'cookie',
+      `lease-loop-company-mode=1; lease-loop-operator=${createOperatorSession('test-operator-password')}`
+    );
+    expect(await demoLeasePrincipal(request, 'lease', true)).toEqual({
+      actorId: 'demo:company-operator',
       role: 'operator',
     });
     expect(await demoLeasePrincipal(new Request('http://localhost:3000'), 'lease')).toMatchObject({
@@ -47,7 +55,7 @@ describe('development-only engine controls', () => {
       customerId: 'cust-aino',
     });
     mocks.lease.mockResolvedValue({ customerId: 'cust-other' });
-    await expect(demoLeasePrincipal(post(), 'lease', true)).rejects.toMatchObject({ status: 403 });
+    await expect(demoLeasePrincipal(post(), 'lease')).rejects.toMatchObject({ status: 403 });
     mocks.lease.mockResolvedValue(null);
     await expect(demoLeasePrincipal(post(), 'lease')).rejects.toMatchObject({ status: 404 });
   });

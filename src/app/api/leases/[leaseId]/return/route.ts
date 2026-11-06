@@ -1,3 +1,6 @@
+import { getLease } from '@/server/lease-engine/leases';
+import { anniversary } from '@/domain/lease-engine/calendar';
+import { latestLifecycleDate } from '@/domain/circular/workflow-date';
 import { z } from 'zod';
 import { ApiError, handleRoute, readJsonBody } from '@/server/api-response';
 import { requestReturn } from '@/server/circular/service';
@@ -17,6 +20,15 @@ export const POST = handleRoute(
     if (principal.role !== 'customer' || !principal.customerId) {
       throw new ApiError(403, 'FORBIDDEN', 'Customer ownership is required');
     }
+    const lease = await getLease(db, leaseId);
+    const end = anniversary(lease.startDate, lease.termMonths);
+    const requestedOn = latestLifecycleDate(
+      todayIso(),
+      lease.status === 'TERMINATED'
+        ? (await db.engineLease.findUniqueOrThrow({ where: { id: leaseId } })).terminatedOn
+        : null,
+      end.ok && lease.status === 'COMPLETED' ? end.value : null
+    );
     const payload = await readJsonBody(request, schema);
     const idempotencyKey = z.string().min(1).max(200).parse(request.headers.get('Idempotency-Key'));
     return respondEngineOperation(() =>
@@ -27,7 +39,7 @@ export const POST = handleRoute(
           leaseId,
           customerId: principal.customerId,
           usageValue: payload.usageValue,
-          requestedOn: todayIso(),
+          requestedOn,
         }
       )
     );

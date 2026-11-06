@@ -56,6 +56,7 @@ export function CircularActions({
     busy: string;
     error: string;
     conflict: string;
+    dateError?: string;
   };
 }) {
   const router = useRouter();
@@ -78,10 +79,19 @@ export function CircularActions({
         body: JSON.stringify(input),
       });
       if (!response.ok) {
-        setError(response.status === 409 ? labels.conflict : labels.error);
+        const body: { error?: { code?: string } } = await response.json();
+        setError(
+          body.error?.code === 'REVIEW_DATE_BEFORE_WORK'
+            ? (labels.dateError ?? labels.conflict)
+            : response.status === 409
+              ? labels.conflict
+              : labels.error
+        );
+        window.dispatchEvent(new Event('lease-loop-returns-changed'));
         router.refresh();
         return;
       }
+      window.dispatchEvent(new Event('lease-loop-returns-changed'));
       router.refresh();
     } catch {
       setError(labels.error);
@@ -90,7 +100,7 @@ export function CircularActions({
     }
   }
 
-  const button = 'rounded bg-emerald-700 px-3 py-2 text-white disabled:opacity-50';
+  const button = 'ui-primary';
   return (
     <div className="mt-4 space-y-3">
       {!receipt && (
@@ -125,10 +135,10 @@ export function CircularActions({
       )}
       {receipt?.status === 'RECEIVED' && (
         <>
-          <label className="block">
+          <label className="block text-sm font-medium">
             {labels.condition}
             <select
-              className="ml-3 rounded border p-2"
+              className="ui-control mt-2 sm:max-w-sm"
               value={grade}
               onChange={(event) => setGrade(event.target.value)}
             >
@@ -139,11 +149,11 @@ export function CircularActions({
               ))}
             </select>
           </label>
-          <label className="block">
+          <label className="block text-sm font-medium">
             {labels.usage}
             <span className="ml-2 text-sm text-stone-600 dark:text-stone-400">{usageUnit}</span>
             <input
-              className="ml-3 w-32 rounded border p-2"
+              className="ui-control mt-2 sm:max-w-xs"
               type="number"
               min={usage}
               value={value}
@@ -169,10 +179,10 @@ export function CircularActions({
         <>
           <p className="text-sm">{labels.confirm}</p>
           {plan.steps.map((step) => (
-            <label key={step.id} className="block text-sm">
+            <label key={step.id} className="block text-sm font-medium">
               <input
                 type="checkbox"
-                className="mr-2"
+                className="mr-3 size-5 shrink-0 align-middle accent-emerald-600"
                 checked={checked.includes(step.id)}
                 onChange={(event) =>
                   setChecked(
@@ -228,19 +238,19 @@ export function CircularActions({
           >
             {busy ? labels.busy : labels.approve}
           </button>
-          <label className="block text-sm">
+          <label className="block text-sm font-medium">
             {labels.rejectReason}
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="mt-1 block w-full rounded border p-2 text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="ui-control mt-2 min-h-24"
               maxLength={500}
               required
             />
           </label>
           <button
             type="button"
-            className="rounded border border-stone-400 px-3 py-2 disabled:opacity-50"
+            className="ui-secondary"
             disabled={busy || reason.trim().length === 0}
             onClick={() =>
               void send(
@@ -265,7 +275,7 @@ export function CircularActions({
         </p>
       )}
       {error && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
           {error}
         </p>
       )}

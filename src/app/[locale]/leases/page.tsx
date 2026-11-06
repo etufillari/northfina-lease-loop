@@ -50,6 +50,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
               return (
                 <details
                   key={lease.terms.contractId}
+                  open={lease.status !== 'SIGNED'}
                   className="group rounded-xl border border-stone-200 dark:border-stone-700"
                 >
                   <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 rounded-xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 [&::-webkit-details-marker]:hidden">
@@ -58,13 +59,15 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                         {asset ? `${asset.make} ${asset.model}` : lease.terms.assetId}
                       </span>
                       <span className="text-sm text-stone-600 dark:text-stone-400">
-                        {remainingMonths.ok
-                          ? t('account.monthsRemaining', { count: remainingMonths.months })
-                          : t('account.endOfTerm.dateError')}
+                        {lease.status === 'COMPLETED' || lease.status === 'TERMINATED'
+                          ? leaseStatusLabels[lease.status]
+                          : remainingMonths.ok
+                            ? t('account.monthsRemaining', { count: remainingMonths.months })
+                            : t('account.endOfTerm.dateError')}
                       </span>
                     </span>
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
-                      {t('account.savedLease')}
+                      {leaseStatusLabels[lease.status]}
                     </span>
                     <svg
                       aria-hidden="true"

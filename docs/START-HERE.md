@@ -53,3 +53,7 @@ Use [PROGRESS.md](PROGRESS.md) for status and [SCENARIO-CARD-RESULTS.md](SCENARI
 3. Verify four languages/keyboard flow and two4-minute rehearsals; keep CI green before submission.
 
 Run `npm run dev -- --webpack`. Choose Aino and lease an available asset, generate invoices, complete and return through the workshop, confirm work, then choose Lena and lease the same asset again. See the scenario report for dates and policies.
+
+## Latest workflow update
+
+Company sign-in and approval now separate the customer lease view from workshop mutations. Work completion alone cannot publish an offer. See [PROGRESS.md](PROGRESS.md) and [UI-LIFECYCLE-WALKTHROUGH.md](UI-LIFECYCLE-WALKTHROUGH.md). The invoice forecast now explains VAT and calendar dates.

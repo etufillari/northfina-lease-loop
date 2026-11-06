@@ -32,6 +32,8 @@ export async function selectEndOption(
     if (allocation?.leaseId !== lease.id) invalid('allocation_missing_or_wrong_life');
     if (await tx.leaseSettlement.findUnique({ where: { leaseId: lease.id } }))
       invalid('end_option_already_selected');
+    if (await tx.assetReturn.findUnique({ where: { leaseId: lease.id } }))
+      invalid('return_workflow_already_started');
     const contract = await tx.contract.findUnique({ where: { id: lease.contractId } });
     if (!contract) throw new EngineServiceError('NOT_FOUND');
     let effective = anniversary(lease.startDate, lease.termMonths);

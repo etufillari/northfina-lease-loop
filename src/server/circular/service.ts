@@ -280,11 +280,7 @@ export async function finishRefurbishment(
       curves
     );
     const financeable = monthlyFactorFor(coefficients, offerNet, 36).ok;
-    // Release only the allocation associated with this completed physical return.
-    const allocation = await tx.engineAllocation.findUnique({ where: { assetId: asset.id } });
-    if (allocation && allocation.leaseId !== receipt.leaseId)
-      invalid('allocation_belongs_to_another_life');
-    if (allocation) await tx.engineAllocation.delete({ where: { assetId: asset.id } });
+    // Keep the allocation until company approval publishes the next offer.
     await tx.asset.update({
       where: { id: asset.id },
       data: {
@@ -327,6 +323,7 @@ export async function reviewRefurbishment(
     })
     .refine((value) => value.decision !== 'REJECT' || Boolean(value.reason))
     .parse(input);
+  const coefficients = await loadCoefficientTable();
   return auditedCommand(
     db,
     context,
@@ -339,12 +336,20 @@ export async function reviewRefurbishment(
         !receipt ||
         receipt.status !== 'PENDING_APPROVAL' ||
         receipt.offerNetCents === null ||
-        !receipt.completedOn ||
-        payload.reviewedOn < receipt.completedOn
+        !receipt.completedOn
       )
         invalid('return_not_awaiting_approval');
+      if (payload.reviewedOn < receipt.completedOn) invalid('review_before_work_completed');
       const asset = await tx.asset.findUnique({ where: { id: receipt.assetId } });
       if (!asset || asset.status !== 'returned') invalid('asset_not_awaiting_approval');
+      const allocation = await tx.engineAllocation.findUnique({ where: { assetId: asset.id } });
+      if (allocation && allocation.leaseId !== receipt.leaseId)
+        invalid('allocation_belongs_to_another_life');
+      if (
+        payload.decision === 'APPROVE' &&
+        !monthlyFactorFor(coefficients, receipt.offerNetCents, 36).ok
+      )
+        invalid('proposal_not_financeable');
       const existingOffer = await tx.circularOffer.findUnique({
         where: { returnId: receipt.id },
       });
@@ -354,12 +359,14 @@ export async function reviewRefurbishment(
           where: { id: receipt.id },
           data: {
             status: 'REJECTED',
+            reviewedBy: context.actor,
             reviewedOn: payload.reviewedOn,
             reviewReason: payload.reason,
           },
         });
         return { receipt: rejected, offer: null };
       }
+      if (allocation) await tx.engineAllocation.delete({ where: { assetId: asset.id } });
       const offer = await tx.circularOffer.create({
         data: {
           id: randomUUID(),
@@ -371,7 +378,12 @@ export async function reviewRefurbishment(
       });
       const approved = await tx.assetReturn.update({
         where: { id: receipt.id },
-        data: { status: 'READY', reviewedOn: payload.reviewedOn, reviewReason: null },
+        data: {
+          status: 'READY',
+          reviewedBy: context.actor,
+          reviewedOn: payload.reviewedOn,
+          reviewReason: null,
+        },
       });
       await tx.asset.update({
         where: { id: asset.id },

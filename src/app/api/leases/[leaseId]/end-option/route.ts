@@ -11,7 +11,7 @@ const schema = z.strictObject({
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/leases/[leaseId]/end-option'>) => {
     const { leaseId } = await params;
-    const actor = await demoLeasePrincipal(request, leaseId, true);
+    const actor = await demoLeasePrincipal(request, leaseId);
     const input = await readJsonBody(request, schema);
     return respondEngineOperation(() =>
       selectEndOption(

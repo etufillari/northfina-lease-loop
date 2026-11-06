@@ -7,7 +7,7 @@ import { signAndActivateContract } from '@/server/lease-engine/real-contract';
 import { completeLease } from '@/server/lease-engine/leases';
 import { issueInvoice } from '@/server/lease-engine/invoices';
 import { selectEndOption } from './end-options';
-import { receiveReturn } from './service';
+import { receiveReturn, requestReturn } from './service';
 let database: Awaited<ReturnType<typeof createTestDb>>;
 let leaseId: string;
 const ctx = (key: string) => ({ actor: 'operator', idempotencyKey: key });
@@ -150,4 +150,21 @@ describe('persisted end options', () => {
       selectEndOption(db, ctx('credit'), { leaseId, option: 'EARLY_RETURN', elapsedMonths: 6 })
     ).rejects.toMatchObject({ reason: 'issued_future_invoice_requires_credit' });
   });
+});
+
+it('cannot switch to buyout after the customer has submitted a physical return request', async () => {
+  const db = database.db;
+  const lease = await db.engineLease.findUniqueOrThrow({ where: { id: leaseId } });
+  const end = '2029-11-05';
+  await completeLease(db, ctx('complete-before-return'), leaseId, end, 1);
+  await requestReturn(db, ctx('request-before-buyout'), {
+    leaseId,
+    customerId: lease.customerId,
+    usageValue: 18400,
+    requestedOn: end,
+  });
+  await expect(
+    selectEndOption(db, ctx('buyout-after-return'), { leaseId, option: 'BUYOUT' })
+  ).rejects.toMatchObject({ reason: 'return_workflow_already_started' });
+  expect(await db.circularOffer.count()).toBe(0);
 });

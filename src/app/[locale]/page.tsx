@@ -85,7 +85,9 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
         </p>
       </div>
       <div className="max-w-2xl">
-        <p className="mt-3 text-lg text-slate-600">{t('catalogue.intro')}</p>
+        <p className="mt-3 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+          {t('catalogue.intro')}
+        </p>
       </div>
 
       <CatalogueFilterControls

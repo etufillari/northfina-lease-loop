@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe('customer lease page', () => {
-  it('renders engine demo controls for each saved lease', async () => {
+  it('renders the saved invoice panel for each customer lease', async () => {
     mocks.listContracts.mockResolvedValue([
       {
         signedDate: '2025-10-15',

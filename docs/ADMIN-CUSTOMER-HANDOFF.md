@@ -1,30 +1,30 @@
-# Next PR: separate customer and company operations
+# Customer / company handoff — implemented locally
 
-Build on `feat/circular-lease-loop`. The full demo loop works locally: contract → lease/invoices → return → inspection → refurbishment → used offer → next lease. See [UI walkthrough](UI-LIFECYCLE-WALKTHROUGH.md).
+## Working separation
 
-## Deliver next
+- **Customer:** catalogue, application/signing, own leases/invoices, read-only invoice forecast and end choice. Return shows physical handover instructions.
+- **Company:** separate password sign-in at `/en/circular`, invoice generation, demo completion, physical receipt, inspection, work confirmation and offer review.
+- Customer identity alone cannot authorize company mutation APIs. Exception: the explicitly labeled development-only `/demo-complete` simulation lets a customer advance their own lease to its agreed end; it cannot receive items, issue invoices or approve offers. The session is signed, HTTP-only and expires after four hours. Access is development-only; real staff identities are still future work.
 
-1. **Customer view:** catalogue, application/signing, own contracts, invoices and end-of-lease choice. Show return instructions and return status. Customers must not receive items, record inspections, confirm workshop work, publish offers or use demo time controls.
-2. **Admin/operator view:** lease operations, physical receipt, inspection, required work, asset passport and company review. Move development controls here and label them clearly.
-3. **Company approval before offering another lease:** after required refurbishment, save the proposed condition, usage, costs and price as pending approval. Keep the asset unavailable and do not publish a CircularOffer yet. An authorized company reviewer approves the proposal before publication. A rejected proposal stays unavailable with a recorded reason.
+## Offer gate
 
-## Important current behavior
+**Required work completed → PENDING_APPROVAL → company approves → READY / published offer.**
 
-The basic role split is implemented for the development demo: the catalogue links to the operator workshop, the customer account no longer links to operator controls, and the workshop API uses a same-origin development-only operator identity without requiring a selected customer. This is not production authentication. Company approval is **not implemented yet**. Completing financeable refurbishment currently publishes the offer immediately. Low-value items save completed work as `REVIEW_REQUIRED` without an offer; this is a financing exception, not company approval.
+Before approval the asset stays unavailable, with its allocation held. Approval atomically publishes one offer, makes it available and records reviewer/date. Rejection requires a reason and keeps it unavailable. Financing exceptions cannot be approved. Decisions and work commands are audited and idempotent.
 
-## Implementation boundaries
+Proposals cannot be edited after submission in this prototype. Rejection is terminal; a future edit/resubmission feature must require a fresh review. Historical offers published before the gate remain unchanged.
 
-- Reuse `src/server/circular/service.ts`, its audited/idempotent commands and existing domain calculations. Do not build a second lease engine.
-- Enforce customer ownership and operator/reviewer authorization on the server. Hiding buttons is insufficient. Use a trusted server identity; never accept a role from the request body.
-- Approval must atomically publish the approved price and make the asset available. Preserve the original contract/invoices and asset identity. Block duplicate publication and leasing before approval.
-- Any proposal edit after approval must require fresh review before a new offer can be published. Record reviewer, date, decision and rejection reason in the audit trail.
-- Follow AGENTS.md: generated Prisma migrations, pure tested domain logic, integer cents, audited writes and four-language UI strings.
+## Files to build on
 
-## Acceptance checks
+- `src/server/circular/service.ts`: finish saves work; `reviewRefurbishment()` handles approval/rejection.
+- `src/server/circular/operator-session.ts` and `demo-operator.ts`: development company session and server permission check.
+- `src/app/api/operator/session/route.ts`: sign-in/sign-out.
+- `src/app/[locale]/circular/page.tsx`: company workspace.
+- `src/components/lease-engine-panel.tsx`: read-only customer panel; operator controls only in the company workspace.
+- `src/components/invoice-forecast.tsx`: signed schedule/VAT projection using the existing domain engine.
 
-- A customer can request a return but cannot call workshop or approval mutations, including direct API requests.
-- Completed workshop work creates a pending proposal; catalogue/application API cannot offer it yet.
-- Company approval publishes exactly one offer; rejection leaves the asset unavailable.
-- Invalid financing amounts remain blocked even if a reviewer attempts approval.
-- Retry, conflicting/stale review and proposal-edit cases preserve consistent state and audit history.
-- A second customer can sign and start the next lease only after approval. Run `npm run check:all` and repeat the walkthrough.
+Set `LEASE_LOOP_OPERATOR_PASSWORD` in local `.env` and restart. Never commit credentials. Follow [UI-LIFECYCLE-WALKTHROUGH.md](UI-LIFECYCLE-WALKTHROUGH.md) to verify the full loop. All future changes must follow AGENTS.md.
+
+## Team integration
+
+Team main `92db65e` is pulled. Keep its Company operations toggle, admin profile, return-request form and Returned queue. The signed operator session remains required for company APIs; a mode cookie alone is insufficient. Return notifications poll the protected `/api/operator/notifications` endpoint and clear when a REQUESTED item is physically received. The full customer request → notification → receipt → approval → second lease passed HTTP checks on an isolated database.

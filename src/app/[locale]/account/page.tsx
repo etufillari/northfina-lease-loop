@@ -16,9 +16,9 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-8 sm:py-7">
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t('account.title')}</h1>
-      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 text-slate-950 shadow-sm sm:p-8 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
         <h2 className="text-xl font-semibold">{t('account.profile')}</h2>
-        <p className="mt-2 text-sm text-slate-600">{t('account.readOnly')}</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t('account.readOnly')}</p>
         {customer ? (
           <CustomerDetails
             customer={customer}
@@ -85,7 +85,7 @@ function CustomerDetails({
     <dl className="mt-6 divide-y divide-slate-200">
       {details.map(({ label, value }) => (
         <div key={label} className="grid gap-1 py-3 sm:grid-cols-[8rem_1fr] sm:gap-4">
-          <dt className="text-sm text-slate-600">{label}</dt>
+          <dt className="text-sm text-slate-600 dark:text-slate-300">{label}</dt>
           <dd className="break-words text-sm font-medium">{value}</dd>
         </div>
       ))}

@@ -4,11 +4,24 @@ import { useRouter } from 'next/navigation';
 export function EndOptionActions({
   leaseId,
   status,
+  locale,
   labels,
 }: {
   leaseId: string;
   status: string;
-  labels: { pass: string; buy: string; early: string; error: string };
+  locale: string;
+  labels: {
+    return: string;
+    pass: string;
+    buy: string;
+    early: string;
+    error: string;
+    returnHelp: string;
+    passHelp: string;
+    buyHelp: string;
+    earlyHelp: string;
+    busy: string;
+  };
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -27,6 +40,7 @@ export function EndOptionActions({
         }),
       });
       if (!response.ok) throw new Error('failed');
+      if (['RETURN', 'PASS_ON', 'EARLY_RETURN'].includes(option)) router.push(`/${locale}/leases`);
       router.refresh();
     } catch {
       setError(true);
@@ -35,25 +49,50 @@ export function EndOptionActions({
     }
   }
   return (
-    <div className="mt-3 flex flex-wrap gap-3">
+    <div className="mt-3 grid gap-3 sm:grid-cols-3" aria-busy={busy}>
       {(status === 'COMPLETED'
-        ? ['PASS_ON', 'BUYOUT']
+        ? ['RETURN', 'PASS_ON', 'BUYOUT']
         : status === 'ACTIVE'
           ? ['EARLY_RETURN']
           : []
       ).map((option) => (
-        <button
-          key={option}
-          type="button"
-          disabled={busy}
-          onClick={() => void run(option)}
-          className="rounded border px-3 py-2 disabled:opacity-50"
-        >
-          {option === 'PASS_ON' ? labels.pass : option === 'BUYOUT' ? labels.buy : labels.early}
-        </button>
+        <div key={option} className="ui-surface flex flex-col gap-3 p-4">
+          <p
+            id={`option-${leaseId}-${option}`}
+            className="grow text-sm leading-relaxed text-slate-600 dark:text-slate-300"
+          >
+            {option === 'RETURN'
+              ? labels.returnHelp
+              : option === 'PASS_ON'
+                ? labels.passHelp
+                : option === 'BUYOUT'
+                  ? labels.buyHelp
+                  : labels.earlyHelp}
+          </p>
+          <button
+            aria-describedby={`option-${leaseId}-${option}`}
+            type="button"
+            disabled={busy}
+            onClick={() => void run(option)}
+            className="ui-secondary mt-auto w-full"
+          >
+            {option === 'RETURN'
+              ? labels.return
+              : option === 'PASS_ON'
+                ? labels.pass
+                : option === 'BUYOUT'
+                  ? labels.buy
+                  : labels.early}
+          </button>
+        </div>
       ))}
+      {busy && (
+        <p role="status" className="sm:col-span-3">
+          {labels.busy}
+        </p>
+      )}
       {error && (
-        <p role="alert" className="w-full text-red-700">
+        <p role="alert" className="sm:col-span-3 text-red-700 dark:text-red-300">
           {labels.error}
         </p>
       )}

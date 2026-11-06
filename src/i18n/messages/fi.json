@@ -126,5 +126,22 @@
   "lease.checkoutTerm": "Leasing-aika",
   "lease.checkoutPaymentDue": "Maksu erääntyy",
   "lease.checkoutPriceList": "Hinnaston versio",
-  "lease.days": "{count} päivää"
+  "lease.days": "{count} päivää",
+  "engine.invoices": "Tallennetut laskut",
+  "engine.activate": "Aktivoi allekirjoitettu sopimus",
+  "engine.generate": "Luo 3 ensimmäistä laskua",
+  "engine.complete": "Päätä sopimuskauden lopussa (demo)",
+  "engine.busy": "Käsitellään…",
+  "engine.error": "Toiminto epäonnistui. Päivitä ja yritä uudelleen.",
+  "engine.demoNote": "Demotoiminnot käyttävät sopimuspäiviä. Laskuja ei merkitä maksetuiksi. Nettohinta on lukittu; ALV määräytyy laskupäivän mukaan.",
+  "engine.totalNet": "Vuokrien netto yhteensä",
+  "engine.noInvoices": "Laskuja ei ole vielä luotu.",
+  "engine.number": "Lasku",
+  "engine.issue": "Laskupäivä",
+  "engine.due": "Eräpäivä",
+  "engine.net": "Netto",
+  "engine.vat": "ALV",
+  "engine.gross": "Yhteensä",
+  "engine.awaitingReturn": "Vuokra päättynyt. Kohde pysyy varattuna palautukseen ja kunnostukseen asti.",
+  "engine.signed": "Allekirjoitettu — odottaa aktivointia"
 }

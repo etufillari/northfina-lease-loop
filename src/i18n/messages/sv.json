@@ -126,5 +126,22 @@
   "lease.checkoutTerm": "Leasingperiod",
   "lease.checkoutPaymentDue": "Betalning förfaller",
   "lease.checkoutPriceList": "Prislistans version",
-  "lease.days": "{count} dagar"
+  "lease.days": "{count} dagar",
+  "engine.invoices": "Sparade fakturor",
+  "engine.activate": "Aktivera undertecknat avtal",
+  "engine.generate": "Skapa de 3 första fakturorna",
+  "engine.complete": "Avsluta vid avtalets slut (demo)",
+  "engine.busy": "Bearbetar…",
+  "engine.error": "Åtgärden misslyckades. Ladda om och försök igen.",
+  "engine.demoNote": "Demot använder avtalsdatum. Fakturor markeras inte som betalda. Nettohyran är låst; momsen följer fakturadatum.",
+  "engine.totalNet": "Total schemalagd nettohyra",
+  "engine.noInvoices": "Inga fakturor utfärdade ännu.",
+  "engine.number": "Faktura",
+  "engine.issue": "Utfärdad",
+  "engine.due": "Förfallodag",
+  "engine.net": "Netto",
+  "engine.vat": "Moms",
+  "engine.gross": "Totalt",
+  "engine.awaitingReturn": "Leasing avslutad. Objektet förblir reserverat tills det returnerats och renoverats.",
+  "engine.signed": "Undertecknat — väntar på aktivering"
 }

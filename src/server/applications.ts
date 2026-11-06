@@ -6,10 +6,11 @@ import type {
 } from '@/generated/prisma/client';
 import { loadCoefficientTable, loadCustomers, loadPriceLists } from '@/data/load';
 import { decideApplication } from '@/domain/application';
+import { toLeaseDTO } from '@/server/lease-engine/contracts';
 import { toLeaseTerms } from '@/domain/contract';
 import { monthlyRentFor } from '@/domain/monthly-rent';
 import { listPriceOn } from '@/domain/price-list';
-import { withAudit } from './audit';
+import { withAudit, type TransactionClient } from './audit';
 import { toAsset } from './assets';
 
 export const DEFAULT_PAYMENT_DUE_DAYS = 14;
@@ -191,7 +192,8 @@ class AssetUnavailableError extends Error {}
 
 export async function signContract(
   db: PrismaClient,
-  input: SignContractInput
+  input: SignContractInput,
+  afterSign?: (tx: TransactionClient, contract: ContractRow) => Promise<void>
 ): Promise<SignContractResult> {
   const application = await db.application.findUnique({ where: { id: input.applicationId } });
   if (!application) return { ok: false, reason: 'application_not_found' };
@@ -226,7 +228,7 @@ export async function signContract(
               { status: 'reserved', reserved_by: input.signerId },
             ],
           },
-          data: { status: 'reserved', reserved_by: contractId },
+          data: { status: 'reserved', reserved_by: contractId, reserved_until: null },
         });
         if (claimed.count !== 1) throw new AssetUnavailableError();
         const created = await tx.contract.create({
@@ -248,6 +250,7 @@ export async function signContract(
           where: { id: application.id },
           data: { signed_at: input.signedAt },
         });
+        if (afterSign) await afterSign(tx, created);
         return created;
       }
     );
@@ -288,18 +291,23 @@ export async function listContractsForCustomer(db: PrismaClient, customerId: str
     where: { customer_id: customerId },
     orderBy: { signed_at: 'desc' },
   });
-  return contracts.map((contract) => ({
-    signedDate: contract.signed_at.toISOString().slice(0, 10),
-    status: 'ACTIVE' as const,
-    latestInvoicePaid: true,
-    terms: toLeaseTerms({
-      id: contract.id,
-      customerId: contract.customer_id,
-      assetId: contract.asset_id,
-      startDate: contract.start_date,
-      termMonths: contract.term_months,
-      monthlyNetCents: contract.monthly_net_cents,
-      paymentDueDays: contract.payment_due_days,
-    }),
-  }));
+  const leases = await db.engineLease.findMany({ where: { customerId } });
+  return contracts.map((contract) => {
+    const engine = leases.find((lease) => lease.contractId === contract.id);
+    return {
+      signedDate: contract.signed_at.toISOString().slice(0, 10),
+      leaseId: engine?.id ?? null,
+      status: engine ? toLeaseDTO(engine).status : ('SIGNED' as const),
+      latestInvoicePaid: false,
+      terms: toLeaseTerms({
+        id: contract.id,
+        customerId: contract.customer_id,
+        assetId: contract.asset_id,
+        startDate: contract.start_date,
+        termMonths: contract.term_months,
+        monthlyNetCents: contract.monthly_net_cents,
+        paymentDueDays: contract.payment_due_days,
+      }),
+    };
+  });
 }

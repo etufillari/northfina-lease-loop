@@ -3,9 +3,11 @@
 // confirming is a separate click. End-of-term buy/return unlock when the term is over.
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import type { BuyoutInvoicePreview } from '@/domain/buyout';
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { BuyoutPurchase } from './buyout-purchase';
 
 type ExitBreakdown = {
   usedMonths: number;
@@ -27,7 +29,7 @@ export function ContractActions({
   asOf,
   endsOn,
   today,
-  buyoutNetCents,
+  buyoutInvoice,
   purchaseAtEnd,
   termMonthsTotal,
 }: {
@@ -37,7 +39,8 @@ export function ContractActions({
   asOf: string | null;
   endsOn: string;
   today: string;
-  buyoutNetCents: number;
+  /** The buyout invoice as it would be issued; null when no VAT rate is known for it. */
+  buyoutInvoice: BuyoutInvoicePreview | null;
   purchaseAtEnd: boolean;
   termMonthsTotal: number;
 }) {
@@ -108,18 +111,24 @@ export function ContractActions({
     <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
       <h2 className="text-sm font-semibold">{t('contract.actions')}</h2>
 
-      <label className="mt-3 flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={purchaseAtEnd}
-          disabled={busy}
-          onChange={(event) => post('buyout-option', { optIn: event.target.checked })}
-          className="accent-emerald-700"
-        />
-        {t('buyoutOption.label', { amount: euro(buyoutNetCents) })}
-      </label>
+      <div className="mt-3">
+        <h3 className="text-sm font-medium">
+          {termOver ? t('endOfTerm.title') : t('buyout.title')}
+        </h3>
+        <div className="mt-2">
+          <BuyoutPurchase
+            locale={locale}
+            contractId={contractId}
+            personaId={personaId}
+            suffix={suffix}
+            invoice={buyoutInvoice}
+            purchaseAtEnd={purchaseAtEnd}
+            termOver={termOver}
+          />
+        </div>
+      </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         {!termOver ? (
           <button
             type="button"
@@ -131,15 +140,6 @@ export function ContractActions({
           </button>
         ) : (
           <>
-            <span className="text-sm font-medium">{t('endOfTerm.title')}:</span>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => post('end-of-term', { action: 'buy' })}
-              className="rounded-xl bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
-            >
-              {t('endOfTerm.buy', { amount: euro(buyoutNetCents) })}
-            </button>
             <button
               type="button"
               disabled={busy}

@@ -2,6 +2,7 @@
 // buy-at-end opt-in. The maths lives in src/domain/early-exit.ts; this file counts what has
 // been invoiced, writes the outcome in one audited transaction and stamps the passport.
 import { loadCoefficientTable, loadVatRates } from '@/data/load';
+import { BUYOUT_PAYMENT_DAYS } from '@/domain/buyout';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
 import { earlyExitQuote, type EarlyExitBreakdown } from '@/domain/early-exit';
 import { vatCents, vatRateOn } from '@/domain/vat';
@@ -185,7 +186,7 @@ export async function endOfTerm(
             contract_id: input.contractId,
             number: contract.invoices.length + 1,
             type: 'buyout',
-            due_date: addDays(input.asOf, 30),
+            due_date: addDays(input.asOf, BUYOUT_PAYMENT_DAYS),
             net_cents: net,
             vat_rate_bp: vat.rateBasisPoints,
             vat_cents: vatCents(net, vat.rateBasisPoints),

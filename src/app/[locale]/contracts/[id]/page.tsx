@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 import { ContractActions } from '@/components/contract-actions';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadVatRates } from '@/data/load';
+import { buyoutInvoicePreview } from '@/domain/buyout';
 import { addMonthsClamped } from '@/domain/calendar';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -33,6 +34,16 @@ export default async function ContractPage({
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
   const endsOn = termEndsOn(contract);
+  const leasedAssets = await db.asset.findMany({
+    where: { id: { in: contract.assets.map((a) => a.asset_id) } },
+    select: { id: true, make: true, model: true },
+    orderBy: { id: 'asc' },
+  });
+  const vatRates = await loadVatRates();
+  const buyout = buyoutInvoicePreview(
+    { buyoutNetCents: contract.buyout_net_cents, termEndsOn: endsOn, asOf },
+    vatRates
+  );
 
   // The first invoice whose VAT rate differs from the previous one gets the banner. The
   // banner names the STATUTORY change date from the rate table, not the invoice's due date.
@@ -42,10 +53,9 @@ export default async function ContractPage({
   );
   const change = changeIndex > 0 ? leaseInvoices[changeIndex]! : null;
   const before = changeIndex > 0 ? leaseInvoices[changeIndex - 1]! : null;
-  const vatRates = change ? await loadVatRates() : null;
   const changeLawDate =
     change &&
-    (vatRates?.rates.find((rate) => Math.round(rate.rate_percent * 100) === change.vat_rate_bp)
+    (vatRates.rates.find((rate) => Math.round(rate.rate_percent * 100) === change.vat_rate_bp)
       ?.valid_from ??
       change.due_date);
 
@@ -86,8 +96,8 @@ export default async function ContractPage({
         <Fact label={t('price.totalCost')} value={euro(contract.net_total_cents)} />
         <Fact label={t('price.buyout')} value={euro(contract.buyout_net_cents)} />
         <Fact
-          label={t('asset.listPrice')}
-          value={contract.assets.map((a) => a.asset_id).join(', ')}
+          label={t('contract.product')}
+          value={leasedAssets.map((a) => `${a.make} ${a.model} (${a.id})`).join(', ')}
         />
       </dl>
 
@@ -99,7 +109,7 @@ export default async function ContractPage({
           asOf={asOf}
           endsOn={endsOn}
           today={asOf}
-          buyoutNetCents={contract.buyout_net_cents}
+          buyoutInvoice={buyout.ok ? buyout.preview : null}
           purchaseAtEnd={contract.purchase_at_end}
           termMonthsTotal={contract.term_months}
         />

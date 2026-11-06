@@ -85,6 +85,14 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         <p className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
           {t('contract.signedBanner')}
         </p>
+        {contract.fleetId ? (
+          <Link
+            href={`/${locale}/fleets/${contract.fleetId}`}
+            className="text-sm font-medium text-emerald-800 underline underline-offset-4 dark:text-emerald-300"
+          >
+            {t('fleet.partOf')}
+          </Link>
+        ) : null}
         <PrintButton label={t('contract.print')} />
       </div>
 

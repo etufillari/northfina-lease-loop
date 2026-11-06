@@ -1,14 +1,20 @@
 'use client';
 
 // Signing: tick that you have read the contract and type your full name. The server checks
-// the application again and locks the price; then we go to the signed contract.
+// the application again and locks the price; then we go to the signed contract. With a
+// `fleetId` it signs every contract of that fleet at once and goes back to the fleet.
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, type FormEvent } from 'react';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { useSessionState } from './use-session-state';
 
-type SignContractFormProps = { applicationId: string; defaultName: string; locale: Locale };
+type SignContractFormProps = {
+  /** The application to sign, or the fleet whose applications are all signed together. */
+  target: { applicationId: string } | { fleetId: string };
+  defaultName: string;
+  locale: Locale;
+};
 
 const errorKeys = {
   QUOTE_EXPIRED: 'contract.error.expired',
@@ -16,12 +22,14 @@ const errorKeys = {
   NOT_APPROVED: 'contract.error.notApproved',
 } as const;
 
-export function SignContractForm({ applicationId, defaultName, locale }: SignContractFormProps) {
+export function SignContractForm({ target, defaultName, locale }: SignContractFormProps) {
   const t = getT(locale);
   const router = useRouter();
   // Kept in session storage, so switching language keeps the typed name and the tick.
   const initial = useMemo(() => ({ name: defaultName, agreed: false }), [defaultName]);
-  const [draft, setDraft] = useSessionState(`sign:${applicationId}`, initial);
+  const fleetId = 'fleetId' in target ? target.fleetId : null;
+  const key = 'fleetId' in target ? `fleet:${target.fleetId}` : target.applicationId;
+  const [draft, setDraft] = useSessionState(`sign:${key}`, initial);
   const { name, agreed } = draft;
   const setName = (next: string) => setDraft((current) => ({ ...current, name: next }));
   const setAgreed = (next: boolean) => setDraft((current) => ({ ...current, agreed: next }));
@@ -33,16 +41,21 @@ export function SignContractForm({ applicationId, defaultName, locale }: SignCon
     setSending(true);
     setError(null);
     try {
-      const response = await fetch('/api/contracts', {
+      const response = await fetch(fleetId ? `/api/fleets/${fleetId}/sign` : '/api/contracts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationId, signerName: name }),
+        body: JSON.stringify(fleetId ? { signerName: name } : { ...target, signerName: name }),
       });
       const payload = (await response.json()) as {
         success: boolean;
         data?: { id: string };
         error?: { code: string; details?: { contractId?: string } };
       };
+      if (fleetId && (payload.success || payload.error?.code === 'ALREADY_SIGNED')) {
+        router.push(`/${locale}/fleets/${fleetId}`);
+        router.refresh();
+        return;
+      }
       const contractId = payload.data?.id ?? payload.error?.details?.contractId;
       if (contractId) {
         router.push(`/${locale}/contracts/${contractId}`);

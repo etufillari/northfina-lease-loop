@@ -39,6 +39,8 @@ export default async function ApplicationPage({
     const owner = (await loadCustomers()).find((c) => c.id === application.customerId);
     return <NotYoursNotice ownerName={owner?.name ?? null} locale={locale} t={getT(locale)} />;
   }
+  // Part of a fleet: it is looked at and signed together with the other items.
+  if (application.fleetId) redirect(`/${locale}/fleets/${application.fleetId}`);
   const { today } = await appDate();
   // Signed already (on or before the app's date): show the contract instead.
   const signed = await getContractForApplication(db, application.id);
@@ -110,7 +112,7 @@ export default async function ApplicationPage({
             t={t}
           />
           <SignContractForm
-            applicationId={application.id}
+            target={{ applicationId: application.id }}
             defaultName={application.applicantName ?? ''}
             locale={locale}
           />

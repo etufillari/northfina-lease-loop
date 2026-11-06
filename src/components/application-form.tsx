@@ -3,11 +3,13 @@
 // Spine step 3: the application. Shows only the questions that apply to this customer and
 // this deal, drops answers that stop applying when an earlier answer changes, and shows the
 // decision (yes, no, or "a person will check") live as the customer answers. The server
-// makes the same decision again when the application is sent.
+// makes the same decision again when the application is sent. A fleet deal (several items
+// for a business, see src/domain/fleet.ts) uses the same form and goes to /api/fleets.
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import type { Question } from '@/data/schemas';
 import { decideApplication } from '@/domain/application';
+import { isBusinessApplicant } from '@/domain/fleet';
 import { formatEuro } from '@/domain/money';
 import {
   getVisibleQuestions,
@@ -23,7 +25,9 @@ import { useSessionState } from './use-session-state';
 type ApplicationFormProps = {
   questions: Question[];
   context: QuestionFlowContext;
-  deal: { assetId: string; termMonths: number; downPaymentCents: number };
+  deal:
+    | { assetId: string; termMonths: number; downPaymentCents: number }
+    | { assetIds: string[]; termMonths: number };
   /** Starting answers: the chosen customer's details, or nothing for a guest. */
   initialAnswers: Record<string, string>;
   /** Who is applying (customer id, or "guest"), so two people's drafts never mix. */
@@ -40,7 +44,11 @@ export function ApplicationForm(props: ApplicationFormProps) {
   const { questions, context, deal, initialAnswers, viewerKey, locale } = props;
   const t = getT(locale);
   // Kept in this tab's session storage, so switching language doesn't wipe the answers.
-  const storageKey = `apply:${viewerKey}:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
+  const fleet = 'assetIds' in deal;
+  const storageKey =
+    'assetIds' in deal
+      ? `fleet:${viewerKey}:${deal.assetIds.join(',')}:${deal.termMonths}`
+      : `apply:${viewerKey}:${deal.assetId}:${deal.termMonths}:${deal.downPaymentCents}`;
   const [answers, setAnswers] = useSessionState(`${storageKey}:answers`, initialAnswers);
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
@@ -49,7 +57,12 @@ export function ApplicationForm(props: ApplicationFormProps) {
   const visible = getVisibleQuestions(questions, answers, context);
   const { evaluation } = decideApplication(questions, answers, context);
   const answered = visible.filter((q) => answers[q.id]?.trim()).length;
-  const canSend = evaluation.status === 'approved' || evaluation.status === 'manual_review';
+  // A fleet is for businesses: a private person leases one item at a time.
+  const wrongCustomerType =
+    fleet && Boolean(answers.q_customer_type) && !isBusinessApplicant(answers);
+  const canSend =
+    !wrongCustomerType &&
+    (evaluation.status === 'approved' || evaluation.status === 'manual_review');
 
   function answer(questionId: string, value: string) {
     // Keep only answers that still apply, so going back and changing an earlier answer
@@ -65,7 +78,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
     setSending(true);
     setSendFailed(false);
     try {
-      const response = await fetch('/api/applications', {
+      const response = await fetch(fleet ? '/api/fleets' : '/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...deal, answers }),
@@ -91,12 +104,12 @@ export function ApplicationForm(props: ApplicationFormProps) {
         {submitted.decision !== 'rejected' ? (
           <p className="mt-2">{t(`apply.successNext.${submitted.decision}`)}</p>
         ) : null}
-        {submitted.decision === 'approved' ? (
+        {submitted.decision === 'approved' || fleet ? (
           <Link
-            href={`/${locale}/applications/${submitted.id}`}
+            href={`/${locale}/${fleet ? 'fleets' : 'applications'}/${submitted.id}`}
             className="mt-4 inline-block rounded-lg bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-emerald-800"
           >
-            {t('apply.toContract')}
+            {t(fleet ? 'fleet.toFleet' : 'apply.toContract')}
           </Link>
         ) : null}
       </section>
@@ -122,7 +135,16 @@ export function ApplicationForm(props: ApplicationFormProps) {
       })}
 
       <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900">
-        <Decision evaluation={evaluation} context={context} locale={locale} t={t} />
+        {wrongCustomerType ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+          >
+            {t('fleet.businessOnly')}
+          </p>
+        ) : (
+          <Decision evaluation={evaluation} context={context} locale={locale} t={t} />
+        )}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm text-stone-600 dark:text-stone-400">
             {t('apply.progress', { answered, total: visible.length })}

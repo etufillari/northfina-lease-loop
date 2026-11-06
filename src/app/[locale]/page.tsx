@@ -1,6 +1,7 @@
 // The catalogue: every asset with today's net list price in one list, searchable, filterable
 // and sortable. The first render uses the filters in the URL (?q=&category=&status=&sort=);
 // after that, CatalogueBrowser updates the list live in the browser.
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { CatalogueBrowser } from '@/components/catalogue-browser';
@@ -40,6 +41,15 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
           {t('catalogue.title')}
         </h1>
         <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
+        <p className="mt-2 text-stone-700 dark:text-stone-300">
+          {t('fleet.catalogueHint')}{' '}
+          <Link
+            href={`/${locale}/fleet`}
+            className="font-medium text-emerald-800 underline underline-offset-4 dark:text-emerald-300"
+          >
+            {t('fleet.catalogueLink')}
+          </Link>
+        </p>
         <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
           <time dateTime={today}>
             {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}

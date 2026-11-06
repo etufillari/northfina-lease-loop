@@ -2,7 +2,7 @@
 import type { PriceList } from '@/data/schemas';
 
 export type ListPriceResult =
-  | { ok: true; priceCents: number; priceListVersion: number }
+  | { ok: true; priceCents: number; priceListVersion: number; isRelisted?: boolean }
   | { ok: false; reason: 'unknown_asset' | 'no_price_list_on_date' };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -34,6 +34,38 @@ export function listPriceOn(
   if (priceCents === undefined) return { ok: false, reason: 'unknown_asset' };
 
   return { ok: true, priceCents, priceListVersion: priceList.version };
+}
+
+/**
+ * Resolves the effective net list price for an asset on `isoDate`:
+ * - If the asset has a stored `relist_price_cents` (a relisted second/third-life item),
+ *   uses `relist_price_cents` instead of the price list, while preserving the active
+ *   `priceListVersion` on `isoDate`.
+ * - Otherwise delegates to `listPriceOn(priceLists, asset.id, isoDate)`.
+ */
+export function effectiveAssetPriceOn(
+  priceLists: readonly PriceList[],
+  asset: { id: string; relist_price_cents?: number | null },
+  isoDate: string
+): ListPriceResult {
+  if (!ISO_DATE.test(isoDate)) {
+    throw new RangeError(`isoDate must look like YYYY-MM-DD, got "${isoDate}"`);
+  }
+  const base = listPriceOn(priceLists, asset.id, isoDate);
+  if (asset.relist_price_cents != null) {
+    if (!Number.isInteger(asset.relist_price_cents) || asset.relist_price_cents < 0) {
+      throw new RangeError(
+        `relist_price_cents must be a non-negative integer, got ${asset.relist_price_cents}`
+      );
+    }
+    return {
+      ok: true,
+      priceCents: asset.relist_price_cents,
+      priceListVersion: base.ok ? base.priceListVersion : 1,
+      isRelisted: true,
+    };
+  }
+  return base;
 }
 
 /**

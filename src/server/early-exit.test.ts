@@ -16,6 +16,11 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
+  await db.assetEvent.deleteMany();
+  await db.invoiceRow.deleteMany();
+  await db.contract.deleteMany();
+  await db.application.deleteMany();
+  await db.quote.deleteMany();
   await db.auditLog.deleteMany();
   await db.assetReservation.deleteMany();
   await db.asset.deleteMany();

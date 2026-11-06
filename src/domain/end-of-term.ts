@@ -10,10 +10,12 @@
 // half up (./rounding). No floating-point money.
 // Avoided CO2 is counted in whole grams, rounded once; kg is only for display.
 import type {
+  Asset,
   AssetCategory,
   AssetCondition,
   CoefficientTable,
   Co2Factors,
+  PriceList,
   ResidualCurves,
   SecondLifeRequest,
   UsageUnit,

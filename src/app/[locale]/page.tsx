@@ -4,15 +4,24 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
 import { CategoryTabs, FilterForm } from '@/components/catalogue-controls';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import type { SecondLifeData } from '@/components/second-life-panel';
 import { assetCategorySchema, type AssetCategory } from '@/data/schemas';
 import { filterCatalogue, parseCatalogueParams } from '@/domain/catalogue-filter';
-import { listPriceOn } from '@/domain/price-list';
+import { deriveAssetSecondLifeValuation } from '@/domain/end-of-term';
+import { effectiveAssetPriceOn, type ListPriceResult } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { listAllAssetEvents, listAssets } from '@/server/assets';
 import { db } from '@/server/db';
+import {
+  readCo2Factors,
+  readCoefficientTable,
+  readPriceLists,
+  readResidualCurves,
+  readSecondLifeDemand,
+  readVatRates,
+} from '@/server/reference-read';
 import { todayIso } from '@/server/today';
 
 export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
@@ -24,11 +33,24 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists, coefficientTable, vatRates] = await Promise.all([
+  const [
+    assets,
+    priceLists,
+    coefficientTable,
+    vatRates,
+    residualCurves,
+    secondLifeDemand,
+    co2Factors,
+    eventsByAsset,
+  ] = await Promise.all([
     listAssets(db),
-    loadPriceLists(),
-    loadCoefficientTable(),
-    loadVatRates(),
+    readPriceLists(db),
+    readCoefficientTable(db),
+    readVatRates(db),
+    readResidualCurves(db),
+    readSecondLifeDemand(db),
+    readCo2Factors(db),
+    listAllAssetEvents(db),
   ]);
 
   const categories = assetCategorySchema.options;
@@ -38,8 +60,36 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
     'e_bike'
   );
   const items = assets.map((asset) => {
-    const price = listPriceOn(priceLists, asset.id, today);
-    return { asset, price, priceCents: price.ok ? price.priceCents : null };
+    const basePrice = effectiveAssetPriceOn(priceLists, asset, today);
+    const events = eventsByAsset[asset.id] ?? [];
+    const hasSecondLife =
+      asset.status === 'returned' || asset.previous_lives > 0 || events.length > 0;
+    const secondLife: SecondLifeData | undefined = hasSecondLife
+      ? {
+          valuation: deriveAssetSecondLifeValuation({
+            asset,
+            priceLists,
+            residualCurves,
+            coefficientTable,
+            secondLifeDemand,
+            co2Factors,
+            asOf: today,
+          }),
+          events,
+        }
+      : undefined;
+
+    const price: ListPriceResult =
+      asset.status === 'returned' && secondLife
+        ? {
+            ok: true,
+            priceCents: secondLife.valuation.relistPriceCents,
+            priceListVersion: basePrice.ok ? basePrice.priceListVersion : 1,
+            isRelisted: true,
+          }
+        : basePrice;
+
+    return { asset, price, priceCents: price.ok ? price.priceCents : null, secondLife };
   });
   const visible = filterCatalogue(items, filter);
   // Tab badges show how many items each category would hold with the current text and price.
@@ -93,7 +143,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
             </p>
           ) : (
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {visible.map(({ asset, price }) => (
+              {visible.map(({ asset, price, secondLife }) => (
                 <li key={asset.id}>
                   <AssetCard
                     asset={asset}
@@ -103,6 +153,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
                     coefficientTable={coefficientTable}
                     vatRates={vatRates}
                     isoDate={today}
+                    secondLife={secondLife}
                   />
                 </li>
               ))}

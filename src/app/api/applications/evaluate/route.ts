@@ -7,11 +7,12 @@
 // because an earlier answer changed, and the decision with its reasons. Send the whole
 // form state every time; the response tells the client what to show next.
 import { z } from 'zod';
-import { loadCoefficientTable, loadQuestions } from '@/data/load';
 import { assetCategorySchema, centsSchema, isoDateSchema } from '@/data/schemas';
 import { decideEligibility } from '@/domain/eligibility';
 import { pruneAnswers, visibleQuestions } from '@/domain/question-flow';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
+import { db } from '@/server/db';
+import { readCoefficientTable, readQuestions } from '@/server/reference-read';
 import { todayIso } from '@/server/today';
 
 const bodySchema = z.strictObject({
@@ -28,8 +29,8 @@ const bodySchema = z.strictObject({
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, bodySchema);
   const [{ questions }, coefficientTable] = await Promise.all([
-    loadQuestions(),
-    loadCoefficientTable(),
+    readQuestions(db),
+    readCoefficientTable(db),
   ]);
 
   // The customer type is the answer to the first question, never a separate field,

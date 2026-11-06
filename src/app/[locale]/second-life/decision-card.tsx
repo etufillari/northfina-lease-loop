@@ -13,6 +13,7 @@ import { PhotoUpload } from './photo-upload';
 
 const OUTCOME_STYLE = {
   offer: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
+  nominee: 'bg-violet-100 text-violet-900 dark:bg-violet-900 dark:text-violet-100',
   list_available: 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100',
   parts_bin: 'bg-stone-200 text-stone-800 dark:bg-stone-700 dark:text-stone-100',
 } as const;
@@ -184,11 +185,18 @@ export function DecisionCard({
   );
 }
 
-/** Who gets the item: one person, one person with a whole set, or nobody. */
+/** Who gets the item: the nominee, one person, one person with a whole set, or nobody. */
 function WhoGetsIt({ locale, preview }: { locale: Locale; preview: SecondLifePreview }) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const { outcome, winner, winnerQuote } = preview;
+  if (outcome.kind === 'nominee') {
+    return (
+      <p className="mt-1 text-sm">
+        {t('secondLife.nomineeGetsIt', { name: preview.nominee?.name ?? outcome.customerId })}
+      </p>
+    );
+  }
   if (outcome.kind !== 'offer' || !winner) {
     return (
       <p className="mt-1 text-sm">

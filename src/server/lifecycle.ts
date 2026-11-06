@@ -5,6 +5,7 @@ import { loadCoefficientTable, loadVatRates } from '@/data/load';
 import { BUYOUT_PAYMENT_DAYS } from '@/domain/buyout';
 import { addDays, addMonthsClamped, previousDay } from '@/domain/calendar';
 import { holdUntil } from '@/domain/holds';
+import { endNominations, NOMINATION_RESERVATION, startNominationClock } from './nominations';
 import { earlyExitQuote, type EarlyExitBreakdown } from '@/domain/early-exit';
 import { vatCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -121,6 +122,10 @@ export async function executeEarlyExit(
           },
         });
       }
+      await startNominationClock(tx, {
+        assetIds: row.assets.map((link) => link.asset_id),
+        returnedOn: input.asOf,
+      });
       for (const link of row.assets) {
         await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'returned' } });
         await tx.assetEvent.create({
@@ -195,6 +200,9 @@ export async function endOfTerm(
           },
         });
       }
+      const assetIds = contract.assets.map((link) => link.asset_id);
+      if (input.action === 'buy') await endNominations(tx, assetIds);
+      else await startNominationClock(tx, { assetIds, returnedOn: input.asOf });
       for (const link of contract.assets) {
         await tx.asset.update({
           where: { id: link.asset_id },
@@ -248,15 +256,29 @@ export async function nominateSuccessor(
       details: { email: input.email, nomineeCustomerId: nominee?.id ?? null },
     },
     async (tx) => {
+      // The 7 days start when the item comes back (src/server/nominations.ts): during the
+      // lease this is provisional, from the term's end, and restarts on the actual return.
+      const returned = contract.status === 'ended_returned';
+      const until = holdUntil('nomination', returned ? input.asOf : termEndsOn(contract));
       for (const link of contract.assets) {
+        // A new nomination replaces an earlier one.
+        await tx.reservation.updateMany({
+          where: { asset_id: link.asset_id, kind: NOMINATION_RESERVATION, active: true },
+          data: { active: false },
+        });
         await tx.reservation.create({
           data: {
             asset_id: link.asset_id,
             customer_id: nominee?.id ?? null,
-            kind: 'nomination',
-            until: holdUntil('nomination', input.asOf),
+            kind: NOMINATION_RESERVATION,
+            until,
           },
         });
+        // Already through the desk and listed: it is now held for the nominee.
+        const asset = await tx.asset.findUnique({ where: { id: link.asset_id } });
+        if (returned && asset?.status === 'available' && nominee) {
+          await tx.asset.update({ where: { id: link.asset_id }, data: { status: 'reserved' } });
+        }
         await tx.assetEvent.create({
           data: {
             asset_id: link.asset_id,

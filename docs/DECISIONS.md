@@ -104,7 +104,12 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   through the normal question flow against the remaining schedule (no down payment, locked
   rent carries over) and the contract transfers on approval; (b) end-of-term nomination —
   the named person may apply for a new lease on that item, skipping the waiting list, and
-  the skip is logged as "nominated by previous lessee".
+  the skip is logged as "nominated by previous lessee". Their 7 days start when the item
+  **comes back** (6 Nov): nominated during the lease, the hold is provisional to 7 days
+  after the term ends and restarts on the actual return day (end of term or early exit);
+  nominated after the return, 7 days from then; a buyout ends it. The item still goes
+  through the second-life desk (mandatory work, re-price), which then holds it for the
+  nominee instead of matching the waiting list. Unused, it goes to the waiting list.
 
 ## Second life
 

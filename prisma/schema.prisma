@@ -2,6 +2,19 @@
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
 // SQLite has no enums here, so allowed values (category, condition, status) are
 // checked with Zod in src/data/schemas.ts before anything is written.
+//
+// Conventions:
+// - Money is integer euro cents (`*_cents`), VAT excluded unless the name says gross.
+// - No floats. Percentages and multipliers are basis points (`*_bp`: 25.5 % = 2550,
+//   ×0.95 = 9500). Rent factors are parts per million (`factor_ppm`: 0.027584 = 27584).
+//   Every value in data/ converts exactly; the seed converts with Math.round once.
+// - Business dates (`*_on`, `*_date`, `valid_*`, `period_*`) are ISO `YYYY-MM-DD`
+//   strings, the same as the `asOf` the domain uses. `created_at` / `updated_at` are
+//   technical timestamps only.
+// - Price snapshots on Quote and Contract are copied, never re-read (price lock).
+//
+// Sections: reference data (seeded from data/, read-only at runtime), then the
+// lifecycle tables the app writes, then the audit log.
 
 generator client {
   provider = "prisma-client"
@@ -12,25 +25,408 @@ datasource db {
   provider = "sqlite"
 }
 
+// ===========================================================================
+// Reference data, seeded from data/*.json
+// ===========================================================================
+
+// --- data/assets.json -------------------------------------------------------
+
 // One physical item that can be leased, returned, refurbished and leased again.
-// Mirrors data/assets.json; `usage` is stored as two columns.
+// `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                     String  @id
+  category               String // e_bike | laptop | farm_machine
+  make                   String
+  model                  String
+  model_year             Int
+  serial_number          String  @unique
+  condition              String // new | like_new | good | fair | poor
+  usage_unit             String // km | battery_cycles | engine_hours
+  usage_value            Int
+  previous_lives         Int
+  status                 String // available | reserved | leased | returned | sold
+  // Second life. Set when the item first goes out / is relisted.
+  relist_price_cents     Int?
+  first_lease_date       String? // YYYY-MM-DD
+  first_list_price_cents Int?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  prices    PriceListEntry[]
+  quotes    Quote[]
+  contracts Contract[]
+  events    AssetEvent[]
 
   @@index([category])
+  @@index([status])
 }
+
+// --- data/price-lists.json --------------------------------------------------
+
+// A dated version of the list prices. Versions never overlap.
+model PriceList {
+  version    Int     @id
+  valid_from String // YYYY-MM-DD, inclusive
+  valid_to   String? // YYYY-MM-DD, inclusive; null = until replaced
+  note       String
+
+  entries   PriceListEntry[]
+  quotes    Quote[]
+  contracts Contract[]
+}
+
+// Net list price of one asset in one price list version.
+model PriceListEntry {
+  price_list_version Int
+  asset_id           String
+  price_cents        Int
+
+  price_list PriceList @relation(fields: [price_list_version], references: [version])
+  asset      Asset     @relation(fields: [asset_id], references: [id])
+
+  @@id([price_list_version, asset_id])
+  @@index([asset_id])
+}
+
+// --- data/coefficient-table.json --------------------------------------------
+
+// monthly net rent = financed amount × factor.
+model CoefficientTable {
+  id         String @id // e.g. ct-2026-1
+  version    Int
+  valid_from String // YYYY-MM-DD
+  currency   String // EUR
+  how_to_use String
+
+  bands   CoefficientBand[]
+  factors CoefficientFactor[]
+  buyouts BuyoutPercent[]
+}
+
+// A financed-amount band. Bands are contiguous: each starts 1 cent after the last.
+model CoefficientBand {
+  table_id           String
+  band               String // A | B | C | D
+  min_financed_cents Int // inclusive
+  max_financed_cents Int // inclusive
+  annual_interest_bp Int // 9.9 % = 990
+
+  table   CoefficientTable    @relation(fields: [table_id], references: [id])
+  factors CoefficientFactor[]
+
+  @@id([table_id, band])
+}
+
+// Monthly rent factor for one band and term.
+model CoefficientFactor {
+  table_id    String
+  band        String
+  term_months Int // 12 | 24 | 36 | 48
+  factor_ppm  Int // 0.027584 = 27584
+
+  table     CoefficientTable @relation(fields: [table_id], references: [id])
+  bandEntry CoefficientBand  @relation(fields: [table_id, band], references: [table_id, band])
+
+  @@id([table_id, band, term_months])
+}
+
+// Buyout price at the end of a term, as a share of the financed amount.
+model BuyoutPercent {
+  table_id    String
+  term_months Int
+  percent_bp  Int // 15 % = 1500
+
+  table CoefficientTable @relation(fields: [table_id], references: [id])
+
+  @@id([table_id, term_months])
+}
+
+// --- data/vat-rates.json ----------------------------------------------------
+
+// General VAT rate over time. The invoice date picks the rate.
+model VatRate {
+  id         Int     @id @default(autoincrement())
+  country    String // FI
+  rate_bp    Int // 25.5 % = 2550
+  valid_from String // YYYY-MM-DD, inclusive
+  valid_to   String? // YYYY-MM-DD, inclusive; null = still valid
+  fictional  Boolean @default(false)
+
+  @@unique([country, valid_from])
+}
+
+// --- data/residual-curves.json ----------------------------------------------
+
+// One point of a category's value-by-age curve. Interpolate between points.
+model ResidualCurvePoint {
+  category   String
+  age_months Int
+  percent_bp Int // share of original net list price, 82 % = 8200
+
+  @@id([category, age_months])
+}
+
+// Market value multiplier by condition.
+model ConditionMultiplier {
+  condition     String @id // new | like_new | good | fair | poor
+  multiplier_bp Int // ×0.95 = 9500
+}
+
+// Value change by usage, per category.
+model UsageAdjustment {
+  category             String @id
+  unit                 String // km | battery_cycles | engine_hours
+  percent_per_step_bp  Int // -2.0 % = -200
+  step                 Int // units of usage per step
+  max_total_percent_bp Int // floor of the adjustment, -20 % = -2000
+}
+
+// --- data/refurbishment-costs.json ------------------------------------------
+
+// Cost to move a returned item up one condition step.
+model RefurbishmentUpgrade {
+  category       String
+  from_condition String
+  to_condition   String
+  cost_cents     Int
+
+  @@id([category, from_condition, to_condition])
+}
+
+// A fixed refurbishment step (inspection, battery, data wipe, service).
+model RefurbishmentFixedCost {
+  category                    String
+  id                          String // e.g. battery_replacement (repeats across categories)
+  cost_cents                  Int
+  when_text                   String // rule in words; the code that applies it lives in domain/
+  resets_usage                Boolean @default(false)
+  mandatory_before_next_lease Boolean @default(false)
+
+  @@id([category, id])
+}
+
+// --- data/second-life-demand.json -------------------------------------------
+
+// A waiting-list entry. ID order is signup order (used as a matchmaking tie-break).
+model SecondLifeRequest {
+  id                         String @id // wait-01 ...
+  category                   String
+  max_monthly_net_rent_cents Int
+  min_condition              String // worst condition accepted
+  preferred_term_months      Int
+  needed_by                  String // YYYY-MM-DD
+  who                        String
+}
+
+// --- data/questions.json ----------------------------------------------------
+
+// The application form. Nested rules are JSON text, validated with the Zod schemas
+// in src/data/schemas.ts when read and written.
+model Question {
+  id                     String  @id // q_customer_type ...
+  position               Int     @unique // bank order; visibility is one pass in this order
+  type                   String // choice | text | date | email | money | list
+  text_en                String
+  text_fi                String
+  text_sv                String
+  text_et                String
+  why_we_ask_en          String
+  why_we_ask_fi          String?
+  why_we_ask_sv          String?
+  why_we_ask_et          String?
+  ask_when_json          String // AskWhenCondition[]; "[]" = always ask
+  options_json           String? // string[]; only for `choice`
+  blocks_json            String? // BlockRule[]
+  validation_format      String? // finnish_business_id
+  validation_hint        String?
+}
+
+// The eligibility rules, in words. The code that applies them lives in domain/.
+model EligibilityRule {
+  id       String @id // min_age | residency | ...
+  position Int    @unique
+  text     String
+}
+
+// --- data/customers.json ----------------------------------------------------
+
+// A customer. Type-specific columns are null for the other types.
+model Customer {
+  id                       String  @id // cust-aino ...
+  type                     String // consumer | sole_trader | company
+  name                     String
+  country                  String // FI | SE | EE ...
+  city                     String
+  email                    String
+  is_pep                   Boolean
+  story                    String // why this test persona exists
+  birth_date               String? // consumer, sole_trader
+  employment               String? // consumer
+  monthly_net_income_cents Int? // consumer
+  business_id              String? // sole_trader, company (check digit not validated here)
+  vat_registered           Boolean? // sole_trader, company
+  annual_revenue_cents     Int? // company
+  applicant_can_sign       Boolean? // company
+  beneficial_owners_json   String? // company, string[]
+
+  applications Application[]
+  contracts    Contract[]
+}
+
+// --- data/co2-factors.json --------------------------------------------------
+
+// kg CO2e to manufacture one new item, per category.
+model Co2ManufacturingFactor {
+  category String @id
+  kg_co2e  Int
+}
+
+// Single-row settings for the impact calculation (id is always 1).
+model Co2Settings {
+  id                               Int    @id @default(1)
+  note                             String
+  refurbishment_share_of_new_bp    Int // 0.12 = 1200
+  e_bike_avoided_car_g_per_km      Int // 0.15 kg/km = 150 g/km
+  avoided_by_reuse_formula_hint    String
+}
+
+// ===========================================================================
+// Lifecycle tables, written by the app
+// ===========================================================================
+
+// A locked price. Saved by "Lock this price and apply"; never changes afterwards.
+// Changing term or down payment creates a new quote at that day's prices.
+model Quote {
+  id                     String  @id @default(uuid())
+  asset_id               String
+  created_on             String // YYYY-MM-DD (asOf the quote was priced on)
+  price_list_version     Int? // null when the asset is relisted (relist price used)
+  list_price_cents       Int
+  down_payment_cents     Int
+  financed_cents         Int
+  band                   String
+  factor_ppm             Int
+  annual_interest_bp     Int
+  term_months            Int
+  monthly_net_rent_cents Int
+  buyout_net_cents       Int
+  created_at             DateTime @default(now())
+
+  asset        Asset         @relation(fields: [asset_id], references: [id])
+  price_list   PriceList?    @relation(fields: [price_list_version], references: [version])
+  applications Application[]
+  contracts    Contract[]
+
+  @@index([asset_id])
+}
+
+// An application against a locked quote. Only `yes` and `manual_review` decisions
+// are stored; a `no` is never saved (data minimisation).
+model Application {
+  id           String  @id @default(uuid())
+  quote_id     String
+  customer_id  String?
+  created_on   String // YYYY-MM-DD
+  answers_json String // JSON text, only the answers the decision needs
+  decision     String // yes | manual_review
+  reasons_json String // JSON text, Reason[]
+  status       String // submitted | signed
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  quote    Quote     @relation(fields: [quote_id], references: [id])
+  customer Customer? @relation(fields: [customer_id], references: [id])
+  contract Contract?
+
+  @@index([quote_id])
+  @@index([customer_id])
+}
+
+// A signed lease. The price fields are copied from the quote at signing.
+model Contract {
+  id                     String  @id @default(uuid())
+  application_id         String  @unique
+  quote_id               String
+  asset_id               String
+  customer_id            String?
+  status                 String // active | exited | ended
+  start_date             String // YYYY-MM-DD
+  price_list_version     Int?
+  list_price_cents       Int
+  down_payment_cents     Int
+  financed_cents         Int
+  band                   String
+  factor_ppm             Int
+  annual_interest_bp     Int
+  term_months            Int
+  monthly_net_rent_cents Int
+  buyout_net_cents       Int
+  total_net_cents        Int
+  total_gross_cents      Int
+  signed_on              String // YYYY-MM-DD
+  closed_on              String? // YYYY-MM-DD, set on exit or end of term
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  application Application  @relation(fields: [application_id], references: [id])
+  quote       Quote        @relation(fields: [quote_id], references: [id])
+  asset       Asset        @relation(fields: [asset_id], references: [id])
+  customer    Customer?    @relation(fields: [customer_id], references: [id])
+  price_list  PriceList?   @relation(fields: [price_list_version], references: [version])
+  invoiceRows InvoiceRow[]
+  events      AssetEvent[]
+
+  @@index([asset_id])
+  @@index([customer_id])
+  @@index([status])
+}
+
+// One line of a contract's invoice schedule. Amounts never change after creation;
+// the only later update is `cancelled_by_exit` on unbilled rent rows.
+model InvoiceRow {
+  id                Int     @id @default(autoincrement())
+  contract_id       String
+  seq               Int // 0-based order within the contract
+  kind              String // down_payment | rent | exit_return | exit_buyout | buyout
+  invoice_date      String // YYYY-MM-DD; VAT follows this date
+  period_start      String // YYYY-MM-DD
+  period_end        String // YYYY-MM-DD
+  net_cents         Int
+  vat_rate_bp       Int
+  vat_cents         Int
+  gross_cents       Int
+  cancelled_by_exit Boolean @default(false)
+  created_at        DateTime @default(now())
+
+  contract Contract @relation(fields: [contract_id], references: [id])
+
+  @@unique([contract_id, seq])
+}
+
+// Append-only history of an asset: status changes, returns, relists. Feeds the
+// product passport. Never updated or deleted.
+model AssetEvent {
+  id           Int     @id @default(autoincrement())
+  asset_id     String
+  on_date      String // YYYY-MM-DD
+  from_status  String
+  to_status    String
+  contract_id  String?
+  condition    String? // condition recorded at return
+  usage_value  Int? // usage recorded at return
+  amount_cents Int? // e.g. relist price or buyout
+  note_key     String? // i18n key, not free text
+  created_at   DateTime @default(now())
+
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract? @relation(fields: [contract_id], references: [id])
+
+  @@index([asset_id, on_date])
+}
+
+// ===========================================================================
+// Audit
+// ===========================================================================
 
 // Who changed what, and when. Written in the same transaction as the change
 // (see src/server/audit.ts), so a change without an audit row cannot exist.

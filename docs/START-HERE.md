@@ -42,19 +42,20 @@ For a task spanning domains, split the work by owner and agree the connection. D
 
 ## Where we are now
 
-This is a snapshot of the inspected checkout, not a live status of every teammate's branch:
+Use [PROGRESS.md](PROGRESS.md) for detailed evidence and local demo steps.
 
-- Catalogue/pricing UI, term/down-payment controls and four languages exist.
-- Initial engine functions for lease transitions, monthly dates and VAT/invoice calculations passed 26 focused tests. They do not yet save or issue invoices.
-- Applications/contracts and return/refurbishment still need integration here; inspect teammates' latest work before starting them.
-- Full checks stop at Prisma test-database setup. This must be fixed before claiming the complete app is validated.
-- Engine/role docs were pushed to `feat/team-roles-and-engine` in **quietmid/northfina-lease-loop2026**. A pushed branch is not automatically merged into `main`; check the team fork's PR status.
+- Pulled Dev2's merged PR12 from team main (`b04cd0e`). Applications and signed contracts are real persisted records.
+- Local integration now connects signing → active lease/allocation → saved VAT-correct invoices → completion, including the account UI. No fake paid status or mock lease fallback is used there.
+- **225 tests pass.** Actual HTTP/account-render smoke passed on isolated SQLite. Webpack production build passes; default Turbopack remains blocked by this runner's worker-port restriction.
+- Return, inspection, refurbishment, readiness/repricing and second-life re-leasing remain to be integrated. Buyout/pass-on/payment settlement are not implemented.
+- New UI/API controls are development-only, with ownership/origin checks; production authentication is still missing.
+- Integration changes are local on `feat/engine-persistence`, not pushed/merged. Stash backups preserve pre-pull work.
 
 ## Next steps
 
-1. **Developer 2:** finish one approved application → signed contract; share its `LeaseTerms`.
-2. **Developer 1:** connect those terms, persist lease/invoice data and prevent duplicate issuance.
-3. **Developer 3:** build return → inspection → refurbishment with mocks, then connect real services.
-4. **Together:** demonstrate a second lease on the same asset, changing VAT, correct month-end dates and green checks.
+1. **Developer 1:** review/publish the real contract/engine/UI integration; coordinate the physical allocation release with Developer3.
+2. **Developer 3:** persist return → inspection → mandatory work/readiness, consuming the real completed lease.
+3. **Developer 2 + Developer3:** publish the ready asset's new offer and sign a second customer's contract without changing physical identity.
+4. **Together:** activate/invoice that second lease; verify end options, language/accessibility and the full demo.
 
-Advanced matching, CO₂ and early-exit fees wait until the full loop works. See [TEAM-AI-RULES.md](TEAM-AI-RULES.md) for the shared working rules and [architecture](01-SYSTEM-ARCHITECTURE-AND-CONTRACTS.md) for engine interfaces.
+Advanced matching, CO₂ and early-exit fees wait until the full loop works. See [TEAM-AI-RULES.md](TEAM-AI-RULES.md) for boundaries and [NEXT-TEAM-PRS.md](NEXT-TEAM-PRS.md) for teammate deliverables.

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { EndOfTermOptions } from '@/components/end-of-term-options';
 import { loadAssets } from '@/data/load';
-import { mockLeaseRecords } from '@/data/mock-leases';
+import { LeaseEnginePanel } from '@/components/lease-engine-panel';
 import type { Customer } from '@/data/schemas';
 import { getEndOfTermChoices, getRemainingMonths } from '@/domain/end-of-term-options';
 import { formatEuro } from '@/domain/money';
@@ -26,15 +26,9 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
   const today = todayIso();
   const [customer, assets] = await Promise.all([getActiveUser(), loadAssets()]);
   const persistedLeases = customer ? await listContractsForCustomer(db, customer.id) : [];
-  const leases =
-    persistedLeases.length > 0
-      ? persistedLeases.map((lease) => ({ ...lease, isMock: false }))
-      : customer
-        ? mockLeaseRecords
-            .filter((lease) => lease.terms.customerId === customer.id)
-            .map((lease) => ({ ...lease, isMock: true }))
-        : [];
-  const leaseStatusLabels: Record<LeaseStatus, string> = {
+  const leases = persistedLeases.map((lease) => ({ ...lease, isMock: false }));
+  const leaseStatusLabels: Record<LeaseStatus | 'SIGNED', string> = {
+    SIGNED: t('engine.signed'),
     ACTIVE: t('account.leaseStatus.active'),
     COMPLETED: t('account.leaseStatus.completed'),
     TERMINATED: t('account.leaseStatus.terminated'),
@@ -176,6 +170,12 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
                             value={formatEuro(lease.terms.monthlyNetCents, intlLocale[locale])}
                           />
                         </dl>
+                        <LeaseEnginePanel
+                          contractId={lease.terms.contractId}
+                          leaseId={lease.leaseId}
+                          status={lease.status}
+                          locale={locale}
+                        />
                         {endOptions?.ok && endOptions.choices.length > 0 ? (
                           <EndOfTermOptions
                             leaseId={lease.terms.contractId}
@@ -222,7 +222,6 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
               </p>
             )}
           </section>
-          <HistorySection title={t('account.invoices')} message={t('account.historyUnavailable')} />
         </div>
       </div>
     </div>
@@ -280,14 +279,5 @@ function CustomerDetails({
         </div>
       ))}
     </dl>
-  );
-}
-
-function HistorySection({ title, message }: { title: string; message: string }) {
-  return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-8">
-      <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-4 text-sm text-stone-600 dark:text-stone-400">{message}</p>
-    </section>
   );
 }

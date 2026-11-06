@@ -202,9 +202,6 @@
   "secondLife.v1Price": "Ursprungligt pris (prislista v1)",
   "secondLife.valueAsIs": "Marknadsvärde efter det obligatoriska arbetet",
   "secondLife.financed": "Nytt finansierat belopp (marknadsvärde efter arbetet)",
-  "secondLife.action.lease_to_waiter": "Erbjuds till kön",
-  "secondLife.action.list_available": "Listas i katalogen",
-  "secondLife.action.parts_bin": "Behålls som reservdelar",
   "secondLife.reason.list_available": "Ingen i kön passar, så artikeln går tillbaka till katalogen för alla.",
   "secondLife.reason.parts_bin": "Den skulle gå med förlust: efter arbetet vore den värd mindre än arbetet kostar, eller under leasingminimum 300 €, även med en uppgradering — så den behålls som reservdelar.",
   "secondLife.winnerTitle": "Vem får den",
@@ -257,8 +254,6 @@
   "passport.noCo2": "Inget pris i prislista v1, så det kvarvarande värdet kan inte mätas.",
   "persona.staff": "Personal",
   "persona.staffDesk": "Personaldisk",
-  "price.quantity": "Antal",
-  "price.quantityNote": "ett avtal, prisklass på totalen",
   "staff.title": "Personalens skrivbord",
   "staff.intro": "Ansökningar som behöver en människa: manuella granskningar och företag som väntar på sin firmatecknare.",
   "staff.actingAs": "Du agerar som {actor}",
@@ -495,5 +490,7 @@
   "usage.unit.engine_hours": "motortimmar",
   "usage.sinceBattery": "Sedan senaste nya batteriet",
   "usage.sinceService": "Sedan senaste stora service",
-  "passport.detail.reading": "mätare {reading} (+{added} under det här avtalet)"
+  "passport.detail.reading": "mätare {reading} (+{added} under det här avtalet)",
+  "apply.backToItem": "Tillbaka till artikeln",
+  "apply.backToFleet": "Tillbaka till flottan"
 }

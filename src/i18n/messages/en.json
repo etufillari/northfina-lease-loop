@@ -223,9 +223,6 @@
   "secondLife.v1Price": "Original price (price list v1)",
   "secondLife.valueAsIs": "Market value after the mandatory work",
   "secondLife.financed": "New financed amount (market value after the work)",
-  "secondLife.action.lease_to_waiter": "Offer to the waiting list",
-  "secondLife.action.list_available": "List in the catalogue",
-  "secondLife.action.parts_bin": "Keep for parts",
   "secondLife.reason.list_available": "Nobody on the waiting list fits, so the item goes back to the catalogue for anyone.",
   "secondLife.reason.parts_bin": "It would lose money: after the work it would be worth less than the work costs, or less than the €300 lease minimum, even with one upgrade — so it is kept for parts.",
   "secondLife.winnerTitle": "Who gets it",
@@ -279,8 +276,6 @@
   "passport.noCo2": "No price in price list v1, so the remaining value cannot be measured.",
   "persona.staff": "Staff",
   "persona.staffDesk": "Staff desk",
-  "price.quantity": "Quantity",
-  "price.quantityNote": "one contract, banded on the total",
   "staff.title": "Staff desk",
   "staff.intro": "Applications that need a person: manual reviews, and companies waiting for their signatory.",
   "staff.actingAs": "Acting as {actor}",
@@ -495,5 +490,7 @@
   "usage.unit.engine_hours": "engine hours",
   "usage.sinceBattery": "Since the last new battery",
   "usage.sinceService": "Since the last major service",
-  "passport.detail.reading": "meter {reading} (+{added} on this lease)"
+  "passport.detail.reading": "meter {reading} (+{added} on this lease)",
+  "apply.backToItem": "Back to the item",
+  "apply.backToFleet": "Back to the fleet"
 }

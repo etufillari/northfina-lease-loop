@@ -1,5 +1,6 @@
 // "My page": the selected persona's contracts, each with its next invoice highlighted.
 import Link from 'next/link';
+import { BackToCatalogue } from '@/components/back-to-catalogue';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { cookies } from 'next/headers';
@@ -54,7 +55,8 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
   if (!customer) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-semibold tracking-tight">{t('me.title')}</h1>
+        <BackToCatalogue locale={locale} label={t('asset.backToCatalogue')} asOfParam={asOfParam} />
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">{t('me.title')}</h1>
         <p className="mt-4 text-stone-700 dark:text-stone-300">{t('me.noPersona')}</p>
       </div>
     );
@@ -67,7 +69,8 @@ export default async function MePage({ params, searchParams }: PageProps<'/[loca
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">{customer.name}</h1>
+      <BackToCatalogue locale={locale} label={t('asset.backToCatalogue')} asOfParam={asOfParam} />
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight">{customer.name}</h1>
       <p className="mt-1 text-stone-600 dark:text-stone-400">{customer.email}</p>
 
       {applications.length > 0 ? (

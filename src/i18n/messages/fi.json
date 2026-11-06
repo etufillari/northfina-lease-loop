@@ -202,9 +202,6 @@
   "secondLife.v1Price": "Alkuperäinen hinta (hinnasto v1)",
   "secondLife.valueAsIs": "Markkina-arvo pakollisten töiden jälkeen",
   "secondLife.financed": "Uusi rahoitettava summa (markkina-arvo töiden jälkeen)",
-  "secondLife.action.lease_to_waiter": "Tarjotaan jonosta",
-  "secondLife.action.list_available": "Luetteloon kaikille",
-  "secondLife.action.parts_bin": "Varaosiksi",
   "secondLife.reason.list_available": "Kukaan jonossa ei sovi, joten tuote palaa luetteloon kaikille.",
   "secondLife.reason.parts_bin": "Se tuottaisi tappiota: töiden jälkeen se olisi vähemmän arvoinen kuin työt maksavat tai alle 300 €:n vuokrarajan, edes yhdellä nostolla — joten se jää varaosiksi.",
   "secondLife.winnerTitle": "Kuka sen saa",
@@ -257,8 +254,6 @@
   "passport.noCo2": "Hinnastossa v1 ei ole hintaa, joten jäljellä olevaa arvoa ei voi mitata.",
   "persona.staff": "Henkilökunta",
   "persona.staffDesk": "Työjono",
-  "price.quantity": "Määrä",
-  "price.quantityNote": "yksi sopimus, hintaluokka kokonaissummasta",
   "staff.title": "Henkilökunnan työpöytä",
   "staff.intro": "Hakemukset, jotka tarvitsevat ihmisen: käsin tarkistettavat ja yritykset, jotka odottavat allekirjoittajaansa.",
   "staff.actingAs": "Toimit käyttäjänä {actor}",
@@ -495,5 +490,7 @@
   "usage.unit.engine_hours": "käyttötunnit",
   "usage.sinceBattery": "Edellisen akun vaihdon jälkeen",
   "usage.sinceService": "Edellisen huollon jälkeen",
-  "passport.detail.reading": "mittari {reading} (+{added} tällä vuokrauksella)"
+  "passport.detail.reading": "mittari {reading} (+{added} tällä vuokrauksella)",
+  "apply.backToItem": "Takaisin tuotteeseen",
+  "apply.backToFleet": "Takaisin kalustoon"
 }

@@ -202,9 +202,6 @@
   "secondLife.v1Price": "Algne hind (hinnakiri v1)",
   "secondLife.valueAsIs": "Turuväärtus pärast kohustuslikke töid",
   "secondLife.financed": "Uus finantseeritav summa (turuväärtus pärast töid)",
-  "secondLife.action.lease_to_waiter": "Pakutakse ootejärjekorrale",
-  "secondLife.action.list_available": "Kataloogi kõigile",
-  "secondLife.action.parts_bin": "Varuosadeks",
   "secondLife.reason.list_available": "Keegi ootejärjekorras ei sobi, seega ese läheb tagasi kataloogi kõigile.",
   "secondLife.reason.parts_bin": "See tooks kahjumit: pärast töid oleks see väärt vähem kui tööd maksavad või alla 300 € liisingumiinimumi, isegi ühe tõstmisega — seega jääb see varuosadeks.",
   "secondLife.winnerTitle": "Kes selle saab",
@@ -257,8 +254,6 @@
   "passport.noCo2": "Hinnakirjas v1 pole hinda, seega järelejäänud väärtust ei saa mõõta.",
   "persona.staff": "Töötajad",
   "persona.staffDesk": "Töölaud",
-  "price.quantity": "Kogus",
-  "price.quantityNote": "üks leping, hinnaklass kogusumma järgi",
   "staff.title": "Töötajate töölaud",
   "staff.intro": "Taotlused, mis vajavad inimest: käsitsi kontrollid ja ettevõtted, kes ootavad oma allkirjastajat.",
   "staff.actingAs": "Tegutsed kasutajana {actor}",
@@ -495,5 +490,7 @@
   "usage.unit.engine_hours": "mootoritunnid",
   "usage.sinceBattery": "Pärast viimast akuvahetust",
   "usage.sinceService": "Pärast viimast suurhooldust",
-  "passport.detail.reading": "näit {reading} (+{added} selle rendiga)"
+  "passport.detail.reading": "näit {reading} (+{added} selle rendiga)",
+  "apply.backToItem": "Tagasi toote juurde",
+  "apply.backToFleet": "Tagasi autopargi juurde"
 }

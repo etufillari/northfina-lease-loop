@@ -213,7 +213,8 @@ export async function startApplication(
   }
   const assets = await db.asset.findMany({ where: { id: { in: input.assetIds } } });
   if (assets.length !== input.assetIds.length) return { ok: false, reason: 'unknown_asset' };
-  if (assets.some((a) => a.status === 'leased' || a.status === 'sold')) {
+  // A `returned` item is in maintenance until the second-life desk clears it.
+  if (assets.some((a) => a.status === 'leased' || a.status === 'sold' || a.status === 'returned')) {
     return { ok: false, reason: 'asset_unavailable' };
   }
   // A reserved item is open only to the customer it is held for: a waiting-list offer or an

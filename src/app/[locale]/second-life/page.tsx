@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -26,6 +26,19 @@ export default async function SecondLifePage({
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
+
+  // The desk changes other people's items and offers: staff only.
+  if (persona !== STAFF_PERSONA) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight">{t('secondLife.title')}</h1>
+        <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+          {t('common.staffOnly')}
+        </p>
+      </div>
+    );
+  }
+
   const [desk, pools, expiredOffers] = await Promise.all([
     listReturnedDecisions(db, asOf),
     listPools(db, asOf),

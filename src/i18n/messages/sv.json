@@ -126,7 +126,6 @@
   "option.leisure": "Fritid",
   "option.delivery": "Budkörning",
   "contract.title": "Leasingavtal",
-  "contract.lockedNote": "Din hyra är låst: offert {quoteDate}, prislista v{version}. Senare prislisteändringar rör aldrig ett signerat avtal.",
   "contract.status.active": "Aktivt",
   "contract.status.ended_returned": "Avslutat — returnerat",
   "contract.status.ended_bought": "Avslutat — utköpt",
@@ -451,5 +450,6 @@
   "staff.expired.explain": "Att frigöra avslutar ansökningarna och lägger tillbaka artiklarna i katalogen för nästa kund. Varje frigörelse skrivs i granskningsloggen.",
   "staff.expired.release": "Frigör {count} utgångna reservationer",
   "staff.done.released": "Frigjorde {applications} ansökningar. {items} artiklar är tillgängliga igen.",
-  "staff.audit.action.application.hold_expired": "Frigjorde en utgången reservation"
+  "staff.audit.action.application.hold_expired": "Frigjorde en utgången reservation",
+  "common.staffOnly": "Det här skrivbordet är för Northfinas personal. Välj Personal i fältet högst upp."
 }

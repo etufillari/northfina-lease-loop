@@ -42,6 +42,13 @@ export function TimeTravel({
   const t = getT(locale);
   const router = useRouter();
   const [value, setValue] = useState(current);
+  // Follow the server's resolved date, so "Back to today" also snaps the slider and the
+  // date field back instead of leaving them on the travelled date.
+  const [seenCurrent, setSeenCurrent] = useState(current);
+  if (current !== seenCurrent) {
+    setSeenCurrent(current);
+    setValue(current);
+  }
 
   function travel(iso: string) {
     setValue(iso);

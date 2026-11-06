@@ -146,7 +146,6 @@
   "option.leisure": "Leisure",
   "option.delivery": "Delivery use",
   "contract.title": "Lease contract",
-  "contract.lockedNote": "Your rent is locked: quoted on {quoteDate} on price list v{version}. Later price-list changes never touch a signed contract.",
   "contract.status.active": "Active",
   "contract.status.ended_returned": "Ended — returned",
   "contract.status.ended_bought": "Ended — bought",
@@ -451,5 +450,6 @@
   "staff.expired.explain": "Releasing ends these applications and puts their items back in the catalogue for the next customer. Each release is written to the audit log.",
   "staff.expired.release": "Release {count} expired holds",
   "staff.done.released": "Released {applications} applications. {items} items are available again.",
-  "staff.audit.action.application.hold_expired": "Released an expired hold"
+  "staff.audit.action.application.hold_expired": "Released an expired hold",
+  "common.staffOnly": "This desk is for Northfina staff. Choose Staff in the top bar to open it."
 }

@@ -37,9 +37,12 @@ export function PersonaPicker({ locale, initialId }: { locale: Locale; initialId
     };
   }, []);
 
+  // Switching who you are is a real context switch: you land on that persona's own page
+  // (staff on the staff desk), so you never keep acting in the previous persona's flow.
   function choose(id: string) {
     setSelected(id);
     setPersonaCookie(id);
+    router.push(`/${locale}/${id === STAFF_PERSONA ? 'staff' : 'me'}`);
     router.refresh();
   }
 

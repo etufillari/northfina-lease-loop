@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { AS_OF_COOKIE } from '@/components/as-of-cookie';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { PERSONA_COOKIE } from '@/components/persona-cookie';
+import { PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { PersonaPicker } from '@/components/persona-picker';
 import { TimeTravel } from '@/components/time-travel';
 import { getT } from '@/i18n/get-t';
@@ -59,12 +59,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 current={travelling ? asOfCookie! : todayIso()}
                 travelling={travelling}
               />
-              <Link
-                href={`/${locale}/second-life`}
-                className="text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
-              >
-                {t('secondLife.title')}
-              </Link>
+              {persona === STAFF_PERSONA ? (
+                <Link
+                  href={`/${locale}/second-life`}
+                  className="text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+                >
+                  {t('secondLife.title')}
+                </Link>
+              ) : null}
               <Link
                 href={`/${locale}/waitlist`}
                 className="text-sm font-medium text-emerald-800 hover:underline dark:text-emerald-300"

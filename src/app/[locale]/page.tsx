@@ -20,8 +20,12 @@ import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { secondLifePrices } from '@/server/quotes';
 
-/** Statuses a customer can still get: leased-out and sold items stay off the page. */
-const VISIBLE_STATUSES = new Set(['available', 'reserved', 'returned']);
+/**
+ * Statuses a customer can still get. A `returned` item is functionally in maintenance —
+ * back from a lease but not yet cleared by the second-life desk — so it stays off the page,
+ * like leased-out and sold items.
+ */
+const VISIBLE_STATUSES = new Set(['available', 'reserved']);
 
 export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
   const { locale } = await params;

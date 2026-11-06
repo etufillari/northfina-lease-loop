@@ -126,7 +126,6 @@
   "option.leisure": "Vapaa-aika",
   "option.delivery": "Lähettikäyttö",
   "contract.title": "Leasing-sopimus",
-  "contract.lockedNote": "Vuokrasi on lukittu: tarjous {quoteDate}, hinnasto v{version}. Myöhemmät hinnastomuutokset eivät koske allekirjoitettua sopimusta.",
   "contract.status.active": "Voimassa",
   "contract.status.ended_returned": "Päättynyt — palautettu",
   "contract.status.ended_bought": "Päättynyt — lunastettu",
@@ -451,5 +450,6 @@
   "staff.expired.explain": "Vapauttaminen päättää nämä hakemukset ja palauttaa tuotteet luetteloon seuraavalle asiakkaalle. Jokainen vapautus kirjataan muutoslokiin.",
   "staff.expired.release": "Vapauta {count} päättynyttä varausta",
   "staff.done.released": "Vapautettiin {applications} hakemusta. {items} tuotetta on taas saatavilla.",
-  "staff.audit.action.application.hold_expired": "Vapautti päättyneen varauksen"
+  "staff.audit.action.application.hold_expired": "Vapautti päättyneen varauksen",
+  "common.staffOnly": "Tämä työpöytä on Northfinan henkilökunnalle. Valitse yläpalkista Henkilökunta."
 }

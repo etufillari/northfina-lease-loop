@@ -126,7 +126,6 @@
   "option.leisure": "Vaba aeg",
   "option.delivery": "Kullerikasutus",
   "contract.title": "Rendileping",
-  "contract.lockedNote": "Sinu üür on lukustatud: pakkumine {quoteDate}, hinnakiri v{version}. Hilisemad hinnakirjamuudatused ei puuduta allkirjastatud lepingut.",
   "contract.status.active": "Kehtiv",
   "contract.status.ended_returned": "Lõppenud — tagastatud",
   "contract.status.ended_bought": "Lõppenud — välja ostetud",
@@ -451,5 +450,6 @@
   "staff.expired.explain": "Vabastamine lõpetab need taotlused ja tagastab tooted kataloogi järgmisele kliendile. Iga vabastamine kirjutatakse auditilogisse.",
   "staff.expired.release": "Vabasta {count} lõppenud broneeringut",
   "staff.done.released": "Vabastati {applications} taotlust. {items} toodet on taas saadaval.",
-  "staff.audit.action.application.hold_expired": "Vabastas lõppenud broneeringu"
+  "staff.audit.action.application.hold_expired": "Vabastas lõppenud broneeringu",
+  "common.staffOnly": "See töölaud on Northfina töötajatele. Vali ülaribalt Töötajad."
 }

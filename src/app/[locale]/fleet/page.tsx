@@ -33,8 +33,9 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
   ]);
   const images = assetImageUrls(imageRows);
 
+  // A `returned` item is still in maintenance (the second-life desk has not cleared it).
   const leasable = assets
-    .filter((asset) => asset.status === 'available' || asset.status === 'returned')
+    .filter((asset) => asset.status === 'available')
     .map((asset) => {
       const price = listPriceOn(priceLists, asset.id, asOf);
       return {

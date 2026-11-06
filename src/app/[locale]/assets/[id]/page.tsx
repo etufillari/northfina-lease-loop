@@ -90,7 +90,7 @@ export default async function AssetPage({
         )}
       </p>
 
-      {asset.status === 'available' || asset.status === 'returned' ? (
+      {asset.status === 'available' ? (
         <PriceConfigurator locale={locale} assetIds={[asset.id]} personaId={persona} asOf={asOf} />
       ) : (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 import { ContractActions } from '@/components/contract-actions';
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadVatRates } from '@/data/load';
+import { addMonthsClamped } from '@/domain/calendar';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
@@ -48,10 +49,13 @@ export default async function ContractPage({
       ?.valid_from ??
       change.due_date);
 
+  // An invoice is open from its due date until the next one is due (a month later), then
+  // counts as paid — including the last one, which otherwise would stay open forever.
   const invoiceState = (dueDate: string): 'paid' | 'open' | 'scheduled' => {
     if (dueDate > asOf) return 'scheduled';
-    const open = [...contract.invoices].filter((i) => i.due_date <= asOf).at(-1);
-    return open && open.due_date === dueDate ? 'open' : 'paid';
+    const latestDue = [...contract.invoices].filter((i) => i.due_date <= asOf).at(-1);
+    const stillOpen = latestDue?.due_date === dueDate && asOf < addMonthsClamped(dueDate, 1);
+    return stillOpen ? 'open' : 'paid';
   };
 
   return (
@@ -69,13 +73,6 @@ export default async function ContractPage({
           {t(`contract.status.${contract.status}` as MessageKey)}
         </span>
       </div>
-
-      <p className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
-        {t('contract.lockedNote', {
-          quoteDate: formatIsoDate(contract.quote_date, locale),
-          version: contract.price_list_version,
-        })}
-      </p>
 
       <dl className="mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
         <Fact label={t('price.netRent')} value={euro(contract.monthly_net_rent_cents)} />

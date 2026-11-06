@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { STAFF_PERSONA } from '@/components/persona-cookie';
+import { cookies } from 'next/headers';
+import { PERSONA_COOKIE, STAFF_PERSONA } from '@/components/persona-cookie';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
@@ -23,6 +24,19 @@ export default async function StaffPage({ params, searchParams }: PageProps<'/[l
 
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
+
+  // The desk decides on other people's applications: staff only.
+  if ((await cookies()).get(PERSONA_COOKIE)?.value !== STAFF_PERSONA) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight">{t('staff.title')}</h1>
+        <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+          {t('common.staffOnly')}
+        </p>
+      </div>
+    );
+  }
+
   // Staff decisions are always logged as staff, never as the customer persona picked in the
   // header (the server also refuses a customer deciding on their own application).
   const actor = STAFF_PERSONA;

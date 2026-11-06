@@ -136,5 +136,19 @@
   "application.progress.label": "Hakemuksen eteneminen",
   "application.progress.questions": "Kysymykset",
   "application.progress.review": "Tarkistus",
-  "application.progress.result": "Tulos"
+  "application.progress.result": "Tulos",
+  "account.applications.loading": "Laaditakse taotlusi…",
+  "account.applications.error": "Taotluste laadimine ebaõnnestus.",
+  "account.applications.errorTitle": "Midagi läks valesti",
+  "account.applications.applicationId": "Hakemuksen tunnus",
+  "account.applications.status.approved": "Hyväksytty",
+  "account.applications.status.rejected": "Hylätty",
+  "account.applications.status.manualReview": "Käsiteltävänä",
+  "account.applications.term": "Leasingkausi",
+  "account.applications.months": "kuukautta",
+  "account.applications.quantity": "Määrä",
+  "account.applications.financedAmount": "Rahoitettava määrä",
+  "account.applications.contractAvailable": "Sopimus saatavilla",
+  "account.applications.manualReviewDescription": "Hakemuksesi odottaa manuaalista käsittelyä.",
+  "account.applications.continueToContract": "Jatka sopimukseen"
 }

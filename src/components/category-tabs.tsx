@@ -56,7 +56,7 @@ export function CategoryTabs({ query, matching, onChange, locale, t }: CategoryT
                 <span
                   className={`rounded-full px-2 text-xs ${
                     active
-                      ? 'bg-white/20 text-white'
+                      ? 'bg-emerald-950 text-white'
                       : 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300'
                   }`}
                 >

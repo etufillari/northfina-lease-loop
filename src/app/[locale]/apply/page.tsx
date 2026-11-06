@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { ApplicationQuestion } from '@/components/application-question';
+import { loadQuestions } from '@/data/load';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 
@@ -7,6 +9,9 @@ export default async function ApplicationPage({ params }: PageProps<'/[locale]/a
   if (!isLocale(locale)) notFound();
 
   const t = getT(locale);
+  const questions = await loadQuestions();
+  const firstQuestion = questions.questions.find((question) => question.id === 'q_customer_type');
+  if (!firstQuestion) throw new Error('Application question q_customer_type is missing');
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
@@ -20,17 +25,7 @@ export default async function ApplicationPage({ params }: PageProps<'/[locale]/a
         <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('application.intro')}</p>
       </header>
 
-      <section
-        aria-labelledby="application-coming-soon"
-        className="mt-10 rounded-2xl border border-dashed border-stone-300 bg-white p-6 dark:border-stone-700 dark:bg-stone-900"
-      >
-        <h2 id="application-coming-soon" className="text-lg font-semibold">
-          {t('application.comingSoonTitle')}
-        </h2>
-        <p className="mt-2 text-stone-700 dark:text-stone-300">
-          {t('application.comingSoonDescription')}
-        </p>
-      </section>
+      <ApplicationQuestion question={firstQuestion} locale={locale} />
     </div>
   );
 }

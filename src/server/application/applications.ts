@@ -188,27 +188,51 @@ export function toApplication(row: ApplicationRow): Application {
   });
 }
 
-/** An application as the screens see it: when a too-young applicant can try again is derived. */
-export type ApplicationView = Application & { eligible_from: string | null };
+/**
+ * An application as the screens see it. When a too-young applicant can try again is derived,
+ * and `contract_id` says whether it has been signed, so a screen knows not to offer signing.
+ */
+export type ApplicationView = Application & {
+  eligible_from: string | null;
+  contract_id: string | null;
+};
 
 export function toView(
   application: Application,
   customer: Customer | undefined,
-  minAge: number
+  minAge: number,
+  contractId: string | null
 ): ApplicationView {
   const birthDate = customer ? applicantBirthDate(customer, application.answers) : null;
   const tooYoung = application.reasons.includes('min_age') && birthDate !== null;
-  return { ...application, eligible_from: tooYoung ? eligibleFrom(birthDate, minAge) : null };
+  return {
+    ...application,
+    eligible_from: tooYoung ? eligibleFrom(birthDate, minAge) : null,
+    contract_id: contractId,
+  };
 }
 
-export async function viewsOf(applications: readonly Application[]): Promise<ApplicationView[]> {
-  const [customers, { questions }] = await Promise.all([loadCustomers(), loadQuestions()]);
+export async function viewsOf(
+  db: PrismaClient,
+  applications: readonly Application[]
+): Promise<ApplicationView[]> {
+  const [customers, { questions }, contracts] = await Promise.all([
+    loadCustomers(),
+    loadQuestions(),
+    db.contract.findMany({
+      where: { application_id: { in: applications.map((application) => application.id) } },
+      select: { id: true, application_id: true },
+    }),
+  ]);
   const minAge = minimumAge(questions);
+  const contractIds = new Map(contracts.map((c) => [c.application_id, c.id]));
+
   return applications.map((application) =>
     toView(
       application,
       customers.find((customer) => customer.id === application.customer_id),
-      minAge
+      minAge,
+      contractIds.get(application.id) ?? null
     )
   );
 }
@@ -308,7 +332,7 @@ export async function submitApplication(
 
   const application = toApplication(row);
   const minAge = minimumAge(prepared.questionBank);
-  return { ok: true, application: toView(application, request.customer, minAge) };
+  return { ok: true, application: toView(application, request.customer, minAge, null) };
 }
 
 // ---------------------------------------------------------------------------

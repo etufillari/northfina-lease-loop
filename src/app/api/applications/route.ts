@@ -42,5 +42,5 @@ export const GET = handleRoute(async (request) => {
 
   const searchParams = new URL(request.url).searchParams;
   const { decision } = querySchema.parse(Object.fromEntries(searchParams));
-  return ok(await viewsOf(await listApplications(db, { decision, customerId })));
+  return ok(await viewsOf(db, await listApplications(db, { decision, customerId })));
 });

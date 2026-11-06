@@ -27,7 +27,7 @@ export const POST = handleRoute(
       return fail(409, 'APPLICATION_NOT_IN_REVIEW', 'This application is not waiting for review');
     }
 
-    const [view] = await viewsOf([result.application]);
+    const [view] = await viewsOf(db, [result.application]);
     return ok(view);
   }
 );

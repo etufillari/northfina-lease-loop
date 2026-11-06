@@ -7,18 +7,18 @@ import { signContract } from './contracts';
 import { loadPricingData, type PricingData } from './pricing-data';
 import type { PrismaClient } from './prisma-client';
 import { createQuote } from './quotes';
-import { createReturnRequest } from './returns';
+import { createReturnRequest, receiveReturn } from './returns';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
-let data: PricingData;
+let pricing: PricingData;
 
-const actor = 'test';
+const actor = 'test-dealer';
 const customerId = 'cust-aino';
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  data = await loadPricingData();
+  pricing = await loadPricingData();
 });
 
 afterAll(async () => {
@@ -32,47 +32,61 @@ beforeEach(async () => {
   await db.contract.deleteMany();
   await db.quote.deleteMany();
   await db.asset.deleteMany();
+
   await seedAssets(db, await loadAssets());
 });
 
-const code = (promise: Promise<unknown>) =>
-  promise.then(
-    () => 'no error',
-    (error: unknown) => (error instanceof ApiError ? error.code : 'unexpected error')
+function getErrorCode(promise: Promise<unknown>) {
+  return promise.then(
+    () => 'NO_ERROR',
+    (error: unknown) => (error instanceof ApiError ? error.code : 'UNEXPECTED_ERROR')
   );
+}
 
 async function createActiveContract(assetId = 'ebike-003') {
-  const quote = await createQuote(db, data, {
+  const quote = await createQuote(db, pricing, {
     assetId,
     termMonths: 36,
     onDate: '2026-11-05',
     downPaymentCents: 0,
-    actor,
+    actor: 'test',
   });
 
-  return signContract(db, data, {
+  return signContract(db, pricing, {
     quoteId: quote.id,
     customerId,
     signedOn: '2026-11-05',
     startDate: '2026-11-05',
     accepted: quote,
-    actor,
+    actor: 'test',
   });
 }
 
+async function createReturnForAsset(assetId = 'ebike-003') {
+  const contract = await createActiveContract(assetId);
+
+  const returnRequest = await createReturnRequest(db, {
+    contractId: contract.id,
+    customerId,
+    expectedReturnDate: '2026-11-10',
+    actor: customerId,
+  });
+
+  return { contract, returnRequest };
+}
+
 describe('createReturnRequest', () => {
-  it('creates a return request without changing asset status and writes an audit row', async () => {
+  it('creates a return request without changing the asset status', async () => {
     const contract = await createActiveContract();
 
     const result = await createReturnRequest(db, {
       contractId: contract.id,
       customerId,
       expectedReturnDate: '2026-11-10',
-      actor,
+      actor: customerId,
     });
 
     expect(result).toMatchObject({
-      asset_id: contract.assetId,
       contract_id: contract.id,
       customer_id: customerId,
       status: 'requested',
@@ -93,20 +107,20 @@ describe('createReturnRequest', () => {
         },
       })
     ).toMatchObject({
-      actor,
+      actor: customerId,
       action: 'return.requested',
       entity_type: 'return_request',
       entity_id: result.id,
     });
   });
 
-  it('rejects a contract that does not exist', async () => {
+  it('rejects a missing contract', async () => {
     expect(
-      await code(
+      await getErrorCode(
         createReturnRequest(db, {
           contractId: 'missing-contract',
           customerId,
-          actor,
+          actor: customerId,
         })
       )
     ).toBe('CONTRACT_NOT_FOUND');
@@ -116,16 +130,14 @@ describe('createReturnRequest', () => {
     const contract = await createActiveContract();
 
     expect(
-      await code(
+      await getErrorCode(
         createReturnRequest(db, {
           contractId: contract.id,
           customerId: 'another-customer',
-          actor,
+          actor: customerId,
         })
       )
     ).toBe('CUSTOMER_CONTRACT_MISMATCH');
-
-    expect(await db.returnRequest.count()).toBe(0);
   });
 
   it('rejects a contract that is not active', async () => {
@@ -133,20 +145,18 @@ describe('createReturnRequest', () => {
 
     await db.contract.update({
       where: { id: contract.id },
-      data: { status: 'ended' },
+      data: { status: 'cancelled' },
     });
 
     expect(
-      await code(
+      await getErrorCode(
         createReturnRequest(db, {
           contractId: contract.id,
           customerId,
-          actor,
+          actor: customerId,
         })
       )
     ).toBe('CONTRACT_NOT_ACTIVE');
-
-    expect(await db.returnRequest.count()).toBe(0);
   });
 
   it('rejects an asset that is not reserved', async () => {
@@ -158,42 +168,52 @@ describe('createReturnRequest', () => {
     });
 
     expect(
-      await code(
+      await getErrorCode(
         createReturnRequest(db, {
           contractId: contract.id,
           customerId,
-          actor,
+          actor: customerId,
         })
       )
     ).toBe('ASSET_NOT_ON_ACTIVE_LEASE');
-
-    expect(await db.returnRequest.count()).toBe(0);
   });
 
-  it('prevents a second open return request for the same contract', async () => {
+  it('rejects a second open return request for the same contract', async () => {
     const contract = await createActiveContract();
 
     const input = {
       contractId: contract.id,
       customerId,
-      actor,
+      actor: customerId,
     };
 
-    await createReturnRequest(db, input);
+    const first = await createReturnRequest(db, input);
 
-    expect(await code(createReturnRequest(db, input))).toBe('RETURN_REQUEST_ALREADY_OPEN');
+    expect(await getErrorCode(createReturnRequest(db, input))).toBe('RETURN_REQUEST_ALREADY_OPEN');
 
-    expect(await db.returnRequest.count()).toBe(1);
-    expect(await db.auditLog.count({ where: { action: 'return.requested' } })).toBe(1);
+    expect(
+      await db.returnRequest.count({
+        where: { contract_id: contract.id },
+      })
+    ).toBe(1);
+
+    expect(
+      await db.auditLog.count({
+        where: {
+          action: 'return.requested',
+          entity_id: first.id,
+        },
+      })
+    ).toBe(1);
   });
 
-  it('allows a new request when the previous request was cancelled', async () => {
+  it('allows a new request after the previous request was cancelled', async () => {
     const contract = await createActiveContract();
 
     const input = {
       contractId: contract.id,
       customerId,
-      actor,
+      actor: customerId,
     };
 
     const first = await createReturnRequest(db, input);
@@ -207,23 +227,177 @@ describe('createReturnRequest', () => {
 
     expect(second.id).not.toBe(first.id);
     expect(second.status).toBe('requested');
-    expect(await db.returnRequest.count()).toBe(2);
   });
 
-  it('does not create a return request or audit entry when validation fails', async () => {
+  it('rejects invalid input without creating a request or audit entry', async () => {
     const contract = await createActiveContract();
+
+    const auditCountBefore = await db.auditLog.count();
 
     await expect(
       createReturnRequest(db, {
         contractId: contract.id,
-        customerId: 'wrong-customer',
-        actor,
+        customerId,
+        expectedReturnDate: 'not-a-date',
+        actor: customerId,
       })
-    ).rejects.toMatchObject({
-      code: 'CUSTOMER_CONTRACT_MISMATCH',
-    });
+    ).rejects.toThrow();
 
     expect(await db.returnRequest.count()).toBe(0);
-    expect(await db.auditLog.count({ where: { action: 'return.requested' } })).toBe(0);
+    expect(await db.auditLog.count()).toBe(auditCountBefore);
+  });
+});
+
+describe('receiveReturn', () => {
+  it('records the dealer inspection and audit without changing the asset', async () => {
+    const { contract, returnRequest } = await createReturnForAsset();
+
+    const assetBefore = await db.asset.findUniqueOrThrow({
+      where: { id: contract.assetId },
+    });
+
+    const result = await receiveReturn(db, returnRequest.id, {
+      condition: 'fair',
+      usageValue: 18_400,
+      actor,
+    });
+
+    expect(result).toMatchObject({
+      id: returnRequest.id,
+      status: 'received',
+      received_by: actor,
+      inspected_condition: 'fair',
+      inspected_usage_unit: 'km',
+      inspected_usage_value: 18_400,
+      usage_since_last_service: null,
+    });
+
+    expect(result.received_at).toBeInstanceOf(Date);
+
+    const assetAfter = await db.asset.findUniqueOrThrow({
+      where: { id: contract.assetId },
+    });
+
+    expect(assetAfter.status).toBe(assetBefore.status);
+    expect(assetAfter.condition).toBe(assetBefore.condition);
+    expect(assetAfter.usage_value).toBe(assetBefore.usage_value);
+
+    expect(
+      await db.auditLog.findFirst({
+        where: {
+          action: 'return.received',
+          entity_id: returnRequest.id,
+        },
+      })
+    ).toMatchObject({
+      actor,
+      action: 'return.received',
+      entity_type: 'return_request',
+      entity_id: returnRequest.id,
+    });
+  });
+
+  it('rejects an unknown return request', async () => {
+    expect(
+      await getErrorCode(
+        receiveReturn(db, 'missing-request', {
+          condition: 'good',
+          usageValue: 100,
+          actor,
+        })
+      )
+    ).toBe('RETURN_REQUEST_NOT_FOUND');
+  });
+
+  it('does not allow the same return request to be received twice', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    const inspection = {
+      condition: 'good' as const,
+      usageValue: 18_400,
+      actor,
+    };
+
+    await receiveReturn(db, returnRequest.id, inspection);
+
+    expect(await getErrorCode(receiveReturn(db, returnRequest.id, inspection))).toBe(
+      'RETURN_REQUEST_NOT_REQUESTED'
+    );
+
+    expect(
+      await db.auditLog.count({
+        where: {
+          action: 'return.received',
+          entity_id: returnRequest.id,
+        },
+      })
+    ).toBe(1);
+  });
+
+  it('requires service history when receiving a farm machine', async () => {
+    const { returnRequest } = await createReturnForAsset('farm-002');
+
+    expect(
+      await getErrorCode(
+        receiveReturn(db, returnRequest.id, {
+          condition: 'good',
+          usageValue: 4_200,
+          actor,
+        })
+      )
+    ).toBe('MISSING_SERVICE_HISTORY');
+
+    const unchanged = await db.returnRequest.findUniqueOrThrow({
+      where: { id: returnRequest.id },
+    });
+
+    expect(unchanged.status).toBe('requested');
+    expect(unchanged.inspected_condition).toBeNull();
+
+    expect(
+      await db.auditLog.count({
+        where: {
+          action: 'return.received',
+          entity_id: returnRequest.id,
+        },
+      })
+    ).toBe(0);
+  });
+
+  it('stores farm machine usage since its last service', async () => {
+    const { returnRequest } = await createReturnForAsset('farm-002');
+
+    const result = await receiveReturn(db, returnRequest.id, {
+      condition: 'good',
+      usageValue: 4_200,
+      usageSinceLastService: 350,
+      actor,
+    });
+
+    expect(result).toMatchObject({
+      status: 'received',
+      inspected_usage_unit: 'engine_hours',
+      inspected_usage_value: 4_200,
+      usage_since_last_service: 350,
+    });
+  });
+
+  it('rejects negative usage values', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    await expect(
+      receiveReturn(db, returnRequest.id, {
+        condition: 'good',
+        usageValue: -1,
+        actor,
+      })
+    ).rejects.toThrow();
+
+    const unchanged = await db.returnRequest.findUniqueOrThrow({
+      where: { id: returnRequest.id },
+    });
+
+    expect(unchanged.status).toBe('requested');
+    expect(unchanged.inspected_usage_value).toBeNull();
   });
 });

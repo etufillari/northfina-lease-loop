@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { assetConditionSchema } from '@/data/schemas';
 import { ApiError } from './api-response';
 import { withAudit } from './audit';
 import { refusal } from './pricing-data';
@@ -13,6 +14,15 @@ const createReturnRequestSchema = z.strictObject({
 });
 
 export type CreateReturnRequestInput = z.infer<typeof createReturnRequestSchema>;
+
+const receiveReturnSchema = z.strictObject({
+  condition: assetConditionSchema,
+  usageValue: z.number().int().nonnegative(),
+  usageSinceLastService: z.number().int().nonnegative().optional(),
+  actor: z.string().trim().min(1).max(100),
+});
+
+export type ReceiveReturnInput = z.infer<typeof receiveReturnSchema>;
 
 const OPEN_STATUSES = ['requested', 'received', 'planned', 'approved'];
 
@@ -93,6 +103,93 @@ export async function createReturnRequest(db: PrismaClient, input: CreateReturnR
           status: 'requested',
           expected_return_date: request.expectedReturnDate,
         },
+      });
+    }
+  );
+}
+
+/**
+ * Records the dealer's physical inspection.
+ * The asset itself is deliberately not updated here.
+ */
+export async function receiveReturn(
+  db: PrismaClient,
+  returnRequestId: string,
+  input: ReceiveReturnInput
+) {
+  const inspection = receiveReturnSchema.parse(input);
+
+  const existing = await db.returnRequest.findUnique({
+    where: { id: returnRequestId },
+    include: { asset: true },
+  });
+
+  if (!existing) {
+    throw new ApiError(404, 'RETURN_REQUEST_NOT_FOUND', 'This return request does not exist.');
+  }
+
+  if (existing.status !== 'requested') {
+    throw new ApiError(
+      409,
+      'RETURN_REQUEST_NOT_REQUESTED',
+      'Only a requested return can be received and inspected.'
+    );
+  }
+
+  if (
+    existing.asset.category === 'farm_machine' &&
+    inspection.usageSinceLastService === undefined
+  ) {
+    throw new ApiError(
+      422,
+      'MISSING_SERVICE_HISTORY',
+      'Farm machine inspections must include usage since the last service.'
+    );
+  }
+
+  return withAudit(
+    db,
+    {
+      actor: inspection.actor,
+      action: 'return.received',
+      entityType: 'return_request',
+      entityId: returnRequestId,
+      details: {
+        assetId: existing.asset_id,
+        condition: inspection.condition,
+        usageUnit: existing.asset.usage_unit,
+        usageValue: inspection.usageValue,
+        usageSinceLastService: inspection.usageSinceLastService ?? null,
+      },
+    },
+    async (tx) => {
+      // Conditional transition prevents two dealers receiving the same request.
+      const claimed = await tx.returnRequest.updateMany({
+        where: {
+          id: returnRequestId,
+          status: 'requested',
+        },
+        data: {
+          status: 'received',
+          received_at: new Date(),
+          received_by: inspection.actor,
+          inspected_condition: inspection.condition,
+          inspected_usage_unit: existing.asset.usage_unit,
+          inspected_usage_value: inspection.usageValue,
+          usage_since_last_service: inspection.usageSinceLastService ?? null,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ApiError(
+          409,
+          'RETURN_REQUEST_NOT_REQUESTED',
+          'Only a requested return can be received and inspected.'
+        );
+      }
+
+      return tx.returnRequest.findUniqueOrThrow({
+        where: { id: returnRequestId },
       });
     }
   );

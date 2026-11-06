@@ -247,8 +247,8 @@ export function ApplicationForm({
     // Cancel any active evaluation so in-flight requests cannot race with signing
     activeAbortControllerRef.current?.abort();
     activeAbortControllerRef.current = null;
+    const priorSequence = latestSequenceRef.current;
     latestSequenceRef.current++;
-
     const actor = getSigningActor(answers);
 
     try {
@@ -275,6 +275,7 @@ export function ApplicationForm({
     } catch {
       isSigningRef.current = false;
       setIsSigning(false);
+      latestSequenceRef.current = priorSequence;
       setSignError(t('apply.signError'));
     }
   }

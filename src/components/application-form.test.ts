@@ -138,6 +138,53 @@ describe('canSignApplication', () => {
     ).toBe(false);
   });
 
+  it('permits retry when signing fails and latestSequence is rolled back to evaluatedSequence', () => {
+    let latestSequence = 2;
+    const evaluatedSequence = 2;
+
+    // Initially can sign
+    expect(
+      canSignApplication({
+        isSigning: false,
+        isEvaluating: false,
+        signTarget: sampleSignTarget,
+        deal: sampleDeal,
+        state: approvedState,
+        latestSequence,
+        evaluatedSequence,
+      })
+    ).toBe(true);
+
+    // Signing starts: sequence incremented and isSigning true
+    const priorSequence = latestSequence;
+    latestSequence++;
+    expect(
+      canSignApplication({
+        isSigning: true,
+        isEvaluating: false,
+        signTarget: sampleSignTarget,
+        deal: sampleDeal,
+        state: approvedState,
+        latestSequence,
+        evaluatedSequence,
+      })
+    ).toBe(false);
+
+    // Signing fails: roll back sequence and clear isSigning to allow retry
+    latestSequence = priorSequence;
+    expect(
+      canSignApplication({
+        isSigning: false,
+        isEvaluating: false,
+        signTarget: sampleSignTarget,
+        deal: sampleDeal,
+        state: approvedState,
+        latestSequence,
+        evaluatedSequence,
+      })
+    ).toBe(true);
+  });
+
   it('rejects signing when signTarget is missing', () => {
     expect(
       canSignApplication({

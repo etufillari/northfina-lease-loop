@@ -107,9 +107,11 @@ describe('createContract', () => {
     expect(JSON.parse(row.pricing_snapshot_json ?? '')).toMatchObject({
       sources: { priceListVersion: 1, coefficientTableVersion: 1 },
     });
-    expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } })).status).toBe(
-      'reserved'
-    );
+    expect(await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } })).toMatchObject({
+      status: 'reserved',
+      first_leased_on: '2026-11-05',
+      original_list_price_cents: 389_000,
+    });
     expect(await db.assetHistory.findFirstOrThrow()).toMatchObject({
       asset_id: 'ebike-003',
       contract_id: row.id,

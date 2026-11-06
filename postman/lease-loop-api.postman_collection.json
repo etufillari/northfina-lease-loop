@@ -58,6 +58,18 @@
       "value": "2026-11-06"
     },
     {
+      "key": "matchAssetId",
+      "value": "ebike-007"
+    },
+    {
+      "key": "matchAvailableOn",
+      "value": "2026-11-06"
+    },
+    {
+      "key": "matchRequestId",
+      "value": "wait-13"
+    },
+    {
       "key": "actor",
       "value": "postman"
     }
@@ -593,6 +605,90 @@
                   "    pm.expect(body.success).to.eql(true);",
                   "    pm.expect(body.data.asset.status).to.eql('available');",
                   "    pm.expect(body.data.asset.condition).to.eql('good');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Second life matchmaking",
+      "description": "Ranks the waiting list for the refurbished ebike-007, then accepts wait-13 and reserves the asset.",
+      "item": [
+        {
+          "name": "Preview matches",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availableOn\": \"{{matchAvailableOn}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{matchAssetId}}/matches/preview"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('match preview is ranked', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.matches.length).to.be.greaterThan(0);",
+                  "    pm.expect(body.data.matches[0].request.id).to.eql('wait-13');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept match",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestId\": \"{{matchRequestId}}\",\n  \"availableOn\": \"{{matchAvailableOn}}\",\n  \"actor\": \"{{actor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/assets/{{matchAssetId}}/matches"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('match reserves the asset', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.asset.status).to.eql('reserved');",
+                  "    pm.expect(body.data.match.requestId).to.eql('wait-13');",
                   "});"
                 ]
               }

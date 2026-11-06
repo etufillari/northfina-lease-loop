@@ -17,6 +17,10 @@ export function toAsset(row: AssetRow): Asset {
     usage: { unit: row.usage_unit, value: row.usage_value },
     previous_lives: row.previous_lives,
     status: row.status,
+    ...(row.first_leased_on === null ? {} : { first_leased_on: row.first_leased_on }),
+    ...(row.original_list_price_cents === null
+      ? {}
+      : { original_list_price_cents: row.original_list_price_cents }),
   });
 }
 
@@ -34,6 +38,8 @@ export function toAssetRowData(asset: Asset) {
     usage_value: asset.usage.value,
     previous_lives: asset.previous_lives,
     status: asset.status,
+    first_leased_on: asset.first_leased_on ?? null,
+    original_list_price_cents: asset.original_list_price_cents ?? null,
   };
 }
 

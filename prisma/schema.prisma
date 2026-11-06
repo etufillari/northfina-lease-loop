@@ -26,12 +26,15 @@ model Asset {
   usage_value    Int
   previous_lives Int
   status         String // available | reserved | returned | sold
+  first_leased_on           String?
+  original_list_price_cents Int?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
   applications Application[]
   contracts    Contract[]
   history      AssetHistory[]
+  second_life_matches SecondLifeMatch[]
 
   @@index([category])
 }
@@ -203,7 +206,7 @@ model AssetHistory {
   id           Int      @id @default(autoincrement())
   asset_id     String
   contract_id  String?
-  event_type   String // lease_started | returned | passed_on | condition_assessed | refurbished | made_available | bought_out
+  event_type   String // lease_started | returned | passed_on | condition_assessed | refurbished | made_available | matched | bought_out
   occurred_on  String
   from_status  String?
   to_status    String?
@@ -219,6 +222,26 @@ model AssetHistory {
 
   @@index([asset_id, occurred_on])
   @@index([contract_id])
+}
+
+// A deterministic waiting-list match reserved for the next lease flow.
+model SecondLifeMatch {
+  id                       String   @id
+  asset_id                 String
+  request_id               String   @unique
+  status                   String   @default("accepted") // accepted
+  matched_on               String
+  actor                    String
+  market_value_cents       Int
+  term_months              Int
+  monthly_net_rent_cents   Int
+  pricing_snapshot_json    String
+  request_snapshot_json    String
+  created_at               DateTime @default(now())
+
+  asset Asset @relation(fields: [asset_id], references: [id], onDelete: Restrict)
+
+  @@index([asset_id, matched_on])
 }
 
 // Who changed what, and when. Written in the same transaction as the change

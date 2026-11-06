@@ -26,7 +26,7 @@ and this file disagree, fix one of them. Smart Problems claimed: **#1 VAT, #2 ea
   date** (`data/vat-rates.json`), so the 1 Jan 2027 change (25.5 % → 26 %) raises the totals
   of later invoices.
 - The UI explains it neutrally: "Your rent is locked at €X. VAT rose from 25.5 % to 26 % on
-  1 Jan 2027 by law: +€Y. Northfina does not keep this."
+  1 Jan 2027 by law: +€Y per month."
 - Catalogue shows net prices with a VAT/net toggle. Once the customer type is known,
   consumers see VAT-inclusive prices by default, businesses net.
 

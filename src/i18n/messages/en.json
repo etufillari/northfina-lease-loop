@@ -153,7 +153,7 @@
   "contract.startDate": "Start date",
   "contract.endsOn": "Term ends",
   "contract.invoices": "Invoices",
-  "contract.vatBanner": "Your rent is locked at {net}. VAT rose from {from} % to {to} % on {date} by law: +{diff} per month. Northfina does not keep this.",
+  "contract.vatBanner": "Your rent is locked at {net}. VAT rose from {from} % to {to} % on {date} by law: +{diff} per month.",
   "invoice.number": "#",
   "invoice.dueDate": "Due date",
   "invoice.period": "Period",

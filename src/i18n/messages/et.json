@@ -134,7 +134,7 @@
   "contract.startDate": "Alguskuupäev",
   "contract.endsOn": "Periood lõpeb",
   "contract.invoices": "Arved",
-  "contract.vatBanner": "Sinu üür on lukustatud: {net}. Käibemaks tõusis {from} %-lt {to} %-le {date} seaduse alusel: +{diff} kuus. Northfina ei jäta seda endale.",
+  "contract.vatBanner": "Sinu üür on lukustatud: {net}. Käibemaks tõusis {from} %-lt {to} %-le {date} seaduse alusel: +{diff} kuus.",
   "invoice.number": "#",
   "invoice.dueDate": "Maksetähtaeg",
   "invoice.period": "Periood",

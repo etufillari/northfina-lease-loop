@@ -134,7 +134,7 @@
   "contract.startDate": "Startdatum",
   "contract.endsOn": "Perioden slutar",
   "contract.invoices": "Fakturor",
-  "contract.vatBanner": "Din hyra är låst på {net}. Momsen höjdes från {from} % till {to} % den {date} enligt lag: +{diff} per månad. Northfina behåller inte detta.",
+  "contract.vatBanner": "Din hyra är låst på {net}. Momsen höjdes från {from} % till {to} % den {date} enligt lag: +{diff} per månad.",
   "invoice.number": "#",
   "invoice.dueDate": "Förfallodag",
   "invoice.period": "Period",

@@ -134,7 +134,7 @@
   "contract.startDate": "Alkamispäivä",
   "contract.endsOn": "Kausi päättyy",
   "contract.invoices": "Laskut",
-  "contract.vatBanner": "Vuokrasi on lukittu: {net}. ALV nousi {from} %:sta {to} %:iin {date} lain nojalla: +{diff} kuukaudessa. Northfina ei pidä tätä itsellään.",
+  "contract.vatBanner": "Vuokrasi on lukittu: {net}. ALV nousi {from} %:sta {to} %:iin {date} lain nojalla: +{diff} kuukaudessa.",
   "invoice.number": "#",
   "invoice.dueDate": "Eräpäivä",
   "invoice.period": "Jakso",

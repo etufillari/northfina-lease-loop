@@ -12,7 +12,7 @@ import { leasePriceFor, type LeasePriceResult } from '../pricing/pricing';
 import { residualValueFor, type ResidualValueResult } from './residual-value';
 import { lifecycleMetadataFor, type LifecyclePricingMetadata } from './used-item-value';
 
-const conditionRank: Record<AssetCondition, number> = {
+export const conditionRank: Record<AssetCondition, number> = {
   poor: 0,
   fair: 1,
   good: 2,

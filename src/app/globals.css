@@ -113,6 +113,10 @@
   }
 }
 
+#end-of-term {
+  scroll-margin-top: 1.5rem;
+}
+
 .brand-hero :focus-visible {
   outline-color: var(--color-ink-950);
 }

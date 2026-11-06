@@ -19,7 +19,13 @@ vi.mock('@/server/lifecycle/end-of-term', async () => {
         buyoutPaidCents: z.number().int().nonnegative(),
       }),
       z.strictObject({ ...base, action: z.literal('returned') }),
-      z.strictObject({ ...base, action: z.literal('passed_on') }),
+      z.strictObject({
+        ...base,
+        action: z.literal('passed_on'),
+        condition: z.string(),
+        usageValue: z.number(),
+        recipient: z.object({ type: z.string() }),
+      }),
     ]),
   };
 });

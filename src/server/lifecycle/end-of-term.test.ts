@@ -7,7 +7,8 @@ import { seedAssets } from '../assets/assets';
 import { createApplication, type ApplicationSubmissionRequest } from '../applications/applications';
 import { createContract } from '../contracts/contracts';
 import { generateInvoices } from '../invoicing/invoices';
-import { completeContract, type EndOfTermRequest } from './end-of-term';
+import { completeContract, endOfTermAvailabilityFor, type EndOfTermRequest } from './end-of-term';
+import { previewPassOn, resolvePassOn } from './pass-on';
 import { seedCustomers } from '../assets/customers';
 import type { PrismaClient } from '../prisma-client';
 
@@ -29,6 +30,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await db.payment.deleteMany();
   await db.invoice.deleteMany();
+  await db.secondLifeMatch.deleteMany();
   await db.assetHistory.deleteMany();
   await db.auditLog.deleteMany();
   await db.contract.deleteMany();
@@ -94,6 +96,17 @@ const returnedRequest: EndOfTermRequest = {
   actor: 'team-test',
 };
 
+function passOnRequest(usageValue: number): Extract<EndOfTermRequest, { action: 'passed_on' }> {
+  return {
+    action: 'passed_on',
+    completedOn: '2029-11-06',
+    actor: 'team-test',
+    condition: 'good',
+    usageValue,
+    recipient: { type: 'named', name: 'Sam Friend', email: 'sam@example.com' },
+  };
+}
+
 describe('completeContract', () => {
   it('completes a return and writes the asset passport and audit entry', async () => {
     const contract = await createActiveContract();
@@ -136,28 +149,114 @@ describe('completeContract', () => {
     });
   });
 
-  it('records pass-on separately while returning the asset to second-life inventory', async () => {
+  it('hands the item to a named person and ends the first lease without a buyout', async () => {
     const contract = await createActiveContract();
     await generateAndSettleRent(contract.id);
+    const before = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+
+    const result = await completeContract(db, contract.id, passOnRequest(before.usage_value + 900));
+
+    expect(result).toMatchObject({
+      ok: true,
+      contract: { action: 'passed_on', buyoutPaidCents: null },
+    });
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    expect(asset).toMatchObject({
+      status: 'reserved',
+      usage_value: before.usage_value + 900,
+      previous_lives: before.previous_lives + 1,
+    });
+    const match = await db.secondLifeMatch.findUniqueOrThrow({
+      where: { from_contract_id: contract.id },
+    });
+    expect(match).toMatchObject({
+      asset_id: 'ebike-003',
+      recipient_name: 'Sam Friend',
+      recipient_email: 'sam@example.com',
+      term_months: 24,
+    });
+    expect(match.market_value_cents).toBeLessThan(before.original_list_price_cents ?? Infinity);
+
+    const history = await db.assetHistory.findFirstOrThrow({ orderBy: { id: 'desc' } });
+    expect(history).toMatchObject({
+      event_type: 'passed_on',
+      from_status: 'reserved',
+      to_status: 'reserved',
+      usage_value: before.usage_value + 900,
+    });
+    expect(history.details_json).not.toContain('sam@example.com');
+    expect(JSON.parse(history.details_json ?? '')).toMatchObject({
+      matchId: match.id,
+      recipientType: 'named',
+      termMonths: 24,
+    });
+  });
+
+  it('offers a waiting-list entry until it is claimed', async () => {
+    const contract = await createActiveContract();
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    const report = { condition: 'good' as const, usageValue: asset.usage_value };
+    const preview = await previewPassOn(db, contract.id, { ...report, handoverOn: '2026-12-01' });
+    if (!preview.ok) throw new Error(`expected options, got ${preview.reason}`);
+    const requestId = preview.waitingList[0]?.request.id;
+    if (!requestId) throw new Error('expected a waiting-list match');
+
+    const details = {
+      ...report,
+      recipient: { type: 'waiting_list' as const, requestId },
+      completedOn: '2026-12-01',
+      actor: 'team-test',
+    };
+    const resolve = () => db.$transaction((tx) => resolvePassOn(tx, asset, details));
+
+    expect(await resolve()).toMatchObject({ ok: true });
+    await db.secondLifeMatch.create({
+      data: {
+        id: 'already-claimed',
+        asset_id: 'ebike-001',
+        request_id: requestId,
+        matched_on: '2026-11-05',
+        actor: 'team-test',
+        market_value_cents: 1,
+        term_months: 24,
+        monthly_net_rent_cents: 1,
+        pricing_snapshot_json: '{}',
+        request_snapshot_json: '{}',
+      },
+    });
+    expect(await resolve()).toEqual({ ok: false, reason: 'recipient_not_eligible' });
+  });
+
+  it('rolls everything back when the handover report fails', async () => {
+    const contract = await createActiveContract();
+    await generateAndSettleRent(contract.id);
+    const asset = await db.asset.update({
+      where: { id: 'ebike-003' },
+      data: { usage_value: 500 },
+    });
+
+    const result = await completeContract(db, contract.id, passOnRequest(asset.usage_value - 1));
+
+    expect(result).toMatchObject({ ok: false, reason: 'usage_below_recorded' });
+    expect(await db.contract.findUniqueOrThrow({ where: { id: contract.id } })).toMatchObject({
+      status: 'active',
+      end_of_term_action: null,
+    });
+    expect(await db.secondLifeMatch.count()).toBe(0);
+    expect(await db.auditLog.count({ where: { action: 'contract.completed' } })).toBe(0);
+  });
+
+  it('refuses a named person below good condition', async () => {
+    const contract = await createActiveContract();
+    await generateAndSettleRent(contract.id);
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
 
     const result = await completeContract(db, contract.id, {
-      action: 'passed_on',
-      completedOn: '2029-11-06',
-      actor: 'team-test',
+      ...passOnRequest(asset.usage_value),
+      condition: 'fair',
     });
 
-    expect(result).toMatchObject({ ok: true, contract: { action: 'passed_on' } });
-    expect(await db.assetHistory.findFirstOrThrow({ orderBy: { id: 'desc' } })).toMatchObject({
-      event_type: 'passed_on',
-      to_status: 'returned',
-    });
-    expect(
-      JSON.parse(
-        (await db.assetHistory.findFirstOrThrow({ orderBy: { id: 'desc' } })).details_json ?? ''
-      )
-    ).toEqual({
-      action: 'passed_on',
-    });
+    expect(result).toEqual({ ok: false, reason: 'recipient_not_eligible' });
   });
 
   it('completes a buyout only for the exact locked amount', async () => {
@@ -230,5 +329,65 @@ describe('completeContract', () => {
       status: 'active',
     });
     expect(await db.auditLog.count({ where: { action: 'contract.completed' } })).toBe(0);
+  });
+});
+
+describe('previewPassOn', () => {
+  it('shows options without changing data, and only for active contracts', async () => {
+    const contract = await createActiveContract();
+    const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+    const input = {
+      condition: 'good' as const,
+      usageValue: asset.usage_value,
+      handoverOn: '2026-12-01',
+    };
+
+    const preview = await previewPassOn(db, contract.id, input);
+
+    expect(preview).toMatchObject({ ok: true, mandatorySteps: [] });
+    expect(await db.secondLifeMatch.count()).toBe(0);
+    expect(await previewPassOn(db, 'missing', input)).toEqual({
+      ok: false,
+      reason: 'contract_not_found',
+    });
+
+    await db.contract.update({ where: { id: contract.id }, data: { status: 'completed' } });
+    expect(await previewPassOn(db, contract.id, input)).toEqual({
+      ok: false,
+      reason: 'contract_not_active',
+      status: 'completed',
+    });
+  });
+});
+
+describe('endOfTermAvailabilityFor', () => {
+  async function availability(asOf: string) {
+    const row = await db.contract.findFirstOrThrow({
+      include: { invoices: { include: { payments: true }, orderBy: { sequence: 'asc' } } },
+    });
+    return endOfTermAvailabilityFor(row, asOf);
+  }
+
+  it('explains each reason a customer cannot choose yet', async () => {
+    const contract = await createActiveContract();
+    expect(await availability('2029-11-05')).toMatchObject({
+      reason: 'invoice_schedule_not_generated',
+    });
+
+    await generateInvoices(db, { contractId: contract.id, actor: 'team-test' }, '2029-11-05');
+    const unpaid = await availability('2029-11-05');
+    expect(unpaid).toMatchObject({ reason: 'rent_balance_outstanding' });
+    expect(unpaid).toHaveProperty('outstandingRentCents', expect.any(Number));
+
+    await db.contract.update({ where: { id: contract.id }, data: { status: 'completed' } });
+    expect(await availability('2029-11-05')).toMatchObject({ reason: 'contract_not_active' });
+  });
+
+  it('is ready once the term has ended and all rent is paid', async () => {
+    const contract = await createActiveContract();
+    await generateAndSettleRent(contract.id);
+
+    expect(await availability('2029-11-05')).toEqual({ status: 'ready' });
+    expect(await availability('2027-01-01')).toMatchObject({ reason: 'term_not_finished' });
   });
 });

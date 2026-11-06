@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { contractNumberFor, statusClasses } from '@/components/contract-status';
+import { EndOfTermChoices } from '@/components/end-of-term-choices';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
@@ -12,19 +14,10 @@ import type {
 type ContractViewProps = {
   locale: Locale;
   view: CustomerContractView;
+  today: string;
 };
 
-const statusClasses = {
-  draft: 'bg-ink-100 text-ink-800 ring-ink-300 dark:bg-ink-800 dark:text-ink-200 dark:ring-ink-600',
-  active:
-    'bg-green-100 text-green-900 ring-green-300 dark:bg-green-950 dark:text-green-200 dark:ring-green-700',
-  completed:
-    'bg-sky-100 text-sky-900 ring-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-700',
-  terminated:
-    'bg-amber-100 text-amber-900 ring-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-700',
-} as const;
-
-export function ContractView({ locale, view }: ContractViewProps) {
+export function ContractView({ locale, view, today }: ContractViewProps) {
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const { contract, asset, customer } = view;
@@ -35,7 +28,7 @@ export function ContractView({ locale, view }: ContractViewProps) {
   const firstInvoiceVatRate =
     firstInvoice?.vatRateBasisPoints ?? Math.round(vatPreview.ratePercent * 100);
   const totalCost = contract.pricingSnapshot.pricing.totalCostWithBuyoutCents;
-  const contractNumber = `LL-${contract.id.slice(0, 8).toUpperCase()}`;
+  const contractNumber = contractNumberFor(contract.id);
   const signedDate = contract.signedOn ?? contract.startsOn;
 
   return (
@@ -209,7 +202,7 @@ export function ContractView({ locale, view }: ContractViewProps) {
 
         <InvoicesSection invoices={view.invoices} locale={locale} t={t} euro={euro} />
 
-        <section aria-labelledby="end-of-term-heading" className="mt-10">
+        <section id="end-of-term" aria-labelledby="end-of-term-heading" className="mt-10">
           <div className="max-w-2xl">
             <p className="text-sm font-medium text-brand-800 dark:text-brand-300">
               {t('contract.endEyebrow')}
@@ -219,30 +212,18 @@ export function ContractView({ locale, view }: ContractViewProps) {
             </h2>
             <p className="mt-2 text-ink-600 dark:text-ink-400">{t('contract.endIntro')}</p>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <ChoiceCard
-              title={t('contract.returnTitle')}
-              body={t('contract.returnBody')}
-              icon="↩"
-            />
-            <ChoiceCard
-              title={t('contract.buyTitle')}
-              body={t('contract.buyBody', { amount: euro(contract.buyoutCents) })}
-              icon="✓"
-            />
-            <ChoiceCard
-              title={t('contract.passOnTitle')}
-              body={t('contract.passOnBody')}
-              icon="→"
-            />
-          </div>
-          {contract.endOfTermAction ? (
-            <p className="mt-4 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200 ring-inset dark:bg-sky-950 dark:text-sky-100 dark:ring-sky-800">
-              {t('contract.selectedEndAction', {
-                action: t(`contract.endAction.${contract.endOfTermAction}`),
-              })}
-            </p>
-          ) : null}
+          <EndOfTermChoices
+            asset={asset}
+            buyoutCents={contract.buyoutCents}
+            contractId={contract.id}
+            customerId={customer.id}
+            endOfTerm={view.endOfTerm}
+            endOfTermAction={contract.endOfTermAction}
+            endsOn={contract.endsOn}
+            locale={locale}
+            passedOnTo={view.passedOnTo}
+            today={today}
+          />
         </section>
 
         <ActivitySection activity={view.activity} locale={locale} t={t} />
@@ -393,18 +374,6 @@ function invoiceStatusFor(invoice: ContractViewInvoice, t: Translate): string {
   return t('contract.invoiceIssued');
 }
 
-function ChoiceCard({ title, body, icon }: { title: string; body: string; icon: string }) {
-  return (
-    <article className="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm dark:border-ink-800 dark:bg-ink-900">
-      <span aria-hidden="true" className="text-2xl text-brand-700 dark:text-brand-400">
-        {icon}
-      </span>
-      <h3 className="mt-4 font-semibold">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-ink-600 dark:text-ink-400">{body}</p>
-    </article>
-  );
-}
-
 function ActivitySection({
   activity,
   locale,
@@ -441,8 +410,8 @@ function ActivitySection({
               <div className="min-w-0">
                 <p className="font-medium">{activityTitle(entry, t)}</p>
                 <p className="mt-1 text-sm text-ink-600 dark:text-ink-400">
-                  {formatIsoDate(entry.occurredOn.slice(0, 10), locale)} ·{' '}
-                  {t('contract.activityBy', { actor: entry.actor })}
+                  {formatIsoDate(entry.occurredOn.slice(0, 10), locale)}
+                  {entry.actor ? ` · ${t('contract.activityBy', { actor: entry.actor })}` : null}
                 </p>
               </div>
             </li>
@@ -456,7 +425,7 @@ function ActivitySection({
 function activityTitle(entry: ContractViewActivity, t: Translate): string {
   if (entry.action === 'contract.signed') return t('contract.activitySigned');
   if (entry.action === 'invoices.generated') return t('contract.activityInvoices');
-  if (entry.action === 'contract.end_of_term_completed') return t('contract.activityCompleted');
+  if (entry.action === 'contract.completed') return t('contract.activityCompleted');
   if (entry.action === 'contract.early_exit_requested') return t('contract.activityEarlyExit');
   if (entry.eventType === 'lease_started') return t('contract.activityStarted');
   if (entry.eventType === 'returned') return t('contract.activityReturned');

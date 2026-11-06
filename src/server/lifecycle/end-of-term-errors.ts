@@ -1,8 +1,11 @@
 import { ApiError } from '../api-response';
 import type { EndOfTermResult } from './end-of-term';
+import type { PassOnPreviewResult } from './pass-on';
 
 /** Maps end-of-term service failures to stable API errors. */
-export function throwEndOfTermError(result: Extract<EndOfTermResult, { ok: false }>): never {
+export function throwEndOfTermError(
+  result: Extract<EndOfTermResult | PassOnPreviewResult, { ok: false }>
+): never {
   switch (result.reason) {
     case 'contract_not_found':
       throw new ApiError(404, 'CONTRACT_NOT_FOUND', 'The contract was not found');
@@ -46,6 +49,20 @@ export function throwEndOfTermError(result: Extract<EndOfTermResult, { ok: false
           status: result.status,
         }
       );
+    case 'condition_above_recorded':
+      throw new ApiError(422, 'CONDITION_ABOVE_RECORDED', 'Condition cannot beat our records', {
+        recorded: result.recorded,
+      });
+    case 'usage_below_recorded':
+      throw new ApiError(422, 'USAGE_BELOW_RECORDED', 'Usage cannot be below our records', {
+        recorded: result.recorded,
+      });
+    case 'recipient_not_eligible':
+      throw new ApiError(422, 'RECIPIENT_NOT_ELIGIBLE', 'This person cannot take the item');
+    case 'asset_not_available':
+    case 'invalid_lifecycle_dates':
+    case 'original_price_not_found':
+      throw new ApiError(422, 'PASS_ON_NOT_PRICEABLE', 'The item cannot be priced for pass-on');
     default: {
       const exhaustive: never = result;
       throw new ApiError(500, 'INTERNAL_ERROR', 'Unable to complete the contract', exhaustive);

@@ -26,7 +26,7 @@ describe('endOfTermFor', () => {
     expect(endOfTermFor({ ...base, action: 'passed_on' })).toMatchObject({
       ok: true,
       action: 'passed_on',
-      assetStatus: 'returned',
+      assetStatus: 'reserved',
       historyEvent: 'passed_on',
     });
   });

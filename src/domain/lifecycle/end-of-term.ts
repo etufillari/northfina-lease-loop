@@ -34,7 +34,7 @@ export type EndOfTermDecision =
       ok: true;
       action: EndOfTermAction;
       contractStatus: 'completed';
-      assetStatus: 'sold' | 'returned';
+      assetStatus: 'sold' | 'returned' | 'reserved';
       historyEvent: 'bought_out' | 'returned' | 'passed_on';
       buyoutPaidCents: number | null;
     }
@@ -106,11 +106,12 @@ export function endOfTermFor(input: EndOfTermInput): EndOfTermDecision {
 
   if (input.buyoutPaidCents !== undefined) return { ok: false, reason: 'buyout_not_allowed' };
 
+  // A passed-on item goes straight to the next person, so it never comes back to stock.
   return {
     ok: true,
     action,
     contractStatus: 'completed',
-    assetStatus: 'returned',
+    assetStatus: action === 'passed_on' ? 'reserved' : 'returned',
     historyEvent: action === 'passed_on' ? 'passed_on' : 'returned',
     buyoutPaidCents: null,
   };

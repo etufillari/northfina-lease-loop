@@ -4,7 +4,6 @@ import type { Metadata } from 'next';
 import { Zalando_Sans_SemiExpanded } from 'next/font/google';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CategoryNavigation } from '@/components/category-navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { SiteFooter } from '@/components/site-footer';
 import { getT } from '@/i18n/get-t';
@@ -53,7 +52,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               </span>
             </Link>
             <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end lg:shrink-0">
-              <CategoryNavigation locale={locale} label={t('nav.categories')} t={t} />
+              <Link
+                href={`/${locale}/leases`}
+                className="rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-950 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-white"
+              >
+                {t('nav.myLeases')}
+              </Link>
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>
           </div>

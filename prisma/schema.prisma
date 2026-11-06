@@ -237,6 +237,9 @@ model SecondLifeMatch {
   monthly_net_rent_cents   Int
   pricing_snapshot_json    String
   request_snapshot_json    String
+  from_contract_id         String?  @unique // the lease this item was passed on from
+  recipient_name           String? // only when the customer named the next person
+  recipient_email          String?
   created_at               DateTime @default(now())
 
   asset Asset @relation(fields: [asset_id], references: [id], onDelete: Restrict)

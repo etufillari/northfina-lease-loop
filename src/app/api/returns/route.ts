@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createReturnRequest } from '@/server/returns';
+import { listReturnRequests } from '@/server/return-queries';
 import { db } from '@/server/db';
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 
@@ -19,4 +20,10 @@ export const POST = handleRoute(async (request) => {
     returnRequest: result,
     assetStatusChanged: false,
   });
+});
+
+export const GET = handleRoute(async (request) => {
+  const status = new URL(request.url).searchParams.get('status') ?? undefined;
+
+  return ok({ returnRequests: await listReturnRequests(db, { status }) });
 });

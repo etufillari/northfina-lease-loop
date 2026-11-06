@@ -101,7 +101,11 @@ describe('signLease', () => {
     });
     if (!result.ok) return;
 
-    expect(await getContract(db, result.id)).toEqual({ id: result.id, contract: result.contract });
+    expect(await getContract(db, result.id)).toEqual({
+      id: result.id,
+      contract: result.contract,
+      awaitingSignature: null,
+    });
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     expect(asset.status).toBe('reserved');
   });
@@ -199,13 +203,6 @@ describe('signLease and the application', () => {
         answers: { ...answers, q_farm_registry: 'FR-1' },
       })
     ).toEqual({ ok: false, reason: 'application_needs_review' });
-  });
-
-  it('refuses an applicant who may not sign for their company (card 6)', async () => {
-    expect(await quoteAndSign(norvi)).toEqual({
-      ok: false,
-      reason: 'signatory_must_sign',
-    });
   });
 
   it('names a new applicant (not a data-pack persona) by their email', async () => {

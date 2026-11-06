@@ -34,6 +34,8 @@ export interface EndLeaseInput {
 /** Every reason `endLease` refuses; `POST /api/contracts/:id/end` answers each in upper case. */
 export type EndLeaseRefusal =
   | 'contract_not_found'
+  /** Still waiting for the person who must sign (D-050). */
+  | 'contract_not_active'
   | 'already_ended'
   | 'unknown_customer'
   | 'asset_not_leased'
@@ -53,6 +55,7 @@ export async function endLease(
 ): Promise<EndLeaseResult> {
   const found = await getContract(db, input.contractId);
   if (!found) return { ok: false, reason: 'contract_not_found' };
+  if (found.awaitingSignature) return { ok: false, reason: 'contract_not_active' };
   const { contract } = found;
   if (await db.contractEnding.findUnique({ where: { contract_id: input.contractId } })) {
     return { ok: false, reason: 'already_ended' };

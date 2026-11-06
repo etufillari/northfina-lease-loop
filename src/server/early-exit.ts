@@ -75,6 +75,8 @@ export function earlyExitContext(
 /** Every reason `endLeaseEarly` refuses; `POST /api/contracts/:id/end-early` answers each. */
 export type EndEarlyRefusal =
   | 'contract_not_found'
+  /** Still waiting for the person who must sign (D-050). */
+  | 'contract_not_active'
   | 'already_ended'
   | 'asset_not_leased'
   | Extract<ExitContextResult, { ok: false }>['reason']
@@ -94,6 +96,7 @@ export async function endLeaseEarly(
 ): Promise<EndLeaseResult<EndEarlyRefusal>> {
   const found = await getContract(db, input.contractId);
   if (!found) return { ok: false, reason: 'contract_not_found' };
+  if (found.awaitingSignature) return { ok: false, reason: 'contract_not_active' };
   const { contract } = found;
   if (await db.contractEnding.findUnique({ where: { contract_id: input.contractId } })) {
     return { ok: false, reason: 'already_ended' };

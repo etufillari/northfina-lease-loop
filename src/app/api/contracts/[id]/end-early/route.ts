@@ -27,6 +27,7 @@ const bodySchema = z.discriminatedUnion('kind', [
 // Every refusal has a status here (the compiler checks), and a message in the UI (D-038).
 const statusFor = {
   contract_not_found: 404,
+  contract_not_active: 409,
   already_ended: 409,
   asset_not_leased: 409,
   not_started: 409,

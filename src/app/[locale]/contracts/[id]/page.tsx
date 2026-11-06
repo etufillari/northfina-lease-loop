@@ -1,20 +1,21 @@
-// A signed contract: the locked price, where it came from, and every invoice.
+// A contract: the locked price, where it came from, and every invoice. One still waiting for the
+// person who must sign shows who, since when and what happens next instead (D-053).
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { AwaitingSignaturePanel } from '@/components/awaiting-signature-panel';
 import { EarlyExitPanel } from '@/components/early-exit-panel';
 import { EndOfTermSection } from '@/components/end-of-term-section';
 import { LeaseReplay } from '@/components/lease-replay';
 import { loadResidualCurves, loadVatRates } from '@/data/load';
 import { assetConditionSchema, usageUnitSchema } from '@/data/schemas';
 import { exitMonthOn } from '@/domain/early-exit';
-import { billedBefore, invoiceSchedule } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
 import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { getContractEnding } from '@/server/contract-endings';
-import { getContract } from '@/server/contracts';
+import { getContract, issuedInvoices } from '@/server/contracts';
 import { db } from '@/server/db';
 import { earlyExitContext } from '@/server/early-exit';
 import { ageClockFor } from '@/server/item-age';
@@ -37,7 +38,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
 
   const found = await getContract(db, Number(id));
   if (!found) notFound();
-  const { contract } = found;
+  const { contract, awaitingSignature: awaiting } = found;
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const date = (iso: string) => formatIsoDate(iso, locale);
@@ -56,15 +57,12 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
     ? null
     : await secondLifeItemFor(db, secondLife.priceLists, contract.assetId);
   const customer = data.customers.find((c) => c.id === contract.customerId);
-  const fullSchedule = invoiceSchedule(contract, vatRates);
-  // After an ending, only the invoices issued before it took effect (D-033).
-  const schedule = fullSchedule.ok
-    ? { ok: true as const, ...billedBefore(fullSchedule, ending?.effectiveDate ?? null) }
-    : fullSchedule;
+  // None while it waits for a signature (D-053); after an ending, only those issued before (D-033).
+  const schedule = issuedInvoices(found, ending, vatRates);
   const today = await asOfDate();
   // Leaving early is offered until the lease ends, unless it has already been ended (D-033).
   const exitPriced =
-    assetRow && clock && !ending
+    assetRow && clock && !ending && !awaiting
       ? earlyExitContext(
           { vatRates, curves, coefficientTable: data.coefficientTable },
           contract,
@@ -76,7 +74,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const exitMonth = exitMonthOn(contract, today);
   const canLeaveEarly = exitContext !== null && (exitMonth.ok || exitMonth.reason !== 'term_over');
   // The headline: the next invoice still to come, or (once ended or all billed) the total.
-  const next = schedule.ok ? schedule.invoices.find((i) => i.invoiceDate >= today) : undefined;
+  const next = schedule?.ok ? schedule.invoices.find((i) => i.invoiceDate >= today) : undefined;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
@@ -88,21 +86,34 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           {t('contract.title', { id })}
         </h1>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${ending ? 'text-muted ring-line' : 'bg-accent/10 text-accent-text ring-accent/40'}`}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${awaiting ? 'bg-warn-bg text-warn-fg ring-warn-fg/40' : ending ? 'text-muted ring-line' : 'bg-accent/10 text-accent-text ring-accent/40'}`}
         >
           <span
             aria-hidden="true"
-            className={`size-1.5 rounded-full ${ending ? 'bg-muted' : 'bg-accent'}`}
+            className={`size-1.5 rounded-full ${awaiting ? 'bg-warn-fg' : ending ? 'bg-muted' : 'bg-accent'}`}
           />
-          {t(ending ? 'contract.ended' : 'contract.active')}
+          {t(awaiting ? 'contract.awaitingBadge' : ending ? 'contract.ended' : 'contract.active')}
         </span>
       </div>
       <p className="mt-2 text-muted">
-        {t('contract.signedBy', {
-          customer: customer?.name ?? contract.customerId,
-          date: date(contract.signDate),
-        })}
+        {awaiting
+          ? t('contract.sentBy', { customer: customer?.name ?? contract.customerId })
+          : t('contract.signedBy', {
+              customer: customer?.name ?? contract.customerId,
+              date: date(contract.signDate),
+            })}
       </p>
+
+      {awaiting ? (
+        <AwaitingSignaturePanel
+          locale={locale}
+          contractId={found.id}
+          awaiting={awaiting}
+          customer={customer?.name ?? contract.customerId}
+          termMonths={contract.termMonths}
+          today={today}
+        />
+      ) : null}
 
       <section
         aria-labelledby="locked"
@@ -114,13 +125,13 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
               {t('contract.locked')}
             </h2>
             <p className="mt-1 text-sm text-stage-muted">
-              {t('contract.lockedNote', {
+              {t(awaiting ? 'contract.lockedNoteSent' : 'contract.lockedNote', {
                 date: date(contract.quoteDate),
                 version: contract.priceListVersion,
               })}
             </p>
           </div>
-          {schedule.ok ? (
+          {schedule?.ok ? (
             <div className="text-left sm:text-right">
               <p className="text-xs font-semibold tracking-[0.08em] text-stage-muted uppercase">
                 {t(next && !ending ? 'lease.monthly' : 'contract.paidInTotal')}
@@ -152,7 +163,8 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         </dl>
       </section>
 
-      {schedule.ok ? (
+      {/* Nothing to replay before the lease is active (D-053). */}
+      {schedule?.ok ? (
         <section aria-labelledby="replay" className="mt-10">
           <h2 id="replay" className="font-display text-lg font-bold tracking-tight uppercase">
             {t('replay.title')}
@@ -172,152 +184,164 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         </section>
       ) : null}
 
-      <section aria-labelledby="invoices" className="mt-10">
-        <h2 id="invoices" className="font-display text-lg font-bold tracking-tight uppercase">
-          {t('contract.invoices')}
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">{t('contract.billingRule')}</p>
-        {schedule.ok && ending && schedule.cancelledCount > 0 ? (
-          <p className="mt-2 max-w-2xl text-sm font-semibold">
-            {t('contract.invoicesCancelled', {
-              count: String(schedule.cancelledCount),
-              date: date(ending.effectiveDate),
-            })}
-          </p>
-        ) : null}
-        {schedule.ok ? (
-          // A scroll box, so a 48-month schedule doesn't push the endings off the page; the
-          // header stays put while the rows scroll.
-          <div className="panel scrollbar-thin mt-4 max-h-[32rem] overflow-auto overscroll-contain">
-            <table className="w-full text-sm tabular-nums">
-              <thead className="sticky top-0 z-10 bg-surface text-left text-xs tracking-wide text-muted uppercase">
-                <tr className="border-b border-line">
-                  <th className="px-4 py-3 font-semibold">{t('contract.number')}</th>
-                  <th className="px-4 py-3 font-semibold">{t('contract.dueDate')}</th>
-                  <th className="px-4 py-3 font-semibold">{t('contract.period')}</th>
-                  <th className="px-4 py-3 text-right font-semibold">{t('contract.net')}</th>
-                  <th className="px-4 py-3 text-right font-semibold">{t('contract.vatRate')}</th>
-                  <th className="px-4 py-3 text-right font-semibold">{t('contract.vat')}</th>
-                  <th className="px-4 py-3 text-right font-semibold">{t('contract.gross')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schedule.downPayment ? (
-                  // Invoice 0: the down payment is part of the total cost, so it is billed too.
-                  <InvoiceRows
-                    vatNote={null}
-                    cells={[
-                      String(schedule.downPayment.number),
-                      date(schedule.downPayment.invoiceDate),
-                      t('contract.downPaymentInvoice'),
-                      euro(schedule.downPayment.netCents),
-                      formatNumber(schedule.downPayment.vatRatePercent, locale),
-                      euro(schedule.downPayment.vatCents),
-                      euro(schedule.downPayment.grossCents),
-                    ]}
-                  />
-                ) : null}
-                {schedule.invoices.map((invoice, i) => {
-                  const previous = schedule.invoices[i - 1];
-                  const vatChanged =
-                    previous !== undefined && previous.vatRatePercent !== invoice.vatRatePercent;
-                  return (
+      {/* A contract waiting for its signature has no invoices yet (D-053). */}
+      {schedule ? (
+        <section aria-labelledby="invoices" className="mt-10">
+          <h2 id="invoices" className="font-display text-lg font-bold tracking-tight uppercase">
+            {t('contract.invoices')}
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">{t('contract.billingRule')}</p>
+          {schedule.ok && ending && schedule.cancelledCount > 0 ? (
+            <p className="mt-2 max-w-2xl text-sm font-semibold">
+              {t('contract.invoicesCancelled', {
+                count: String(schedule.cancelledCount),
+                date: date(ending.effectiveDate),
+              })}
+            </p>
+          ) : null}
+          {schedule.ok ? (
+            // A scroll box, so a 48-month schedule doesn't push the endings off the page; the
+            // header stays put while the rows scroll.
+            <div className="panel scrollbar-thin mt-4 max-h-[32rem] overflow-auto overscroll-contain">
+              <table className="w-full text-sm tabular-nums">
+                <thead className="sticky top-0 z-10 bg-surface text-left text-xs tracking-wide text-muted uppercase">
+                  <tr className="border-b border-line">
+                    <th className="px-4 py-3 font-semibold">{t('contract.number')}</th>
+                    <th className="px-4 py-3 font-semibold">{t('contract.dueDate')}</th>
+                    <th className="px-4 py-3 font-semibold">{t('contract.period')}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{t('contract.net')}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{t('contract.vatRate')}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{t('contract.vat')}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{t('contract.gross')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedule.downPayment ? (
+                    // Invoice 0: the down payment is part of the total cost, so it is billed too.
                     <InvoiceRows
-                      key={invoice.number}
-                      vatNote={
-                        vatChanged
-                          ? t('contract.vatChanged', {
-                              date: date(invoice.invoiceDate),
-                              rate: formatNumber(invoice.vatRatePercent, locale),
-                            })
-                          : null
-                      }
+                      vatNote={null}
                       cells={[
-                        String(invoice.number),
-                        date(invoice.invoiceDate),
-                        `${date(invoice.periodStart)} – ${date(invoice.periodEnd)}`,
-                        euro(invoice.netCents),
-                        formatNumber(invoice.vatRatePercent, locale),
-                        euro(invoice.vatCents),
-                        euro(invoice.grossCents),
+                        String(schedule.downPayment.number),
+                        date(schedule.downPayment.invoiceDate),
+                        t('contract.downPaymentInvoice'),
+                        euro(schedule.downPayment.netCents),
+                        formatNumber(schedule.downPayment.vatRatePercent, locale),
+                        euro(schedule.downPayment.vatCents),
+                        euro(schedule.downPayment.grossCents),
                       ]}
                     />
-                  );
-                })}
-              </tbody>
-              <tfoot className="sticky bottom-0 font-semibold">
-                <tr className="border-t-2 border-line bg-surface-2">
-                  <td className="px-4 py-3" colSpan={3}>
-                    {t('contract.total')}
-                  </td>
-                  <td className="px-4 py-3 text-right">{euro(schedule.totals.netCents)}</td>
-                  <td />
-                  <td className="px-4 py-3 text-right">{euro(schedule.totals.vatCents)}</td>
-                  <td className="px-4 py-3 text-right">{euro(schedule.totals.grossCents)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        ) : null}
-      </section>
+                  ) : null}
+                  {schedule.invoices.map((invoice, i) => {
+                    const previous = schedule.invoices[i - 1];
+                    const vatChanged =
+                      previous !== undefined && previous.vatRatePercent !== invoice.vatRatePercent;
+                    return (
+                      <InvoiceRows
+                        key={invoice.number}
+                        vatNote={
+                          vatChanged
+                            ? t('contract.vatChanged', {
+                                date: date(invoice.invoiceDate),
+                                rate: formatNumber(invoice.vatRatePercent, locale),
+                              })
+                            : null
+                        }
+                        cells={[
+                          String(invoice.number),
+                          date(invoice.invoiceDate),
+                          `${date(invoice.periodStart)} – ${date(invoice.periodEnd)}`,
+                          euro(invoice.netCents),
+                          formatNumber(invoice.vatRatePercent, locale),
+                          euro(invoice.vatCents),
+                          euro(invoice.grossCents),
+                        ]}
+                      />
+                    );
+                  })}
+                </tbody>
+                <tfoot className="sticky bottom-0 font-semibold">
+                  <tr className="border-t-2 border-line bg-surface-2">
+                    <td className="px-4 py-3" colSpan={3}>
+                      {t('contract.total')}
+                    </td>
+                    <td className="px-4 py-3 text-right">{euro(schedule.totals.netCents)}</td>
+                    <td />
+                    <td className="px-4 py-3 text-right">{euro(schedule.totals.vatCents)}</td>
+                    <td className="px-4 py-3 text-right">{euro(schedule.totals.grossCents)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
-      {/* Leave early and End of term as a pair of cards, or End of term alone across the page. */}
-      <div className="mt-10 grid gap-6 lg:grid-cols-2">
-        {canLeaveEarly && exitContext && assetRow ? (
-          <section aria-labelledby="early-exit" className="panel p-5 sm:p-6">
-            <h2 id="early-exit" className="font-display text-lg font-bold tracking-tight uppercase">
-              {t('early.title')}
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {t('early.intro', { rate: formatNumber(exitContext.annualInterestPercent, locale) })}
-            </p>
-            {/* The panel moves its slider to the new current month when the demo date changes. */}
-            <EarlyExitPanel
+      {awaiting ? null : (
+        <>
+          {/* Leave early and End of term as a pair of cards, or End of term alone across the page. */}
+          <div className="mt-10 grid gap-6 lg:grid-cols-2">
+            {canLeaveEarly && exitContext && assetRow ? (
+              <section aria-labelledby="early-exit" className="panel p-5 sm:p-6">
+                <h2
+                  id="early-exit"
+                  className="font-display text-lg font-bold tracking-tight uppercase"
+                >
+                  {t('early.title')}
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  {t('early.intro', {
+                    rate: formatNumber(exitContext.annualInterestPercent, locale),
+                  })}
+                </p>
+                {/* The panel moves its slider to the new current month when the demo date changes. */}
+                <EarlyExitPanel
+                  locale={locale}
+                  contractId={found.id}
+                  contract={contract}
+                  context={exitContext}
+                  unit={usageUnitSchema.parse(assetRow.usage_unit)}
+                  today={today}
+                />
+              </section>
+            ) : null}
+
+            <EndOfTermSection
               locale={locale}
               contractId={found.id}
+              assetId={contract.assetId}
               contract={contract}
-              context={exitContext}
-              unit={usageUnitSchema.parse(assetRow.usage_unit)}
+              ending={ending}
+              vatRates={vatRates}
               today={today}
+              asset={
+                assetRow
+                  ? {
+                      condition: assetConditionSchema.parse(assetRow.condition),
+                      usageValue: assetRow.usage_value,
+                      unit: usageUnitSchema.parse(assetRow.usage_unit),
+                    }
+                  : null
+              }
+              customers={data.customers}
+              passOn={
+                passOnItem
+                  ? {
+                      data: {
+                        curves: secondLife.curves,
+                        costs: secondLife.costs,
+                        table: secondLife.table,
+                      },
+                      demand: secondLife.demand,
+                      item: passOnItem,
+                    }
+                  : null
+              }
+              demand={secondLife.demand}
+              standalone={!(canLeaveEarly && exitContext && assetRow)}
             />
-          </section>
-        ) : null}
-
-        <EndOfTermSection
-          locale={locale}
-          contractId={found.id}
-          assetId={contract.assetId}
-          contract={contract}
-          ending={ending}
-          vatRates={vatRates}
-          today={today}
-          asset={
-            assetRow
-              ? {
-                  condition: assetConditionSchema.parse(assetRow.condition),
-                  usageValue: assetRow.usage_value,
-                  unit: usageUnitSchema.parse(assetRow.usage_unit),
-                }
-              : null
-          }
-          customers={data.customers}
-          passOn={
-            passOnItem
-              ? {
-                  data: {
-                    curves: secondLife.curves,
-                    costs: secondLife.costs,
-                    table: secondLife.table,
-                  },
-                  demand: secondLife.demand,
-                  item: passOnItem,
-                }
-              : null
-          }
-          demand={secondLife.demand}
-          standalone={!(canLeaveEarly && exitContext && assetRow)}
-        />
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

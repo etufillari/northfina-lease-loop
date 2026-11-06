@@ -47,17 +47,23 @@ model AuditLog {
   @@index([created_at])
 }
 
-// A signed lease. `terms_json` is the frozen contract from src/domain/contract.ts: the locked
-// price, where it came from and the billing rule. It is written once and never updated, so a
-// later price list can't change it (D-014). The other columns are copies for lookups.
+// A lease. `terms_json` is the frozen contract from src/domain/contract.ts: the locked price,
+// where it came from and the billing rule. A later price list can't change it (D-014). The other
+// columns are copies for lookups.
+// A contract can wait for the person who must sign (D-050): `status` is `awaiting_signatory`,
+// `signatory_email` says who, and `sent_on` when. It is not active: no invoices, the asset is
+// reserved for it. When they sign, only the sign and start dates change, once, and it is active.
 model Contract {
-  id          Int      @id @default(autoincrement())
-  created_at  DateTime @default(now())
-  asset_id    String
-  customer_id String
-  sign_date   String // ISO date
-  start_date  String // ISO date
-  terms_json  String
+  id              Int      @id @default(autoincrement())
+  created_at      DateTime @default(now())
+  asset_id        String
+  customer_id     String
+  sign_date       String // ISO date
+  start_date      String // ISO date
+  terms_json      String
+  status          String   @default("active") // active | awaiting_signatory
+  signatory_email String?
+  sent_on         String? // ISO date
 
   @@index([asset_id])
   @@index([customer_id])

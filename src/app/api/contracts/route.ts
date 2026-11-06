@@ -2,7 +2,9 @@
 //   body: { quoteId, customerId?, answers, priceChoice?, shownMonthlyNetRentCents }
 // Signs a stored quote (D-034): checks today's price first (D-014), decides the application again,
 // locks the contract and reserves the asset, with an audit row in the same transaction. When
-// today's rent is lower, answers 409 PRICE_CHOICE_REQUIRED with the offer and signs nothing.
+// today's rent is lower, answers 409 PRICE_CHOICE_REQUIRED with the offer and signs nothing. When
+// the applicant may not sign, the contract is stored waiting for their signatory (D-050), and
+// `awaitingSignature` says who and since when.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { signLease, type SignLeaseRefusal } from '@/server/contracts';
@@ -41,7 +43,6 @@ const statusFor = {
   asset_not_available: 409,
   application_declined: 403,
   application_needs_review: 403,
-  signatory_must_sign: 403,
   answers_do_not_match_customer: 422,
   starts_before_signing: 422,
   no_vat_rate: 422,
@@ -70,5 +71,13 @@ export const POST = handleRoute(async (request) => {
       Object.keys(details).length > 0 ? details : undefined
     );
   }
-  return ok({ id: result.id, contract: result.contract, quoteId: result.quoteId }, { status: 201 });
+  return ok(
+    {
+      id: result.id,
+      contract: result.contract,
+      quoteId: result.quoteId,
+      awaitingSignature: result.awaitingSignature,
+    },
+    { status: 201 }
+  );
 });

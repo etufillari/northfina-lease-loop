@@ -375,10 +375,12 @@ function DecisionPanel(props: {
   const { decision, locale, t } = props;
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const busy = props.signing === 'busy';
-  const canSign =
-    decision.status === 'decided' &&
-    decision.outcome === 'approved' &&
-    decision.signer.kind === 'applicant';
+  const canSign = decision.status === 'decided' && decision.outcome === 'approved';
+  // An applicant who may not sign sends the lease to their signatory instead (D-050).
+  const signatory =
+    decision.status === 'decided' && decision.signer.kind === 'signatory'
+      ? decision.signer.email
+      : null;
 
   return (
     <aside
@@ -463,10 +465,14 @@ function DecisionPanel(props: {
           disabled={!canSign || busy}
           className="btn-primary mt-6 w-full py-3.5"
         >
-          {busy ? t('lease.signing') : t('lease.sign')}
+          {signatory
+            ? t(busy ? 'lease.sending' : 'lease.sendToSignatory', { email: signatory })
+            : t(busy ? 'lease.signing' : 'lease.sign')}
         </button>
       )}
-      <p className="mt-2 text-xs text-muted">{t('lease.signNote')}</p>
+      <p className="mt-2 text-xs text-muted">
+        {signatory ? t('lease.sendNote', { email: signatory }) : t('lease.signNote')}
+      </p>
       {props.signing === 'refused' ? (
         <p role="alert" className="mt-3 text-sm font-medium text-danger">
           {refusalText(t, props.refusal, 'lease.error')}

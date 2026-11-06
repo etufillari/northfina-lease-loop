@@ -7,6 +7,7 @@ import type { EndLeaseRefusal } from '@/server/contract-endings';
 import type { EndEarlyRefusal } from '@/server/early-exit';
 import type { RelistRefusal } from '@/server/second-life';
 import type { SignLeaseRefusal } from '@/server/contracts';
+import type { CountersignRefusal } from '@/server/awaiting-signature';
 import type { MessageKey, Translate } from './get-t';
 
 /** The envelope's own codes (api-response.ts) and the not-found checks in the routes. */
@@ -22,6 +23,7 @@ export type RefusalCode =
   | CommonRefusal
   | CreateQuoteRefusal
   | SignLeaseRefusal
+  | CountersignRefusal
   | EndLeaseRefusal
   | EndEarlyRefusal
   | RelistRefusal;
@@ -58,7 +60,10 @@ const messageKeys = {
   application_invalid: 'refusal.application_invalid',
   application_declined: 'refusal.application_declined',
   application_needs_review: 'refusal.application_needs_review',
-  signatory_must_sign: 'refusal.signatory_must_sign',
+  // a contract waiting for its signatory (D-050)
+  contract_not_active: 'refusal.contract_not_active',
+  not_awaiting_signature: 'refusal.not_awaiting_signature',
+  signed_before_sent: 'refusal.signed_before_sent',
   // end of term and early exit
   already_ended: 'refusal.already_ended',
   asset_not_leased: 'refusal.asset_not_leased',

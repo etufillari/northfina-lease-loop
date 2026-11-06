@@ -105,6 +105,98 @@ describe('reserveAsset', () => {
     expect(activeReservations).toHaveLength(1);
   });
 
+  it('creates an offer reservation where server computes quote and locks catalogue price', async () => {
+    const now = new Date('2026-11-05T10:00:00.000Z');
+    const result = await reserveAsset(db, {
+      assetId: 'ebike-003',
+      actor: 'customer-offer',
+      reservationType: 'offer',
+      validityDays: 14,
+      termMonths: 36,
+      downPaymentCents: 0,
+      now,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.reservation.reservationType).toBe('offer');
+    expect(result.reservation.offeredOn).toBe('2026-11-05');
+    expect(result.reservation.listPriceCents).toBe(389_000); // computed by server from v1
+    expect(result.reservation.priceListVersion).toBe(1);
+    expect(result.reservation.monthlyNetRentCents).toBe(10_730);
+    expect(result.reservation.expiresAt).toBe('2026-11-19T23:59:59.999Z');
+
+    const audits = await db.auditLog.findMany({
+      where: { entity_id: 'ebike-003', action: 'asset.offer_created' },
+    });
+    expect(audits).toHaveLength(1);
+  });
+
+  it('upgrades an active standard application reservation into a 14-day offer upon approval', async () => {
+    const t0 = new Date('2026-11-05T10:00:00.000Z');
+    const initial = await reserveAsset(db, {
+      assetId: 'ebike-003',
+      actor: 'customer-apply',
+      now: t0,
+    });
+    expect(initial.ok).toBe(true);
+    if (!initial.ok) return;
+    expect(initial.reservation.reservationType).toBe('standard');
+
+    const t1 = new Date('2026-11-05T10:05:00.000Z');
+    const upgraded = await reserveAsset(db, {
+      assetId: 'ebike-003',
+      actor: 'customer-apply',
+      token: initial.reservation.token,
+      reservationType: 'offer',
+      validityDays: 14,
+      termMonths: 36,
+      downPaymentCents: 0,
+      now: t1,
+    });
+    expect(upgraded.ok).toBe(true);
+    if (!upgraded.ok) return;
+
+    expect(upgraded.reservation.token).toBe(initial.reservation.token);
+    expect(upgraded.reservation.reservationType).toBe('offer');
+    expect(upgraded.reservation.offeredOn).toBe('2026-11-05');
+    expect(upgraded.reservation.listPriceCents).toBe(389_000);
+    expect(upgraded.reservation.expiresAt).toBe('2026-11-19T23:59:59.999Z');
+  });
+
+  it('refuses to extend/renew offer expiry when reposting with offer token', async () => {
+    const t0 = new Date('2026-11-05T10:00:00.000Z');
+    const first = await reserveAsset(db, {
+      assetId: 'ebike-003',
+      actor: 'customer-offer',
+      reservationType: 'offer',
+      validityDays: 14,
+      now: t0,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const originalExpiry = first.reservation.expiresAt;
+
+    // Next day, client attempts to "renew" the offer
+    const t1 = new Date('2026-11-06T10:00:00.000Z');
+    const attempt = await reserveAsset(db, {
+      assetId: 'ebike-003',
+      actor: 'customer-offer',
+      token: first.reservation.token,
+      validityDays: 30, // Attempting to extend validity
+      now: t1,
+    });
+
+    expect(attempt.ok).toBe(true);
+    if (!attempt.ok) return;
+
+    // Must NOT be renewed, and expiry must NOT change
+    expect(attempt.renewed).toBe(false);
+    expect(attempt.reservation.expiresAt).toBe(originalExpiry);
+  });
+
   it('renews the reservation when applicant provides matching token', async () => {
     const t0 = new Date('2026-11-06T12:00:00.000Z');
     const first = await reserveAsset(db, {

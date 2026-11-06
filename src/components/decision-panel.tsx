@@ -5,18 +5,18 @@ import type { EligibilityDecision, Reason } from '@/domain/eligibility';
 import { formatEuro } from '@/domain/money';
 import { messages, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { OfferCreatedCard } from './offer-created-card';
 
 export function reasonText(t: Translate, reason: Reason, locale: Locale): string {
   const { rule, params } = reason;
-  const euro = (cents: unknown) => formatEuro(Number(cents), intlLocale[locale]);
 
   if (rule === 'financed_limits') {
     return t(`reason.financed_limits.${String(params.reason)}` as MessageKey);
   }
   if (rule === 'affordability') {
     return t('reason.affordability', {
-      rent: euro(params.rentCents),
-      income: euro(params.incomeCents),
+      rent: formatEuro(Number(params.rentCents), intlLocale[locale]),
+      income: formatEuro(Number(params.incomeCents), intlLocale[locale]),
     });
   }
   const key = `reason.${rule}`;
@@ -29,16 +29,16 @@ const tones = {
     title: 'text-[#14522a] dark:text-emerald-200',
   },
   no: {
-    box: 'border-[#DC2626] bg-[#f8f7f6] text-[#353331] dark:border-red-800 dark:bg-red-950/40 dark:text-stone-100',
+    box: 'border-[#DC2626] bg-[#f8f7f6] text-[#353331] dark:border-red-800 dark:bg-red-950/40 dark:text-red-200',
     title: 'text-[#DC2626] dark:text-red-300',
   },
   manual_review: {
-    box: 'border-[#e9dac8] bg-[#f8f7f6] text-[#5c360a] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200',
-    title: 'text-[#5c360a] dark:text-amber-300',
+    box: 'border-[#e9dac8] bg-[#f8f7f6] text-[#5c360a] dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
+    title: 'text-[#b76200] dark:text-amber-300',
   },
   incomplete: {
-    box: 'border-[#ccd7e6] bg-[#f6f7f8] text-[#123054] dark:border-sky-950 dark:bg-stone-800/80 dark:text-stone-100',
-    title: 'text-[#123054] dark:text-sky-300',
+    box: 'border-[#dad9d8] bg-[#f7f7f7] text-[#353331] dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-200',
+    title: 'text-[#353331] dark:text-stone-100',
   },
 } as const;
 
@@ -50,6 +50,9 @@ export function DecisionPanel({
   isSigning = false,
   isEvaluating = false,
   signError = null,
+  onCreateOffer,
+  isCreatingOffer = false,
+  offerDetails = null,
 }: {
   decision: EligibilityDecision;
   locale: Locale;
@@ -58,6 +61,15 @@ export function DecisionPanel({
   isSigning?: boolean;
   isEvaluating?: boolean;
   signError?: string | null;
+  onCreateOffer?: () => void;
+  isCreatingOffer?: boolean;
+  offerDetails?: {
+    token: string;
+    expiresAt: string;
+    assetId: string;
+    termMonths: number;
+    downPaymentCents: number;
+  } | null;
 }) {
   const kind = decision.decision;
   const tone = tones[kind];
@@ -89,7 +101,7 @@ export function DecisionPanel({
         </ul>
       ) : null}
       {kind === 'yes' && onSign ? (
-        <div className="mt-[16px]">
+        <div className="mt-[16px] space-y-[8px]">
           {signError ? (
             <p
               role="alert"
@@ -98,14 +110,40 @@ export function DecisionPanel({
               {signError}
             </p>
           ) : null}
-          <button
-            type="button"
-            disabled={isSigning || isEvaluating}
-            onClick={onSign}
-            className="w-full rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a] dark:bg-sky-600 dark:hover:bg-sky-500 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
-          >
-            {isSigning ? t('apply.signingButton') : t('apply.signButton')}
-          </button>
+          {offerDetails ? (
+            <OfferCreatedCard
+              token={offerDetails.token}
+              expiresAt={offerDetails.expiresAt}
+              assetId={offerDetails.assetId}
+              termMonths={offerDetails.termMonths}
+              downPaymentCents={offerDetails.downPaymentCents}
+              locale={locale}
+              onSign={onSign}
+              isSigning={isSigning}
+              isEvaluating={isEvaluating}
+            />
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={isSigning || isEvaluating || isCreatingOffer}
+                onClick={onSign}
+                className="w-full rounded-[8px] bg-[#1a65c1] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#1354a5] disabled:cursor-not-allowed disabled:bg-[#857f7a] dark:bg-sky-600 dark:hover:bg-sky-500 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
+              >
+                {isSigning ? t('apply.signingButton') : t('apply.signButton')}
+              </button>
+              {onCreateOffer ? (
+                <button
+                  type="button"
+                  disabled={isSigning || isEvaluating || isCreatingOffer}
+                  onClick={onCreateOffer}
+                  className="w-full rounded-[8px] border border-[#bfbcbb] bg-[#FFFFFF] px-[16px] py-[8px] text-[0.875rem] font-semibold text-[#353331] transition-colors hover:bg-[#f7f7f7] disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+                >
+                  {isCreatingOffer ? t('contract.offerCreating') : t('contract.createOfferButton')}
+                </button>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
     </section>

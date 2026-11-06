@@ -8,11 +8,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Question } from '@/data/schemas';
 import type { EligibilityDecision } from '@/domain/eligibility';
 import type { AnswerValue } from '@/domain/question-flow';
-import { formatRemainingTime, shouldReleaseReservationOnDecision } from '@/domain/reservation';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { DecisionPanel } from './decision-panel';
 import { QuestionField } from './question-field';
+import { formatRemainingDuration, useApplicationReservation } from './use-application-reservation';
+
 type Answers = Record<string, AnswerValue>;
 
 export type EvaluateData = {
@@ -77,6 +78,7 @@ export function getSigningActor(answers: Answers): string {
         : 'customer';
   return rawActor.slice(0, 100);
 }
+
 export type ApplicationDeal = {
   category: string;
   financed_amount_cents: number;
@@ -90,18 +92,18 @@ export type SignTarget = {
   termMonths: number;
   downPaymentCents: number;
   signedOn: string;
+  offeredOn?: string;
 };
 
 /** Wait for typing to pause before asking the server. */
 const DEBOUNCE_MS = 250;
-
-type ReservationState = 'init' | 'active' | 'conflict' | 'expired' | 'released' | 'error';
 
 export function ApplicationForm({
   locale,
   deal,
   signTarget,
   initialToken,
+  initialReservationType = 'standard',
   children,
 }: {
   locale: Locale;
@@ -110,6 +112,8 @@ export function ApplicationForm({
   signTarget?: SignTarget;
   /** Initial reservation token if passed from page or previous navigation. */
   initialToken?: string;
+  /** Initial reservation type ('standard' | 'offer'). */
+  initialReservationType?: 'standard' | 'offer';
   /** Rendered above the decision in the side column: the lease summary. */
   children?: ReactNode;
 }) {
@@ -120,12 +124,8 @@ export function ApplicationForm({
   const [isEvaluating, setIsEvaluating] = useState(true);
   const [removed, setRemoved] = useState<string[]>([]);
   const [isSigning, setIsSigning] = useState(false);
+  const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(initialToken ?? null);
-  const [resState, setResState] = useState<ReservationState>('init');
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [remainingSec, setRemainingSec] = useState<number>(0);
-  const [isReleasing, setIsReleasing] = useState(false);
   // Question texts seen so far, so a removed answer can be named after its question is gone.
   const seen = useRef(new Map<string, Question>());
   // Race condition guards
@@ -134,6 +134,26 @@ export function ApplicationForm({
   const isSigningRef = useRef(false);
   const isEvaluatingRef = useRef(true);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
+
+  const {
+    token,
+    displayResState,
+    reservationType,
+    expiresAt,
+    remainingSec,
+    isReleasing,
+    handleCancelApplication,
+    handleReReserve,
+    updateOfferCreated,
+  } = useApplicationReservation({
+    signTarget,
+    initialToken,
+    initialReservationType,
+    state,
+    locale,
+    onNavigateHome: () => router.push(`/${locale}`),
+  });
+
   const { category, financed_amount_cents, term_months, monthly_rent_incl_vat_cents } = deal;
   useEffect(() => {
     if (isSigningRef.current) return;
@@ -214,155 +234,6 @@ export function ApplicationForm({
     };
   }, [answers, category, financed_amount_cents, term_months, monthly_rent_incl_vat_cents, locale]);
 
-  // Reserve the asset when the application process starts
-  useEffect(() => {
-    if (!signTarget) return;
-    const assetId = signTarget.assetId;
-    const storageKey = `lease_loop_res_${assetId}`;
-    const storedToken =
-      initialToken ?? (typeof window !== 'undefined' ? sessionStorage.getItem(storageKey) : null);
-
-    let active = true;
-
-    async function initReservation() {
-      try {
-        const response = await fetch(`/api/assets/${encodeURIComponent(assetId)}/reserve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actor: 'customer',
-            token: storedToken ?? undefined,
-          }),
-        });
-        const json = (await response.json()) as {
-          success: boolean;
-          data?: { reservation: { token: string; expiresAt: string } };
-        };
-        if (!active) return;
-
-        if (response.ok && json.success && json.data) {
-          const resToken = json.data.reservation.token;
-          const expiry = json.data.reservation.expiresAt;
-          setToken(resToken);
-          setExpiresAt(expiry);
-          sessionStorage.setItem(storageKey, resToken);
-          setResState('active');
-
-          const currentUrl = new URL(window.location.href);
-          currentUrl.searchParams.set('token', resToken);
-          window.history.replaceState({}, '', currentUrl.toString());
-        } else if (response.status === 409) {
-          setResState('conflict');
-        } else {
-          setResState('error');
-        }
-      } catch {
-        if (active) setResState('error');
-      }
-    }
-
-    initReservation();
-
-    return () => {
-      active = false;
-    };
-  }, [signTarget, initialToken]);
-
-  // Reservation countdown ticker
-  useEffect(() => {
-    if (resState !== 'active' || !expiresAt) return;
-
-    function tick() {
-      const ms = new Date(expiresAt!).getTime() - Date.now();
-      const sec = Math.max(0, Math.floor(ms / 1000));
-      setRemainingSec(sec);
-      if (sec <= 0) {
-        setResState('expired');
-        if (signTarget) {
-          sessionStorage.removeItem(`lease_loop_res_${signTarget.assetId}`);
-        }
-      }
-    }
-
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [resState, expiresAt, signTarget]);
-
-  // Automatically cancel and release reservation if application is rejected
-  useEffect(() => {
-    if (
-      state.status === 'ready' &&
-      shouldReleaseReservationOnDecision(state.data.decision.decision) &&
-      signTarget &&
-      token &&
-      resState === 'active'
-    ) {
-      sessionStorage.removeItem(`lease_loop_res_${signTarget.assetId}`);
-      fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/reserve`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, reason: 'rejected' }),
-      })
-        .then(() => {
-          setResState('released');
-        })
-        .catch(() => {});
-    }
-  }, [state, signTarget, token, resState]);
-
-  async function handleCancelApplication() {
-    if (signTarget && token && resState === 'active') {
-      setIsReleasing(true);
-      try {
-        await fetch(`/api/assets/${encodeURIComponent(signTarget.assetId)}/reserve`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, reason: 'cancelled' }),
-        });
-      } catch {
-        // ignore error during voluntary cancel
-      } finally {
-        sessionStorage.removeItem(`lease_loop_res_${signTarget.assetId}`);
-      }
-    }
-    router.push(`/${locale}`);
-  }
-
-  async function handleReReserve() {
-    if (!signTarget) return;
-    setResState('init');
-    try {
-      const response = await fetch(
-        `/api/assets/${encodeURIComponent(signTarget.assetId)}/reserve`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ actor: 'customer' }),
-        }
-      );
-      const json = (await response.json()) as {
-        success: boolean;
-        data?: { reservation: { token: string; expiresAt: string } };
-      };
-      if (response.ok && json.success && json.data) {
-        const resToken = json.data.reservation.token;
-        const expiry = json.data.reservation.expiresAt;
-        setToken(resToken);
-        setExpiresAt(expiry);
-        sessionStorage.setItem(`lease_loop_res_${signTarget.assetId}`, resToken);
-        setResState('active');
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('token', resToken);
-        window.history.replaceState({}, '', currentUrl.toString());
-      } else {
-        setResState('conflict');
-      }
-    } catch {
-      setResState('error');
-    }
-  }
-
   function change(id: string, value: AnswerValue | undefined) {
     if (isSigningRef.current) return;
     setRemoved([]);
@@ -379,6 +250,43 @@ export function ApplicationForm({
       else next[id] = value;
       return next;
     });
+  }
+
+  async function handleCreateOffer() {
+    if (!signTarget || isCreatingOffer || isSigningRef.current || isEvaluatingRef.current) return;
+    setIsCreatingOffer(true);
+    setSignError(null);
+    const actor = getSigningActor(answers);
+
+    try {
+      const response = await fetch(
+        `/api/assets/${encodeURIComponent(signTarget.assetId)}/reserve`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actor,
+            token: token ?? undefined,
+            reservationType: 'offer',
+            validityDays: 14,
+            termMonths: signTarget.termMonths,
+            downPaymentCents: signTarget.downPaymentCents,
+          }),
+        }
+      );
+      const json = (await response.json()) as {
+        success?: boolean;
+        data?: { reservation: { token: string; expiresAt: string } };
+      };
+      if (!response.ok || !json.success || !json.data) {
+        throw new Error('offer creation failed');
+      }
+      updateOfferCreated(json.data.reservation.token, json.data.reservation.expiresAt);
+    } catch {
+      setSignError(t('apply.signError'));
+    } finally {
+      setIsCreatingOffer(false);
+    }
   }
 
   async function handleSign() {
@@ -427,6 +335,7 @@ export function ApplicationForm({
         term: String(signTarget.termMonths),
         down: String(signTarget.downPaymentCents),
         signedOn: signTarget.signedOn,
+        ...(token ? { token } : {}),
       });
       router.push(`/${locale}/invoices?${params.toString()}`);
     } catch {
@@ -436,11 +345,19 @@ export function ApplicationForm({
       setSignError(t('apply.signError'));
     }
   }
-  const isRejected =
-    state.status === 'ready' && shouldReleaseReservationOnDecision(state.data.decision.decision);
-  const displayResState: ReservationState =
-    isRejected && resState === 'active' ? 'released' : resState;
+
   const data = state.status === 'ready' ? state.data : null;
+  const offerDetails =
+    reservationType === 'offer' && token && expiresAt && signTarget
+      ? {
+          token,
+          expiresAt,
+          assetId: signTarget.assetId,
+          termMonths: signTarget.termMonths,
+          downPaymentCents: signTarget.downPaymentCents,
+        }
+      : null;
+
   return (
     <div className="grid gap-[32px] lg:grid-cols-[minmax(0,1fr)_22rem]">
       <form
@@ -461,7 +378,8 @@ export function ApplicationForm({
               <span className="inline-block size-2 rounded-full bg-[#16A34A] animate-pulse" />
               <span className="font-semibold">{t('apply.reservation.held')}</span>
               <span className="text-[0.875rem] text-[#615b57] dark:text-stone-300">
-                • {t('apply.reservation.expiresIn', { time: formatRemainingTime(remainingSec) })}
+                •{' '}
+                {t('apply.reservation.expiresIn', { time: formatRemainingDuration(remainingSec) })}
               </span>
             </div>
             <button
@@ -588,6 +506,13 @@ export function ApplicationForm({
               isSigning={isSigning}
               isEvaluating={isEvaluating}
               signError={signError}
+              onCreateOffer={
+                signTarget && displayResState === 'active' && reservationType === 'standard'
+                  ? handleCreateOffer
+                  : undefined
+              }
+              isCreatingOffer={isCreatingOffer}
+              offerDetails={offerDetails}
             />
           ) : null}
         </div>

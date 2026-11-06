@@ -49,7 +49,6 @@ export function Contract({
   defaultBreakdownOpen = false,
   onClose,
   onUseTerms,
-  onSign,
 }: ContractProps) {
   const router = useRouter();
   const t = getT(locale);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getT } from '@/i18n/get-t';
-import { Contract, type ContractProps, type SignedContract } from './contract';
+import { Contract, type ContractProps } from './contract';
 
 export type ContractDrawerTriggerProps = Omit<ContractProps, 'onClose'>;
 
@@ -11,9 +11,6 @@ export type ContractDrawerTriggerProps = Omit<ContractProps, 'onClose'>;
  */
 export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [signedContract, setSignedContract] = useState<SignedContract | null>(
-    props.initialSignedContract ?? null
-  );
   const t = getT(props.locale);
 
   useEffect(() => {
@@ -34,18 +31,12 @@ export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         className={`w-full rounded-[8px] px-[16px] py-[8px] text-[0.875rem] font-semibold transition-colors ${
-          signedContract
-            ? 'border border-[#cde5d5] bg-[#eaf0ec] text-[#14522a] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
-            : isOpen
-              ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
-              : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500'
+          isOpen
+            ? 'border border-[#bfbcbb] bg-transparent text-[#353331] hover:bg-[#f7f7f7] dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
+            : 'bg-[#1a65c1] text-[#FFFFFF] hover:bg-[#1354a5] dark:bg-sky-600 dark:hover:bg-sky-500'
         }`}
       >
-        {signedContract
-          ? t('contract.statusSigned')
-          : isOpen
-            ? t('contract.hideButton')
-            : t('contract.openButton')}
+        {isOpen ? t('contract.hideButton') : t('contract.openButton')}
       </button>
 
       {isOpen ? (
@@ -61,15 +52,7 @@ export function ContractDrawerTrigger(props: ContractDrawerTriggerProps) {
           }}
         >
           <div className="my-auto max-h-[92dvh] w-full max-w-2xl overflow-y-auto">
-            <Contract
-              {...props}
-              initialSignedContract={signedContract}
-              onSign={(signed) => {
-                setSignedContract(signed);
-                props.onSign?.(signed);
-              }}
-              onClose={() => setIsOpen(false)}
-            />
+            <Contract {...props} onClose={() => setIsOpen(false)} />
           </div>
         </div>
       ) : null}

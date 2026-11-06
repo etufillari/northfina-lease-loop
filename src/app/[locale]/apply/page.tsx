@@ -37,6 +37,8 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
 
   const { asset: assetId, term, down, token } = query.data;
   const today = todayIso();
+  // Check and expire any overdue reservation before listing assets so status is never stale
+  const activeReservation = await getActiveReservation(db, assetId);
   const [assets, priceLists, coefficientTable, vatRates] = await Promise.all([
     listAssets(db),
     loadPriceLists(),
@@ -45,8 +47,6 @@ export default async function ApplyPage({ params, searchParams }: PageProps<'/[l
   ]);
   const asset = assets.find((a) => a.id === assetId);
   if (!asset) return <Message text={t('apply.notFound')} />;
-
-  const activeReservation = await getActiveReservation(db, asset.id);
   if (asset.status === 'reserved') {
     const isTokenHolder = Boolean(token && activeReservation && activeReservation.token === token);
     if (!isTokenHolder) {

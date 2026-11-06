@@ -85,6 +85,26 @@ describe('reserveAsset', () => {
     });
   });
 
+  it('prevents simultaneous concurrent reservations via Promise.all', async () => {
+    const now = new Date('2026-11-06T12:00:00.000Z');
+    const [first, second] = await Promise.all([
+      reserveAsset(db, { assetId: 'ebike-005', actor: 'alice', now }),
+      reserveAsset(db, { assetId: 'ebike-005', actor: 'bob', now }),
+    ]);
+
+    const successes = [first, second].filter((r) => r.ok);
+    const failures = [first, second].filter((r) => !r.ok);
+
+    expect(successes).toHaveLength(1);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatchObject({ ok: false, reason: 'already_reserved' });
+
+    const activeReservations = await db.assetReservation.findMany({
+      where: { asset_id: 'ebike-005', status: 'active' },
+    });
+    expect(activeReservations).toHaveLength(1);
+  });
+
   it('renews the reservation when applicant provides matching token', async () => {
     const t0 = new Date('2026-11-06T12:00:00.000Z');
     const first = await reserveAsset(db, {

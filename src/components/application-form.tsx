@@ -387,6 +387,7 @@ export function ApplicationForm({
     ) {
       return;
     }
+    if (!signTarget) return;
 
     // Synchronously acquire signing lock to prevent double-clicks
     isSigningRef.current = true;

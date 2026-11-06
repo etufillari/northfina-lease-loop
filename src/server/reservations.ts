@@ -45,10 +45,20 @@ export type ReserveAssetResult =
       };
     };
 
+class ReservationConflictError extends Error {
+  constructor(
+    public readonly reason: 'asset_not_available' | 'already_reserved',
+    public readonly expiresAt?: string
+  ) {
+    super(reason);
+  }
+}
+
 /**
  * Reserves an asset for a lease application in progress.
  * If the applicant already holds the active reservation, its expiry is extended (renewed).
  * If a previous reservation expired, it is superseded.
+ * Uses atomic compare-and-set within the transaction to prevent concurrent reservation races.
  * All mutations commit with an AuditLog record in the same transaction.
  */
 export async function reserveAsset(
@@ -67,89 +77,72 @@ export async function reserveAsset(
   const asset = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!asset) return { ok: false, reason: 'not_found' };
 
-  const existingActive = await db.assetReservation.findFirst({
-    where: { asset_id: input.assetId, status: 'active' },
-    orderBy: { created_at: 'desc' },
-  });
+  const auditEntry = {
+    actor: input.actor,
+    action: 'asset.reserved',
+    entityType: 'asset',
+    entityId: input.assetId,
+    details: {} as Record<string, unknown>,
+  };
 
-  const check = canReserveAsset({
-    assetStatus: asset.status,
-    activeReservation: existingActive
-      ? {
-          status: existingActive.status as ReservationStatus,
-          expiresAt: existingActive.expires_at,
-          token: existingActive.token,
-        }
-      : null,
-    candidateToken: input.token,
-    now: currentDate,
-  });
+  try {
+    return await withAudit(db, auditEntry, async (tx) => {
+      const currentAsset = await tx.asset.findUnique({ where: { id: input.assetId } });
+      if (!currentAsset) throw new ReservationConflictError('asset_not_available');
 
-  if (!check.canReserve) {
-    return {
-      ok: false,
-      reason: check.reason,
-      existingReservation: existingActive
-        ? { expiresAt: existingActive.expires_at.toISOString() }
-        : undefined,
-    };
-  }
+      const existingActive = await tx.assetReservation.findFirst({
+        where: { asset_id: input.assetId, status: 'active' },
+        orderBy: { created_at: 'desc' },
+      });
 
-  if (check.reason === 'renewed' && existingActive) {
-    const newExpiryIso = calculateReservationExpiry(currentDate, timeoutMinutes);
-    const updated = await withAudit(
-      db,
-      {
-        actor: input.actor,
-        action: 'asset.reservation_extended',
-        entityType: 'asset',
-        entityId: input.assetId,
-        details: {
+      const check = canReserveAsset({
+        assetStatus: currentAsset.status,
+        activeReservation: existingActive
+          ? {
+              status: existingActive.status as ReservationStatus,
+              expiresAt: existingActive.expires_at,
+              token: existingActive.token,
+            }
+          : null,
+        candidateToken: input.token,
+        now: currentDate,
+      });
+
+      if (!check.canReserve) {
+        throw new ReservationConflictError(
+          check.reason,
+          existingActive ? existingActive.expires_at.toISOString() : undefined
+        );
+      }
+
+      if (check.reason === 'renewed' && existingActive) {
+        const newExpiryIso = calculateReservationExpiry(currentDate, timeoutMinutes);
+        auditEntry.action = 'asset.reservation_extended';
+        auditEntry.details = {
           token: existingActive.token,
           expiresAt: newExpiryIso,
-        },
-      },
-      async (tx) =>
-        tx.assetReservation.update({
+        };
+
+        const updated = await tx.assetReservation.update({
           where: { id: existingActive.id },
           data: { expires_at: new Date(newExpiryIso) },
-        })
-    );
+        });
 
-    return {
-      ok: true,
-      renewed: true,
-      reservation: {
-        id: updated.id,
-        assetId: updated.asset_id,
-        token: updated.token,
-        actor: updated.actor,
-        status: updated.status as ReservationStatus,
-        expiresAt: updated.expires_at.toISOString(),
-        createdAt: updated.created_at.toISOString(),
-      },
-    };
-  }
+        return {
+          ok: true as const,
+          renewed: true,
+          reservation: {
+            id: updated.id,
+            assetId: updated.asset_id,
+            token: updated.token,
+            actor: updated.actor,
+            status: updated.status as ReservationStatus,
+            expiresAt: updated.expires_at.toISOString(),
+            createdAt: updated.created_at.toISOString(),
+          },
+        };
+      }
 
-  const token = input.token?.trim() || randomUUID();
-  const expiryIso = calculateReservationExpiry(currentDate, timeoutMinutes);
-
-  const reservation = await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'asset.reserved',
-      entityType: 'asset',
-      entityId: input.assetId,
-      details: {
-        from: asset.status,
-        to: 'reserved',
-        token,
-        expiresAt: expiryIso,
-        reason: 'application_started',
-      },
-    },
-    async (tx) => {
       if (check.reason === 'expired_takeover' && existingActive) {
         await tx.assetReservation.update({
           where: { id: existingActive.id },
@@ -157,12 +150,30 @@ export async function reserveAsset(
         });
       }
 
-      await tx.asset.update({
-        where: { id: input.assetId },
+      // Atomic compare-and-set: ensure asset status matches expected pre-condition
+      const expectedStatus = check.reason === 'expired_takeover' ? 'reserved' : 'available';
+      const cas = await tx.asset.updateMany({
+        where: { id: input.assetId, status: expectedStatus },
         data: { status: 'reserved' },
       });
 
-      return tx.assetReservation.create({
+      if (cas.count !== 1) {
+        throw new ReservationConflictError('already_reserved');
+      }
+
+      const token = input.token?.trim() || randomUUID();
+      const expiryIso = calculateReservationExpiry(currentDate, timeoutMinutes);
+
+      auditEntry.action = 'asset.reserved';
+      auditEntry.details = {
+        from: currentAsset.status,
+        to: 'reserved',
+        token,
+        expiresAt: expiryIso,
+        reason: 'application_started',
+      };
+
+      const created = await tx.assetReservation.create({
         data: {
           asset_id: input.assetId,
           token,
@@ -171,22 +182,31 @@ export async function reserveAsset(
           expires_at: new Date(expiryIso),
         },
       });
-    }
-  );
 
-  return {
-    ok: true,
-    renewed: false,
-    reservation: {
-      id: reservation.id,
-      assetId: reservation.asset_id,
-      token: reservation.token,
-      actor: reservation.actor,
-      status: reservation.status as ReservationStatus,
-      expiresAt: reservation.expires_at.toISOString(),
-      createdAt: reservation.created_at.toISOString(),
-    },
-  };
+      return {
+        ok: true as const,
+        renewed: false,
+        reservation: {
+          id: created.id,
+          assetId: created.asset_id,
+          token: created.token,
+          actor: created.actor,
+          status: created.status as ReservationStatus,
+          expiresAt: created.expires_at.toISOString(),
+          createdAt: created.created_at.toISOString(),
+        },
+      };
+    });
+  } catch (error) {
+    if (error instanceof ReservationConflictError) {
+      return {
+        ok: false,
+        reason: error.reason,
+        existingReservation: error.expiresAt ? { expiresAt: error.expiresAt } : undefined,
+      };
+    }
+    throw error;
+  }
 }
 
 export type ReleaseReservationResult =

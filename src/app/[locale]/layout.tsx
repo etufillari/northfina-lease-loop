@@ -69,11 +69,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 >
                   {t('nav.catalogue')}
                 </Link>
+                {/* The demo panel (D-058) holds the scenario cards and links to the audit trail. */}
                 <Link
-                  href={`/${locale}/audit`}
-                  className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                  href={`/${locale}/demo`}
+                  className="rounded-full border border-accent px-3 py-1.5 font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
                 >
-                  {t('nav.audit')}
+                  {t('nav.demo')}
                 </Link>
               </nav>
               <AsOfControl key={when.date} locale={locale} date={when.date} />

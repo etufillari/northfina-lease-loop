@@ -59,7 +59,7 @@ describe('band boundaries: two laptops at €1,999.99 and €2,000.00', () => {
 
 describe('minimum and maximum amounts', () => {
   it('ebike-010 (€289) is under the €300 minimum: no quote, no application', async () => {
-    expect(await quote(['ebike-010'])).toEqual({ ok: false, reason: 'below_minimum' });
+    expect(await quote(['ebike-010'])).toMatchObject({ ok: false, reason: 'below_minimum' });
     expect((await start('cust-aino', ['ebike-010'])).ok).toBe(false);
   });
 
@@ -69,20 +69,28 @@ describe('minimum and maximum amounts', () => {
   });
 
   it('farm-006 (€260,000) is over the €250,000 maximum with no down payment', async () => {
-    expect(await quote(['farm-006'])).toEqual({ ok: false, reason: 'above_maximum' });
+    // The refusal still carries what the sliders and the message need.
+    expect(await quote(['farm-006'])).toMatchObject({
+      ok: false,
+      reason: 'above_maximum',
+      minDownPayment: { cents: 1_000_000, percent: 4 },
+    });
   });
 
   it('a €10,000 down payment brings it to exactly €250,000, which is allowed', async () => {
     const exactly = await quote(['farm-006'], 1_000_000, 48);
     if (!exactly.ok) throw new Error(exactly.reason);
     expect(exactly.live.quote).toMatchObject({ financedCents: 25_000_000, band: 'D' });
-    expect(await quote(['farm-006'], 999_999, 48)).toEqual({ ok: false, reason: 'above_maximum' });
+    expect(await quote(['farm-006'], 999_999, 48)).toMatchObject({
+      ok: false,
+      reason: 'above_maximum',
+    });
   });
 
   it('a down payment over 30 % of the price is refused', async () => {
     // 30 % of farm-002's €145,000 is €43,500.
     expect((await quote(['farm-002'], 4_350_000, 48)).ok).toBe(true);
-    expect(await quote(['farm-002'], 4_350_001, 48)).toEqual({
+    expect(await quote(['farm-002'], 4_350_001, 48)).toMatchObject({
       ok: false,
       reason: 'down_payment_over_max',
     });

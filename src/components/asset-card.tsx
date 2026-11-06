@@ -92,6 +92,8 @@ type AssetCardProps = {
   vatRatePercent: number | null;
   /** Priced at the second-life desk's re-price instead of the price list. */
   secondLife?: boolean;
+  /** Above the largest financing band: the smallest down payment that makes it leasable. */
+  needsDownPayment?: { cents: number; percent: number } | null;
   locale: Locale;
   t: Translate;
 };
@@ -105,6 +107,7 @@ export function AssetCard({
   termMonths,
   vatRatePercent,
   secondLife = false,
+  needsDownPayment = null,
   locale,
   t,
 }: AssetCardProps) {
@@ -179,6 +182,14 @@ export function AssetCard({
                 </p>
                 <p className="text-xs text-stone-600 dark:text-stone-400">{vatNote}</p>
               </>
+            ) : needsDownPayment ? (
+              // Priceable, but only with money down: say how much instead of "no price".
+              <p className="text-sm font-medium">
+                {t('catalogue.needsDownPayment', {
+                  percent: needsDownPayment.percent,
+                  amount: euro(needsDownPayment.cents),
+                })}
+              </p>
             ) : (
               <p className="text-xl font-semibold">{t('asset.noPrice')}</p>
             )}

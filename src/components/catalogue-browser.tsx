@@ -21,6 +21,8 @@ export type CatalogueItem = {
   secondLife: boolean;
   /** Term months → monthly rent with no down payment; null when not priceable. */
   monthly: Record<number, { netCents: number; grossCents: number } | null>;
+  /** Above the largest financing band: the smallest down payment that makes it leasable. */
+  needsDownPayment: { cents: number; percent: number } | null;
 };
 
 const CATEGORIES: AssetCategory[] = ['e_bike', 'laptop', 'farm_machine'];
@@ -255,7 +257,7 @@ export function CatalogueBrowser({
         </div>
       ) : (
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map(({ asset, imageUrl, listPrice, secondLife, monthly }) => (
+          {filtered.map(({ asset, imageUrl, listPrice, secondLife, monthly, needsDownPayment }) => (
             <li key={asset.id}>
               <Link
                 href={`/${locale}/assets/${asset.id}${asOfParam ? `?asOf=${asOfParam}` : ''}`}
@@ -270,6 +272,7 @@ export function CatalogueBrowser({
                   termMonths={term}
                   vatRatePercent={vatRatePercent}
                   secondLife={secondLife}
+                  needsDownPayment={needsDownPayment}
                   locale={locale}
                   t={t}
                 />

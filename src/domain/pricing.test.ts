@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import type { CoefficientTable, PriceList } from '@/data/schemas';
-import { maxDownPaymentCents, quoteFor } from './pricing';
+import { maxDownPaymentCents, quoteFor, requiredDownPayment } from './pricing';
 import { listPriceOn } from './price-list';
 
 let table: CoefficientTable;
@@ -128,5 +128,32 @@ describe('maxDownPaymentCents', () => {
 
   it('is zero for an item already under the minimum', () => {
     expect(maxDownPaymentCents(28_900, table)).toBe(0);
+  });
+});
+
+describe('requiredDownPayment', () => {
+  it('asks nothing of a price inside the bands', () => {
+    expect(requiredDownPayment(25_000_000, table)).toEqual({ needed: false });
+  });
+
+  it('the €260,000 combine needs €10,000 down: 4 % advertised (rounded up)', () => {
+    expect(requiredDownPayment(26_000_000, table)).toEqual({
+      needed: true,
+      possible: true,
+      minDownPaymentCents: 1_000_000,
+      minPercent: 4,
+    });
+  });
+
+  it('is impossible when even 30 % down leaves the price above the largest band', () => {
+    // 30 % of €360,000 is €108,000; €252,000 is still above €250,000.
+    expect(requiredDownPayment(36_000_000, table)).toEqual({ needed: true, possible: false });
+  });
+
+  it('a price exactly at the 30 % edge is still possible', () => {
+    // €250,000 / 0.7 rounded down to whole cents: the cap exactly covers the overshoot.
+    const edge = 35_714_285;
+    const result = requiredDownPayment(edge, table);
+    expect(result).toMatchObject({ needed: true, possible: true });
   });
 });

@@ -9,7 +9,7 @@ import { CatalogueBrowser, type CatalogueItem } from '@/components/catalogue-bro
 import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { assetCategorySchema, type AssetCategory } from '@/data/schemas';
-import { quoteFor } from '@/domain/pricing';
+import { quoteFor, requiredDownPayment } from '@/domain/pricing';
 import { listPriceOn } from '@/domain/price-list';
 import { grossCents, pricesIncludeVat, vatRateOn } from '@/domain/vat';
 import { getT } from '@/i18n/get-t';
@@ -67,11 +67,20 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
     .filter((asset) => VISIBLE_STATUSES.has(asset.status))
     .filter((asset) => {
       const price = priceOf(asset.id);
-      return price === null || price >= minFinancedCents;
+      if (price === null) return true;
+      // Too cheap for the smallest band, or above the largest band even with the 30 %
+      // down-payment cap: it cannot be leased at any configuration, so it is not offered.
+      const required = requiredDownPayment(price, table);
+      return price >= minFinancedCents && !(required.needed && !required.possible);
     })
     .map((asset) => {
       const reprice = secondLife[asset.id];
       const priceCents = priceOf(asset.id);
+      const required = priceCents !== null ? requiredDownPayment(priceCents, table) : null;
+      const needsDownPayment =
+        required?.needed && required.possible
+          ? { cents: required.minDownPaymentCents, percent: required.minPercent }
+          : null;
       const monthly: CatalogueItem['monthly'] = {};
       for (const term of terms) {
         if (priceCents === null || !vat.ok) {
@@ -104,6 +113,7 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
               },
         secondLife: reprice !== undefined,
         monthly,
+        needsDownPayment,
       };
     });
 

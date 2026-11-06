@@ -3,7 +3,7 @@
 // category) priced as ONE banded total — never "4 copies" of the same item.
 // All numbers come from the pure domain functions; this file only loads data and stores.
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
-import { maxDownPaymentCents, quoteFor, type Quote } from '@/domain/pricing';
+import { maxDownPaymentCents, quoteFor, requiredDownPayment, type Quote } from '@/domain/pricing';
 import { listPriceOn } from '@/domain/price-list';
 import { grossCents, vatRateOn } from '@/domain/vat';
 import type { PrismaClient } from '@/generated/prisma/client';
@@ -58,6 +58,11 @@ export type LiveQuoteResult =
         | 'unknown_term'
         | 'down_payment_negative'
         | 'down_payment_over_max';
+      /** Set when the price itself is known and only the configuration is refused. */
+      listPriceCents?: number;
+      maxDownPaymentCents?: number;
+      /** Above the largest band: the smallest down payment that makes it leasable. */
+      minDownPayment?: { cents: number; percent: number } | null;
     };
 
 export async function buildLiveQuote(input: {
@@ -101,7 +106,21 @@ export async function buildLiveQuote(input: {
     termMonths: input.termMonths,
     table,
   });
-  if (!result.ok) return { ok: false, reason: result.reason };
+  if (!result.ok) {
+    // The sliders stay usable on a refusal: the caller still gets the list price, the
+    // down-payment cap, and — above the largest band — the smallest down payment that works.
+    const required = requiredDownPayment(listPriceCents, table);
+    return {
+      ok: false,
+      reason: result.reason,
+      listPriceCents,
+      maxDownPaymentCents: maxDownPaymentCents(listPriceCents, table),
+      minDownPayment:
+        required.needed && required.possible
+          ? { cents: required.minDownPaymentCents, percent: required.minPercent }
+          : null,
+    };
+  }
 
   const vat = vatRateOn(vatRates, input.asOf);
   if (!vat.ok) return { ok: false, reason: vat.reason };

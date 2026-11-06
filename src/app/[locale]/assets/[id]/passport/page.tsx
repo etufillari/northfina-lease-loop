@@ -58,7 +58,12 @@ export default async function PassportPage({
 
       <section className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
         <h2 className="text-sm font-semibold">{t('passport.co2Title')}</h2>
-        {co2 ? (
+        {/* A first life avoids nothing: the machine was newly made for it. The avoided-
+            manufacturing saving only exists from the second life on, when leasing this item
+            again replaces making a new one. */}
+        {passport.currentLife === 1 ? (
+          <p className="mt-2 text-sm">{t('passport.co2FirstLife')}</p>
+        ) : co2 ? (
           <>
             <p className="mt-2 text-2xl font-semibold text-emerald-900 dark:text-emerald-200">
               {formatNumber(co2.kg, locale)} kg CO₂e

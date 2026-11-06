@@ -31,6 +31,13 @@ type LiveQuote = {
   suggestion: { termMonths: number; downPaymentCents: number } | null;
 };
 
+/** What a NOT_PRICEABLE answer still tells us (api/quote failure details). */
+type FailDetails = {
+  listPriceCents: number | null;
+  maxDownPaymentCents: number | null;
+  minDownPayment: { cents: number; percent: number } | null;
+};
+
 export function PriceConfigurator({
   locale,
   assetIds,
@@ -54,6 +61,9 @@ export function PriceConfigurator({
   const [downCents, setDownCents] = useState(0);
   const [live, setLive] = useState<LiveQuote | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
+  // On a refusal the API still sends the list price, cap and minimum down payment, so the
+  // sliders keep working and the message can say how much down is needed.
+  const [failDetails, setFailDetails] = useState<FailDetails | null>(null);
   const [starting, setStarting] = useState(false);
 
   const query = useMemo(() => {
@@ -75,9 +85,11 @@ export function PriceConfigurator({
           if (body.success) {
             setLive(body.data);
             setFailReason(null);
+            setFailDetails(null);
           } else {
             setLive(null);
             setFailReason(String(body.error?.message ?? 'generic'));
+            setFailDetails((body.error?.details as FailDetails) ?? null);
           }
         })
         .catch(() => setFailReason('generic'));
@@ -109,13 +121,22 @@ export function PriceConfigurator({
   }
 
   const terms = live?.termsMonths ?? [12, 24, 36, 48];
-  const maxDown = live?.maxDownPaymentCents ?? 0;
-  const knownReasons = ['below_minimum', 'above_maximum', 'down_payment_over_max'];
-  const notPriceableKey = (
-    failReason && knownReasons.includes(failReason)
-      ? `price.notPriceable.${failReason}`
-      : 'price.notPriceable.generic'
-  ) as MessageKey;
+  const maxDown = live?.maxDownPaymentCents ?? failDetails?.maxDownPaymentCents ?? 0;
+  const knownReasons = ['below_minimum', 'down_payment_over_max'];
+  const failMessage = !failReason
+    ? null
+    : failReason === 'above_maximum'
+      ? failDetails?.minDownPayment
+        ? t('price.notPriceable.above_maximum', {
+            percent: failDetails.minDownPayment.percent,
+            amount: euro(failDetails.minDownPayment.cents),
+          })
+        : t('price.notPriceable.above_maximum_cap')
+      : t(
+          (knownReasons.includes(failReason)
+            ? `price.notPriceable.${failReason}`
+            : 'price.notPriceable.generic') as MessageKey
+        );
 
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-5">
@@ -193,10 +214,7 @@ export function PriceConfigurator({
             <h3 className="mb-2 text-sm font-semibold">{t('price.breakdown')}</h3>
             <Row label={t('price.listPrice')} value={euro(live.listPriceCents)} />
             <Row label={t('price.downPayment')} value={`− ${euro(live.quote.downPaymentCents)}`} />
-            <Row
-              label={`${t('price.financed')} (${t('price.band', { band: live.quote.band })})`}
-              value={euro(live.quote.financedCents)}
-            />
+            <Row label={t('price.financed')} value={euro(live.quote.financedCents)} />
             <Row
               label={t('price.factor')}
               value={`× ${(live.quote.factorPpm / 1_000_000).toFixed(6)}`}
@@ -210,19 +228,21 @@ export function PriceConfigurator({
             ) : null}
             <Row label={t('price.buyout')} value={euro(live.quote.buyoutNetCents)} />
             <Row
-              label={`${t('price.totalCost')} (${
-                pricesInclVat
-                  ? t('price.inclVat', { rate: live.vatRatePercent })
-                  : t('price.exclVat')
-              })`}
+              label={t('price.totalCost')}
               value={euro(
                 pricesInclVat ? live.totalWithVatAtCurrentRateCents : live.quote.netTotalCents
               )}
             />
+            {/* One VAT note for the whole breakdown instead of a suffix on every row. */}
+            <p className="pt-2 text-xs text-stone-500 dark:text-stone-400">
+              {pricesInclVat
+                ? t('price.vatFooter.gross', { rate: live.vatRatePercent })
+                : t('price.vatFooter.net')}
+            </p>
           </dl>
         ) : (
           <p className="mt-6 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
-            {failReason ? t(notPriceableKey) : t('common.loading')}
+            {failMessage ?? t('common.loading')}
           </p>
         )}
       </section>

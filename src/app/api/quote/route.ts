@@ -39,7 +39,14 @@ export const GET = handleRoute(async (request) => {
     asOf,
     secondLifePricesCents: await secondLifePrices(db, ids),
   });
-  if (!live.ok) return fail(422, 'NOT_PRICEABLE', live.reason);
+  if (!live.ok) {
+    return fail(422, 'NOT_PRICEABLE', live.reason, {
+      reason: live.reason,
+      listPriceCents: live.listPriceCents ?? null,
+      maxDownPaymentCents: live.maxDownPaymentCents ?? null,
+      minDownPayment: live.minDownPayment ?? null,
+    });
+  }
 
   let affordability: AffordabilityResult | null = null;
   let suggestion: AffordableSuggestion | null = null;

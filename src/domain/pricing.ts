@@ -94,3 +94,32 @@ export function quoteFor(input: {
     },
   };
 }
+
+export type RequiredDownPayment =
+  /** Leasable with at least this down payment (a whole percent, rounded up for display). */
+  | { needed: true; possible: true; minDownPaymentCents: number; minPercent: number }
+  /** Even the 30 % cap leaves the financed amount above the table's largest band. */
+  | { needed: true; possible: false }
+  /** The list price is financeable as it is: no down payment required. */
+  | { needed: false };
+
+/**
+ * Whether — and how big — a down payment is REQUIRED for this list price: the smallest
+ * amount that brings the financed amount down into the coefficient table's bands. The
+ * catalogue shows it on items above the largest band, and hides items that stay above it
+ * even at the 30 % cap (src/domain/pricing DOWN_PAYMENT_MAX_PERCENT).
+ */
+export function requiredDownPayment(
+  listPriceCents: number,
+  table: CoefficientTable
+): RequiredDownPayment {
+  const maxFinanced = Math.max(...table.bands.map((b) => b.max_financed_cents));
+  if (listPriceCents <= maxFinanced) return { needed: false };
+  const minDownPaymentCents = listPriceCents - maxFinanced;
+  if (minDownPaymentCents > Math.floor((listPriceCents * DOWN_PAYMENT_MAX_PERCENT) / 100)) {
+    return { needed: true, possible: false };
+  }
+  // Rounded UP to a whole percent: the advertised share must always be enough.
+  const minPercent = Math.ceil((minDownPaymentCents * 100) / listPriceCents);
+  return { needed: true, possible: true, minDownPaymentCents, minPercent };
+}

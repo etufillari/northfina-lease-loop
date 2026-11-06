@@ -29,6 +29,7 @@ import {
 import { formatNumber } from '@/i18n/format';
 import { getT, messages, type MessageKey, type Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { STAFF, VIEWER_COOKIE } from '@/server/viewer';
 
 type WorkbenchProps = {
   asset: Asset;
@@ -141,144 +142,187 @@ export function SecondLifeWorkbench(props: WorkbenchProps) {
     }
   }
 
+  const blocked = !plan.ok
+    ? t('secondLife.blocked.plan')
+    : !leasable
+      ? t('secondLife.tooLow')
+      : priceCents <= 0
+        ? t('secondLife.blocked.price')
+        : null;
+
+  function becomeStaff() {
+    document.cookie = `${VIEWER_COOKIE}=${STAFF}; path=/; samesite=lax`;
+    router.refresh();
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
-        <h2 className="text-lg font-semibold">{t('secondLife.check')}</h2>
-        <label className="mt-4 block text-sm font-medium">
-          {t('secondLife.conditionAfter')}
-          <select
-            value={conditionAfter}
-            onChange={(event) => {
-              setConditionAfter(event.target.value as AssetCondition);
-              setPriceEuros(null);
-            }}
-            className={field}
-          >
-            {options.map((c) => (
-              <option key={c} value={c}>
-                {t(`condition.${c}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {!leasable ? (
-          <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">
-            {t('secondLife.tooLow')}
-          </p>
-        ) : null}
+    <div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+          <h2 className="text-lg font-semibold">{t('secondLife.check')}</h2>
+          <label className="mt-4 block text-sm font-medium">
+            {t('secondLife.conditionAfter')}
+            <select
+              value={conditionAfter}
+              onChange={(event) => {
+                setConditionAfter(event.target.value as AssetCondition);
+                setPriceEuros(null);
+              }}
+              className={field}
+            >
+              {options.map((c) => (
+                <option key={c} value={c}>
+                  {t(`condition.${c}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!leasable ? (
+            <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">
+              {t('secondLife.tooLow')}
+            </p>
+          ) : null}
 
-        <h3 className="mt-5 text-sm font-semibold">{t('secondLife.jobs')}</h3>
-        <ul className="mt-2 space-y-1 text-sm">
-          {plan.ok
-            ? plan.steps.map((step) => (
-                <li key={step.id} className="flex justify-between gap-3">
-                  <span>
-                    ✓ {stepLabel(step.id, t)}{' '}
-                    <span className="text-xs text-stone-500">
-                      ({t(`secondLife.reason.${step.reason}`)})
+          <h3 className="mt-5 text-sm font-semibold">{t('secondLife.jobs')}</h3>
+          <ul className="mt-2 space-y-1 text-sm">
+            {plan.ok
+              ? plan.steps.map((step) => (
+                  <li key={step.id} className="flex justify-between gap-3">
+                    <span>
+                      ✓ {stepLabel(step.id, t)}{' '}
+                      <span className="text-xs text-stone-500">
+                        ({t(`secondLife.reason.${step.reason}`)})
+                      </span>
                     </span>
-                  </span>
-                  <span className="tabular-nums">{euro(step.costCents)}</span>
-                </li>
-              ))
-            : null}
-        </ul>
-        <label className="mt-4 block text-sm font-medium">
-          {t('secondLife.extra')}
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={extraEuros}
-            onChange={(e) => setExtraEuros(e.target.value)}
-            className={field}
-          />
-        </label>
-        <label className="mt-4 block text-sm font-medium">
-          {t('secondLife.notes')}
-          <textarea
-            rows={3}
-            maxLength={2000}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={t('secondLife.notesHint')}
-            className={field}
-          />
-        </label>
-      </section>
+                    <span className="tabular-nums">{euro(step.costCents)}</span>
+                  </li>
+                ))
+              : null}
+          </ul>
+          <label className="mt-4 block text-sm font-medium">
+            {t('secondLife.extra')}
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={extraEuros}
+              onChange={(e) => setExtraEuros(e.target.value)}
+              className={field}
+            />
+          </label>
+          <label className="mt-4 block text-sm font-medium">
+            {t('secondLife.notes')}
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={t('secondLife.notesHint')}
+              className={field}
+            />
+          </label>
+        </section>
 
-      <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
-        <h2 className="text-lg font-semibold">{t('secondLife.price')}</h2>
-        <dl className="mt-4 space-y-1.5 text-sm tabular-nums">
-          <Row label={t('secondLife.original')} value={euro(originalNetCents)} />
-          <Row
-            label={t('secondLife.age', { months: ageMonths })}
-            value={`${formatNumber(Math.round(residualPercent(curves.curves[asset.category] ?? [], ageMonths) * 10) / 10, props.locale)} %`}
-          />
-          <Row label={t('secondLife.valueNow')} value={euro(valueNow)} />
-          <Row label={t('secondLife.cost')} value={`− ${euro(costCents)}`} />
-          <Row label={t('secondLife.valueAfter')} value={euro(valueAfter)} strong />
-          <Row
-            label={gain >= 0 ? t('secondLife.worthIt') : t('secondLife.notWorthIt')}
-            value={euro(Math.abs(gain))}
-          />
-        </dl>
-        <label className="mt-5 block text-sm font-medium">
-          {t('secondLife.newPrice', { suggested: euro(suggested) })}
-          <input
-            type="number"
-            min={1}
-            step="1"
-            value={priceEuros ?? String(suggested / 100)}
-            onChange={(event) => setPriceEuros(event.target.value)}
-            className={field}
-          />
-        </label>
-        <p className="mt-3 text-sm text-stone-700 dark:text-stone-300">
-          {leaseTerms(table)
-            .map((months) => {
-              const monthly = monthlyFor(months);
-              return `${months} ${t('secondLife.monthsShort')}: ${monthly === null ? '–' : euro(monthly)}`;
-            })
-            .join(' · ')}
+        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+          <h2 className="text-lg font-semibold">{t('secondLife.price')}</h2>
+          <dl className="mt-4 space-y-1.5 text-sm tabular-nums">
+            <Row label={t('secondLife.original')} value={euro(originalNetCents)} />
+            <Row
+              label={t('secondLife.age', { months: ageMonths })}
+              value={`${formatNumber(Math.round(residualPercent(curves.curves[asset.category] ?? [], ageMonths) * 10) / 10, props.locale)} %`}
+            />
+            <Row label={t('secondLife.valueNow')} value={euro(valueNow)} />
+            <Row label={t('secondLife.cost')} value={`− ${euro(costCents)}`} />
+            <Row label={t('secondLife.valueAfter')} value={euro(valueAfter)} strong />
+            <Row
+              label={gain >= 0 ? t('secondLife.worthIt') : t('secondLife.notWorthIt')}
+              value={euro(Math.abs(gain))}
+            />
+          </dl>
+          <label className="mt-5 block text-sm font-medium">
+            {t('secondLife.newPrice', { suggested: euro(suggested) })}
+            <input
+              type="number"
+              min={1}
+              step="1"
+              value={priceEuros ?? String(suggested / 100)}
+              onChange={(event) => setPriceEuros(event.target.value)}
+              className={field}
+            />
+          </label>
+          <p className="mt-3 text-sm text-stone-700 dark:text-stone-300">
+            {leaseTerms(table)
+              .map((months) => {
+                const monthly = monthlyFor(months);
+                return `${months} ${t('secondLife.monthsShort')}: ${monthly === null ? '–' : euro(monthly)}`;
+              })
+              .join(' · ')}
+          </p>
+
+          <h3 className="mt-5 text-sm font-semibold">{t('secondLife.waiting')}</h3>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {ranked.map((fit) => (
+              <li key={fit.request.id} className={fit.fits ? 'font-medium' : 'text-stone-500'}>
+                {fit.fits ? '✓' : '✗'} {fit.request.id} · {fit.request.who} ·{' '}
+                {t('secondLife.wants', {
+                  months: fit.request.preferred_term_months,
+                  budget: euro(fit.request.max_monthly_net_rent_cents),
+                  condition: t(`condition.${fit.request.min_condition}`),
+                  date: fit.request.needed_by,
+                })}
+                {fit.monthlyNetCents !== null ? ` → ${euro(fit.monthlyNetCents)}` : ''}
+                {fit.problems.length > 0
+                  ? ` (${fit.problems.map((p) => t(`secondLife.problem.${p}`)).join(', ')})`
+                  : ''}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-stone-500">{t('secondLife.rankingRule')}</p>
+        </section>
+      </div>
+
+      <section
+        aria-labelledby="confirm-heading"
+        className="mt-6 rounded-2xl border-2 border-emerald-600 bg-emerald-50 p-6 dark:border-emerald-500 dark:bg-emerald-950"
+      >
+        <h2 id="confirm-heading" className="text-lg font-semibold">
+          {t('secondLife.confirmTitle')}
+        </h2>
+        <p className="mt-2">
+          {t('secondLife.confirmSummary', {
+            condition: t(`condition.${conditionAfter}`),
+            price: euro(priceCents),
+            cost: euro(costCents),
+          })}{' '}
+          {props.heldForName
+            ? t('secondLife.confirmReserved', { name: props.heldForName })
+            : t('secondLife.confirmAvailable')}
         </p>
-
-        <h3 className="mt-5 text-sm font-semibold">{t('secondLife.waiting')}</h3>
-        <ul className="mt-2 space-y-1.5 text-sm">
-          {ranked.map((fit) => (
-            <li key={fit.request.id} className={fit.fits ? 'font-medium' : 'text-stone-500'}>
-              {fit.fits ? '✓' : '✗'} {fit.request.id} · {fit.request.who} ·{' '}
-              {t('secondLife.wants', {
-                months: fit.request.preferred_term_months,
-                budget: euro(fit.request.max_monthly_net_rent_cents),
-                condition: t(`condition.${fit.request.min_condition}`),
-                date: fit.request.needed_by,
-              })}
-              {fit.monthlyNetCents !== null ? ` → ${euro(fit.monthlyNetCents)}` : ''}
-              {fit.problems.length > 0
-                ? ` (${fit.problems.map((p) => t(`secondLife.problem.${p}`)).join(', ')})`
-                : ''}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2 text-xs text-stone-500">{t('secondLife.rankingRule')}</p>
-
+        {blocked ? (
+          <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">{blocked}</p>
+        ) : null}
         {props.isStaff ? (
           <button
             type="button"
-            disabled={busy || !plan.ok || !leasable || priceCents <= 0}
+            disabled={busy || blocked !== null}
             onClick={() => void putBack()}
-            className="mt-6 w-full rounded-lg bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+            className="mt-4 rounded-lg bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {props.heldForName
               ? t('secondLife.reserveFor', { name: props.heldForName, price: euro(priceCents) })
               : t('secondLife.putBack', { price: euro(priceCents) })}
           </button>
         ) : (
-          <p className="mt-6 rounded-lg bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100">
-            {t('admin.staffOnly')}
-          </p>
+          <div className="mt-4">
+            <p className="text-sm">{t('secondLife.staffOnly')}</p>
+            <button
+              type="button"
+              onClick={becomeStaff}
+              className="mt-2 rounded-lg bg-amber-700 px-4 py-2 font-semibold text-white hover:bg-amber-800"
+            >
+              {t('admin.becomeStaff')}
+            </button>
+          </div>
         )}
         {error ? (
           <p role="alert" className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">

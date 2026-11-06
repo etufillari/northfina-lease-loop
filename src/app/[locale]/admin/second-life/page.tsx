@@ -1,12 +1,14 @@
-// Admin, Second life: the items that came back and wait for a check, and the ones already
-// refurbished for a new life. Each returned item opens the workbench.
+// Admin, Second life: the items that came back and wait for a check, the ones already
+// refurbished for a new life, and the waiting list from the data pack. Each returned item opens
+// the workbench.
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { StatusBadge } from '@/components/status-badge';
-import { loadCustomers } from '@/data/load';
+import { loadCustomers, loadSecondLifeDemand } from '@/data/load';
+import { appDate } from '@/server/app-date';
 import { formatEuro } from '@/domain/money';
-import { formatNumber } from '@/i18n/format';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
@@ -18,6 +20,7 @@ export default async function SecondLifePage({ params }: PageProps<'/[locale]/ad
   await connection();
 
   const t = getT(locale);
+  const [{ today }, demand] = await Promise.all([appDate(), loadSecondLifeDemand()]);
   const [returned, refurbished, customers] = await Promise.all([
     db.asset.findMany({ where: { status: 'returned' }, orderBy: { id: 'asc' } }),
     db.asset.findMany({
@@ -114,6 +117,71 @@ export default async function SecondLifePage({ params }: PageProps<'/[locale]/ad
           })}
         </ul>
       )}
+
+      <h2 className="mt-10 border-b border-stone-200 pb-2 text-xl font-semibold dark:border-stone-800">
+        {t('secondLife.waitingList', { count: demand.length })}
+      </h2>
+      <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
+        {t('secondLife.waitingListSource')}
+      </p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[44rem] text-sm">
+          <thead className="text-left text-stone-600 dark:text-stone-400">
+            <tr className="border-b border-stone-200 dark:border-stone-700">
+              <th scope="col" className="py-2 pr-3 font-medium">
+                #
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                {t('secondLife.col.who')}
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                {t('asset.category')}
+              </th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium">
+                {t('secondLife.col.budget')}
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                {t('secondLife.col.condition')}
+              </th>
+              <th scope="col" className="py-2 pr-3 font-medium">
+                {t('apply.term')}
+              </th>
+              <th scope="col" className="py-2 font-medium">
+                {t('secondLife.col.neededBy')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {demand.map((request) => {
+              const late = request.needed_by < today;
+              return (
+                <tr
+                  key={request.id}
+                  className={
+                    'border-b border-stone-100 dark:border-stone-800 ' +
+                    (late ? 'text-stone-400' : '')
+                  }
+                >
+                  <td className="py-1.5 pr-3 font-mono">{request.id}</td>
+                  <td className="py-1.5 pr-3">{request.who}</td>
+                  <td className="py-1.5 pr-3">{t(`category.${request.category}`)}</td>
+                  <td className="py-1.5 pr-3 text-right tabular-nums">
+                    {formatEuro(request.max_monthly_net_rent_cents, intlLocale[locale])}
+                  </td>
+                  <td className="py-1.5 pr-3">{t(`condition.${request.min_condition}`)}</td>
+                  <td className="py-1.5 pr-3">
+                    {t('apply.termValue', { months: request.preferred_term_months })}
+                  </td>
+                  <td className="py-1.5">
+                    {formatIsoDate(request.needed_by, locale)}
+                    {late ? ` · ${t('secondLife.problem.deadline')}` : ''}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

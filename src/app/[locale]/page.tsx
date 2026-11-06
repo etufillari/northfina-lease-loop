@@ -55,13 +55,23 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
     .map(Number)
     .sort((a, b) => a - b);
 
+  // The smallest amount the coefficient table finances: anything cheaper cannot be leased.
+  const minFinancedCents = Math.min(...table.bands.map((band) => band.min_financed_cents));
+  const priceOf = (assetId: string): number | null => {
+    const listed = listPriceOn(priceLists, assetId, today);
+    // A refurbished item is priced at the desk's re-price, not the new-item price list.
+    return listed.ok ? (secondLife[assetId] ?? listed.priceCents) : null;
+  };
+
   const items: CatalogueItem[] = assets
     .filter((asset) => VISIBLE_STATUSES.has(asset.status))
+    .filter((asset) => {
+      const price = priceOf(asset.id);
+      return price === null || price >= minFinancedCents;
+    })
     .map((asset) => {
-      const listed = listPriceOn(priceLists, asset.id, today);
-      // A refurbished item is priced at the desk's re-price, not the new-item price list.
       const reprice = secondLife[asset.id];
-      const priceCents = listed.ok ? (reprice ?? listed.priceCents) : null;
+      const priceCents = priceOf(asset.id);
       const monthly: CatalogueItem['monthly'] = {};
       for (const term of terms) {
         if (priceCents === null || !vat.ok) {

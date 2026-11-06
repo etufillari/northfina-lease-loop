@@ -26,6 +26,7 @@ import {
 import type { PrismaClient } from '@/generated/prisma/client';
 import { toAsset } from './assets';
 import { withAudit } from './audit';
+import { recordInspection, returnInspection, type ReturnInspection } from './inspection';
 import { endNominations, nomineesByAsset, startNomineeClock } from './nominations';
 import { offerSet, secondLifeRent, shelfItems } from './second-life-offers';
 import { listWaitlist, toSecondLifeRequest } from './waitlist';
@@ -57,6 +58,8 @@ export type SecondLifePreview = {
   outcome: PreviewOutcome;
   /** The person the last lessee nominated, who gets it ahead of the waiting list. */
   nominee: { id: string; name: string | null } | null;
+  /** The return inspection, for an item back from a lease in the app (null otherwise). */
+  inspection: ReturnInspection | null;
   /** Everyone the decision looked at, by id, so the desk can say who they are. */
   waiters: Record<string, SecondLifeRequest>;
   winner: SecondLifeRequest | null;
@@ -94,9 +97,17 @@ export async function listReturnedDecisions(
   const byId = new Map(demand.map((w) => [w.id, w]));
 
   const items: DeskItem[] = [];
+  // Until someone inspects a return, the desk decides on the suggested grade (which the
+  // execute then records as the inspection).
+  const inspections = new Map<string, ReturnInspection | null>();
   for (const row of assetRows) {
+    const inspection = await returnInspection(db, row);
+    inspections.set(row.id, inspection);
     const v1 = listPriceOn(priceLists, row.id, ORIGINAL_PRICE_DATE);
-    if (v1.ok) items.push({ asset: toAsset(row), originalListPriceCents: v1.priceCents });
+    if (!v1.ok) continue;
+    const asset = toAsset(row);
+    if (inspection?.needed) asset.condition = inspection.suggested.condition;
+    items.push({ asset, originalListPriceCents: v1.priceCents });
   }
   const nominees = await nomineesByAsset(
     db,
@@ -153,6 +164,7 @@ export async function listReturnedDecisions(
       asOf,
       decision,
       outcome: allocation.outcome,
+      inspection: inspections.get(item.asset.id) ?? null,
       nominee:
         allocation.outcome.kind === 'nominee'
           ? {
@@ -285,6 +297,15 @@ export async function executeSecondLife(
           data: { asset_id: asset.id, type, on_date: asOf, details_json: JSON.stringify(details) },
         });
 
+      // Executing an uninspected return accepts the suggested grade as its inspection.
+      if (preview.inspection?.needed) {
+        await recordInspection(tx, {
+          assetId: asset.id,
+          condition: asset.condition,
+          inspection: preview.inspection,
+          asOf,
+        });
+      }
       if (applied === 'parts_bin') {
         await event('parts_bin', {
           valueAsIsCents: decision.valueAsIsCents,

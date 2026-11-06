@@ -527,5 +527,15 @@
   "secondLife.skipped.gain_below_cost": "No upgrade: {from} → {to} would cost {cost} but add only {gain} of value.",
   "secondLife.skipped.not_worth_work": "No upgrade: {from} → {to} for {cost} would make it worth {value}, not more than the {work} all the work would cost — so it goes to parts.",
   "secondLife.skipped.below_minimum": "No upgrade: even as {to} it would be worth only {value}, under the €300 lease minimum — so it goes to parts.",
-  "secondLife.skipped.still_not_listable": "No upgrade: {from} → {to} would pay for itself, but as {to} it still cannot be listed and nobody on the waiting list takes it — so it goes to parts."
+  "secondLife.skipped.still_not_listable": "No upgrade: {from} → {to} would pay for itself, but as {to} it still cannot be listed and nobody on the waiting list takes it — so it goes to parts.",
+  "secondLife.factors": "Age {months} months → {age} % · {condition} × {multiplier} · {usage} → {usagePercent} %",
+  "secondLife.inspection.title": "Return inspection",
+  "secondLife.inspection.suggestion": "Went out {out}, {used} used on this lease. Suggested: {suggested} — a used item is at best like new, and drops one grade per {step}.",
+  "secondLife.inspection.pending": "Not inspected yet: the decision below uses the suggestion, and carrying it out accepts it.",
+  "secondLife.inspection.done": "Inspected: {condition}.",
+  "secondLife.inspection.grade": "Condition",
+  "secondLife.inspection.save": "Save inspection",
+  "passport.event.inspected": "Return inspection",
+  "passport.detail.inspected": "Graded {condition} (suggested {suggested})",
+  "staff.audit.action.asset.inspected": "Inspected a return"
 }

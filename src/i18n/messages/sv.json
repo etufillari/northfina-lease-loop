@@ -527,5 +527,15 @@
   "secondLife.skipped.gain_below_cost": "Ingen uppgradering: {from} → {to} skulle kosta {cost} men bara tillföra {gain} i värde.",
   "secondLife.skipped.not_worth_work": "Ingen uppgradering: {from} → {to} för {cost} skulle göra den värd {value}, inte mer än de {work} allt arbete skulle kosta – så den går till reservdelar.",
   "secondLife.skipped.below_minimum": "Ingen uppgradering: även som {to} skulle den bara vara värd {value}, under leasingminimum på 300 € – så den går till reservdelar.",
-  "secondLife.skipped.still_not_listable": "Ingen uppgradering: {from} → {to} skulle betala sig, men som {to} kan den ändå inte listas och ingen i kön tar den – så den går till reservdelar."
+  "secondLife.skipped.still_not_listable": "Ingen uppgradering: {from} → {to} skulle betala sig, men som {to} kan den ändå inte listas och ingen i kön tar den – så den går till reservdelar.",
+  "secondLife.factors": "Ålder {months} mån → {age} % · {condition} × {multiplier} · {usage} → {usagePercent} %",
+  "secondLife.inspection.title": "Returbesiktning",
+  "secondLife.inspection.suggestion": "Gick ut som {out}, {used} användning under det här avtalet. Förslag: {suggested} – en använd artikel är som bäst som ny och sjunker ett steg per {step}.",
+  "secondLife.inspection.pending": "Inte besiktigad än: beslutet nedan använder förslaget, och att genomföra det godkänner förslaget.",
+  "secondLife.inspection.done": "Besiktigad: {condition}.",
+  "secondLife.inspection.grade": "Skick",
+  "secondLife.inspection.save": "Spara besiktning",
+  "passport.event.inspected": "Returbesiktning",
+  "passport.detail.inspected": "Bedömd {condition} (förslag {suggested})",
+  "staff.audit.action.asset.inspected": "Besiktigade en retur"
 }

@@ -9,6 +9,7 @@ import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { SecondLifePreview } from '@/server/second-life';
 import { DeskActionButton } from './desk-action-button';
+import { InspectionForm } from './inspection-form';
 import { PhotoUpload } from './photo-upload';
 
 const OUTCOME_STYLE = {
@@ -69,6 +70,19 @@ export function DecisionCard({
         </span>
       </summary>
 
+      {preview.inspection ? (
+        <div className="mt-5">
+          <InspectionForm
+            locale={locale}
+            assetId={asset.id}
+            usageUnit={asset.usage.unit}
+            inspection={preview.inspection}
+            graded={asset.condition}
+            asOfParam={asOfParam}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <section>
           <h3 className="text-sm font-semibold">{t('secondLife.refurbTitle')}</h3>
@@ -116,12 +130,14 @@ export function DecisionCard({
               label={t('secondLife.valueAsReturned')}
               value={euro(decision.valueAsReturnedCents)}
             />
+            <Factors locale={locale} unit={asset.usage.unit} decision={decision} at="asReturned" />
             {/* The financed amount IS the value after all the work, so the value before the
                 upgrade is worth a line only when an upgrade makes it differ. */}
             {decision.valueAsIsCents !== decision.financedCents && (
               <Row label={t('secondLife.valueAsIs')} value={euro(decision.valueAsIsCents)} />
             )}
             <Row label={t('secondLife.financed')} value={euro(decision.financedCents)} strong />
+            <Factors locale={locale} unit={asset.usage.unit} decision={decision} at="final" />
           </dl>
         </section>
       </div>
@@ -294,6 +310,35 @@ function UpgradeWhy({ locale, preview }: { locale: Locale; preview: SecondLifePr
     case 'still_not_listable':
       return t('secondLife.skipped.still_not_listable', { from, to: condition(skipped.to) });
   }
+}
+
+/** How a market value was worked out: age, condition and usage, each with its effect. */
+function Factors({
+  locale,
+  unit,
+  decision,
+  at,
+}: {
+  locale: Locale;
+  unit: string;
+  decision: SecondLifePreview['decision'];
+  at: 'asReturned' | 'final';
+}) {
+  const t = getT(locale);
+  const f = decision.valueFactors[at];
+  const percent = (value: number) => formatNumber(Math.round(value * 10) / 10, locale);
+  return (
+    <dd className="pb-1 text-xs text-stone-600 dark:text-stone-400">
+      {t('secondLife.factors', {
+        months: decision.valueFactors.ageMonths,
+        age: percent(f.agePercent),
+        condition: t(`condition.${f.condition}` as MessageKey),
+        multiplier: formatNumber(f.conditionMultiplier, locale),
+        usage: t(`usage.${unit}` as MessageKey, { value: formatNumber(f.usage, locale) }),
+        usagePercent: percent(f.usagePercent),
+      })}
+    </dd>
+  );
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

@@ -63,6 +63,7 @@ const invoice = {
   id: 'inv-1',
   contract_id: 'con-1',
   sequence: 3,
+  kind: 'rent',
   period_start: '2027-01-05',
   period_end: '2027-02-04',
   invoice_date: '2027-01-05',

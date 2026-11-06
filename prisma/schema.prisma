@@ -118,6 +118,7 @@ model Invoice {
   id                    String   @id @default(cuid())
   contract_id           String
   sequence              Int // 1 for the first invoice of the contract
+  kind                  String   @default("rent") // rent | down_payment | buyout
   period_start          String
   period_end            String
   invoice_date          String

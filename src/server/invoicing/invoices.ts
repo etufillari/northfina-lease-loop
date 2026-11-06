@@ -8,6 +8,7 @@ export function toInvoice(row: InvoiceRow): Invoice {
     id: row.id,
     contract_id: row.contract_id,
     sequence: row.sequence,
+    kind: row.kind,
     period_start: row.period_start,
     period_end: row.period_end,
     invoice_date: row.invoice_date,

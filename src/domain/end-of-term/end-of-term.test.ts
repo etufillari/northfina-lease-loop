@@ -22,6 +22,7 @@ const contract = {
   status: 'active' as const,
   planned_end_on: '2029-11-04',
   term_months: 36,
+  down_payment_cents: 0,
   buyout_cents: 58_350,
 };
 
@@ -97,6 +98,7 @@ describe('buyoutInvoice', () => {
     expect(buyoutInvoice(contract, vatRates, '2029-11-05')).toEqual({
       contract_id: 'con-1',
       sequence: 37,
+      kind: 'buyout',
       period_start: '2029-11-05',
       period_end: '2029-11-05',
       invoice_date: '2029-11-05',
@@ -107,6 +109,11 @@ describe('buyoutInvoice', () => {
       total_cents: 73_521,
       status: 'issued',
     });
+  });
+
+  it('follows the down payment invoice too, when there was one', () => {
+    const withDown = { ...contract, down_payment_cents: 50_000 };
+    expect(buyoutInvoice(withDown, vatRates, '2029-11-05').sequence).toBe(38);
   });
 
   it('uses the rate of the date it is given', () => {

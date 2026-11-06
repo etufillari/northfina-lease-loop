@@ -1,13 +1,18 @@
 // The eligibility rules from data/questions.json: yes, no or "a person will check", with reasons.
 //
+// The rules follow who is leasing, which the applicant answers: a person may lease privately
+// or through a business, so their record's type does not decide it.
+//
 // A fact can come from the form or the customer record, and the two can disagree. The stricter
 // one wins, so a false answer never helps: an applicant under age or a PEP in either source
 // counts, and income is the lower figure. The record also covers questions that were not
-// asked, since q_monthly_income and q_pep only appear for larger deals.
+// asked, since q_monthly_income and q_pep only appear for larger deals. A birth date on record
+// always counts, whatever the answered type, so nobody passes the age limit as a company.
 import type { Answers, ApplicationDecision, EligibilityReason } from '@/data/lease-schemas';
 import type { Customer, Question } from '@/data/schemas';
 import { ageOn, eligibleFrom } from './age';
 import { isValidBusinessId } from './business-id';
+import { answeredCustomerType } from './question-flow';
 
 // In the data only as English text, unlike the age and country limits below.
 const MAX_RENT_PERCENT_OF_INCOME = 30;
@@ -62,13 +67,22 @@ function moneyAnswer(answers: Answers, questionId: string): number | undefined {
 }
 
 /**
- * The applicant's birth date. The later date wins, because the younger applicant is the
- * stricter case, and ISO dates compare correctly as text. Companies have none.
+ * The applicant's birth date, from the form and the record. The later date wins, because the
+ * younger applicant is the stricter case, and ISO dates compare correctly as text.
  */
 export function applicantBirthDate(customer: Customer, answers: Answers): string | null {
-  if (customer.type === 'company') return null;
-  const answer = textAnswer(answers, 'q_birth_date') ?? customer.birth_date;
-  return answer > customer.birth_date ? answer : customer.birth_date;
+  const answered = textAnswer(answers, 'q_birth_date');
+  const recorded = customer.type === 'company' ? undefined : customer.birth_date;
+  if (answered === undefined || recorded === undefined) return answered ?? recorded ?? null;
+  return answered > recorded ? answered : recorded;
+}
+
+/** The applicant's income: the lower of form and record, or `null` when neither has one. */
+function applicantIncome(customer: Customer, answers: Answers): number | null {
+  const answered = moneyAnswer(answers, 'q_monthly_income');
+  const recorded = customer.type === 'consumer' ? customer.monthly_net_income_cents : undefined;
+  if (answered === undefined || recorded === undefined) return answered ?? recorded ?? null;
+  return Math.min(answered, recorded);
 }
 
 /** Compares in whole numbers: rent ÷ income ≤ 30 % is the same as rent × 100 ≤ income × 30. */
@@ -85,6 +99,7 @@ export function decide(input: EligibilityInput): Eligibility {
   const { questions, customer, answers, startOn, monthlyRentWithVatCents } = input;
   const reasons: EligibilityReason[] = [];
   let eligible_from: string | null = null;
+  const applicantType = answeredCustomerType(answers) ?? customer.type;
 
   const minAge = minimumAge(questions);
   const birthDate = applicantBirthDate(customer, answers);
@@ -99,17 +114,20 @@ export function decide(input: EligibilityInput): Eligibility {
     reasons.push('residency');
   }
 
-  if (customer.type === 'consumer' && monthlyRentWithVatCents !== null) {
-    const recorded = customer.monthly_net_income_cents;
-    const income = Math.min(moneyAnswer(answers, 'q_monthly_income') ?? recorded, recorded);
-    if (!isAffordable(monthlyRentWithVatCents, income)) reasons.push('affordability');
+  if (applicantType === 'consumer' && monthlyRentWithVatCents !== null) {
+    // An unknown income cannot show the rent is affordable, so it does not pass.
+    const income = applicantIncome(customer, answers);
+    if (income === null || !isAffordable(monthlyRentWithVatCents, income)) {
+      reasons.push('affordability');
+    }
   }
 
-  if (customer.type !== 'consumer') {
-    const answeredId = textAnswer(answers, 'q_business_id') ?? customer.business_id;
-    if (![answeredId, customer.business_id].every(isValidBusinessId)) {
-      reasons.push('business_id');
-    }
+  if (applicantType !== 'consumer') {
+    const ids = [
+      textAnswer(answers, 'q_business_id'),
+      customer.type === 'consumer' ? undefined : customer.business_id,
+    ].filter((id) => id !== undefined);
+    if (ids.length === 0 || !ids.every(isValidBusinessId)) reasons.push('business_id');
   }
 
   if (monthlyRentWithVatCents === null) reasons.push('financed_limits');

@@ -117,11 +117,9 @@ describe('submitApplication: approved (card 1)', () => {
     expect(JSON.parse(rows[0]?.details_json ?? '')).toMatchObject({ decision: 'approved' });
   });
 
-  it('saves the answers that count, and the customer type from the record, not the request', async () => {
-    const application = await submitOk(
-      card1({ answers: { ...ainoEbikeAnswers, q_customer_type: 'company' } })
-    );
-    expect(application.answers).toEqual({ ...ainoEbikeAnswers, q_customer_type: 'consumer' });
+  it('saves the answers that count, including who is leasing', async () => {
+    const application = await submitOk(card1());
+    expect(application.answers).toEqual(ainoEbikeAnswers);
   });
 
   it('ignores an answer to a question that was not asked, so it cannot change the outcome', async () => {
@@ -159,7 +157,7 @@ describe('submitApplication: rejected', () => {
       quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
-      answers: { q_birth_date: '2009-03-10' },
+      answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
     });
     expect(application).toMatchObject({
       decision: 'rejected',
@@ -176,6 +174,7 @@ describe('submitApplication: rejected', () => {
       termMonths: 36,
       downPaymentCents: 0,
       answers: {
+        q_customer_type: 'consumer',
         q_full_name: 'Mikko Laine',
         q_birth_date: '1990-01-01',
         q_email: 'mikko@example.com',
@@ -199,13 +198,15 @@ describe('submitApplication: rejected', () => {
       quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
-      answers: { q_birth_date: '2009-03-10' },
+      answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
     });
     expect(result).toMatchObject({ ok: false, reason: 'answers_missing' });
   });
 
   it('rejects a country outside FI, SE and EE without asking for the rest', async () => {
-    const application = await submitOk(card1({ answers: { q_country: 'other' } }));
+    const application = await submitOk(
+      card1({ answers: { q_customer_type: 'consumer', q_country: 'other' } })
+    );
     expect(application).toMatchObject({ decision: 'rejected', reasons: ['residency'] });
   });
 
@@ -217,6 +218,7 @@ describe('submitApplication: rejected', () => {
       termMonths: 24,
       downPaymentCents: 0,
       answers: {
+        q_customer_type: 'company',
         q_email: 'typo@example.com',
         q_business_id: '1234567-8',
         q_company_name: 'Typo Trading Oy',
@@ -230,6 +232,7 @@ describe('submitApplication: rejected', () => {
   it('rejects Sanna for rent above 30 % of her income (12 months, v2 cargo e-bike)', async () => {
     await setDemoDate(db, { date: '2026-11-06', actor: 'test' });
     const answers = {
+      q_customer_type: 'consumer',
       q_full_name: 'Sanna Mäkelä',
       q_birth_date: '2004-11-02',
       q_email: 'sanna@example.com',
@@ -262,6 +265,49 @@ describe('submitApplication: rejected', () => {
       decision: 'rejected',
       reasons: ['financed_limits'],
       financed_cents: 28_900,
+    });
+  });
+});
+
+describe('submitApplication: leasing as a different type', () => {
+  const companyAnswers = {
+    q_customer_type: 'company',
+    q_email: 'x@example.com',
+    q_business_id: '3012456-5',
+    q_company_name: 'Side Business Oy',
+    q_can_sign: 'yes',
+    q_vat_registered: 'no',
+    q_usage_purpose: 'delivery',
+  };
+
+  it('lets a person lease through a business, on the business rules', async () => {
+    expect(await submitOk(card1({ answers: companyAnswers }))).toMatchObject({
+      decision: 'approved',
+      reasons: [],
+    });
+  });
+
+  it('does not let Mikko past the age limit by answering company', async () => {
+    const application = await submitOk({
+      customer: customer('cust-mikko'),
+      assetId: 'laptop-008',
+      quantity: 1,
+      termMonths: 36,
+      downPaymentCents: 0,
+      answers: companyAnswers,
+    });
+    expect(application).toMatchObject({
+      decision: 'rejected',
+      reasons: ['min_age'],
+      eligible_from: '2027-03-10',
+    });
+  });
+
+  it('needs a business ID from someone who answers company', async () => {
+    const answers = { ...companyAnswers, q_business_id: '1234567-8' };
+    expect(await submitOk(card1({ answers }))).toMatchObject({
+      decision: 'rejected',
+      reasons: ['business_id'],
     });
   });
 });
@@ -320,7 +366,8 @@ describe('submitApplication: requests that are not saved', () => {
   });
 
   it('refuses an incomplete form and says what is missing', async () => {
-    const result = await submitApplication(db, card1({ answers: { q_full_name: 'Aino' } }));
+    const answers = { q_customer_type: 'consumer', q_full_name: 'Aino' };
+    const result = await submitApplication(db, card1({ answers }));
     expect(result).toEqual({
       ok: false,
       reason: 'answers_missing',
@@ -338,10 +385,23 @@ describe('submitApplication: requests that are not saved', () => {
 });
 
 describe('describeQuestions', () => {
-  it('shows a consumer the questions for the deal, without the server-filled type', async () => {
+  it('starts with who is leasing, and suggests the type on record', async () => {
     const result = await describeQuestions(db, card1({ answers: {} }));
     if (!result.ok) throw new Error(result.reason);
     expect(result.questions.map((q) => q.id)).toEqual([
+      'q_customer_type',
+      'q_email',
+      'q_usage_purpose',
+    ]);
+    expect(result.suggested_customer_type).toBe('consumer');
+  });
+
+  it('shows a consumer the questions for the deal once the type is answered', async () => {
+    const answers = { q_customer_type: 'consumer' };
+    const result = await describeQuestions(db, card1({ answers }));
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.questions.map((q) => q.id)).toEqual([
+      'q_customer_type',
       'q_full_name',
       'q_birth_date',
       'q_email',
@@ -350,7 +410,8 @@ describe('describeQuestions', () => {
       'q_monthly_income',
       'q_usage_purpose',
     ]);
-    expect(result.unanswered).toEqual(result.questions.map((q) => q.id));
+    expect(result.unanswered).not.toContain('q_customer_type');
+    expect(result.unanswered).toHaveLength(7);
     expect(result.blocked).toBeNull();
   });
 
@@ -362,9 +423,11 @@ describe('describeQuestions', () => {
   });
 
   it('shows the card 7 questions to a company, and asks about PEP status', async () => {
-    const result = await describeQuestions(db, card7({ answers: {} }));
+    const answers = { q_customer_type: 'company' };
+    const result = await describeQuestions(db, card7({ answers }));
     if (!result.ok) throw new Error(result.reason);
     expect(result.questions.map((q) => q.id)).toEqual([
+      'q_customer_type',
       'q_email',
       'q_business_id',
       'q_company_name',
@@ -378,9 +441,33 @@ describe('describeQuestions', () => {
   });
 
   it('adds the signatory question once the company says it cannot sign', async () => {
-    const result = await describeQuestions(db, card7({ answers: { q_can_sign: 'no' } }));
+    const answers = { q_customer_type: 'company', q_can_sign: 'no' };
+    const result = await describeQuestions(db, card7({ answers }));
     if (!result.ok) throw new Error(result.reason);
     expect(result.questions.map((q) => q.id)).toContain('q_signatory_email');
+  });
+
+  it('swaps the form and drops old answers when the type changes', async () => {
+    const answers = { ...ainoEbikeAnswers, q_customer_type: 'company' };
+    const result = await describeQuestions(db, card1({ answers }));
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.dropped.sort()).toEqual([
+      'q_birth_date',
+      'q_country',
+      'q_employment',
+      'q_full_name',
+      'q_monthly_income',
+    ]);
+    expect(result.questions.map((q) => q.id)).toContain('q_business_id');
+    expect(result.questions.map((q) => q.id)).not.toContain('q_birth_date');
+  });
+
+  it('reports an answer to who is leasing that is not an option', async () => {
+    const answers = { q_customer_type: 'alien' };
+    const result = await describeQuestions(db, card1({ answers }));
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.invalid).toEqual([{ question_id: 'q_customer_type', reason: 'not_an_option' }]);
   });
 
   it('stops Mikko at his birth date and says when he can apply', async () => {
@@ -390,14 +477,17 @@ describe('describeQuestions', () => {
       quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
-      answers: { q_birth_date: '2009-03-10' },
+      answers: { q_customer_type: 'consumer', q_birth_date: '2009-03-10' },
     });
     if (!result.ok) throw new Error(result.reason);
     expect(result.blocked).toEqual({ reason: 'min_age', eligible_from: '2027-03-10' });
   });
 
   it('stops a customer who lives outside the allowed countries', async () => {
-    const result = await describeQuestions(db, card1({ answers: { q_country: 'other' } }));
+    const result = await describeQuestions(
+      db,
+      card1({ answers: { q_customer_type: 'consumer', q_country: 'other' } })
+    );
     if (!result.ok) throw new Error(result.reason);
     expect(result.blocked).toEqual({ reason: 'residency', eligible_from: null });
   });

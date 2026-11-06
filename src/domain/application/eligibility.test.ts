@@ -93,9 +93,28 @@ describe('decide: minimum age', () => {
     expect(result.reasons).toEqual(['min_age']);
   });
 
-  it('does not apply to companies', () => {
-    const result = decide(input('cust-norvi', { answers: { q_birth_date: '2010-01-01' } }));
-    expect(result.decision).toBe('approved');
+  it('has nothing to check for a company, which has no birth date', () => {
+    expect(decide(input('cust-norvi')).decision).toBe('approved');
+  });
+
+  it('keeps a birth date on record in force, whatever type is answered', () => {
+    const result = decide(
+      input('cust-mikko', {
+        answers: { q_customer_type: 'company', q_business_id: '3012456-5' },
+        monthlyRentWithVatCents: 5_000,
+      })
+    );
+    expect(result).toEqual({
+      decision: 'rejected',
+      reasons: ['min_age'],
+      eligible_from: '2027-03-10',
+    });
+  });
+
+  it('checks the answer when the record has no birth date', () => {
+    const answers = { q_customer_type: 'consumer', q_birth_date: '2010-01-01' };
+    const result = decide(input('cust-norvi', { answers, monthlyRentWithVatCents: 5_000 }));
+    expect(result.reasons).toContain('min_age');
   });
 });
 
@@ -203,6 +222,49 @@ describe('decide: financed limits', () => {
   });
 });
 
+describe('decide: the answered type', () => {
+  it('applies business rules to a consumer record answering company', () => {
+    const answers = { q_customer_type: 'company', q_business_id: '3012456-5' };
+    const result = decide(input('cust-aino', { answers, monthlyRentWithVatCents: 99_999_999 }));
+    expect(result.decision).toBe('approved');
+  });
+
+  it('needs a business ID when a consumer record answers company', () => {
+    const answers = { q_customer_type: 'company' };
+    expect(decide(input('cust-aino', { answers })).reasons).toEqual(['business_id']);
+  });
+
+  it('checks only the typed ID when the record has none', () => {
+    const answers = { q_customer_type: 'sole_trader', q_business_id: '1234567-8' };
+    expect(decide(input('cust-aino', { answers })).reasons).toEqual(['business_id']);
+  });
+
+  it('applies consumer rules to a sole trader answering consumer', () => {
+    const answers = { q_customer_type: 'consumer', q_monthly_income: 100_000 };
+    const result = decide(input('cust-pekka', { answers, monthlyRentWithVatCents: 50_000 }));
+    expect(result.reasons).toEqual(['affordability']);
+  });
+
+  it('does not check a business ID for someone leasing as a consumer', () => {
+    const answers = { q_customer_type: 'consumer', q_monthly_income: 900_000 };
+    expect(decide(input('cust-broken-id', { answers })).decision).toBe('approved');
+  });
+
+  it('does not pass affordability when no income is known', () => {
+    const answers = { q_customer_type: 'consumer' };
+    expect(decide(input('cust-norvi', { answers })).reasons).toEqual(['affordability']);
+  });
+
+  it('counts PEP status from the record, whatever type is answered', () => {
+    const answers = { q_customer_type: 'consumer', q_monthly_income: 900_000 };
+    expect(decide(input('cust-haapala', { answers })).decision).toBe('manual_review');
+  });
+
+  it('falls back to the type on record when the question has no answer', () => {
+    expect(decide(input('cust-broken-id')).reasons).toEqual(['business_id']);
+  });
+});
+
 describe('decide: PEP', () => {
   it('sends Haapala to manual review from the record (card 7)', () => {
     expect(decide(input('cust-haapala'))).toEqual({
@@ -264,7 +326,7 @@ describe('applicantBirthDate', () => {
 
   it('works for sole traders and gives nothing for companies', () => {
     expect(applicantBirthDate(customer('cust-pekka'), {})).toBe('1988-01-22');
-    expect(applicantBirthDate(customer('cust-norvi'), { q_birth_date: '2000-01-01' })).toBeNull();
+    expect(applicantBirthDate(customer('cust-norvi'), {})).toBeNull();
   });
 });
 

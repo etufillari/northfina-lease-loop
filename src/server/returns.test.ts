@@ -7,7 +7,7 @@ import { signContract } from './contracts';
 import { loadPricingData, type PricingData } from './pricing-data';
 import type { PrismaClient } from './prisma-client';
 import { createQuote } from './quotes';
-import { createReturnRequest, receiveReturn } from './returns';
+import { createReturnRequest, receiveReturn, planReturn } from './returns';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -399,5 +399,136 @@ describe('receiveReturn', () => {
 
     expect(unchanged.status).toBe('requested');
     expect(unchanged.inspected_usage_value).toBeNull();
+  });
+});
+
+describe('planReturn', () => {
+  it('creates and saves a refurbishment plan from dealer inspection', async () => {
+    const { contract, returnRequest } = await createReturnForAsset();
+
+    await receiveReturn(db, returnRequest.id, {
+      condition: 'fair',
+      usageValue: 18_400,
+      actor,
+    });
+
+    const result = await planReturn(db, returnRequest.id, {
+      targetCondition: 'good',
+      actor,
+    });
+
+    expect(result).toMatchObject({
+      id: returnRequest.id,
+      status: 'planned',
+      target_condition: 'good',
+      resulting_condition: 'good',
+      resulting_usage_unit: 'km',
+      resulting_usage_value: 0,
+    });
+
+    expect(result.refurbishment_total_cost_cents).toBeGreaterThan(0);
+    expect(result.refurbishment_plan_json).toBeTruthy();
+
+    const savedPlan = JSON.parse(result.refurbishment_plan_json!);
+
+    expect(savedPlan).toMatchObject({
+      targetCondition: 'good',
+      inspectedCondition: 'fair',
+      resultingCondition: 'good',
+      usageReset: true,
+    });
+
+    expect(savedPlan.actions.length).toBeGreaterThan(0);
+
+    // Planning must not update the original asset.
+    const asset = await db.asset.findUniqueOrThrow({
+      where: { id: contract.assetId },
+    });
+
+    expect(asset.status).toBe('reserved');
+  });
+
+  it('rejects planning before dealer inspection', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    expect(
+      await getErrorCode(
+        planReturn(db, returnRequest.id, {
+          targetCondition: 'good',
+          actor,
+        })
+      )
+    ).toBe('RETURN_NOT_RECEIVED');
+  });
+
+  it('rejects a target condition worse than the inspection', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    await receiveReturn(db, returnRequest.id, {
+      condition: 'good',
+      usageValue: 100,
+      actor,
+    });
+
+    expect(
+      await getErrorCode(
+        planReturn(db, returnRequest.id, {
+          targetCondition: 'fair',
+          actor,
+        })
+      )
+    ).toBe('INVALID_TARGET_CONDITION');
+  });
+
+  it('does not allow a return to be planned twice', async () => {
+    const { returnRequest } = await createReturnForAsset();
+
+    await receiveReturn(db, returnRequest.id, {
+      condition: 'fair',
+      usageValue: 100,
+      actor,
+    });
+
+    const input = {
+      targetCondition: 'good' as const,
+      actor,
+    };
+
+    await planReturn(db, returnRequest.id, input);
+
+    expect(await getErrorCode(planReturn(db, returnRequest.id, input))).toBe('RETURN_NOT_RECEIVED');
+
+    expect(
+      await db.auditLog.count({
+        where: {
+          action: 'return.planned',
+          entity_id: returnRequest.id,
+        },
+      })
+    ).toBe(1);
+  });
+
+  it('uses recorded farm-machine service history for planning', async () => {
+    const { returnRequest } = await createReturnForAsset('farm-002');
+
+    await receiveReturn(db, returnRequest.id, {
+      condition: 'fair',
+      usageValue: 4_200,
+      usageSinceLastService: 350,
+      actor,
+    });
+
+    const result = await planReturn(db, returnRequest.id, {
+      targetCondition: 'good',
+      actor,
+    });
+
+    expect(result.status).toBe('planned');
+    expect(result.refurbishment_total_cost_cents).toBeGreaterThan(0);
+
+    const savedPlan = JSON.parse(result.refurbishment_plan_json!);
+
+    expect(savedPlan.targetCondition).toBe('good');
+    expect(savedPlan.resultingCondition).toBe('good');
   });
 });

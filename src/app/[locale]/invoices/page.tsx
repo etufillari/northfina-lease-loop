@@ -100,6 +100,8 @@ export default async function InvoicesPage({
   const contractPrice = await loadContractPrice(db, {
     assetId: asset.id,
     signedOn,
+    termMonths: term,
+    downPaymentCents: down,
     token,
     priceLists,
   });

@@ -99,6 +99,8 @@ export async function executeEarlyExit(
   const { price, offer } = await loadContractPrice(db, {
     assetId: asset.id,
     signedOn: input.signedOn,
+    termMonths: input.termMonths,
+    downPaymentCents: input.downPaymentCents,
     token: input.token,
     priceLists,
   });

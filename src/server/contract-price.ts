@@ -24,15 +24,31 @@ export async function loadContractPrice(
   input: {
     assetId: string;
     signedOn: string;
+    termMonths: number;
+    downPaymentCents: number;
     token?: string;
     priceLists: readonly PriceList[];
   }
 ): Promise<ContractPrice> {
-  const reservation = input.token
+  // Only a signed offer (status `completed`) locks a price, and only for the terms it was
+  // made on: the token is in the URL, so a released or expired offer, or the same token sent
+  // with other terms, must fall back to the catalogue price.
+  const found = input.token
     ? await db.assetReservation.findFirst({
-        where: { token: input.token, asset_id: input.assetId, reservation_type: 'offer' },
+        where: {
+          token: input.token,
+          asset_id: input.assetId,
+          reservation_type: 'offer',
+          status: 'completed',
+        },
       })
     : null;
+  const reservation =
+    found &&
+    found.term_months === input.termMonths &&
+    found.down_payment_cents === input.downPaymentCents
+      ? found
+      : null;
   const offer =
     reservation && reservation.list_price_cents !== null && reservation.price_list_version !== null
       ? {

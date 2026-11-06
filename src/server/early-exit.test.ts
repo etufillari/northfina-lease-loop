@@ -219,6 +219,35 @@ describe('executeEarlyExit', () => {
       const other = await executeEarlyExit(db, { ...CARD_8, token: 'offer-token' });
       expect(other).toMatchObject({ ok: true, receipt: { netCents: 330_666 } });
     });
+
+    it.each(['active', 'released', 'expired'])(
+      'ignores an offer that was never signed (%s)',
+      async (status) => {
+        await db.assetReservation.update({ where: { token: 'offer-token' }, data: { status } });
+        const result = await executeEarlyExit(db, OFFER_CONTRACT);
+        expect(result).toMatchObject({ ok: true, receipt: { netCents: 223_053 } });
+        expect((await auditRows())[0]?.details.contract.signedUnderOffer).toBe(false);
+      }
+    );
+
+    it('ignores the offer when the contract terms differ from the offered terms', async () => {
+      // The offer was made for 36 months with no down payment.
+      const otherTerm = await executeEarlyExit(db, { ...OFFER_CONTRACT, termMonths: 24 });
+      expect(otherTerm.ok).toBe(true);
+      expect((await auditRows())[0]?.details.contract).toMatchObject({
+        listPriceCents: 262_400,
+        signedUnderOffer: false,
+      });
+
+      await db.asset.update({ where: { id: 'ebike-002' }, data: { status: 'reserved' } });
+      const otherDown = await executeEarlyExit(db, { ...OFFER_CONTRACT, downPaymentCents: 10_000 });
+      expect(otherDown.ok).toBe(true);
+      expect((await auditRows()).at(-1)?.details.contract).toMatchObject({
+        downPaymentCents: 10_000,
+        listPriceCents: 262_400,
+        signedUnderOffer: false,
+      });
+    });
   });
 
   it('lets only one of two simultaneous exits through', async () => {

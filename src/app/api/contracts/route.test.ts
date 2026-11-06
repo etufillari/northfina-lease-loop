@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContractCreationResult, CreatedContract } from '@/server/contracts';
+import type { ContractCreationResult, CreatedContract } from '@/server/contracts/contracts';
 
 const { createContractMock } = vi.hoisted(() => ({
   createContractMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/contracts', async () => {
+vi.mock('@/server/contracts/contracts', async () => {
   const { z } = await import('zod');
   const { isoDateSchema } = await import('@/data/schemas');
   return {

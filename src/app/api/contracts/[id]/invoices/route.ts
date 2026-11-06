@@ -2,8 +2,12 @@
 // GET /api/contracts/:id/invoices: return the persisted invoice schedule.
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
-import { generateInvoices, invoiceGenerationRequestSchema, listInvoices } from '@/server/invoices';
-import { throwInvoiceError } from '@/server/invoice-errors';
+import {
+  generateInvoices,
+  invoiceGenerationRequestSchema,
+  listInvoices,
+} from '@/server/invoicing/invoices';
+import { throwInvoiceError } from '@/server/invoicing/invoice-errors';
 
 type InvoiceRouteContext = RouteContext<'/api/contracts/[id]/invoices'>;
 

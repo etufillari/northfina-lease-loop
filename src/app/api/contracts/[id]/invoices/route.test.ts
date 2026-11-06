@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { InvoiceGenerationResult, InvoiceListResult, InvoiceRecord } from '@/server/invoices';
+import type {
+  InvoiceGenerationResult,
+  InvoiceListResult,
+  InvoiceRecord,
+} from '@/server/invoicing/invoices';
 
 const { generateInvoicesMock, listInvoicesMock } = vi.hoisted(() => ({
   generateInvoicesMock: vi.fn(),
@@ -7,7 +11,7 @@ const { generateInvoicesMock, listInvoicesMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/invoices', async () => {
+vi.mock('@/server/invoicing/invoices', async () => {
   const { z } = await import('zod');
   return {
     generateInvoices: generateInvoicesMock,

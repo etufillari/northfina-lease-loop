@@ -2,8 +2,12 @@
 // GET /api/contracts/:id/invoices/:invoiceId/payments: return payment history and balance.
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
-import { throwPaymentError } from '@/server/payment-errors';
-import { listInvoicePayments, paymentRequestSchema, recordPayment } from '@/server/payments';
+import { throwPaymentError } from '@/server/payments/payment-errors';
+import {
+  listInvoicePayments,
+  paymentRequestSchema,
+  recordPayment,
+} from '@/server/payments/payments';
 
 type PaymentRouteContext = RouteContext<'/api/contracts/[id]/invoices/[invoiceId]/payments'>;
 

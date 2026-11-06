@@ -4,8 +4,8 @@ import { db } from '@/server/db';
 import {
   previewSecondLifeMatches,
   secondLifePreviewRequestSchema,
-} from '@/server/second-life-matching';
-import { throwSecondLifeError } from '@/server/second-life-errors';
+} from '@/server/second-life/second-life-matching';
+import { throwSecondLifeError } from '@/server/second-life/second-life-errors';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/assets/[id]/matches/preview'>) => {

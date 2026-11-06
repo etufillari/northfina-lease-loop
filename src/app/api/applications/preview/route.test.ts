@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ApplicationPreviewResult } from '@/server/applications';
-import type { QuoteData } from '@/domain/quote';
+import type { ApplicationPreviewResult } from '@/server/applications/applications';
+import type { QuoteData } from '@/domain/pricing/quote';
 
 const { createApplicationPreviewMock } = vi.hoisted(() => ({
   createApplicationPreviewMock: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({ db: {} }));
-vi.mock('@/server/applications', async () => {
+vi.mock('@/server/applications/applications', async () => {
   const { z } = await import('zod');
   const { centsSchema, isoDateSchema } = await import('@/data/schemas');
   return {

@@ -1,8 +1,8 @@
 // POST /api/contracts/:id/end-of-term: complete a contract as bought, returned or passed on.
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
-import { throwEndOfTermError } from '@/server/end-of-term-errors';
-import { completeContract, endOfTermRequestSchema } from '@/server/end-of-term';
+import { throwEndOfTermError } from '@/server/lifecycle/end-of-term-errors';
+import { completeContract, endOfTermRequestSchema } from '@/server/lifecycle/end-of-term';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/end-of-term'>) => {

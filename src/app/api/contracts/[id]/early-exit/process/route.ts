@@ -2,8 +2,8 @@
 // body: { processedOn, settlementPaidCents, actor }
 import { handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
-import { earlyExitProcessRequestSchema, processEarlyExit } from '@/server/early-exit';
-import { throwEarlyExitError } from '@/server/early-exit-errors';
+import { earlyExitProcessRequestSchema, processEarlyExit } from '@/server/lifecycle/early-exit';
+import { throwEarlyExitError } from '@/server/lifecycle/early-exit-errors';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/early-exit/process'>) => {

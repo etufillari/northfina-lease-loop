@@ -5,7 +5,7 @@ import { connection } from 'next/server';
 import { assetCategorySchema } from '@/data/schemas';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { listAssets } from '@/server/assets/assets';
 import { db } from '@/server/db';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {

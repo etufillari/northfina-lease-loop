@@ -2,9 +2,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
 import { AssetImage } from '@/components/asset-card';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { PriceConfigurator } from '@/components/price-configurator';
 import { formatEuro } from '@/domain/money';
 import { pricesIncludeVat } from '@/domain/vat';
@@ -15,6 +13,7 @@ import { checkClaim } from '@/server/asset-claims';
 import { assetImageUrl } from '@/server/asset-images';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
+import { currentUser } from '@/server/current-user';
 
 export default async function AssetPage({
   params,
@@ -29,7 +28,7 @@ export default async function AssetPage({
   if (!asset) notFound();
 
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const persona = (await currentUser())?.customerId ?? null;
   const customer = persona
     ? await db.customer.findUnique({ where: { id: persona }, select: { type: true } })
     : null;

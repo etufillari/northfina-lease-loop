@@ -29,7 +29,6 @@ type ExitBreakdown = {
 export function ContractActions({
   locale,
   contractId,
-  personaId,
   asOf,
   endsOn,
   today,
@@ -42,7 +41,6 @@ export function ContractActions({
 }: {
   locale: Locale;
   contractId: string;
-  personaId: string;
   asOf: string | null;
   endsOn: string;
   today: string;
@@ -83,7 +81,7 @@ export function ContractActions({
     const response = await fetch(`/api/contracts/${contractId}/transfer${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ actor: personaId }),
+      body: JSON.stringify({}),
     });
     const body = await response.json();
     setBusy(false);
@@ -97,7 +95,7 @@ export function ContractActions({
     const response = await fetch(`/api/contracts/${contractId}/nominate${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: nomineeEmail, actor: personaId }),
+      body: JSON.stringify({ email: nomineeEmail }),
     });
     const body = await response.json();
     setBusy(false);
@@ -127,7 +125,7 @@ export function ContractActions({
     const response = await fetch(`/api/contracts/${contractId}/${path}${suffix}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...payload, actor: personaId }),
+      body: JSON.stringify(payload),
     });
     const body = await response.json();
     setBusy(false);
@@ -156,7 +154,6 @@ export function ContractActions({
           <BuyoutPurchase
             locale={locale}
             contractId={contractId}
-            personaId={personaId}
             suffix={suffix}
             invoice={buyoutInvoice}
             pricesInclVat={pricesInclVat}

@@ -34,7 +34,7 @@ export function DeskActionButton({
       const response = await fetch(`${path}${suffix}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor: personaId }),
+        body: JSON.stringify({}),
       });
       const body = await response.json();
       if (body.success) router.refresh();

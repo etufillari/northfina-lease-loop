@@ -13,7 +13,6 @@ import { intlLocale, type Locale } from '@/i18n/locales';
 export function BuyoutPurchase({
   locale,
   contractId,
-  personaId,
   suffix,
   invoice,
   pricesInclVat,
@@ -22,7 +21,6 @@ export function BuyoutPurchase({
 }: {
   locale: Locale;
   contractId: string;
-  personaId: string;
   suffix: string;
   /** Null when no VAT rate is known for the invoice date. */
   invoice: BuyoutInvoicePreview | null;
@@ -46,7 +44,7 @@ export function BuyoutPurchase({
       const response = await fetch(`/api/contracts/${contractId}/${path}${suffix}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...payload, actor: personaId }),
+        body: JSON.stringify(payload),
       });
       const body = await response.json();
       if (body.success) {

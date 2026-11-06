@@ -132,6 +132,7 @@ describe('staff decline', () => {
     const declined = await declineApplication(db, {
       applicationId: ctx.applicationId,
       actor: 'staff',
+      isStaff: true,
     });
     if (!declined.ok) throw new Error(declined.reason);
     expect(await activeOffer(db)).not.toBeNull();

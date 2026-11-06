@@ -69,7 +69,7 @@ export function CatalogueBrowser({
       void fetch(`/api/customers/${personaId}/preferred-category`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ category: next, actor: personaId }),
+        body: JSON.stringify({ category: next }),
       }).catch(() => {});
     }
   }

@@ -1,4 +1,4 @@
-// POST /api/contracts/:id/end-of-term  body: { action: "buy" | "return", actor,
+// POST /api/contracts/:id/end-of-term  body: { action: "buy" | "return",
 //   usageReadings?: { assetId: reading } }  [?asOf=] — a return needs every item's reading.
 // Buy it (buyout invoice, 30 days to pay, asset leaves the loop) or return it (the asset
 // becomes `returned` and feeds the second-life desk).
@@ -8,10 +8,10 @@ import { asOfFrom } from '@/server/as-of';
 import { notYours } from '@/server/authz';
 import { db } from '@/server/db';
 import { endOfTerm } from '@/server/lifecycle';
+import { requireCustomer } from '@/server/current-user';
 
 const bodySchema = z.strictObject({
   action: z.enum(['buy', 'return']),
-  actor: z.string().trim().min(1).max(100),
   /** Asset id → the lifetime meter reading at the return (km, cycles or hours). */
   usageReadings: z.record(z.string(), z.number().int().nonnegative()).optional(),
 });
@@ -19,11 +19,13 @@ const bodySchema = z.strictObject({
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/end-of-term'>) => {
     const { id } = await params;
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
     const result = await endOfTerm(db, {
       contractId: id,
       action: body.action,
-      actor: body.actor,
+      actor: user.actorId,
       asOf: asOfFrom(request),
       usageReadings: body.usageReadings,
     });

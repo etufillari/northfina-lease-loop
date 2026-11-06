@@ -4,9 +4,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
 import { FleetBuilder } from '@/components/fleet-builder';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { loadPriceLists } from '@/data/load';
 import { listPriceOn } from '@/domain/price-list';
 import { pricesIncludeVat } from '@/domain/vat';
@@ -17,6 +15,7 @@ import { listAssets } from '@/server/assets';
 import { assetImageUrls } from '@/server/asset-images';
 import { db } from '@/server/db';
 import { secondLifePrices } from '@/server/quotes';
+import { currentUser } from '@/server/current-user';
 
 export default async function FleetPage({ params, searchParams }: PageProps<'/[locale]/fleet'>) {
   const { locale } = await params;
@@ -25,7 +24,7 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
 
   const t = getT(locale);
   const { asOf } = await asOfFromPage(await searchParams);
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const persona = (await currentUser())?.customerId ?? null;
   const [assets, priceLists, secondLife, imageRows, customer] = await Promise.all([
     listAssets(db),
     loadPriceLists(),

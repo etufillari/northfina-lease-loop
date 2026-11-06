@@ -308,6 +308,7 @@ describe('card 7 — big ticket: Haapalan Tila, farm-002 (€145,000), 48 months
     const approved = await approveApplication(db, {
       applicationId: state.application.id,
       actor: 'staff',
+      isStaff: true,
       asOf: '2026-11-05',
     });
     expect(approved).toMatchObject({ ok: true, status: 'approved' });

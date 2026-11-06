@@ -4,7 +4,6 @@
 import { holdUntil as holdUntilFor } from '@/domain/holds';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { checkClaim } from '@/server/asset-claims';
-import { isStaffActor } from '@/server/authz';
 import { withAudit } from '@/server/audit';
 import { quoteAssetIds } from '@/server/quotes';
 
@@ -91,7 +90,14 @@ export type StaffDecisionResult =
  */
 export async function approveApplication(
   db: Db,
-  input: { applicationId: string; actor: string; asOf: string; note?: string }
+  input: {
+    applicationId: string;
+    actor: string;
+    /** From the signed-in user (src/server/current-user.ts): reviews are staff work. */
+    isStaff: boolean;
+    asOf: string;
+    note?: string;
+  }
 ): Promise<StaffDecisionResult> {
   const application = await db.application.findUnique({
     where: { id: input.applicationId },
@@ -101,7 +107,7 @@ export async function approveApplication(
   // Four-eyes rule: nobody decides on their own application.
   if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
   // Reviews are desk work: no customer persona can decide on an application.
-  if (!(await isStaffActor(db, input.actor))) return { ok: false, reason: 'staff_only' };
+  if (!input.isStaff) return { ok: false, reason: 'staff_only' };
   if (application.status !== 'manual_review') return { ok: false, reason: 'not_reviewable' };
 
   const answers = JSON.parse(application.answers_json) as Record<string, unknown>;
@@ -166,7 +172,7 @@ export async function approveApplication(
 /** A person declines: the application ends and its items are free for the next customer. */
 export async function declineApplication(
   db: Db,
-  input: { applicationId: string; actor: string; note?: string }
+  input: { applicationId: string; actor: string; isStaff: boolean; note?: string }
 ): Promise<StaffDecisionResult> {
   const application = await db.application.findUnique({
     where: { id: input.applicationId },
@@ -175,7 +181,7 @@ export async function declineApplication(
   if (!application) return { ok: false, reason: 'not_found' };
   if (input.actor === application.customer_id) return { ok: false, reason: 'self_decision' };
   // Reviews are desk work: no customer persona can decide on an application.
-  if (!(await isStaffActor(db, input.actor))) return { ok: false, reason: 'staff_only' };
+  if (!input.isStaff) return { ok: false, reason: 'staff_only' };
   if (!(STAFF_QUEUE_STATUSES as readonly string[]).includes(application.status)) {
     return { ok: false, reason: 'not_reviewable' };
   }

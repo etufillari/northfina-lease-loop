@@ -11,13 +11,11 @@ type Action = 'accept' | 'decline' | 'leave';
 export function EntryActions({
   locale,
   entryId,
-  actor,
   actions,
   asOfParam,
 }: {
   locale: Locale;
   entryId: string;
-  actor: string;
   actions: Action[];
   asOfParam: string | null;
 }) {
@@ -33,7 +31,7 @@ export function EntryActions({
       const response = await fetch(`/api/waitlist/${entryId}/${action}${suffix}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor }),
+        body: JSON.stringify({}),
       });
       const body = await response.json();
       if (!body.success) {

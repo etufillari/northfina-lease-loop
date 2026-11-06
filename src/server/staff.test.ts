@@ -76,6 +76,7 @@ describe('scenario card 7: Haapala is approved from the manual-review queue', ()
     const result = await approveApplication(db, {
       applicationId,
       actor: STAFF,
+      isStaff: true,
       asOf: '2026-11-06',
     });
     expect(result).toEqual({ ok: true, status: 'approved', holdUntil: '2026-11-13' });
@@ -98,11 +99,13 @@ describe('scenario card 7: Haapala is approved from the manual-review queue', ()
   });
 
   it('cannot approve or decline twice', async () => {
-    expect(await approveApplication(db, { applicationId, actor: STAFF, asOf: AS_OF })).toEqual({
+    expect(
+      await approveApplication(db, { applicationId, actor: STAFF, isStaff: true, asOf: AS_OF })
+    ).toEqual({
       ok: false,
       reason: 'not_reviewable',
     });
-    expect(await declineApplication(db, { applicationId, actor: STAFF })).toEqual({
+    expect(await declineApplication(db, { applicationId, actor: STAFF, isStaff: true })).toEqual({
       ok: false,
       reason: 'not_reviewable',
     });
@@ -110,9 +113,16 @@ describe('scenario card 7: Haapala is approved from the manual-review queue', ()
 
   it('reports an unknown application', async () => {
     expect(
-      await approveApplication(db, { applicationId: 'nope', actor: STAFF, asOf: AS_OF })
+      await approveApplication(db, {
+        applicationId: 'nope',
+        actor: STAFF,
+        isStaff: true,
+        asOf: AS_OF,
+      })
     ).toEqual({ ok: false, reason: 'not_found' });
-    expect(await declineApplication(db, { applicationId: 'nope', actor: STAFF })).toEqual({
+    expect(
+      await declineApplication(db, { applicationId: 'nope', actor: STAFF, isStaff: true })
+    ).toEqual({
       ok: false,
       reason: 'not_found',
     });
@@ -128,7 +138,7 @@ describe('declining a manual review releases the asset', () => {
     expect(state.application.status).toBe('manual_review');
 
     // Four-eyes rule: the customer cannot decide on their own application.
-    const own = { applicationId: state.application.id, actor: 'cust-haapala' };
+    const own = { applicationId: state.application.id, actor: 'cust-haapala', isStaff: false };
     expect(await approveApplication(db, { ...own, asOf: AS_OF })).toEqual({
       ok: false,
       reason: 'self_decision',
@@ -138,6 +148,7 @@ describe('declining a manual review releases the asset', () => {
     const result = await declineApplication(db, {
       applicationId: state.application.id,
       actor: STAFF,
+      isStaff: true,
       note: 'Missing PEP documentation',
     });
     expect(result).toEqual({ ok: true, status: 'declined', holdUntil: null });
@@ -184,6 +195,7 @@ describe('a fleet in manual review: every item is held, and released on decline'
     const result = await approveApplication(db, {
       applicationId: state.application.id,
       actor: STAFF,
+      isStaff: true,
       asOf: AS_OF,
     });
     // The applicant may not sign for Norvi, so approval hands over to the signatory.
@@ -202,6 +214,7 @@ describe('a fleet in manual review: every item is held, and released on decline'
     const result = await declineApplication(db, {
       applicationId: waiting!.applicationId,
       actor: STAFF,
+      isStaff: true,
     });
     expect(result.ok).toBe(true);
     const assets = await db.asset.findMany({ where: { id: { in: FLEET } } });

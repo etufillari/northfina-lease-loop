@@ -72,10 +72,9 @@ export function PriceConfigurator({
       downPaymentCents: String(downCents),
       termMonths: String(termMonths),
     });
-    if (personaId) params.set('customerId', personaId);
     if (asOf) params.set('asOf', asOf);
     return params.toString();
-  }, [assetIds, downCents, termMonths, personaId, asOf]);
+  }, [assetIds, downCents, termMonths, asOf]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -107,8 +106,6 @@ export function PriceConfigurator({
         assetIds,
         downPaymentCents: downCents,
         termMonths,
-        customerId: personaId,
-        actor: personaId,
       }),
     });
     const body = await response.json();

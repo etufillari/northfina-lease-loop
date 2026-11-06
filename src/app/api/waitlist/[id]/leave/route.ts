@@ -1,18 +1,21 @@
-// POST /api/waitlist/:id/leave  body: { actor }  [?asOf=]
-// Leaves the queue.
-import { handleRoute, ok, readJsonBody } from '@/server/api-response';
+// POST /api/waitlist/:id/leave  [?asOf=]
+// The signed-in customer leaves the queue (staff may do it for a waiter).
+import { handleRoute, ok } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
+import { requireUser } from '@/server/current-user';
 import { db } from '@/server/db';
 import { leaveWaitlist } from '@/server/waitlist-actions';
-import { actorBody, waitlistFailure } from '../../failure';
+import { waitlistFailure } from '../../failure';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/waitlist/[id]/leave'>) => {
     const { id } = await params;
-    const body = await readJsonBody(request, actorBody);
+    const user = await requireUser();
+    if (user instanceof Response) return user;
     const result = await leaveWaitlist(db, {
       entryId: id,
-      actor: body.actor,
+      actor: user.actorId,
+      isStaff: user.isStaff,
       asOf: asOfFrom(request),
     });
     if (!result.ok) return waitlistFailure(result.reason);

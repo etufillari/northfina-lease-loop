@@ -1,10 +1,11 @@
 // GET  /api/contracts/:id/early-exit  [?asOf=] — the full card-8 calculation as a preview.
-// POST /api/contracts/:id/early-exit  body: { actor, usageReadings } — confirm: end the contract, issue
+// POST /api/contracts/:id/early-exit  body: { usageReadings } — confirm (the holder): end the contract, issue
 // the exit invoice (30 days to pay) and return the asset.
 import { z } from 'zod';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { notYours } from '@/server/authz';
+import { requireCustomer, requireUser } from '@/server/current-user';
 import { db } from '@/server/db';
 import { earlyExitPreview, executeEarlyExit } from '@/server/lifecycle';
 
@@ -27,6 +28,11 @@ const failures: Record<string, [number, string, string]> = {
 export const GET = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/early-exit'>) => {
     const { id } = await params;
+    const user = await requireUser();
+    if (user instanceof Response) return user;
+    // The exit price is the holder's business (and staff's).
+    const contract = await db.contract.findUnique({ where: { id }, select: { customer_id: true } });
+    if (contract && !user.isStaff && contract.customer_id !== user.customerId) return notYours();
     const result = await earlyExitPreview(db, id, asOfFrom(request));
     if (!result.ok) {
       if (result.reason === 'not_yours') return notYours();
@@ -38,7 +44,6 @@ export const GET = handleRoute(
 );
 
 const bodySchema = z.strictObject({
-  actor: z.string().trim().min(1).max(100),
   /** Asset id → the lifetime meter reading at the return (km, cycles or hours). */
   usageReadings: z.record(z.string(), z.number().int().nonnegative()).optional(),
 });
@@ -46,10 +51,12 @@ const bodySchema = z.strictObject({
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/contracts/[id]/early-exit'>) => {
     const { id } = await params;
+    const user = await requireCustomer();
+    if (user instanceof Response) return user;
     const body = await readJsonBody(request, bodySchema);
     const result = await executeEarlyExit(db, {
       contractId: id,
-      actor: body.actor,
+      actor: user.actorId,
       asOf: asOfFrom(request),
       usageReadings: body.usageReadings,
     });

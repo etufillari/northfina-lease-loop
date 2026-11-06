@@ -2,8 +2,6 @@
 // same locked rent, remaining schedule, no down payment — and the apply button.
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { cookies } from 'next/headers';
-import { customerPersona, PERSONA_COOKIE } from '@/components/persona-cookie';
 import { TransferApply } from '@/components/transfer-apply';
 import { loadVatRates } from '@/data/load';
 import { formatEuro } from '@/domain/money';
@@ -15,6 +13,7 @@ import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { termEndsOn } from '@/server/lifecycle';
 import { getTransferOffer } from '@/server/transfers';
+import { currentUser } from '@/server/current-user';
 
 export default async function TransferPage({
   params,
@@ -27,7 +26,7 @@ export default async function TransferPage({
   const t = getT(locale);
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const { asOf } = await asOfFromPage(await searchParams);
-  const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
+  const persona = (await currentUser())?.customerId ?? null;
   const offer = await getTransferOffer(db, token);
 
   // No link, or the term has reached its end: there is nothing left to take over.

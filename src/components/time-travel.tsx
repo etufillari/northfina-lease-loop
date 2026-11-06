@@ -52,7 +52,7 @@ export function TimeTravel({
       const response = await fetch('/api/demo/advance', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ from: current, to: iso, actor: actor ?? 'demo' }),
+        body: JSON.stringify({ from: current, to: iso }),
       });
       const body = await response.json();
       if (!body.success) {
@@ -76,7 +76,7 @@ export function TimeTravel({
       const response = await fetch('/api/demo/reset', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor: actor ?? 'demo' }),
+        body: JSON.stringify({}),
       });
       const body = await response.json();
       if (!body.success) {

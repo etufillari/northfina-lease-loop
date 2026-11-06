@@ -14,7 +14,6 @@ import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
 import { startApplication } from './applications';
 import { withAudit } from './audit';
 import { OFFER_RESERVATION, passItemsOn } from './second-life-offers';
-import { STAFF_PERSONA as STAFF_ACTOR } from '@/components/persona-cookie';
 
 type Db = PrismaClient;
 
@@ -95,16 +94,16 @@ export async function joinWaitlist(db: Db, input: JoinInput): Promise<JoinResult
 type EntryFailure = 'not_found' | 'not_yours' | 'bad_status';
 
 /** The entry, if the actor may act on it: its own customer, or staff. */
+/** The entry, if it is the actor's own — or the actor is staff, who act for waiters. */
 async function ownEntry(
   db: Db,
   entryId: string,
-  actor: string,
+  by: { actor: string; isStaff?: boolean },
   statuses: string[]
 ): Promise<{ ok: true; entry: WaitlistEntry } | { ok: false; reason: EntryFailure }> {
   const entry = await db.waitlistEntry.findUnique({ where: { id: entryId } });
   if (!entry) return { ok: false, reason: 'not_found' };
-  if (actor !== STAFF_ACTOR && actor !== entry.customer_id)
-    return { ok: false, reason: 'not_yours' };
+  if (!by.isStaff && by.actor !== entry.customer_id) return { ok: false, reason: 'not_yours' };
   if (!statuses.includes(entry.status)) return { ok: false, reason: 'bad_status' };
   return { ok: true, entry };
 }
@@ -122,9 +121,9 @@ export type LeaveResult = { ok: true } | { ok: false; reason: EntryFailure };
 /** Leaves the queue. Nothing is ever held for someone still waiting, so nothing moves. */
 export async function leaveWaitlist(
   db: Db,
-  input: { entryId: string; actor: string; asOf: string }
+  input: { entryId: string; actor: string; isStaff?: boolean; asOf: string }
 ): Promise<LeaveResult> {
-  const found = await ownEntry(db, input.entryId, input.actor, ['waiting']);
+  const found = await ownEntry(db, input.entryId, input, ['waiting']);
   if (!found.ok) return found;
   await withAudit(
     db,
@@ -157,9 +156,9 @@ export type AcceptResult =
  */
 export async function acceptOffer(
   db: Db,
-  input: { entryId: string; actor: string; asOf: string }
+  input: { entryId: string; actor: string; isStaff?: boolean; asOf: string }
 ): Promise<AcceptResult> {
-  const found = await ownEntry(db, input.entryId, input.actor, ['offered']);
+  const found = await ownEntry(db, input.entryId, input, ['offered']);
   if (!found.ok) return found;
   const { entry } = found;
   if (!entry.customer_id) return { ok: false, reason: 'no_customer' };
@@ -263,9 +262,9 @@ export type DeclineResult =
 /** Declines an offer (also after accepting, before signing). */
 export async function declineOffer(
   db: Db,
-  input: { entryId: string; actor: string; asOf: string }
+  input: { entryId: string; actor: string; isStaff?: boolean; asOf: string }
 ): Promise<DeclineResult> {
-  const found = await ownEntry(db, input.entryId, input.actor, ['offered', 'accepted']);
+  const found = await ownEntry(db, input.entryId, input, ['offered', 'accepted']);
   if (!found.ok) return found;
   const offers = await offeredItems(db, found.entry.id);
   if (offers.length === 0) return { ok: false, reason: 'no_offer' };

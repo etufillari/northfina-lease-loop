@@ -1,8 +1,5 @@
 // One mapping from waiting-list failure reasons to API errors, shared by the waitlist routes.
-import { z } from 'zod';
 import { fail } from '@/server/api-response';
-
-export const actorBody = z.strictObject({ actor: z.string().trim().min(1).max(100) });
 
 const FAILURES: Record<string, [number, string, string]> = {
   not_found: [404, 'WAITLIST_ENTRY_NOT_FOUND', 'No such waiting-list entry'],
@@ -10,8 +7,8 @@ const FAILURES: Record<string, [number, string, string]> = {
   bad_status: [409, 'BAD_STATUS', 'This entry cannot do that in its current state'],
   no_customer: [409, 'NO_CUSTOMER', 'This entry has no customer account to apply with'],
   no_offer: [409, 'NO_OFFER', 'Nothing is offered to this entry right now'],
-  offer_expired: [409, 'OFFER_EXPIRED', 'The 7-day hold on this offer has ended'],
-  not_expired: [409, 'OFFER_NOT_EXPIRED', 'This offer is still within its 7-day hold'],
+  offer_expired: [409, 'OFFER_EXPIRED', 'The 3-day hold on this offer has ended'],
+  not_expired: [409, 'OFFER_NOT_EXPIRED', 'This offer is still within its 3-day hold'],
   unknown_customer: [404, 'CUSTOMER_NOT_FOUND', 'No such customer'],
   deadline_in_past: [422, 'DEADLINE_IN_PAST', 'The needed-by date is already past'],
   unknown_term: [422, 'UNKNOWN_TERM', 'Terms are 12, 24, 36 or 48 months'],

@@ -9,12 +9,10 @@ import type { Locale } from '@/i18n/locales';
 export function NominationActions({
   locale,
   assetId,
-  actor,
   asOfParam,
 }: {
   locale: Locale;
   assetId: string;
-  actor: string;
   asOfParam: string | null;
 }) {
   const t = getT(locale);
@@ -31,7 +29,7 @@ export function NominationActions({
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ accept, actor }),
+          body: JSON.stringify({ accept }),
         }
       );
       const body = await response.json();

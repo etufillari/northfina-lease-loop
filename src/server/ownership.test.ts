@@ -160,6 +160,7 @@ describe('nobody acts on someone else’s lease or application', () => {
       await approveApplication(db, {
         applicationId: state.application.id,
         actor: 'cust-olavi',
+        isStaff: false,
         asOf: START,
       })
     ).toEqual({ ok: false, reason: 'staff_only' });

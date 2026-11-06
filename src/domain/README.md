@@ -26,16 +26,43 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 | ---------------- | ------------------------------------------------------------------------ |
 | `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term. |
 | `price-list.ts`  | Worked example: finds the net list price of an asset on a date.          |
-| `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.              |
+| `money.ts`       | The rounding rule, rate conversions, and euro formatting for the UI.     |
+| `calendar.ts`    | Month arithmetic on ISO dates, safe for month ends and leap years.       |
+| `vat.ts`         | The VAT rate on a date, and the VAT of one invoice.                      |
+| `pricing.ts`     | Rent, buyout and contract total for a net price or a catalogue item.     |
+| `contract.ts`    | The price-lock rule, and the snapshot that signing makes.                |
+| `invoicing.ts`   | The invoice schedule, totals, VAT-change notes and cost forecast.        |
+
+## Pricing and invoicing rules
+
+These are design decisions, so they are written down here and tested. All of them are general
+rules: nothing is specific to a scenario card.
+
+| Topic          | Rule                                                                                                                                                                          |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rounding       | Half up, once, per amount, using whole-number rates (`roundHalfUp`). No floats touch money.                                                                                   |
+| Rent           | `round(financed × factor)` is one locked integer. Every rent invoice has exactly this net amount.                                                                             |
+| Contract total | `down payment + term × rent`, net, fixed at signing. The buyout is optional and is not part of it.                                                                            |
+| Rounding gap   | Rounding the rent can differ from the unrounded total by up to `term ÷ 2` cents. The rounded rent is the agreed price, so nothing is corrected later.                         |
+| VAT            | Rounded per invoice at the rate on the invoice date. The gross total is the sum of the invoices.                                                                              |
+| Down payment   | Net, so it is its own invoice (sequence 0) on the start date, with VAT added. The data pack does not define this: it is our assumption.                                       |
+| Billing        | Monthly in advance. Every period is a full contract month from the start date, so nothing is prorated.                                                                        |
+| Dates          | Counted from the start date and clamped to the month end: 31 Jan, 28 Feb, 31 Mar. Never from the previous invoice.                                                            |
+| Due date       | The invoice date. It does not move for weekends, as the data pack has no bank-holiday calendar.                                                                               |
+| Price lock     | A quote is not binding. The price list on the signing day decides, and if that differs from what the customer accepted, nothing is signed until they confirm the new figures. |
+| Second life    | Same calculation, from an assessed net price instead of a list price. No price list can change it.                                                                            |
+
+Structured reason codes: `below_minimum`, `above_maximum`, `unknown_term`,
+`down_payment_exceeds_price`, `unknown_asset`, `no_price_list_on_date`, `no_vat_rate_on_date`,
+`signed_before_quote`, `start_before_signing`, `price_changed`, and on the contract
+`price_unchanged_since_quote` or `list_price_changed_since_quote`. The API sends them in upper case
+as `error.code`; `src/server/pricing-data.ts` has the full list.
 
 ## What teams are expected to add
 
 Create these as you need them. Do not commit empty files.
 
-- `pricing`: monthly rent, down payment, VAT and the end-of-term buyout price.
 - `question-flow`: which question to ask next, from `data/questions.json`, and what happens
   to answers that stop applying.
-- `contract`: build the contract from an approved application and lock it so it cannot change.
-- `invoicing`: the monthly invoices for a contract, including a VAT rate change mid-contract.
 - `end-of-term`: return, buy out or extend, and the value of the returned item.
 - `second-life`: refurbishment cost, matching a returned item to the waiting list, CO2 saved.

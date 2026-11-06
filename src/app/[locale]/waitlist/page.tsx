@@ -1,6 +1,6 @@
-// The second-life waiting list. A customer joins it, sees their place in the queue and
-// answers offers (accepting starts the normal application). Staff see the whole list in
-// queue order, category by category.
+// The second-life waiting list. A customer joins it, sees what they are waiting for and
+// answers offers in their own section (accepting starts the normal application). Staff see
+// the whole list in queue order, category by category.
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -79,15 +79,36 @@ async function CustomerSection({
 }) {
   const t = getT(locale);
   const views = await customerWaitlist(db, customerId, asOf);
+  const offers = views.filter((view) => view.entry.status !== 'waiting');
+  const waiting = views.filter((view) => view.entry.status === 'waiting');
   return (
     <>
+      {offers.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">{t('waitlist.offers')}</h2>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+            {t('waitlist.offersIntro')}
+          </p>
+          <div className="mt-4 space-y-4">
+            {offers.map((view) => (
+              <EntryCard
+                key={view.entry.id}
+                locale={locale}
+                view={view}
+                actor={customerId}
+                asOfParam={asOfParam}
+              />
+            ))}
+          </div>
+        </section>
+      )}
       <section className="mt-8">
         <h2 className="text-lg font-semibold">{t('waitlist.yours')}</h2>
-        {views.length === 0 ? (
+        {waiting.length === 0 ? (
           <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{t('waitlist.none')}</p>
         ) : (
           <div className="mt-4 space-y-4">
-            {views.map((view) => (
+            {waiting.map((view) => (
               <EntryCard
                 key={view.entry.id}
                 locale={locale}

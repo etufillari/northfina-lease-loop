@@ -1,8 +1,8 @@
 'use client';
 // The demo's "login": pick who you are. No passwords — the data-pack customers plus anyone
 // added via "+ New customer". The choice lives in a cookie and becomes the customerId and
-// audit actor behind every action.
-import Link from 'next/link';
+// audit actor behind every action. It sits in the demo bar; the My page / Staff desk link
+// is in the nav bar.
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getT } from '@/i18n/get-t';
@@ -66,36 +66,26 @@ export function PersonaPicker({ locale, initialId }: { locale: Locale; initialId
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label className="flex items-center gap-2 text-sm">
-        <span className="text-stone-600 dark:text-stone-400">{t('persona.label')}</span>
-        <select
-          value={selected}
-          onChange={(event) =>
-            event.target.value === '__new__' ? addCustomer() : choose(event.target.value)
-          }
-          className="max-w-44 rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-900"
-        >
-          <option value="" disabled>
-            {t('persona.none')}
+    <label className="flex items-center gap-2 text-sm">
+      <span className="text-amber-900 dark:text-amber-200">{t('persona.label')}</span>
+      <select
+        value={selected}
+        onChange={(event) =>
+          event.target.value === '__new__' ? addCustomer() : choose(event.target.value)
+        }
+        className="max-w-44 rounded-md border border-amber-300 bg-white px-2 py-1 text-sm dark:border-amber-700 dark:bg-stone-900"
+      >
+        <option value="" disabled>
+          {t('persona.none')}
+        </option>
+        {customers.map((customer) => (
+          <option key={customer.id} value={customer.id}>
+            {customer.name}
           </option>
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name}
-            </option>
-          ))}
-          <option value={STAFF_PERSONA}>{t('persona.staff')}</option>
-          <option value="__new__">{t('persona.new')}</option>
-        </select>
-      </label>
-      {selected ? (
-        <Link
-          href={`/${locale}/${selected === STAFF_PERSONA ? 'staff' : 'me'}`}
-          className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
-        >
-          {selected === STAFF_PERSONA ? t('persona.staffDesk') : t('persona.myPage')}
-        </Link>
-      ) : null}
-    </div>
+        ))}
+        <option value={STAFF_PERSONA}>{t('persona.staff')}</option>
+        <option value="__new__">{t('persona.new')}</option>
+      </select>
+    </label>
   );
 }

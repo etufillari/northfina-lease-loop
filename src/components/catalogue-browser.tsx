@@ -22,7 +22,8 @@ export type CatalogueItem = {
 };
 
 const CATEGORIES: AssetCategory[] = ['e_bike', 'laptop', 'farm_machine'];
-const CONDITIONS: AssetCondition[] = ['poor', 'fair', 'good', 'like_new', 'new'];
+// No 'poor': nothing below fair is ever leased, so it is never a useful minimum.
+const CONDITIONS: AssetCondition[] = ['fair', 'good', 'like_new', 'new'];
 
 export function CatalogueBrowser({
   locale,

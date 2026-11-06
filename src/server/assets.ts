@@ -1,6 +1,6 @@
 // Reading and changing assets in the database. Rows are converted to the same `Asset`
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
-import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
+import type { Asset as AssetRow, Prisma, PrismaClient } from '@/generated/prisma/client';
 import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
 import { withAudit } from './audit';
 
@@ -75,7 +75,7 @@ export async function changeAssetStatus(
 
 /** Inserts assets that are not in the database yet. Never overwrites changes you made. */
 export async function seedAssets(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   assets: readonly Asset[]
 ): Promise<{ created: number; skipped: number }> {
   const existing = await db.asset.findMany({ select: { id: true } });

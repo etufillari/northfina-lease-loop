@@ -1,7 +1,9 @@
-// Read models for the waiting-list pages: a customer's own entries (place in the queue, offers
-// with their rent and hold date, set progress) and the whole list for staff. Changes nothing.
+// Read models for the waiting-list pages: a customer's own entries (what they wait for, offers
+// with their rent and hold date) and the whole list for staff. Changes nothing. The place in
+// the queue is deliberately not shown: it moves for reasons the customer cannot see (people
+// ahead who do not fit an item, sets that skip a turn).
 import type { PrismaClient, WaitlistEntry } from '@/generated/prisma/client';
-import { OFFER_RESERVATION, pooledAssetsByWaiter } from './second-life-pools';
+import { OFFER_RESERVATION } from './second-life-offers';
 
 type Db = PrismaClient;
 
@@ -16,11 +18,9 @@ export type OfferedItem = {
 
 export type WaitlistView = {
   entry: WaitlistEntry;
-  /** 1-based place among people still waiting for this category; null once offered or gone. */
-  position: number | null;
+  /** Still waiting, but the needed-by date has passed, so they are no longer matched. */
+  pastDeadline: boolean;
   offer: { items: OfferedItem[]; until: string; expired: boolean } | null;
-  /** Items already held for a multi-item entry. */
-  pooledAssetIds: string[];
   /** The application started by accepting the offer. */
   applicationId: string | null;
 };
@@ -30,21 +30,10 @@ function detailsOf(json: string | null): Record<string, unknown> {
   return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
 
-/** First come, first served on joined_on, id as the tie-break (as the matcher does). */
-const before = (a: WaitlistEntry, b: WaitlistEntry) =>
-  a.joined_on < b.joined_on || (a.joined_on === b.joined_on && a.id < b.id);
-
 async function buildViews(db: Db, entries: WaitlistEntry[], asOf: string) {
-  const [waiting, pools] = await Promise.all([
-    db.waitlistEntry.findMany({ where: { status: 'waiting', needed_by: { gte: asOf } } }),
-    pooledAssetsByWaiter(db),
-  ]);
   const views: WaitlistView[] = [];
   for (const entry of entries) {
-    const position =
-      entry.status === 'waiting' && entry.needed_by >= asOf
-        ? waiting.filter((w) => w.category === entry.category && before(w, entry)).length + 1
-        : null;
+    const pastDeadline = entry.status === 'waiting' && entry.needed_by < asOf;
 
     let offer: WaitlistView['offer'] = null;
     let applicationId: string | null = null;
@@ -82,26 +71,25 @@ async function buildViews(db: Db, entries: WaitlistEntry[], asOf: string) {
     }
     views.push({
       entry,
-      position,
+      pastDeadline,
       offer,
-      pooledAssetIds: pools[entry.id] ?? [],
       applicationId,
     });
   }
   return views;
 }
 
-/** One customer's entries, newest first. An entry they chose to leave is not shown again. */
+/**
+ * One customer's open entries, newest first: still waiting, or with an offer (or the
+ * application it started). Entries they left, declined, let lapse or leased are not shown.
+ */
 export async function customerWaitlist(
   db: Db,
   customerId: string,
   asOf: string
 ): Promise<WaitlistView[]> {
   const entries = await db.waitlistEntry.findMany({
-    where: {
-      customer_id: customerId,
-      NOT: { status: 'removed', left_reason: 'left' },
-    },
+    where: { customer_id: customerId, status: { in: ['waiting', 'offered', 'accepted'] } },
     orderBy: [{ joined_on: 'desc' }, { id: 'desc' }],
   });
   return buildViews(db, entries, asOf);

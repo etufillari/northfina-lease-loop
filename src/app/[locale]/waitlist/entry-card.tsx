@@ -1,5 +1,5 @@
-// One waiting-list entry: what was asked for, where it stands (place in the queue, set
-// progress, an offer with its rent and hold, an application, a lease) and what can be done.
+// One waiting-list entry: what was asked for, where it stands (waiting, an offer with its rent
+// and hold, an application, a lease) and what can be done.
 import Link from 'next/link';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -76,20 +76,10 @@ export function EntryCard({
         </span>
       </header>
 
-      {entry.status === 'waiting' && (
-        <div className="mt-3 space-y-1 text-sm">
-          {view.position === null && (
-            <p className="text-stone-600 dark:text-stone-400">{t('waitlist.pastDeadline')}</p>
-          )}
-          {view.pooledAssetIds.length > 0 && (
-            <p>
-              {t('waitlist.pooled', {
-                filled: view.pooledAssetIds.length,
-                quantity: entry.quantity,
-                assets: view.pooledAssetIds.join(', '),
-              })}
-            </p>
-          )}
+      {entry.status === 'waiting' && (view.pastDeadline || entry.quantity > 1) && (
+        <div className="mt-3 space-y-1 text-sm text-stone-600 dark:text-stone-400">
+          {view.pastDeadline && <p>{t('waitlist.pastDeadline')}</p>}
+          {entry.quantity > 1 && <p>{t('waitlist.manyNote', { quantity: entry.quantity })}</p>}
         </div>
       )}
 
@@ -121,6 +111,11 @@ export function EntryCard({
               </li>
             ))}
           </ul>
+          {offer.items.length > 1 && (
+            <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
+              {t('waitlist.setNote', { quantity: offer.items.length })}
+            </p>
+          )}
           <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
             {t('waitlist.offerNote')}
           </p>

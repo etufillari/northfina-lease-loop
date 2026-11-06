@@ -76,7 +76,8 @@ export function QuoteSummary(props: {
         <Fact label={t('lease.totalCost')}>{euro(quote.totalNetCostCents)}</Fact>
       </dl>
       {props.status === 'open' ? (
-        <div className="max-w-md">
+        // The same two columns as the facts above, so the VAT notice lines up with the left one.
+        <div className="grid gap-x-10 sm:grid-cols-2">
           <PriceOverTerm
             locale={locale}
             vatRates={props.vatRates}

@@ -56,6 +56,8 @@ export function ApplicationForm(props: ApplicationFormProps) {
   const [signing, setSigning] = useState<Signing>('idle');
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
   const personaFieldId = useId();
+  // Said once above the questions; every pre-filled field points at it (aria-describedby).
+  const recordNoteId = useId();
   // A persona's answers are facts on its record; the server refuses anything else (D-031).
   const persona = props.personas.find((p) => p.id === personaId);
 
@@ -160,6 +162,15 @@ export function ApplicationForm(props: ApplicationFormProps) {
           ))}
         </select>
       </div>
+      {persona ? (
+        <p
+          id={recordNoteId}
+          className="mt-4 flex max-w-2xl items-start gap-2.5 rounded-md bg-surface-2 px-4 py-3 text-sm"
+        >
+          <RecordMark className="mt-0.5 size-4 shrink-0 text-accent-text" />
+          {t('application.fromRecord')}
+        </p>
+      ) : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem] lg:gap-12">
         <div className="min-w-0 space-y-6">
@@ -171,7 +182,7 @@ export function ApplicationForm(props: ApplicationFormProps) {
               t={t}
               draft={drafts[question.id] ?? ''}
               answer={answers[question.id]}
-              fromRecord={persona?.answers[question.id] !== undefined}
+              recordNoteId={persona?.answers[question.id] !== undefined ? recordNoteId : null}
               onChange={(text) => answer(question.id, text)}
             />
           ))}
@@ -207,17 +218,19 @@ function QuestionField(props: {
   t: Translate;
   draft: string;
   answer: AnswerValue | undefined;
-  /** The chosen customer's record answers this one: shown, but not editable. */
-  fromRecord: boolean;
+  /**
+   * Set when the chosen customer's record answers this one (shown, but not editable): the id of
+   * the form's one "from the customer record" note.
+   */
+  recordNoteId: string | null;
   onChange: (text: string) => void;
 }) {
-  const { question, locale, t, draft, fromRecord } = props;
+  const { question, locale, t, draft, recordNoteId } = props;
+  const fromRecord = recordNoteId !== null;
   const id = useId();
   const check = props.answer === undefined ? null : validateAnswer(question, props.answer);
   const error = check && !check.ok ? t(`error.${check.reason}`) : null;
-  const describedBy = [`${id}-why`, fromRecord && `${id}-record`, error && `${id}-error`]
-    .filter(Boolean)
-    .join(' ');
+  const describedBy = [`${id}-why`, recordNoteId, error && `${id}-error`].filter(Boolean).join(' ');
   const field = 'field mt-2';
   const common = {
     id,
@@ -254,6 +267,9 @@ function QuestionField(props: {
         onChange={(e) => props.onChange(e.target.value)}
       />
     );
+  } else if (fromRecord && question.type === 'date') {
+    // A browser date field shows 04/12/1997, which reads two ways: a record's date is spelled out.
+    input = <input {...common} readOnly type="text" value={longDate(draft, locale)} />;
   } else {
     const type = question.type === 'date' ? 'date' : question.type === 'email' ? 'email' : 'text';
     input = (
@@ -272,25 +288,66 @@ function QuestionField(props: {
   return (
     // The anchor the decision panel's "next question" link jumps to.
     <div id={`q-${question.id}`} className="scroll-mt-28">
-      <label htmlFor={id} className="text-sm font-medium">
-        {question.text[locale]}
-      </label>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <label htmlFor={id} className="text-sm font-medium">
+          {question.text[locale]}
+        </label>
+        {fromRecord ? (
+          // Screen readers hear the form's note through aria-describedby instead.
+          <span
+            aria-hidden="true"
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted"
+          >
+            <RecordMark className="size-3.5 text-accent-text" />
+            {t('application.fromRecordTag')}
+          </span>
+        ) : null}
+      </div>
       {input}
       <p id={`${id}-why`} className="mt-1 text-xs text-muted">
         <span className="font-medium">{t('application.why')}:</span>{' '}
         {translated(`why.${question.id}`, t) ?? question.why_we_ask.en}
       </p>
-      {fromRecord ? (
-        <p id={`${id}-record`} className="mt-1 text-xs text-muted">
-          {t('application.fromRecord')}
-        </p>
-      ) : null}
       {error ? (
         <p id={`${id}-error`} className="mt-1 text-sm font-medium text-danger">
           {error}
         </p>
       ) : null}
     </div>
+  );
+}
+
+/** `1997-12-04` → "4 December 1997"; anything that isn't a real date is shown as typed. */
+function longDate(text: string, locale: Locale): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  try {
+    return formatIsoDate(text, locale);
+  } catch {
+    return text;
+  }
+}
+
+/** A small "card on file" mark for answers that come from the customer record. */
+function RecordMark({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className={className}>
+      <rect
+        x="1.75"
+        y="3.25"
+        width="12.5"
+        height="9.5"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <circle cx="5.5" cy="7.25" r="1.25" fill="currentColor" />
+      <path
+        d="M3.5 10.5c.4-1 1.1-1.5 2-1.5s1.6.5 2 1.5M9.5 6.5h3M9.5 9h2"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

@@ -6,7 +6,9 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { ApplicationForm } from '@/components/application-form';
 import { PriceCheckNotice, QuoteSummary } from '@/components/quote-summary';
+import { CategoryArt } from '@/components/ui/category-art';
 import { answersFromCustomer } from '@/domain/persona';
+import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { asOfDate } from '@/server/as-of';
@@ -54,10 +56,35 @@ export default async function QuotePage({ params }: PageProps<'/[locale]/quotes/
       >
         <span aria-hidden="true">←</span> {t('quote.back')}
       </Link>
-      <p className="mt-6 eyebrow">{asset ? `${asset.make} ${asset.model}` : quote.assetId}</p>
-      <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight uppercase sm:text-4xl">
-        {t('quote.title', { id })}
-      </h1>
+      <header className="mt-6 flex items-center gap-5 sm:gap-7">
+        {asset ? (
+          <CategoryArt
+            category={asset.category}
+            className="aspect-square w-24 shrink-0 rounded-lg shadow-lg ring-1 shadow-black/10 ring-line sm:w-32"
+          />
+        ) : null}
+        <div className="min-w-0">
+          <p className="eyebrow">{t('quote.title', { id })}</p>
+          <h1 className="mt-1.5 font-display text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl">
+            {asset ? (
+              <>
+                <span className="block text-base font-bold tracking-normal text-muted sm:text-lg">
+                  {asset.make}
+                </span>{' '}
+                {asset.model}
+              </>
+            ) : (
+              quote.assetId
+            )}
+          </h1>
+          {status === 'open' ? (
+            <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1 text-xs font-semibold ring-1 ring-line ring-inset">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-500" />
+              {t('quote.validUntil', { date: formatIsoDate(quote.validUntil, locale) })}
+            </p>
+          ) : null}
+        </div>
+      </header>
 
       <div className="mt-8">
         <QuoteSummary

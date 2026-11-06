@@ -85,6 +85,7 @@ describe('signLease when the applicant may not sign (card 6)', () => {
       id: result.id,
       contract: result.contract,
       awaitingSignature: { email: 'ceo@norvi.example.com', sentOn: '2026-11-05' },
+      signedBySignatory: null,
     });
     const row = await db.contract.findUniqueOrThrow({ where: { id: result.id } });
     expect(row).toMatchObject({
@@ -191,7 +192,11 @@ describe('countersignContract', () => {
       ok: true,
       contract: { ...sent.contract, signDate: '2026-11-20', startDate: '2026-11-20' },
     });
-    expect(await getContract(db, sent.id)).toMatchObject({ awaitingSignature: null });
+    // The header names who signed for the company, not only the company (D-056).
+    expect(await getContract(db, sent.id)).toMatchObject({
+      awaitingSignature: null,
+      signedBySignatory: 'ceo@norvi.example.com',
+    });
     const row = await db.contract.findUniqueOrThrow({ where: { id: sent.id } });
     expect(row).toMatchObject({
       status: 'active',

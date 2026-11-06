@@ -1,7 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCustomers, loadQuestions } from '@/data/load';
 import type { Customer, Question } from '@/data/schemas';
-import { answersFromCustomer, answersNotMatchingCustomer, customerOnRecord } from './persona';
+import {
+  answersFromCustomer,
+  answersNotMatchingCustomer,
+  customerName,
+  customerOnRecord,
+} from './persona';
 import type { Answers, Deal } from './question-flow';
 
 let customers: Customer[];
@@ -198,5 +203,26 @@ describe('customerOnRecord', () => {
 
   it('ignores answers that are not text', () => {
     expect(idOf({ q_email: 42, q_business_id: ['3299871-7'] })).toBeUndefined();
+  });
+});
+
+describe('customerName', () => {
+  const customers = [
+    { id: 'cust-aino', name: 'Aino Virtanen' },
+    { id: 'cust-norvi', name: 'Norvi Logistics Oy' },
+  ];
+
+  it('is the name on record for a data-pack customer', () => {
+    expect(customerName(customers, 'cust-norvi')).toBe('Norvi Logistics Oy');
+  });
+
+  it('is the bare email for someone who applied with an empty form (B5)', () => {
+    expect(customerName(customers, 'email:test.person@example.com')).toBe(
+      'test.person@example.com'
+    );
+  });
+
+  it('is the id itself when it is neither', () => {
+    expect(customerName(customers, 'cust-gone')).toBe('cust-gone');
   });
 });

@@ -11,6 +11,7 @@ import { loadResidualCurves, loadVatRates } from '@/data/load';
 import { assetConditionSchema, usageUnitSchema } from '@/data/schemas';
 import { exitMonthOn } from '@/domain/early-exit';
 import { formatEuro } from '@/domain/money';
+import { customerName } from '@/domain/persona';
 import { formatFactor, formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
@@ -57,7 +58,8 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const passOnItem = ending
     ? null
     : await secondLifeItemFor(db, secondLife.priceLists, contract.assetId);
-  const customer = data.customers.find((c) => c.id === contract.customerId);
+  // The name on record, or the email from an empty form without its `email:` prefix (D-056).
+  const who = customerName(data.customers, contract.customerId);
   // None while it waits for a signature (D-053); after an ending, only those issued before (D-033).
   const schedule = issuedInvoices(found, ending, vatRates);
   const today = await asOfDate();
@@ -104,11 +106,14 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
       </div>
       <p className="mt-2 text-muted">
         {awaiting
-          ? t('contract.sentBy', { customer: customer?.name ?? contract.customerId })
-          : t('contract.signedBy', {
-              customer: customer?.name ?? contract.customerId,
-              date: date(contract.signDate),
-            })}
+          ? t('contract.sentBy', { customer: who })
+          : found.signedBySignatory
+            ? t('contract.signedBySignatory', {
+                signatory: found.signedBySignatory,
+                customer: who,
+                date: date(contract.signDate),
+              })
+            : t('contract.signedBy', { customer: who, date: date(contract.signDate) })}
       </p>
 
       {awaiting ? (
@@ -116,7 +121,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
           locale={locale}
           contractId={found.id}
           awaiting={awaiting}
-          customer={customer?.name ?? contract.customerId}
+          customer={who}
           termMonths={contract.termMonths}
           today={today}
         />

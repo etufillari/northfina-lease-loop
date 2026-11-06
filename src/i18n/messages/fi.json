@@ -127,6 +127,7 @@
   "lease.unavailable.browse": "Selaa valikoimaa",
   "contract.title": "Sopimus {id}",
   "contract.signedBy": "Allekirjoittanut {customer} {date}",
+  "contract.signedBySignatory": "Allekirjoittanut {signatory} yrityksen {customer} puolesta {date}",
   "contract.active": "Voimassa",
   "contract.ended": "Päättynyt",
   "contract.nextInvoice": "Seuraavan laskun eräpäivä {date}",

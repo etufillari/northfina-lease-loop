@@ -80,6 +80,19 @@ export function answersNotMatchingCustomer(
 }
 
 /**
+ * Who a contract is with, for people to read: the name on record, else the email someone applied
+ * with on an empty form, without the `email:` prefix of its stored id (D-056).
+ */
+export function customerName(
+  customers: readonly Pick<Customer, 'id' | 'name'>[],
+  customerId: string
+): string {
+  const known = customers.find((c) => c.id === customerId);
+  if (known) return known.name;
+  return customerId.startsWith('email:') ? customerId.slice('email:'.length) : customerId;
+}
+
+/**
  * The data-pack customer an application is about when it names none (D-040): the one whose
  * email matches `q_email` (trimmed, without case), else the one whose business ID matches
  * `q_business_id` (trimmed). Without this, an empty form with Mikko's email skips the record

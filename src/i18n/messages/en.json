@@ -127,6 +127,7 @@
   "lease.unavailable.browse": "Browse the catalogue",
   "contract.title": "Contract {id}",
   "contract.signedBy": "Signed by {customer} on {date}",
+  "contract.signedBySignatory": "Signed by {signatory} for {customer} on {date}",
   "contract.active": "Active",
   "contract.ended": "Ended",
   "contract.nextInvoice": "Next invoice due {date}",

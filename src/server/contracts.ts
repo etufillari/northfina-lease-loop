@@ -296,6 +296,8 @@ export interface StoredContract {
   contract: Contract;
   /** Set while the contract waits for the person who must sign; null once it is active. */
   awaitingSignature: AwaitingSignature | null;
+  /** The authorised signatory's email once they have signed for the company; else null (D-056). */
+  signedBySignatory: string | null;
 }
 
 export async function getContract(db: PrismaClient, id: number): Promise<StoredContract | null> {
@@ -306,6 +308,7 @@ export async function getContract(db: PrismaClient, id: number): Promise<StoredC
     id: row.id,
     contract: Object.freeze(contract),
     awaitingSignature: awaitingFromRow(row),
+    signedBySignatory: row.status === 'active' ? row.signatory_email : null,
   };
 }
 

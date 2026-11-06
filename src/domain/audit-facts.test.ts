@@ -158,6 +158,13 @@ describe('auditActor', () => {
     expect(auditActor('applicant', customers)).toEqual({ type: 'role', role: 'applicant' });
   });
 
+  it('shows an empty-form applicant by email, without the `email:` prefix of their id (D-056)', () => {
+    expect(auditActor('email:test.person@example.com', customers)).toEqual({
+      type: 'other',
+      text: 'test.person@example.com',
+    });
+  });
+
   it('keeps anything else, such as an applicant email, as it is', () => {
     expect(auditActor('someone@example.com', customers)).toEqual({
       type: 'other',

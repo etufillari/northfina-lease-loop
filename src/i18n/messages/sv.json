@@ -127,6 +127,7 @@
   "lease.unavailable.browse": "Bläddra i katalogen",
   "contract.title": "Avtal {id}",
   "contract.signedBy": "Signerat av {customer} den {date}",
+  "contract.signedBySignatory": "Signerat av {signatory} för {customer} den {date}",
   "contract.active": "Aktivt",
   "contract.ended": "Avslutat",
   "contract.nextInvoice": "Nästa faktura förfaller {date}",

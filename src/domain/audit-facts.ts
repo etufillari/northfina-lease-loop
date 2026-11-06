@@ -4,6 +4,7 @@
 // amounts are the ones recorded in the change, all excl. VAT so they compare: rent and list
 // prices are stored net, and for a buyout or exit price the stored net amount is used.
 import { assetConditionSchema, type AssetCondition } from '@/data/schemas';
+import { customerName } from './persona';
 
 export type AuditFactValue =
   | { type: 'money'; cents: number }
@@ -152,5 +153,6 @@ export function auditActor(
   if (customer) return { type: 'customer', name: customer.name };
   const role = Object.hasOwn(roles, actor) ? roles[actor] : undefined;
   if (role) return { type: 'role', role };
-  return { type: 'other', text: actor };
+  // An empty-form applicant's id is `email:…`; show the email as `customerName` does (D-056).
+  return { type: 'other', text: customerName(customers, actor) };
 }

@@ -105,6 +105,7 @@ describe('signLease', () => {
       id: result.id,
       contract: result.contract,
       awaitingSignature: null,
+      signedBySignatory: null,
     });
     const asset = await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
     expect(asset.status).toBe('reserved');

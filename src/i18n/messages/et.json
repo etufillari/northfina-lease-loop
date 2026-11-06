@@ -127,6 +127,7 @@
   "lease.unavailable.browse": "Sirvi kataloogi",
   "contract.title": "Leping {id}",
   "contract.signedBy": "Allkirjastas {customer} {date}",
+  "contract.signedBySignatory": "Allkirjastas {signatory} ettevõtte {customer} nimel {date}",
   "contract.active": "Kehtiv",
   "contract.ended": "Lõppenud",
   "contract.nextInvoice": "Järgmise arve maksetähtaeg {date}",

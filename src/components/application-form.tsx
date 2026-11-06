@@ -71,6 +71,13 @@ export function ApplicationForm(props: ApplicationFormProps) {
     setDraft((current) => ({ ...current, [questionId]: value }));
   }
 
+  // Puts the customer's own details (what a profile would hold) back into their fields, and
+  // leaves every other answer as it is. Guests have no details, so they don't get the button.
+  const hasDetails = Object.keys(initialAnswers).length > 0;
+  function fillMyDetails() {
+    setDraft((current) => ({ ...current, ...initialAnswers }));
+  }
+
   async function send(event: FormEvent) {
     event.preventDefault();
     setSending(true);
@@ -116,6 +123,17 @@ export function ApplicationForm(props: ApplicationFormProps) {
 
   return (
     <form onSubmit={send} className="space-y-5" noValidate>
+      {hasDetails ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={fillMyDetails}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-800 ring-1 ring-emerald-700/40 ring-inset hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:outline-none dark:text-emerald-300 dark:ring-emerald-400/40 dark:hover:bg-emerald-950"
+          >
+            {t('apply.fillMyDetails')}
+          </button>
+        </div>
+      ) : null}
       {visible.map((question) => {
         const value = answers[question.id] ?? '';
         const check = validateQuestionAnswer(question, value, context);

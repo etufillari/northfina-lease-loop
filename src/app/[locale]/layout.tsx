@@ -3,11 +3,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CustomerSwitcher } from '@/components/customer-switcher';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { TimeTravelBar } from '@/components/time-travel-bar';
+import { loadCustomers } from '@/data/load';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { appDate } from '@/server/app-date';
+import { currentViewer } from '@/server/current-viewer';
+import { STAFF } from '@/server/viewer';
 import '../globals.css';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
@@ -21,7 +25,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
-  const date = await appDate();
+  const [date, viewer, customers] = await Promise.all([
+    appDate(),
+    currentViewer(),
+    loadCustomers(),
+  ]);
 
   return (
     <html lang={locale}>
@@ -46,18 +54,23 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <CustomerSwitcher
+                customers={customers.map(({ id, name, type }) => ({ id, name, type }))}
+                current={
+                  viewer.kind === 'customer'
+                    ? viewer.customer.id
+                    : viewer.kind === 'staff'
+                      ? STAFF
+                      : ''
+                }
+                locale={locale}
+              />
               <Link
                 href={`/${locale}/contracts`}
                 className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
               >
                 {t('nav.contracts')}
-              </Link>
-              <Link
-                href={`/${locale}/apply`}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-              >
-                {t('nav.apply')}
               </Link>
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>

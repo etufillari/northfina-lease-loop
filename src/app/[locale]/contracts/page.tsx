@@ -12,6 +12,8 @@ import { appDate } from '@/server/app-date';
 import { listAssets } from '@/server/assets';
 import { listContracts } from '@/server/contracts';
 import { db } from '@/server/db';
+import { currentViewer } from '@/server/current-viewer';
+import { viewerCustomerId } from '@/server/viewer';
 
 export default async function ContractsPage({ params }: PageProps<'/[locale]/contracts'>) {
   const { locale } = await params;
@@ -20,7 +22,10 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
 
   const t = getT(locale);
   const { today } = await appDate();
-  const [contracts, assets] = await Promise.all([listContracts(db), listAssets(db)]);
+  const viewer = await currentViewer();
+  // Staff see every contract; a customer sees theirs; a guest sees those made as a guest.
+  const filter = viewer.kind === 'staff' ? null : { customerId: viewerCustomerId(viewer) };
+  const [contracts, assets] = await Promise.all([listContracts(db, filter), listAssets(db)]);
   const assetName = new Map(assets.map((a) => [a.id, `${a.make} ${a.model}`]));
   const date = (iso: string) => formatIsoDate(iso, locale);
 
@@ -28,6 +33,9 @@ export default async function ContractsPage({ params }: PageProps<'/[locale]/con
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t('contracts.title')}</h1>
       <p className="mt-3 max-w-2xl text-lg text-stone-700 dark:text-stone-300">
+        {viewer.kind === 'customer'
+          ? t('contracts.showingCustomer', { name: viewer.customer.name })
+          : t(`contracts.showing.${viewer.kind}`)}{' '}
         {t('contracts.intro')}
       </p>
 

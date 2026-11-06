@@ -9,7 +9,7 @@ import { ContractDocument } from '@/components/contract-document';
 import { EndOfTermPanel } from '@/components/end-of-term-panel';
 import { InvoiceList } from '@/components/invoice-list';
 import { PrintButton } from '@/components/print-button';
-import { loadPriceLists, loadVatRates } from '@/data/load';
+import { loadCustomers, loadPriceLists, loadVatRates } from '@/data/load';
 import { contractStage } from '@/domain/contract';
 import { invoiceSchedule, splitByDate } from '@/domain/invoicing';
 import { differentPriceOn } from '@/domain/price-list';
@@ -19,6 +19,9 @@ import { isLocale } from '@/i18n/locales';
 import { getAsset } from '@/server/assets';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
+import { currentViewer } from '@/server/current-viewer';
+import { canSee } from '@/server/viewer';
+import { NotYoursNotice } from '@/components/not-yours-notice';
 import { appDate } from '@/server/app-date';
 
 /** Short, readable contract number from the id: the first 8 characters, upper case. */
@@ -39,6 +42,11 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
 
   const contract = await getContract(db, id);
   if (!contract) notFound();
+  // Demo login: only the customer it belongs to (or staff) sees it; see src/server/viewer.ts.
+  if (!canSee(await currentViewer(), contract.customerId)) {
+    const owner = (await loadCustomers()).find((c) => c.id === contract.customerId);
+    return <NotYoursNotice ownerName={owner?.name ?? null} locale={locale} t={getT(locale)} />;
+  }
   const [asset, vatRates, priceLists] = await Promise.all([
     getAsset(db, contract.assetId),
     loadVatRates(),

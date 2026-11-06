@@ -1,3 +1,4 @@
+
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
 // SQLite has no enums here, so allowed values (category, condition, status) are
@@ -15,21 +16,258 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id              String   @id
+  category        String // e_bike | laptop | farm_machine
+  make            String
+  model           String
+  model_year      Int
+  serial_number   String   @unique
+  condition       String // new | like_new | good | fair | poor
+  usage_unit      String // km | battery_cycles | engine_hours
+  usage_value     Int
+  previous_lives  Int
+  status          String // available | reserved | returned
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  quotes          Quote[]
+  contracts       Contract[]
+  return_requests ReturnRequest[]
+  wishlist_requests WishlistRequest[]
+  second_life_reservations SecondLifeReservation[]
 
   @@index([category])
+}
+
+// A priced offer, saved as it was shown. Never updated; it is not binding until signed.
+// Dates are ISO `YYYY-MM-DD` text, money is integer euro cents, VAT excluded.
+model Quote {
+  id                       String   @id
+  created_at               DateTime @default(now())
+  asset_id                 String
+  asset                    Asset    @relation(fields: [asset_id], references: [id])
+  customer_id              String?
+  quoted_on                String
+  price_list_version       Int? // null: a second-life price, not from a price list
+  list_price_cents         Int
+  down_payment_cents       Int
+  term_months              Int
+  financed_cents           Int
+  band                     String
+  monthly_factor           Float
+  annual_interest_percent  Float
+  monthly_net_rent_cents   Int
+  buyout_percent           Float
+  buyout_net_cents         Int
+  contract_net_total_cents Int
+  contract                 Contract?
+
+  @@index([asset_id])
+}
+
+// The locked agreement: a full copy of the signed terms, so it needs no price list or quote
+// to be reproduced. Pricing columns are never updated after signing.
+model Contract {
+  id                       String   @id
+  created_at               DateTime @default(now())
+  quote_id                 String   @unique // one quote can be signed once
+  quote                    Quote    @relation(fields: [quote_id], references: [id])
+  asset_id                 String
+  asset                    Asset    @relation(fields: [asset_id], references: [id])
+  customer_id              String
+  status                   String // active
+  signed_on                String
+  start_date               String
+  end_date                 String // last day covered by the lease
+  price_list_version       Int?
+  list_price_cents         Int
+  down_payment_cents       Int
+  term_months              Int
+  financed_cents           Int
+  band                     String
+  monthly_factor           Float
+  annual_interest_percent  Float
+  monthly_net_rent_cents   Int
+  buyout_percent           Float
+  buyout_net_cents         Int
+  contract_net_total_cents Int
+  price_lock_json          String // which price was locked and why
+  invoices                 Invoice[]
+  access_tokens            CustomerAccessToken[]
+  return_requests          ReturnRequest[]
+  buyout_requests        BuyoutRequest[]
+
+  @@index([asset_id])
+  @@index([customer_id])
+  @@index([end_date])
+}
+
+// Passwordless customer access. Only the SHA-256 token hash is stored.
+model CustomerAccessToken {
+  id           String   @id
+  created_at   DateTime @default(now())
+  expires_at   DateTime
+  token_hash   String   @unique
+  contract_id  String
+  contract     Contract @relation(fields: [contract_id], references: [id])
+
+  @@index([contract_id])
+  @@index([expires_at])
+}
+
+// A submitted application and the decision made from its answers.
+// Answers and reasons are immutable JSON snapshots for explainability and audit history.
+model Application {
+  id                  String   @id
+  created_at          DateTime @default(now())
+  quote_id            String?
+  customer_id         String?
+  category            String
+  financed_cents      Int
+  contract_start_date String
+  decision            String // approved | declined | manual_review
+  reasons_json        String
+  answers_json        String
+
+  @@index([quote_id])
+  @@index([customer_id])
+  @@index([created_at])
+}
+
+// A customer's request to return a leased asset, followed by dealer inspection,
+// refurbishment planning, approval and completion.
+// The asset itself is not made available for matching until completion.
+model ReturnRequest {
+  id         String   @id
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Original lease and customer
+  asset_id    String
+  asset       Asset    @relation(fields: [asset_id], references: [id])
+  contract_id String
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  customer_id String
+
+  // requested | received | inspected | planned | approved | completed | cancelled
+  status String
+
+  // Customer return request
+  expected_return_date String?
+
+  // Dealer confirms physical receipt
+  received_at DateTime?
+  received_by String?
+
+  // Dealer inspection
+  inspected_at             DateTime?
+  inspected_by             String?
+  inspected_condition      String?
+  inspected_usage_unit     String?
+  inspected_usage_value    Int?
+  usage_since_last_service Int?
+
+  // Refurbishment plan snapshot
+  target_condition                String?
+  refurbishment_plan_json         String?
+  refurbishment_total_cost_cents  Int?
+  resulting_condition             String?
+  resulting_usage_unit            String?
+  resulting_usage_value           Int?
+
+  // Dealer approval
+  approved_at DateTime?
+  approved_by String?
+
+  // Dealer confirms refurbishment work is complete
+  completed_at DateTime?
+  completed_by String?
+
+  @@index([asset_id, status])
+  @@index([contract_id])
+  @@index([customer_id])
+  @@index([status])
+}
+
+// A customer's end-of-term request to buy the leased asset.
+// The buyout amount is copied from the signed contract and cannot change.
+model BuyoutRequest {
+  id              String   @id
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  contract_id     String
+  contract        Contract @relation(fields: [contract_id], references: [id])
+  customer_id     String
+  buyout_net_cents Int
+  settlement_due_after String
+  status          String // requested | approved | completed | cancelled
+
+  @@index([contract_id, status])
+  @@index([customer_id])
+}
+
+// A customer wants to lease this asset when it becomes available again.
+model WishlistRequest {
+  id                    String   @id
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  asset_id              String
+  asset                 Asset    @relation(fields: [asset_id], references: [id])
+  customer_id           String
+  minimum_condition     String
+  max_monthly_net_rent_cents Int
+  preferred_term_months Int
+  needed_by             String
+  status                String // requested | matched | cancelled
+
+  @@index([asset_id, status])
+  @@index([customer_id, status])
+}
+
+// A returned asset held for one waiting-list request (data/second-life-demand.json), with the
+// terms the decision produced. The terms and the full decision are copied here, so the reason
+// for the choice can be shown later even if the waiting list or the rules change.
+model SecondLifeReservation {
+  id                       String   @id
+  created_at               DateTime @default(now())
+  asset_id                 String
+  asset                    Asset    @relation(fields: [asset_id], references: [id])
+  waiting_request_id       String // e.g. wait-13
+  who                      String
+  status                   String // reserved
+  reserved_by              String
+  available_date           String
+  needed_by                String
+  target_condition         String
+  term_months              Int
+  monthly_net_rent_cents   Int
+  refurbishment_cost_cents Int
+  payback_months           Int
+  decision_json            String // ranked candidates and the rule that decided each comparison
+
+  @@index([asset_id, status])
+  @@index([waiting_request_id, status])
+}
+
+// An issued invoice. The VAT rate and amounts are stored, so history never changes even if
+// the VAT data does. Invoices not issued yet are computed and shown as a forecast.
+model Invoice {
+  id          String   @id
+  created_at  DateTime @default(now())
+  contract_id String
+  contract    Contract @relation(fields: [contract_id], references: [id])
+  sequence    Int // 0 = down payment, 1..term = rents
+  kind        String // down_payment | rent
+  invoice_date String
+  due_date    String
+  period_start String?
+  period_end   String?
+  net_cents   Int
+  vat_rate_percent Float
+  vat_cents   Int
+  gross_cents Int
+
+  @@unique([contract_id, sequence]) // what makes invoice generation idempotent
 }
 
 // Who changed what, and when. Written in the same transaction as the change
@@ -41,7 +279,7 @@ model AuditLog {
   action       String // e.g. asset.status_changed
   entity_type  String // e.g. asset
   entity_id    String
-  details_json String? // JSON text, e.g. {"from":"available","to":"reserved"}
+  details_json String? // JSON text, e.g. {"from":"available","to":"returned"}
 
   @@index([entity_type, entity_id])
   @@index([created_at])

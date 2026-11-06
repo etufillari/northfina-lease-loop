@@ -1,5 +1,4 @@
 // The result of the sliders: the monthly rent, what it adds up to, and anything worth a warning.
-import Link from 'next/link';
 import { formatEuro } from '@/domain/money';
 import type { PricedQuote } from '@/domain/quote-costs';
 import type { LowerRentOption } from '@/domain/quote-options';
@@ -11,7 +10,9 @@ type PriceSummaryProps = {
   quote: PricedQuote;
   lowerRent: LowerRentOption | null;
   onUseLowerRent: (downPaymentCents: number) => void;
-  applyHref: string;
+  onContinue: () => void;
+  isSaving: boolean;
+  saveFailure: 'asset_unavailable' | 'failed' | null;
   locale: Locale;
 };
 
@@ -19,7 +20,9 @@ export function PriceSummary({
   quote,
   lowerRent,
   onUseLowerRent,
-  applyHref,
+  onContinue,
+  isSaving,
+  saveFailure,
   locale,
 }: PriceSummaryProps) {
   const t = getT(locale);
@@ -90,12 +93,23 @@ export function PriceSummary({
         </div>
       ) : null}
 
-      <Link
-        href={applyHref}
-        className="mt-5 block rounded-lg bg-emerald-700 px-4 py-2.5 text-center font-medium text-white hover:bg-emerald-800"
+      {saveFailure ? (
+        <p
+          role="alert"
+          className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100"
+        >
+          {t(`price.save.${saveFailure}`)}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onContinue}
+        disabled={isSaving}
+        className="mt-5 block w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-center font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
       >
-        {t('price.continue')}
-      </Link>
+        {t(isSaving ? 'price.save.saving' : 'price.continue')}
+      </button>
     </section>
   );
 }

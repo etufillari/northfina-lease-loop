@@ -2,7 +2,8 @@
 
 // The term and down payment sliders. Runs the same pure pricing functions as the server, so the
 // price updates on every move with no request to wait for or fail. Saving repeats the sum.
-import { useEffect, useId, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useId, useState, useTransition } from 'react';
 import type { AssetCategory, CoefficientTable, VatRates } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import { priceLeaseChoice } from '@/domain/quote-costs';
@@ -19,6 +20,7 @@ import {
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { PriceSummary } from './price-summary';
+import { saveQuote, type SaveQuoteResult } from './save-quote';
 
 const CENTS_PER_EURO = 100;
 /** Browsers limit URL changes per minute, and dragging a slider would easily go over. */
@@ -56,6 +58,13 @@ export function PriceSliders({
   // until the box loses focus, while the price already uses the nearest allowed amount.
   const [typed, setTyped] = useState<string | null>(null);
 
+  const router = useRouter();
+  const [saveFailure, setSaveFailure] = useState<
+    Extract<SaveQuoteResult, { ok: false }>['reason'] | null
+  >(null);
+  // Pending from the click until /apply has loaded, so a double click saves only one quote.
+  const [isSaving, startSaving] = useTransition();
+
   const termId = useId();
   const downId = useId();
   const boxId = useId();
@@ -82,6 +91,24 @@ export function PriceSliders({
     downPaymentCents,
     termMonths,
   });
+
+  // Saved only here, not on every slider move: an unused quote is just noise in the audit log.
+  const continueToApplication = (financedCents: number) => {
+    setSaveFailure(null);
+    startSaving(async () => {
+      const saved = await saveQuote({ assetId, termMonths, downPaymentCents, quotedOn: onDate });
+      if (!saved.ok) {
+        setSaveFailure(saved.reason);
+        return;
+      }
+      const query = new URLSearchParams({
+        quoteId: saved.quoteId,
+        category,
+        financedAmountCents: String(financedCents),
+      });
+      router.push(`/${locale}/apply?${query}`);
+    });
+  };
 
   const positions = sliderPositions(range);
   const onType = (text: string) => {
@@ -180,14 +207,9 @@ export function PriceSliders({
             setTyped(null);
             setDownPaymentCents(cents);
           }}
-          applyHref={`/${locale}/apply?${new URLSearchParams({
-            category,
-            financedAmountCents: String(result.quote.financedCents),
-            assetId,
-            termMonths: String(termMonths),
-            downPaymentCents: String(downPaymentCents),
-            onDate,
-          })}`}
+          onContinue={() => continueToApplication(result.quote.financedCents)}
+          isSaving={isSaving}
+          saveFailure={saveFailure}
           locale={locale}
         />
       ) : (

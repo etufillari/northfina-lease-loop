@@ -2,6 +2,7 @@
 // still show, with the reason. A returned item shows its second life instead (D-035).
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import type { Asset } from '@/data/schemas';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
@@ -63,13 +64,24 @@ export default async function AssetPage({ params }: PageProps<'/[locale]/assets/
   else if (!price.ok || !vat.ok) blocked = 'lease.notLeasable.no_price';
   else if (!bounds?.ok) blocked = 'lease.notLeasable.below_minimum';
 
-  // Where the calculator would be, an item that can't be leased points at ones that can.
+  // Where the calculator would be, an item that can't be leased points at ones that can: the same
+  // price and minimum checks as `blocked` above, so a suggestion never opens on a refusal.
+  const leasableToday = (candidate: Asset) => {
+    const candidatePrice = listPriceOn(priceLists, candidate.id, today);
+    return (
+      vat.ok &&
+      candidatePrice.ok &&
+      downPaymentBounds(data.coefficientTable, candidatePrice.priceCents).ok
+    );
+  };
   const similar =
     blocked !== null && !secondLife
-      ? similarAvailable(await listAssets(db, { category: asset.category }), asset).map((a) => ({
-          asset: a,
-          price: listPriceOn(priceLists, a.id, today),
-        }))
+      ? similarAvailable(
+          await listAssets(db, { category: asset.category }),
+          asset,
+          3,
+          leasableToday
+        ).map((a) => ({ asset: a, price: listPriceOn(priceLists, a.id, today) }))
       : [];
 
   return (

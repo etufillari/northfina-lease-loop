@@ -58,3 +58,22 @@ describe('similarAvailable: items to suggest when this one cannot be leased', ()
     expect(similarAvailable([asset('ebike-001')], current, 0)).toEqual([]);
   });
 });
+
+describe('similarAvailable with a leasability check', () => {
+  const current = asset('ebike-009', { status: 'reserved' });
+
+  it('skips items the check rejects and still fills the list from the rest', () => {
+    // ebike-001 stands in for an item under the 300 € minimum (ebike-010 on price list v1).
+    const all = [asset('ebike-001'), asset('ebike-002'), asset('ebike-003'), asset('ebike-004')];
+    const leasable = (a: Asset) => a.id !== 'ebike-001';
+    expect(similarAvailable(all, current, 3, leasable).map((a) => a.id)).toEqual([
+      'ebike-002',
+      'ebike-003',
+      'ebike-004',
+    ]);
+  });
+
+  it('is empty when no available item passes the check', () => {
+    expect(similarAvailable([asset('ebike-001')], current, 3, () => false)).toEqual([]);
+  });
+});

@@ -40,6 +40,7 @@ export type ApplicationFlowLabels = {
   previewFailed: string;
   submitFailed: string;
   answerRequired: string;
+  emailInvalid: string;
   moneyHint: string;
   listHint: string;
   ready: string;
@@ -209,6 +210,10 @@ export function CustomerApplicationFlow({
     );
     if (value === undefined || !answerIsPresent(value)) {
       setFieldError(labels.answerRequired);
+      return;
+    }
+    if (currentQuestion.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
+      setFieldError(labels.emailInvalid);
       return;
     }
 
@@ -385,6 +390,11 @@ export function CustomerApplicationFlow({
                   locale={locale}
                   t={t}
                   labels={labels}
+                  emailError={
+                    currentQuestion.type === 'email' && fieldError === labels.emailInvalid
+                      ? fieldError
+                      : undefined
+                  }
                   onChange={updateDraft}
                 />
                 {fieldError ? <p className="mt-3 text-sm text-rose-700">{fieldError}</p> : null}

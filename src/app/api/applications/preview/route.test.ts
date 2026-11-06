@@ -19,7 +19,14 @@ vi.mock('@/server/applications/applications', async () => {
       termMonths: z.number().int().positive(),
       answers: z
         .record(z.string(), z.union([z.string(), z.number(), z.array(z.string())]))
-        .default({}),
+        .default({})
+        .superRefine((answers, ctx) => {
+          for (const id of ['q_email', 'q_signatory_email']) {
+            if (answers[id] !== undefined && !z.email().safeParse(answers[id]).success) {
+              ctx.addIssue({ code: 'custom', path: [id], message: 'Invalid email address' });
+            }
+          }
+        }),
     }),
   };
 });

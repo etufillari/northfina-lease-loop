@@ -45,6 +45,7 @@
   "application.flow.previewFailed": "Det gick inte att uppdatera frågeformuläret. Försök igen.",
   "application.flow.submitFailed": "Det gick inte att skapa avtalet. Försök igen.",
   "application.flow.answerRequired": "Svara på frågan innan du fortsätter.",
+  "application.flow.emailInvalid": "Ange en giltig e-postadress.",
   "application.flow.moneyHint": "Ange ett helt eurobelopp eller använd två decimaler.",
   "application.flow.listHint": "Ange en uppgift per rad.",
   "application.flow.ready": "Din ansökan är godkänd",

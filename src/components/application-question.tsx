@@ -12,6 +12,7 @@ type ApplicationQuestionProps = {
   locale: Locale;
   t: ReturnType<typeof getT>;
   labels: ApplicationFlowLabels;
+  emailError?: string;
   onChange: (value: string) => void;
 };
 
@@ -22,6 +23,7 @@ export function ApplicationQuestion({
   locale,
   t,
   labels,
+  emailError,
   onChange,
 }: ApplicationQuestionProps) {
   const text = question.text[locale];
@@ -78,6 +80,8 @@ export function ApplicationQuestion({
           <input
             id={question.id}
             type={question.type === 'money' ? 'text' : question.type}
+            required={question.type === 'email'}
+            aria-invalid={Boolean(emailError)}
             inputMode={question.type === 'money' ? 'decimal' : undefined}
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -89,6 +93,11 @@ export function ApplicationQuestion({
         <span className="font-medium text-stone-800 dark:text-stone-200">{labels.whyWeAsk}:</span>{' '}
         {question.why_we_ask[locale]}
       </p>
+      {emailError ? (
+        <p role="alert" className="mt-2 text-sm text-rose-700">
+          {emailError}
+        </p>
+      ) : null}
       {question.validation ? (
         <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
           {question.validation.hint[locale]}

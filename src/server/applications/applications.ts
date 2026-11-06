@@ -23,12 +23,27 @@ const applicationAnswerSchema: z.ZodType<ApplicationAnswer> = z.union([
   z.array(z.string()),
 ]);
 
+const emailQuestionIds = new Set(['q_email', 'q_signatory_email']);
+const applicationAnswersSchema = z
+  .record(z.string(), applicationAnswerSchema)
+  .default({})
+  .superRefine((answers, ctx) => {
+    for (const questionId of emailQuestionIds) {
+      const answer = answers[questionId];
+      if (answer === undefined) continue;
+      const result = z.email().safeParse(answer);
+      if (!result.success) {
+        ctx.addIssue({ code: 'custom', path: [questionId], message: 'Invalid email address' });
+      }
+    }
+  });
+
 const applicationRequestFields = {
   assetId: z.string().min(1),
   date: isoDateSchema,
   downPaymentCents: centsSchema,
   termMonths: z.number().int().positive(),
-  answers: z.record(z.string(), applicationAnswerSchema).default({}),
+  answers: applicationAnswersSchema,
 };
 
 export const applicationPreviewRequestSchema = z.strictObject(applicationRequestFields);

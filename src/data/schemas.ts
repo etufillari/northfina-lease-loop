@@ -28,7 +28,8 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned']);
+/** `leased` and `sold` are set by the app; the data pack only uses the other three. */
+export const assetStatusSchema = z.enum(['available', 'reserved', 'leased', 'returned', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */
@@ -53,6 +54,16 @@ export const assetSchema = z.strictObject({
   /** How many lease contracts this item has already been through. */
   previous_lives: z.number().int().nonnegative(),
   status: assetStatusSchema,
+  /** When a used item was first leased. Made up by this team: see data/DATA.md. */
+  first_leased_on: isoDateSchema.optional(),
+  /** Its net price at that first lease. Made up by this team: see data/DATA.md. */
+  first_lease_price_cents: centsSchema.optional(),
+  /** The price a re-listed item leases at. Set by the app, never in the data pack. */
+  relist_price_cents: centsSchema.optional(),
+  /** The customer this item is held for after being passed on. Set by the app. */
+  reserved_for: z.string().min(1).optional(),
+  /** Set by `assetForViewer` for the person a held item is waiting for. */
+  held_for_you: z.literal(true).optional(),
 });
 export type Asset = z.infer<typeof assetSchema>;
 export const assetsFileSchema = z.array(assetSchema);
@@ -250,7 +261,7 @@ export const questionSchema = z
     options: z.array(z.string()).min(1).optional(),
     blocks_application_when: z.array(blockRuleSchema).optional(),
     validation: z
-      .strictObject({ format: z.literal('finnish_business_id'), hint: z.string() })
+      .strictObject({ format: z.literal('finnish_business_id'), hint: localizedTextSchema })
       .optional(),
   })
   .refine((q) => (q.type === 'choice') === (q.options !== undefined), {
@@ -281,6 +292,8 @@ const customerBase = {
   is_pep: z.boolean(),
   /** Why this test customer exists. */
   story: z.string(),
+  /** Their entry in second-life-demand.json. Added by this team, so they can be passed items. */
+  waitlist_id: z.string().min(1).optional(),
 };
 
 export const employmentSchema = z.enum([
@@ -327,6 +340,41 @@ export const customerSchema = z.discriminatedUnion('type', [
 ]);
 export type Customer = z.infer<typeof customerSchema>;
 export const customersFileSchema = z.array(customerSchema);
+
+// ---------------------------------------------------------------------------
+// data/staff.json: seeded Northfina users for the no-password "acting as" login.
+// Not part of the original data pack; added for the identity and roles feature.
+// ---------------------------------------------------------------------------
+
+export const staffRoleSchema = z.enum(['dealer', 'admin']);
+export type StaffRole = z.infer<typeof staffRoleSchema>;
+
+export const staffSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  role: staffRoleSchema,
+  /** Why this seeded user exists. */
+  story: z.string(),
+});
+export type Staff = z.infer<typeof staffSchema>;
+export const staffFileSchema = z.array(staffSchema);
+
+// ---------------------------------------------------------------------------
+// data/signatories.json: people allowed to sign for a company, who are not the applicant.
+// Not part of the original data pack; added for the company signing flow.
+// ---------------------------------------------------------------------------
+
+export const signatorySchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  email: z.email(),
+  /** The company they sign for: the id of a customer of type `company`. */
+  company_id: z.string().min(1),
+  /** Why this seeded user exists. */
+  story: z.string(),
+});
+export type Signatory = z.infer<typeof signatorySchema>;
+export const signatoriesFileSchema = z.array(signatorySchema);
 
 // ---------------------------------------------------------------------------
 // data/second-life-demand.json: people waiting for a returned item.

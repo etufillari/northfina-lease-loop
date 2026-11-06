@@ -1,0 +1,154 @@
+// Roles and permissions for the no-password "acting as" login. Identity itself is
+// simulated (there is no password check), but once someone is acting as a given
+// customer or staff member, what their role may do is real and checked here.
+//
+// Pure: this file never loads data or reads a session. Callers pass in the customers
+// and staff they already have, and `src/server/auth/session.ts` decides who is acting now.
+import type { Customer, Signatory, Staff, StaffRole } from '@/data/schemas';
+
+/** Every customer acts as a client. Staff carry their own role from data/staff.json. */
+export const CLIENT_ROLE = 'client' as const;
+/** Someone who signs for a company, without being its applicant. */
+export const SIGNATORY_ROLE = 'signatory' as const;
+export type Role = typeof CLIENT_ROLE | typeof SIGNATORY_ROLE | StaffRole;
+export const ROLES: readonly Role[] = [CLIENT_ROLE, SIGNATORY_ROLE, 'dealer', 'admin'];
+
+/** True when `value` is one of the known roles. Used to check a role read from outside
+ *  the app, e.g. a decoded session token, before it is trusted as a `Role`. */
+export function isRole(value: unknown): value is Role {
+  return typeof value === 'string' && (ROLES as readonly string[]).includes(value);
+}
+
+/** One person who can log in, with the role that decides what they may do. */
+export type Identity =
+  | { kind: 'customer'; role: typeof CLIENT_ROLE; customer: Customer }
+  | { kind: 'staff'; role: StaffRole; staff: Staff }
+  | { kind: 'signatory'; role: typeof SIGNATORY_ROLE; signatory: Signatory };
+
+export function identityId(identity: Identity): string {
+  switch (identity.kind) {
+    case 'customer':
+      return identity.customer.id;
+    case 'staff':
+      return identity.staff.id;
+    case 'signatory':
+      return identity.signatory.id;
+  }
+}
+
+export function identityName(identity: Identity): string {
+  switch (identity.kind) {
+    case 'customer':
+      return identity.customer.name;
+    case 'staff':
+      return identity.staff.name;
+    case 'signatory':
+      return identity.signatory.name;
+  }
+}
+
+/** The customer this identity acts for: themselves, or a signatory's company. */
+export function actingCustomerId(identity: Identity): string | undefined {
+  if (identity.kind === 'customer') return identity.customer.id;
+  return identity.kind === 'signatory' ? identity.signatory.company_id : undefined;
+}
+
+/** Everyone who can log in, as one list of identities. */
+export function listIdentities(
+  customers: readonly Customer[],
+  staff: readonly Staff[],
+  signatories: readonly Signatory[] = []
+): Identity[] {
+  return [
+    ...customers.map((customer): Identity => ({ kind: 'customer', role: CLIENT_ROLE, customer })),
+    ...staff.map((person): Identity => ({ kind: 'staff', role: person.role, staff: person })),
+    ...signatories.map((signatory): Identity => ({
+      kind: 'signatory',
+      role: SIGNATORY_ROLE,
+      signatory,
+    })),
+  ];
+}
+
+/** The one identity with this id, across customers and staff; `undefined` if none matches. */
+export function findIdentity(
+  customers: readonly Customer[],
+  staff: readonly Staff[],
+  id: string,
+  signatories: readonly Signatory[] = []
+): Identity | undefined {
+  return listIdentities(customers, staff, signatories).find(
+    (identity) => identityId(identity) === id
+  );
+}
+
+/** A plain, serializable view of an identity: enough for an "acting as" UI, no more. */
+export type IdentitySummary = { id: string; name: string; role: Role; kind: Identity['kind'] };
+
+export function identitySummary(identity: Identity): IdentitySummary {
+  return {
+    id: identityId(identity),
+    name: identityName(identity),
+    role: identity.role,
+    kind: identity.kind,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Permissions: can a role ever do this, not "may this person do this to this record".
+// A record-specific check (e.g. "only the client who owns this contract") belongs in
+// the service that holds the record, alongside the data it needs to decide.
+// ---------------------------------------------------------------------------
+
+export const PERMISSIONS = [
+  /** Submit a lease application and answer its questions. */
+  'application.submit',
+  /** Sign a contract as the customer on it. */
+  'contract.sign',
+  /** See every contract, not only your own. */
+  'contract.view_all',
+  /** End a contract at the end of its term: buy out, return or pass on. */
+  'contract.end_term',
+  /** Change an asset's status, e.g. available → reserved → returned. */
+  'asset.change_status',
+  /** Refurbish a returned asset and re-list it for a second life. */
+  'second_life.refurbish',
+  /** Approve or reject an application sent to manual review. */
+  'application.decide_manual_review',
+  /** Read the audit log. */
+  'audit_log.view',
+  /** Change how the demo runs, e.g. the date the app runs on. */
+  'demo.configure',
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+
+/** What a dealer may do. Admin is defined as "a dealer, plus more" below, so a new
+ *  dealer permission never has to be added to admin by hand. */
+const DEALER_PERMISSIONS: readonly Permission[] = [
+  'contract.view_all',
+  'contract.end_term',
+  'asset.change_status',
+  'second_life.refurbish',
+  'audit_log.view',
+];
+
+const GRANTS: Record<Role, readonly Permission[]> = {
+  client: ['application.submit', 'contract.sign', 'contract.end_term'],
+  signatory: ['contract.sign'],
+  dealer: DEALER_PERMISSIONS,
+  admin: [...DEALER_PERMISSIONS, 'application.decide_manual_review', 'demo.configure'],
+};
+
+/** Whether `role` may ever perform `permission`. */
+export function can(role: Role, permission: Permission): boolean {
+  return GRANTS[role].includes(permission);
+}
+
+/**
+ * Whether this identity may see a contract and its invoices: a customer their own, and staff
+ * any. A signatory signs for a company but does not get to read its contracts.
+ */
+export function canViewContract(identity: Identity, ownerId: string | undefined): boolean {
+  const isOwner = identity.kind === 'customer' && identity.customer.id === ownerId;
+  return isOwner || can(identity.role, 'contract.view_all');
+}

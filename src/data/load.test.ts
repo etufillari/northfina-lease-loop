@@ -11,25 +11,39 @@ import {
   loadRefurbishmentCosts,
   loadResidualCurves,
   loadSecondLifeDemand,
+  loadSignatories,
+  loadStaff,
   loadVatRates,
 } from './load';
 import { coefficientTableSchema, priceListsFileSchema } from './schemas';
 
 describe('data pack', () => {
   it('every file in data/ parses against its schema', async () => {
-    const [assets, priceLists, table, curves, vat, questions, customers, demand, refurb, co2] =
-      await Promise.all([
-        loadAssets(),
-        loadPriceLists(),
-        loadCoefficientTable(),
-        loadResidualCurves(),
-        loadVatRates(),
-        loadQuestions(),
-        loadCustomers(),
-        loadSecondLifeDemand(),
-        loadRefurbishmentCosts(),
-        loadCo2Factors(),
-      ]);
+    const [
+      assets,
+      priceLists,
+      table,
+      curves,
+      vat,
+      questions,
+      customers,
+      staff,
+      demand,
+      refurb,
+      co2,
+    ] = await Promise.all([
+      loadAssets(),
+      loadPriceLists(),
+      loadCoefficientTable(),
+      loadResidualCurves(),
+      loadVatRates(),
+      loadQuestions(),
+      loadCustomers(),
+      loadStaff(),
+      loadSecondLifeDemand(),
+      loadRefurbishmentCosts(),
+      loadCo2Factors(),
+    ]);
 
     expect(assets).toHaveLength(30);
     expect(priceLists.map((list) => list.version)).toEqual([1, 2]);
@@ -38,6 +52,7 @@ describe('data pack', () => {
     expect(vat.country).toBe('FI');
     expect(questions.questions.length).toBeGreaterThan(0);
     expect(customers.length).toBeGreaterThan(0);
+    expect(staff.map((person) => person.role).sort()).toEqual(['admin', 'dealer']);
     expect(demand.length).toBeGreaterThan(0);
     expect(refurb.laptop.fixed.length).toBeGreaterThan(0);
     expect(co2.manufacturing_new_kg.e_bike).toBeGreaterThan(0);
@@ -51,6 +66,35 @@ describe('data pack', () => {
           'number'
         );
       }
+    }
+  });
+
+  it('links every signatory to a company in the data', async () => {
+    const [signatories, customers] = await Promise.all([loadSignatories(), loadCustomers()]);
+    expect(signatories.length).toBeGreaterThan(0);
+    for (const signatory of signatories) {
+      const company = customers.find((customer) => customer.id === signatory.company_id);
+      expect(company?.type, signatory.id).toBe('company');
+    }
+  });
+
+  it('links every waiting customer to a real waiting-list entry', async () => {
+    const [customers, demand] = await Promise.all([loadCustomers(), loadSecondLifeDemand()]);
+    const waiting = customers.filter((customer) => customer.waitlist_id !== undefined);
+    expect(waiting.length).toBeGreaterThan(0);
+    for (const customer of waiting) {
+      expect(
+        demand.map((entry) => entry.id),
+        customer.id
+      ).toContain(customer.waitlist_id);
+    }
+  });
+
+  it('gives every used item a first lease, and no new item one', async () => {
+    for (const asset of await loadAssets()) {
+      const hasFirstLease =
+        asset.first_leased_on !== undefined && asset.first_lease_price_cents !== undefined;
+      expect(hasFirstLease, asset.id).toBe(asset.previous_lives > 0);
     }
   });
 

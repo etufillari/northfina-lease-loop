@@ -1,7 +1,14 @@
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
 // SQLite has no enums here, so allowed values (category, condition, status) are
-// checked with Zod in src/data/schemas.ts before anything is written.
+// checked with Zod before anything is written: src/data/schemas.ts for the data pack,
+// src/data/lease-schemas.ts for records the app creates.
+//
+// House rules for the lease models:
+// - Calendar dates are ISO `YYYY-MM-DD` strings, the same shape the domain functions use.
+// - Money is integer cents. Rates are integers too: 25.5 % is 2550 basis points.
+// - `customer_id` has no relation: customers live in data/customers.json, not here.
+// - Application and Contract ids come from the service, because withAudit() needs them first.
 
 generator client {
   provider = "prisma-client"
@@ -15,21 +22,152 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
-  category       String // e_bike | laptop | farm_machine
-  make           String
-  model          String
-  model_year     Int
-  serial_number  String   @unique
-  condition      String // new | like_new | good | fair | poor
-  usage_unit     String // km | battery_cycles | engine_hours
-  usage_value    Int
-  previous_lives Int
-  status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                      String   @id
+  category                String // e_bike | laptop | farm_machine
+  make                    String
+  model                   String
+  model_year              Int
+  serial_number           String   @unique
+  condition               String // new | like_new | good | fair | poor
+  usage_unit              String // km | battery_cycles | engine_hours
+  usage_value             Int
+  previous_lives          Int
+  status                  String // available | reserved | leased | returned | sold
+  // Set when a used item is re-listed. Replaces the price list for its next lease.
+  relist_price_cents      Int?
+  // The customer this item is held for after being passed on. Nobody else can lease it.
+  reserved_for            String?
+  // For items first leased before the app. Later items keep this on their first AssetLife.
+  first_leased_on         String?
+  first_lease_price_cents Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  applications Application[]
+  contracts    Contract[]
+  lives        AssetLife[]
 
   @@index([category])
+}
+
+// One attempt to lease an asset: the quote the customer saw, their answers and the decision.
+model Application {
+  id                 String   @id
+  customer_id        String
+  asset_id           String
+  quote_date         String
+  start_on           String // planned contract start: the date age is judged on
+  price_list_version Int? // null for a re-listed item, which has no list price
+  base_price_cents   Int
+  down_payment_cents Int
+  financed_cents     Int
+  term_months        Int
+  answers_json       String // {"q_country":"FI","q_monthly_income":320000}
+  decision           String // approved | rejected | manual_review
+  reasons_json       String // ["pep_manual_review"]: codes, translated by the UI
+  reviewed_by        String? // who decided a manual review
+  reviewed_on        String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract?
+
+  @@index([customer_id])
+  @@index([decision])
+}
+
+// A signed lease. The price fields are a locked copy of the quote and never change:
+// only `status` and `actual_end_on` move after signing. VAT is not locked (see Invoice).
+model Contract {
+  id                           String   @id
+  application_id               String   @unique
+  customer_id                  String
+  asset_id                     String
+  quote_date                   String
+  signed_on                    String
+  signed_by                    String? // the customer, or a signatory for a company
+  start_on                     String
+  planned_end_on               String
+  actual_end_on                String?
+  passed_to                    String? // the customer it was passed on to
+  status                       String // active | bought_out | returned | passed_on | exited_early
+  price_list_version           Int? // null for a re-listed item, which has no list price
+  base_price_cents             Int
+  down_payment_cents           Int
+  financed_cents               Int
+  term_months                  Int
+  band                         String
+  factor_micros                Int // 0.027584 is stored as 27584
+  annual_interest_basis_points Int // 9.9 % is stored as 990
+  monthly_net_rent_cents       Int
+  buyout_cents                 Int
+  created_at                   DateTime @default(now())
+  updated_at                   DateTime @updatedAt
+
+  application Application @relation(fields: [application_id], references: [id])
+  asset       Asset       @relation(fields: [asset_id], references: [id])
+  invoices    Invoice[]
+  life        AssetLife?
+
+  @@index([customer_id])
+  @@index([asset_id])
+}
+
+// One monthly bill. Stores its own VAT rate, taken from the invoice date, so a VAT
+// change never touches the contract or an invoice that already exists.
+model Invoice {
+  id                    String   @id @default(cuid())
+  contract_id           String
+  sequence              Int // 1 for the first invoice of the contract
+  kind                  String   @default("rent") // rent | down_payment | buyout
+  period_start          String
+  period_end            String
+  invoice_date          String
+  due_date              String
+  net_cents             Int
+  vat_rate_basis_points Int // 25.5 % is stored as 2550
+  vat_cents             Int
+  total_cents           Int
+  status                String // issued | paid | cancelled
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  contract Contract @relation(fields: [contract_id], references: [id])
+
+  @@unique([contract_id, sequence])
+}
+
+// One life of one asset. A new life adds a row; old lives are never overwritten.
+// Lives from before the app have no contract, and the data pack only says they
+// happened, so their dates, prices and readings are null.
+model AssetLife {
+  id                      String   @id @default(cuid())
+  asset_id                String
+  life_number             Int // 1 for the first life
+  contract_id             String?  @unique
+  first_lease_price_cents Int? // the item's price at its first lease: the residual curve needs it
+  started_on              String?
+  ended_on                String?
+  outcome                 String? // bought_out | returned | passed_on | exited_early; null while open
+  start_condition         String?
+  start_usage_value       Int?
+  end_condition           String?
+  end_usage_value         Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract? @relation(fields: [contract_id], references: [id])
+
+  @@unique([asset_id, life_number])
+}
+
+// Settings an admin can change while the app runs, e.g. `demo_date`. No row means the default.
+model AppSetting {
+  key        String   @id
+  value      String
+  updated_at DateTime @updatedAt
 }
 
 // Who changed what, and when. Written in the same transaction as the change

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "staff-dealer",
+    "name": "Dealer desk",
+    "role": "dealer",
+    "story": "Handles returns, refurbishment, re-listing and asset status."
+  },
+  {
+    "id": "staff-admin",
+    "name": "Northfina admin",
+    "role": "admin",
+    "story": "Decides manual-review applications and can do everything a dealer can."
+  }
+]

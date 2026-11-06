@@ -1,0 +1,150 @@
+// The eligibility rules from data/questions.json: yes, no or "a person will check", with reasons.
+//
+// The rules follow who is leasing, which the applicant answers: a person may lease privately
+// or through a business, so their record's type does not decide it.
+//
+// A fact can come from the form or the customer record, and the two can disagree. The stricter
+// one wins, so a false answer never helps: an applicant under age or a PEP in either source
+// counts, and income is the lower figure. The record also covers questions that were not
+// asked, since q_monthly_income and q_pep only appear for larger deals. A birth date on record
+// always counts, whatever the answered type, so nobody passes the age limit as a company.
+import type { Answers, ApplicationDecision, EligibilityReason } from '@/data/lease-schemas';
+import type { Customer, Question } from '@/data/schemas';
+import { ageOn, eligibleFrom } from './age';
+import { isValidBusinessId } from './business-id';
+import { answeredCustomerType } from './question-flow';
+
+// In the data only as English text, unlike the age and country limits below.
+const MAX_RENT_PERCENT_OF_INCOME = 30;
+
+export type EligibilityInput = {
+  /** The question bank: the age and country limits are read from it. */
+  questions: readonly Question[];
+  customer: Customer;
+  /** Answers that have passed `invalidAnswers`, with stale ones already dropped. */
+  answers: Answers;
+  /** The planned contract start: age is judged on this date. */
+  startOn: string;
+  /** Monthly rent including VAT, or `null` when the financed amount is outside the table. */
+  monthlyRentWithVatCents: number | null;
+};
+
+export type Eligibility = {
+  decision: ApplicationDecision;
+  reasons: EligibilityReason[];
+  /** When someone too young reaches the minimum age, so the UI can say "not yet". */
+  eligible_from: string | null;
+};
+
+function blockRules(questions: readonly Question[], questionId: string) {
+  const question = questions.find((q) => q.id === questionId);
+  if (!question) throw new Error(`data/questions.json has no ${questionId} question`);
+  return { options: question.options ?? [], rules: question.blocks_application_when ?? [] };
+}
+
+/** The minimum age, from the rule that stops the form at q_birth_date. */
+export function minimumAge(questions: readonly Question[]): number {
+  const rule = blockRules(questions, 'q_birth_date').rules.find((r) => r.rule === 'age_under');
+  if (rule?.rule !== 'age_under') throw new Error('q_birth_date has no minimum age rule');
+  return rule.value;
+}
+
+/** The q_country options that do not stop the form. */
+export function allowedCountries(questions: readonly Question[]): string[] {
+  const { options, rules } = blockRules(questions, 'q_country');
+  const blocked = rules.flatMap((rule) => (rule.rule === 'answer_in' ? rule.value : []));
+  return options.filter((option) => !blocked.includes(option));
+}
+
+function textAnswer(answers: Answers, questionId: string): string | undefined {
+  const value = answers[questionId];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function moneyAnswer(answers: Answers, questionId: string): number | undefined {
+  const value = answers[questionId];
+  return typeof value === 'number' ? value : undefined;
+}
+
+/**
+ * The applicant's birth date, from the form and the record. The later date wins, because the
+ * younger applicant is the stricter case, and ISO dates compare correctly as text.
+ */
+export function applicantBirthDate(customer: Customer, answers: Answers): string | null {
+  const answered = textAnswer(answers, 'q_birth_date');
+  const recorded = customer.type === 'company' ? undefined : customer.birth_date;
+  if (answered === undefined || recorded === undefined) return answered ?? recorded ?? null;
+  return answered > recorded ? answered : recorded;
+}
+
+/** The applicant's income: the lower of form and record, or `null` when neither has one. */
+function applicantIncome(customer: Customer, answers: Answers): number | null {
+  const answered = moneyAnswer(answers, 'q_monthly_income');
+  const recorded = customer.type === 'consumer' ? customer.monthly_net_income_cents : undefined;
+  if (answered === undefined || recorded === undefined) return answered ?? recorded ?? null;
+  return Math.min(answered, recorded);
+}
+
+/** Compares in whole numbers: rent ÷ income ≤ 30 % is the same as rent × 100 ≤ income × 30. */
+function isAffordable(rentCents: number, incomeCents: number): boolean {
+  return rentCents * 100 <= incomeCents * MAX_RENT_PERCENT_OF_INCOME;
+}
+
+/**
+ * Any failed rule rejects the application, and every failed rule is listed so the customer
+ * sees all of them at once. Otherwise a PEP, or a consumer whose income nobody knows, goes to
+ * manual review. Everyone else is approved.
+ * Who may sign for a company is not an eligibility rule: it is checked at signing.
+ */
+export function decide(input: EligibilityInput): Eligibility {
+  const { questions, customer, answers, startOn, monthlyRentWithVatCents } = input;
+  const reasons: EligibilityReason[] = [];
+  let eligible_from: string | null = null;
+  const applicantType = answeredCustomerType(answers) ?? customer.type;
+  let incomeUnknown = false;
+
+  const minAge = minimumAge(questions);
+  const birthDate = applicantBirthDate(customer, answers);
+  if (birthDate !== null && ageOn(birthDate, startOn) < minAge) {
+    reasons.push('min_age');
+    eligible_from = eligibleFrom(birthDate, minAge);
+  }
+
+  const allowed = allowedCountries(questions);
+  const answeredCountry = textAnswer(answers, 'q_country') ?? customer.country;
+  if (![answeredCountry, customer.country].every((country) => allowed.includes(country))) {
+    reasons.push('residency');
+  }
+
+  if (applicantType === 'consumer' && monthlyRentWithVatCents !== null) {
+    // An unknown income proves nothing either way, so a person decides.
+    const income = applicantIncome(customer, answers);
+    if (income === null) incomeUnknown = true;
+    else if (!isAffordable(monthlyRentWithVatCents, income)) reasons.push('affordability');
+  }
+
+  if (applicantType !== 'consumer') {
+    const ids = [
+      textAnswer(answers, 'q_business_id'),
+      customer.type === 'consumer' ? undefined : customer.business_id,
+    ].filter((id) => id !== undefined);
+    if (ids.length === 0 || !ids.every(isValidBusinessId)) reasons.push('business_id');
+  }
+
+  if (monthlyRentWithVatCents === null) reasons.push('financed_limits');
+
+  if (reasons.length > 0) return { decision: 'rejected', reasons, eligible_from };
+
+  const isPep = customer.is_pep || answers.q_pep === 'yes';
+  if (isPep || incomeUnknown) {
+    return {
+      decision: 'manual_review',
+      reasons: [
+        ...(isPep ? (['pep_manual_review'] as const) : []),
+        ...(incomeUnknown ? (['income_review'] as const) : []),
+      ],
+      eligible_from: null,
+    };
+  }
+  return { decision: 'approved', reasons: [], eligible_from: null };
+}

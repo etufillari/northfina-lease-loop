@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { UserSwitcher } from '@/components/user-switcher';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
@@ -43,7 +44,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <div className="flex flex-wrap items-center gap-2">
+              <UserSwitcher locale={locale} />
+              <LanguageSwitcher current={locale} label={t('nav.language')} />
+            </div>
           </div>
         </header>
 
@@ -53,7 +57,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
         <footer className="border-t border-stone-200 dark:border-stone-800">
           <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
+            {t('footer.note')}
           </div>
         </footer>
       </body>

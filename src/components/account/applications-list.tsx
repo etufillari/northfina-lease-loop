@@ -1,0 +1,208 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+
+import type { EligibilityReason } from '@/data/lease-schemas';
+import { formatEuro } from '@/domain/money';
+import { formatIsoDate } from '@/i18n/format';
+import { getT, type Translate } from '@/i18n/get-t';
+import type { Locale } from '@/i18n/locales';
+
+import { EmptyState } from '@/components/states/empty-state';
+import { ErrorState } from '@/components/states/error-state';
+import { ApplicationStatusBadge } from '../ui/application-status-badge';
+
+type ApplicationsListProps = {
+  locale: Locale;
+};
+
+type ApplicationListItem = {
+  id: string;
+  asset_id: string;
+  quote_date: string;
+  start_on: string;
+  term_months: number;
+  down_payment_cents: number;
+  financed_cents: number;
+  decision: 'approved' | 'rejected' | 'manual_review';
+  reasons: EligibilityReason[];
+  reviewed_by: string | null;
+  eligible_from: string | null;
+  contract_id: string | null;
+};
+
+type ApiResponse = {
+  success: boolean;
+  data?: ApplicationListItem[];
+  error?: {
+    message?: string;
+  };
+};
+
+/**
+ * What to tell the customer. An approved application needs no reason. A case a person rejected
+ * keeps the reason it was sent to them, which no longer says what happened, so it is replaced.
+ */
+function reasonTexts(application: ApplicationListItem, t: Translate): string[] {
+  if (application.decision === 'approved') return [];
+  if (application.decision === 'rejected' && application.reviewed_by !== null) {
+    return [t('application.reason.reviewedRejected')];
+  }
+  return application.reasons.map((reason) => t(`application.reason.${reason}`));
+}
+
+export default function ApplicationsList({ locale }: ApplicationsListProps) {
+  const t = useMemo(() => getT(locale), [locale]);
+
+  const [applications, setApplications] = useState<ApplicationListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchApplications() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch('/api/applications', {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+
+        const result = (await response.json()) as ApiResponse;
+
+        if (!response.ok || !result.success || !result.data) {
+          throw new Error(result.error?.message ?? t('account.applications.error'));
+        }
+
+        setApplications(result.data);
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+
+        setError(err instanceof Error ? err.message : t('account.applications.error'));
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void fetchApplications();
+
+    return () => controller.abort();
+  }, [t]);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-stone-800 bg-stone-900 p-8 text-center text-sm text-stone-400">
+        {t('account.applications.loading')}
+      </div>
+    );
+  }
+
+  if (error) {
+    return <ErrorState title={t('account.applications.errorTitle')} description={error} />;
+  }
+
+  if (applications.length === 0) {
+    return (
+      <EmptyState
+        title={t('account.applications.emptyTitle')}
+        description={t('account.applications.emptyDescription')}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {applications.map((application) => (
+        <article
+          key={application.id}
+          className="rounded-2xl border border-stone-800 bg-stone-900 p-5 sm:p-6"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-stone-500">{t('account.applications.applicationId')}</p>
+
+              <p className="mt-1 break-all font-mono text-sm text-stone-300">{application.id}</p>
+            </div>
+
+            <ApplicationStatusBadge status={application.decision} t={t} />
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-stone-500">{t('account.applications.term')}</p>
+              <p className="mt-1 text-sm font-medium text-stone-200">
+                {application.term_months} {t('account.applications.months')}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-stone-500">{t('account.applications.financedAmount')}</p>
+              <p className="mt-1 text-sm font-medium text-stone-200">
+                {formatEuro(application.financed_cents, locale)}
+              </p>
+            </div>
+          </div>
+
+          {application.decision === 'approved' && (
+            <div className="mt-5 rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-medium text-emerald-300">
+                  {application.contract_id
+                    ? t('account.applications.contractSigned')
+                    : t('account.applications.contractAvailable')}
+                </p>
+
+                {!application.contract_id && (
+                  <Link
+                    href={`/${locale}/account/contracts/${application.id}`}
+                    className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-emerald-400"
+                  >
+                    {t('account.applications.continueToContract')}
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
+          {application.decision === 'manual_review' && (
+            <p className="mt-4 text-sm text-amber-300">
+              {t('account.applications.manualReviewDescription')}
+            </p>
+          )}
+
+          {reasonTexts(application, t).length > 0 && (
+            <div className="mt-4 rounded-xl border border-stone-800 bg-stone-950 p-4">
+              <h3 className="text-sm font-medium text-stone-100">
+                {t(
+                  application.decision === 'rejected'
+                    ? 'application.result.reasons'
+                    : 'application.result.additionalInformation'
+                )}
+              </h3>
+
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-stone-400">
+                {reasonTexts(application, t).map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+
+              {application.eligible_from && (
+                <p className="mt-2 text-sm text-stone-400">
+                  {t('application.result.eligibleFrom')}{' '}
+                  {formatIsoDate(application.eligible_from, locale)}
+                </p>
+              )}
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}

@@ -14,6 +14,8 @@ import {
   refurbishmentCostsSchema,
   residualCurvesSchema,
   secondLifeDemandFileSchema,
+  signatoriesFileSchema,
+  staffFileSchema,
   vatRatesSchema,
 } from './schemas';
 
@@ -43,6 +45,8 @@ export const loadResidualCurves = () => loadDataFile('residual-curves.json', res
 export const loadVatRates = () => loadDataFile('vat-rates.json', vatRatesSchema);
 export const loadQuestions = () => loadDataFile('questions.json', questionsFileSchema);
 export const loadCustomers = () => loadDataFile('customers.json', customersFileSchema);
+export const loadStaff = () => loadDataFile('staff.json', staffFileSchema);
+export const loadSignatories = () => loadDataFile('signatories.json', signatoriesFileSchema);
 export const loadSecondLifeDemand = () =>
   loadDataFile('second-life-demand.json', secondLifeDemandFileSchema);
 export const loadRefurbishmentCosts = () =>

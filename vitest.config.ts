@@ -6,14 +6,31 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   test: {
-    environment: 'node',
-    include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
-    globalSetup: ['./tests/global-setup.ts'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
+          globalSetup: ['./tests/global-setup.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'components',
+          environment: 'jsdom',
+          include: ['src/**/*.test.tsx'],
+          setupFiles: ['./tests/setup.ts'],
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       // Business logic and server code must stay tested; UI pages are not measured.
-      include: ['src/domain/**', 'src/server/**', 'src/data/**', 'src/i18n/**'],
-      exclude: ['**/*.test.ts', '**/*.json', '**/*.md'],
+      include: ['src/domain/**', 'src/server/**', 'src/data/**', 'src/i18n/**', 'src/lib/**'],
+      exclude: ['**/*.test.ts', '**/*.test.tsx', '**/*.json', '**/*.md'],
       reporter: ['text', 'json-summary', 'html'],
       thresholds: { lines: 60, functions: 60, branches: 60, statements: 60 },
     },

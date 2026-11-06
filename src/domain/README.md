@@ -22,20 +22,27 @@ ESLint enforces rules 1 and 2 for this folder (see `eslint.config.mjs`).
 
 ## What is here
 
-| File             | What it does                                                             |
-| ---------------- | ------------------------------------------------------------------------ |
-| `coefficient.ts` | Worked example: finds the monthly factor for a financed amount and term. |
-| `price-list.ts`  | Worked example: finds the net list price of an asset on a date.          |
-| `money.ts`       | Formats cents as euros for a locale. Use it only in the UI.              |
+| File                           | What it does                                                                                                                                                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pricing/coefficient.ts`       | Worked example: finds the monthly factor for a financed amount and term.                                                                                                                                       |
+| `pricing/price-list.ts`        | Worked example: finds the net list price of an asset on a date.                                                                                                                                                |
+| `money.ts`                     | `roundedDivide` is the one rounding rule. `formatEuro` formats cents for a locale; use it only in the UI.                                                                                                      |
+| `pricing/pricing.ts`           | `quote` prices a deal: financed amount, band, monthly net rent and buyout.                                                                                                                                     |
+| `vat.ts`                       | The VAT rate on a date, and VAT on a net amount.                                                                                                                                                               |
+| `dates.ts`                     | `addDays` and `addMonths` on ISO dates. `addMonths` clamps to short months.                                                                                                                                    |
+| `assets/status.ts`             | `canChangeStatusByHand` keeps `leased` and `sold` under the control of contracts.                                                                                                                              |
+| `contract/contract.ts`         | `signingProblem` says who may sign, `lockedQuote` keeps the quoted price, `buildContract` builds the contract, and `openLife` opens the asset's next life.                                                     |
+| `invoicing/invoicing.ts`       | `invoiceSchedule` gives every invoice of a contract, each with the VAT rate on its own date.                                                                                                                   |
+| `end-of-term/end-of-term.ts`   | The customer's choice at the end of a lease, its 7-day window, and the buyout invoice.                                                                                                                         |
+| `second-life/second-life.ts`   | `marketValue` values a used item from the residual curves, and `relistProblem` says whether it can be re-listed.                                                                                               |
+| `application/question-flow.ts` | `questionsToAsk` works out which questions apply and drops answers that no longer do. `invalidAnswers` checks each answer fits its question type. `blockingAnswer` finds an answer that stops the application. |
+| `application/age.ts`           | `ageOn` gives an age in whole years on a date, and `eligibleFrom` gives the date someone reaches an age.                                                                                                       |
+| `application/business-id.ts`   | `isValidBusinessId` checks the format and check digit of a Finnish Y-tunnus.                                                                                                                                   |
+| `application/eligibility.ts`   | `decide` applies the eligibility rules and returns yes, no or manual review, with every reason.                                                                                                                |
+| `identity.ts`                  | Roles for the no-password "acting as" login: merges customers and staff into one `Identity` list, and `can(role, permission)` decides what each role may do.                                                   |
 
 ## What teams are expected to add
 
 Create these as you need them. Do not commit empty files.
 
-- `pricing`: monthly rent, down payment, VAT and the end-of-term buyout price.
-- `question-flow`: which question to ask next, from `data/questions.json`, and what happens
-  to answers that stop applying.
-- `contract`: build the contract from an approved application and lock it so it cannot change.
-- `invoicing`: the monthly invoices for a contract, including a VAT rate change mid-contract.
-- `end-of-term`: return, buy out or extend, and the value of the returned item.
 - `second-life`: refurbishment cost, matching a returned item to the waiting list, CO2 saved.

@@ -2,15 +2,20 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
-import { loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
-import { listPriceOn } from '@/domain/price-list';
+import { assetPriceOn } from '@/domain/pricing/price-list';
+import { assetForViewer } from '@/domain/assets/status';
+import { actingCustomerId } from '@/domain/identity';
+import { leaseEstimate } from '@/domain/pricing/pricing';
+import { vatRateOn } from '@/domain/vat';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { getActor } from '@/server/auth/actor';
+import { currentDate } from '@/server/date/app-date';
+import { listAssets } from '@/server/assets/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -20,10 +25,24 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   await connection();
 
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [today, storedAssets, priceLists, table, vatRates, actor] = await Promise.all([
+    currentDate(db), // the page decides what "today" is; domain code never reads the clock
+    listAssets(db),
+    loadPriceLists(),
+    loadCoefficientTable(),
+    loadVatRates(),
+    getActor(),
+  ]);
+  const viewerId = actor ? actingCustomerId(actor) : undefined;
+  const assets = storedAssets.map((asset) => assetForViewer(asset, viewerId));
+  const vatRate = vatRateOn(vatRates, today);
   const groups = assetCategorySchema.options
-    .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
+    .map((category) => ({
+      category,
+      assets: assets
+        .filter((asset) => asset.category === category)
+        .sort((a, b) => Number(b.held_for_you ?? false) - Number(a.held_for_you ?? false)),
+    }))
     .filter((group) => group.assets.length > 0);
 
   return (
@@ -61,16 +80,25 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
             </p>
           </div>
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {group.assets.map((asset) => (
-              <li key={asset.id}>
-                <AssetCard
-                  asset={asset}
-                  price={listPriceOn(priceLists, asset.id, today)}
-                  locale={locale}
-                  t={t}
-                />
-              </li>
-            ))}
+            {group.assets.map((asset) => {
+              const price = assetPriceOn(priceLists, asset, today);
+              const canLease = asset.status === 'available' && price.ok && vatRate.ok;
+              return (
+                <li key={asset.id}>
+                  <AssetCard
+                    asset={asset}
+                    price={price}
+                    lease={
+                      canLease
+                        ? leaseEstimate(table, price.priceCents, vatRate.rateBasisPoints)
+                        : null
+                    }
+                    locale={locale}
+                    t={t}
+                  />
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}

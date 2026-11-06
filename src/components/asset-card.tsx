@@ -1,83 +1,109 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
-import type { Asset, AssetStatus } from '@/data/schemas';
+import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { ListPriceResult } from '@/domain/price-list';
+import type { AssetPriceResult } from '@/domain/pricing/price-list';
+import type { LeaseEstimate } from '@/domain/pricing/pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-
-const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
-  available: {
-    badge:
-      'bg-emerald-50 text-emerald-900 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800',
-    dot: 'bg-emerald-600 dark:bg-emerald-400',
-  },
-  reserved: {
-    badge:
-      'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800',
-    dot: 'bg-amber-500 dark:bg-amber-400',
-  },
-  returned: {
-    badge:
-      'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
-    dot: 'bg-sky-600 dark:bg-sky-400',
-  },
-};
+import { AssetStatusBadge } from '@/components/ui/asset-status-badge';
+import { categoryFallbackImages } from '@/data/asset-images';
+import Image from 'next/image';
+import Link from 'next/link';
 
 type AssetCardProps = {
   asset: Asset;
-  price: ListPriceResult;
+  price: AssetPriceResult;
+  lease: LeaseEstimate | null;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
+  const monthlyPrice = lease && formatEuro(lease.monthlyTotalCents, intlLocale[locale]);
+  const isRelisted = price.ok && price.priceListVersion === null;
   const headingId = `asset-${asset.id}`;
-  const status = statusStyles[asset.status];
+  const fallbackImage = categoryFallbackImages[asset.category];
 
   return (
-    <article
-      aria-labelledby={headingId}
-      className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
-          <h3 id={headingId} className="text-lg leading-snug font-semibold">
-            {asset.model}
-          </h3>
+    <Link href={`/${locale}/assets/${asset.id}`} className="group block">
+      <article
+        aria-labelledby={headingId}
+        className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      >
+        <div className="relative mb-4 aspect-[16/9] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
+          <Image
+            src={fallbackImage}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover"
+          />
         </div>
-        <p
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${status.badge}`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
-          <span className="sr-only">{t('status.label')}: </span>
-          {t(`status.${asset.status}`)}
-        </p>
-      </div>
-
-      <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
-        <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
-        <Fact
-          label={t('asset.usage')}
-          value={t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) })}
-        />
-        <Fact label={t('asset.previousLives')} value={formatNumber(asset.previous_lives, locale)} />
-      </dl>
-
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-        <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
-          ) : null}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-stone-600 dark:text-stone-400">{asset.make}</p>
+            <h3 id={headingId} className="text-lg leading-snug font-semibold">
+              {asset.model}
+            </h3>
+          </div>
+          <AssetStatusBadge status={asset.status} heldForYou={asset.held_for_you} t={t} />
         </div>
-        <p className="text-right text-xl font-semibold tabular-nums">
-          {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
-        </p>
-      </div>
-    </article>
+
+        <dl className="mt-4 mb-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <Fact label={t('condition.label')} value={t(`condition.${asset.condition}`)} />
+          <Fact label={t('asset.modelYear')} value={String(asset.model_year)} />
+          <Fact
+            label={t('asset.usage')}
+            value={t(`usage.${asset.usage.unit}`, {
+              value: formatNumber(asset.usage.value, locale),
+            })}
+          />
+          <Fact
+            label={t('asset.previousLives')}
+            value={formatNumber(asset.previous_lives, locale)}
+          />
+        </dl>
+
+        {/* Price: a re-listed item has no price list */}
+        <div className="mt-auto border-t border-stone-100 pt-4 dark:border-stone-800">
+          <div className="flex items-end justify-between gap-3 px-3">
+            <div className="text-xs text-stone-600 dark:text-stone-400">
+              <p>{isRelisted ? t('asset.price') : t('asset.listPrice')}</p>
+              {price.ok && price.priceListVersion !== null ? (
+                <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
+              ) : null}
+            </div>
+
+            <p className="text-right text-xl font-semibold tabular-nums">
+              {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+            </p>
+          </div>
+
+          {/* Estimated lease price, with VAT like the headline on the item page */}
+          {lease && monthlyPrice && (
+            <div className="mt-4 rounded-xl bg-stone-50 px-3 py-3 dark:bg-stone-800/60">
+              <div className="flex items-end justify-between gap-3">
+                <div className="text-xs text-stone-600 dark:text-stone-400">
+                  <p>{t('asset.estimatedLeasePrice')}</p>
+                  <p>{t('asset.estimatedLeaseVat')}</p>
+                  <p>{t('asset.leaseDuration', { months: lease.termMonths })}</p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-xl font-semibold tabular-nums">
+                    {lease.requiresDownPayment
+                      ? t('asset.fromPrice', { price: monthlyPrice })
+                      : monthlyPrice}
+                  </p>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">/ {t('asset.month')}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </article>
+    </Link>
   );
 }
 

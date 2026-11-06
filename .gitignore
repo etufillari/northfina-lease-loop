@@ -25,3 +25,9 @@ src/generated/
 .DS_Store
 npm-debug.log*
 .vercel
+
+# local files
+local/
+
+# notes
+NOTES.md

@@ -4,6 +4,12 @@ Everything here is **synthetic**. The brands, people, companies and business IDs
 
 Typed loaders and Zod schemas for every file live in `src/data/`. Read those for the exact field types.
 
+**Added by this team:** four customers with `waitlist_id`, made-up people for entries in `second-life-demand.json`, so an item can be passed on to someone who can log in.
+
+**Added by this team:** the 9 used items in `assets.json` also have `first_leased_on` and `first_lease_price_cents`. These are made up, because the residual curve needs an age and a first-lease price, and the original data only has `model_year`.
+
+**Added by this team:** the `income_review` rule in `questions.json`, and all `why_we_ask` and hint translations. A consumer with no income on record is asked for one on any deal, and goes to a person if it is still unknown.
+
 ## Conventions
 
 - **Money is integer euro cents.** `389000` means €3,890.00. Prices are **net (VAT excluded)** unless a field says otherwise.
@@ -22,8 +28,10 @@ Typed loaders and Zod schemas for every file live in `src/data/`. Read those for
 | `refurbishment-costs.json` | What it costs to bring a returned item back to leasable condition, including mandatory steps.                                                                                                                       |
 | `second-life-demand.json`  | The waiting list: people who want a used item, their budget, minimum condition, term and deadline.                                                                                                                  |
 | `questions.json`           | The application question bank in 4 languages, the targeting rules (`ask_when`) and the eligibility rules.                                                                                                           |
-| `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                       |
+| `customers.json`           | Ten personas, plus four added by this team, each with a `story`. Several of them are edge cases on purpose.                                                                                                         |
 | `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                            |
+| `staff.json`               | **Added by this team**, not part of the original pack. Seeded `dealer` and `admin` users for the no-password "acting as" login (see `src/server/auth/session.ts`).                                                  |
+| `signatories.json`         | **Added by this team**, not part of the original pack. People allowed to sign for a company when its applicant cannot, each linked to the company by `company_id`.                                                  |
 
 ## Worked example: the monthly price
 

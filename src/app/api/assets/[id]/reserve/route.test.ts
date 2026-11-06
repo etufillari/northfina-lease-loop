@@ -108,6 +108,91 @@ describe('POST /api/assets/:id/reserve', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rejects timeoutMinutes exceeding 120 or non-preset validityDays with 400 VALIDATION_ERROR', async () => {
+    const resTimeout = await post('ebike-001', { actor: 'customer', timeoutMinutes: 129600 });
+    expect(resTimeout.status).toBe(400);
+
+    const resValidity = await post('ebike-001', {
+      actor: 'customer',
+      reservationType: 'offer',
+      validityDays: 90,
+    });
+    expect(resValidity.status).toBe(400);
+  });
+
+  it('rejects client attempting to supply quote or offeredOn in request body', async () => {
+    const resWithQuote = await post('ebike-001', {
+      actor: 'customer',
+      quote: { listPriceCents: 100 },
+    });
+    expect(resWithQuote.status).toBe(400);
+
+    const resWithOfferedOn = await post('ebike-001', {
+      actor: 'customer',
+      offeredOn: '2099-01-01',
+    });
+    expect(resWithOfferedOn.status).toBe(400);
+  });
+
+  it('creates an offer where server computes list price from catalogue', async () => {
+    const res = await post('ebike-003', {
+      actor: 'customer',
+      reservationType: 'offer',
+      validityDays: 14,
+      termMonths: 36,
+      downPaymentCents: 0,
+    });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.reservation.reservationType).toBe('offer');
+    expect(json.data.reservation.listPriceCents).toBeGreaterThan(0);
+  });
+
+  it('does not extend expiry for an active offer when reposting with token', async () => {
+    const createRes = await post('ebike-003', {
+      actor: 'customer',
+      reservationType: 'offer',
+      validityDays: 14,
+    });
+    const createJson = await createRes.json();
+    const originalExpiry = createJson.data.reservation.expiresAt;
+    const token = createJson.data.reservation.token;
+
+    const renewRes = await post('ebike-003', {
+      actor: 'customer',
+      token,
+      validityDays: 30,
+    });
+    const renewJson = await renewRes.json();
+
+    expect(renewRes.status).toBe(200);
+    expect(renewJson.data.renewed).toBe(false);
+    expect(renewJson.data.reservation.expiresAt).toBe(originalExpiry);
+  });
+
+  it('upgrades a standard reservation into a 14-day offer after approval', async () => {
+    const initialRes = await post('ebike-003', { actor: 'customer' });
+    const initialJson = await initialRes.json();
+    const token = initialJson.data.reservation.token;
+    expect(initialJson.data.reservation.reservationType).toBe('standard');
+
+    const offerRes = await post('ebike-003', {
+      actor: 'customer',
+      token,
+      reservationType: 'offer',
+      validityDays: 14,
+      termMonths: 36,
+      downPaymentCents: 0,
+    });
+    const offerJson = await offerRes.json();
+
+    expect(offerRes.status).toBe(200);
+    expect(offerJson.data.reservation.token).toBe(token);
+    expect(offerJson.data.reservation.reservationType).toBe('offer');
+    expect(offerJson.data.reservation.listPriceCents).toBeGreaterThan(0);
+  });
+
   it('generates a fresh token when re-reserving after a released or expired reservation', async () => {
     const first = await post('ebike-001', { actor: 'customer-1' });
     const firstJson = await first.json();
@@ -153,14 +238,11 @@ describe('DELETE /api/assets/:id/reserve', () => {
     const resA = await post('ebike-001', { actor: 'alice' });
     const tokenA = (await resA.json()).data.reservation.token;
 
-    // Alice is rejected and releases her reservation
     await del('ebike-001', { token: tokenA, reason: 'rejected' });
 
-    // Bob reserves the asset
     const resB = await post('ebike-001', { actor: 'bob' });
     expect(resB.status).toBe(200);
 
-    // Alice tries to sign using her released tokenA
     const signA = await patch('ebike-001', { status: 'reserved', actor: 'alice', token: tokenA });
     expect(signA.status).toBe(409);
   });
@@ -199,5 +281,26 @@ describe('GET /api/assets/:id/reserve', () => {
     const otherJson = await otherCheck.json();
     expect(otherJson.data.active).toBe(true);
     expect(otherJson.data.reservation.isHolder).toBe(false);
+  });
+  it('retrieves active offer with remaining days', async () => {
+    const offerRes = await post('ebike-003', {
+      actor: 'customer-offer',
+      reservationType: 'offer',
+      validityDays: 14,
+      termMonths: 36,
+      downPaymentCents: 0,
+    });
+    const offerJson = await offerRes.json();
+    expect(offerRes.status).toBe(200);
+    expect(offerJson.data.reservation.reservationType).toBe('offer');
+
+    const token = offerJson.data.reservation.token;
+    const checkRes = await get('ebike-003', token);
+    const checkJson = await checkRes.json();
+
+    expect(checkJson.data.active).toBe(true);
+    expect(checkJson.data.reservation.reservationType).toBe('offer');
+    expect(checkJson.data.reservation.remainingDays).toBeGreaterThanOrEqual(13);
+    expect(checkJson.data.reservation.isHolder).toBe(true);
   });
 });

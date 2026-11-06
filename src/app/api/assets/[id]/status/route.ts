@@ -49,7 +49,6 @@ export const PATCH = handleRoute(
 
     const result = await changeAssetStatus(db, { id, status: body.status, actor: body.actor });
     if (!result.ok) return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);
-
     return ok(result.asset);
   }
 );

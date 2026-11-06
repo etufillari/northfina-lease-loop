@@ -444,9 +444,10 @@ model AuditLog {
   @@index([created_at])
 }
 
-// Temporary reservation of an asset during an application in progress.
-// Created with status 'active' when a customer applies, released if abandoned
-// or rejected, expired if timed out, or completed upon signing.
+// Temporary reservation of an asset during an application in progress,
+// or a longer-term binding offer holding quote terms and price protection.
+// Created with status 'active' when a customer applies or requests an offer,
+// released if abandoned or rejected, expired if timed out, or completed upon signing.
 model AssetReservation {
   id         String   @id @default(uuid())
   asset_id   String
@@ -456,6 +457,18 @@ model AssetReservation {
   expires_at DateTime
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  // Longer-term offer fields
+  reservation_type         String   @default("standard") // standard | offer
+  offered_on               String?  // ISO date YYYY-MM-DD when offer was made
+  list_price_cents         Int?
+  price_list_version       Int?
+  term_months              Int?
+  down_payment_cents       Int?
+  monthly_net_rent_cents   Int?
+  monthly_gross_rent_cents Int?
+  buyout_net_cents         Int?
+  quote_json               String?  // Serialized ContractQuote JSON
 
   asset Asset @relation(fields: [asset_id], references: [id])
 

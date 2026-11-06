@@ -14,6 +14,7 @@ import { isLocale } from '@/i18n/locales';
 import { asOfFromPage } from '@/server/as-of';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
+import { secondLifePrices } from '@/server/quotes';
 
 export default async function FleetPage({ params, searchParams }: PageProps<'/[locale]/fleet'>) {
   const { locale } = await params;
@@ -23,7 +24,11 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
   const t = getT(locale);
   const { asOf } = await asOfFromPage(await searchParams);
   const persona = customerPersona((await cookies()).get(PERSONA_COOKIE)?.value);
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assets, priceLists, secondLife] = await Promise.all([
+    listAssets(db),
+    loadPriceLists(),
+    secondLifePrices(db),
+  ]);
 
   const leasable = assets
     .filter((asset) => asset.status === 'available' || asset.status === 'returned')
@@ -35,7 +40,8 @@ export default async function FleetPage({ params, searchParams }: PageProps<'/[l
         make: asset.make,
         model: asset.model,
         condition: asset.condition,
-        priceCents: price.ok ? price.priceCents : null,
+        // A refurbished item is priced at the desk's re-price, not the new-item price list.
+        priceCents: price.ok ? (secondLife[asset.id] ?? price.priceCents) : null,
       };
     })
     .filter((asset) => asset.priceCents !== null);

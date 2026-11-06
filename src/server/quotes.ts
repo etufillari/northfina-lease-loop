@@ -6,13 +6,34 @@ import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load'
 import { maxDownPaymentCents, quoteFor, type Quote } from '@/domain/pricing';
 import { listPriceOn } from '@/domain/price-list';
 import { grossCents, vatRateOn } from '@/domain/vat';
+import type { PrismaClient } from '@/generated/prisma/client';
+
+/**
+ * The second-life desk's re-price per asset id: refurbished value + refurbishment, quoted
+ * instead of the catalogue list price once an item has been through the desk.
+ */
+export async function secondLifePrices(
+  db: PrismaClient,
+  assetIds?: string[]
+): Promise<Record<string, number>> {
+  const rows = await db.asset.findMany({
+    where: {
+      second_life_price_cents: { not: null },
+      ...(assetIds ? { id: { in: assetIds } } : {}),
+    },
+    select: { id: true, second_life_price_cents: true },
+  });
+  return Object.fromEntries(rows.map((row) => [row.id, row.second_life_price_cents!]));
+}
 
 export type LiveQuote = {
   assetIds: string[];
   asOf: string;
   priceListVersion: number;
-  /** Asset id → its net list price on the quote date. */
+  /** Asset id → its net list price on the quote date (its second-life price, if it has one). */
   unitListPricesCents: Record<string, number>;
+  /** The items priced at their second-life price instead of the price list. */
+  secondLifeAssetIds: string[];
   listPriceCents: number;
   maxDownPaymentCents: number;
   termsMonths: number[];
@@ -44,6 +65,8 @@ export async function buildLiveQuote(input: {
   downPaymentCents: number;
   termMonths: number;
   asOf: string;
+  /** From `secondLifePrices`: these items are priced at the desk's re-price. */
+  secondLifePricesCents?: Readonly<Record<string, number>>;
 }): Promise<LiveQuoteResult> {
   if (input.assetIds.length === 0) return { ok: false, reason: 'no_assets' };
   // Each physical item can be in the group once: there is no second ebike-004.
@@ -58,13 +81,17 @@ export async function buildLiveQuote(input: {
   ]);
 
   const unitListPricesCents: Record<string, number> = {};
+  const secondLifeAssetIds: string[] = [];
   let listPriceCents = 0;
   let priceListVersion = 0;
   for (const assetId of input.assetIds) {
     const price = listPriceOn(priceLists, assetId, input.asOf);
     if (!price.ok) return { ok: false, reason: price.reason };
-    unitListPricesCents[assetId] = price.priceCents;
-    listPriceCents += price.priceCents;
+    const secondLife = input.secondLifePricesCents?.[assetId];
+    if (secondLife !== undefined) secondLifeAssetIds.push(assetId);
+    const unit = secondLife ?? price.priceCents;
+    unitListPricesCents[assetId] = unit;
+    listPriceCents += unit;
     priceListVersion = price.priceListVersion;
   }
 
@@ -86,6 +113,7 @@ export async function buildLiveQuote(input: {
       asOf: input.asOf,
       priceListVersion,
       unitListPricesCents,
+      secondLifeAssetIds,
       listPriceCents,
       maxDownPaymentCents: maxDownPaymentCents(listPriceCents, table),
       termsMonths: Object.keys(table.end_of_term_buyout_percent_of_financed)

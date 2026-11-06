@@ -11,8 +11,9 @@ import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
 import { listReturnedDecisions } from '@/server/second-life';
 import { listPools } from '@/server/second-life-pools';
+import { listExpiredOffers } from '@/server/waitlist-actions';
 import { DecisionCard } from './decision-card';
-import { PoolsSection } from './pools-section';
+import { HoldsSection } from './holds-section';
 
 export default async function SecondLifePage({
   params,
@@ -25,7 +26,11 @@ export default async function SecondLifePage({
   const t = getT(locale);
   const { asOf, asOfParam } = await asOfFromPage(await searchParams);
   const persona = (await cookies()).get(PERSONA_COOKIE)?.value ?? null;
-  const [desk, pools] = await Promise.all([listReturnedDecisions(db, asOf), listPools(db, asOf)]);
+  const [desk, pools, expiredOffers] = await Promise.all([
+    listReturnedDecisions(db, asOf),
+    listPools(db, asOf),
+    listExpiredOffers(db, asOf),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -35,7 +40,13 @@ export default async function SecondLifePage({
         {t('secondLife.asOf', { date: formatIsoDate(asOf, locale) })}
       </p>
 
-      <PoolsSection locale={locale} pools={pools} personaId={persona} asOfParam={asOfParam} />
+      <HoldsSection
+        locale={locale}
+        pools={pools}
+        expiredOffers={expiredOffers}
+        personaId={persona}
+        asOfParam={asOfParam}
+      />
 
       {desk.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">

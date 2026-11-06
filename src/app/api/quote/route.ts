@@ -14,7 +14,7 @@ import {
 import { fail, handleRoute, ok } from '@/server/api-response';
 import { asOfFrom } from '@/server/as-of';
 import { db } from '@/server/db';
-import { buildLiveQuote } from '@/server/quotes';
+import { buildLiveQuote, secondLifePrices } from '@/server/quotes';
 
 const paramsSchema = z.object({
   /** Comma-separated DISTINCT asset ids: one item, or a fleet priced as one banded total. */
@@ -31,11 +31,13 @@ export const GET = handleRoute(async (request) => {
   const { assetIds, downPaymentCents, termMonths, customerId } = parsed.data;
   const asOf = asOfFrom(request);
 
+  const ids = assetIds.split(',').filter(Boolean);
   const live = await buildLiveQuote({
-    assetIds: assetIds.split(',').filter(Boolean),
+    assetIds: ids,
     downPaymentCents,
     termMonths,
     asOf,
+    secondLifePricesCents: await secondLifePrices(db, ids),
   });
   if (!live.ok) return fail(422, 'NOT_PRICEABLE', live.reason);
 

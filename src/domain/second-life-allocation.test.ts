@@ -16,7 +16,7 @@ import type {
   SecondLifeRequest,
 } from '@/data/schemas';
 import { listPriceOn } from './price-list';
-import { allocateDesk, type DeskItem } from './second-life-allocation';
+import { allocateDesk, allocateRefurbished, type DeskItem } from './second-life-allocation';
 
 let assets: Asset[];
 let priceLists: PriceList[];
@@ -155,5 +155,65 @@ describe('allocateDesk: nobody wins', () => {
       data
     );
     expect(result[0]!.outcome).toEqual({ kind: 'parts_bin' });
+  });
+});
+
+describe('allocateRefurbished: passing a refurbished item on', () => {
+  const ebike = {
+    assetId: 'ebike-007',
+    category: 'e_bike' as const,
+    condition: 'fair' as const,
+    financedCents: 155_476,
+  };
+  const without = (...ids: string[]) => demand.filter((w) => !ids.includes(w.id));
+
+  it('offers it to the next person who fits, at the price the desk already set', () => {
+    // wait-02 declined, so they are off the list; nobody else accepts 'fair'.
+    const [result] = allocateRefurbished(
+      [ebike],
+      {
+        asOfDate: AS_OF,
+        demand: without('wait-02'),
+        pooled: {},
+      },
+      data.table
+    );
+    expect(result!.outcome).toEqual({ kind: 'list_available' });
+    expect(result!.considered.find((v) => v.id === 'wait-13')?.outcome).toBe(
+      'condition_below_minimum'
+    );
+  });
+
+  it('serves each person once, first come first served', () => {
+    const good = { ...ebike, condition: 'good' as const, financedCents: 37_101 };
+    const result = allocateRefurbished(
+      [
+        { ...good, assetId: 'ebike-b' },
+        { ...good, assetId: 'ebike-a' },
+      ],
+      { asOfDate: AS_OF, demand: without('wait-02'), pooled: {} },
+      data.table
+    );
+    expect(result.map((r) => [r.assetId, r.outcome])).toEqual([
+      ['ebike-a', { kind: 'offer', waiterId: 'wait-01' }],
+      ['ebike-b', { kind: 'offer', waiterId: 'wait-13' }],
+    ]);
+  });
+
+  it('pools a laptop for wait-08 and completes the set when it is the last one', () => {
+    const laptop = {
+      assetId: 'laptop-006',
+      category: 'laptop' as const,
+      condition: 'good' as const,
+      financedCents: 30_077,
+    };
+    const pool = (pooled: Record<string, number>) =>
+      allocateRefurbished([laptop], { asOfDate: AS_OF, demand, pooled }, data.table)[0]!.outcome;
+    expect(pool({})).toEqual({ kind: 'pool', waiterId: 'wait-08', filled: 1, quantity: 3 });
+    expect(pool({ 'wait-08': 2 })).toEqual({
+      kind: 'complete_pool',
+      waiterId: 'wait-08',
+      quantity: 3,
+    });
   });
 });

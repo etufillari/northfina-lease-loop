@@ -12,6 +12,7 @@ import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
 import { asOfFromPage } from '@/server/as-of';
 import { db } from '@/server/db';
+import { secondLifePrices } from '@/server/quotes';
 
 export default async function CataloguePage({ params, searchParams }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -24,7 +25,17 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
   // The page decides what "today" is (the time-travel control or ?asOf=); domain code
   // never reads the clock.
   const { asOf: today, asOfParam } = await asOfFromPage(await searchParams);
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assets, priceLists, secondLife] = await Promise.all([
+    listAssets(db),
+    loadPriceLists(),
+    secondLifePrices(db),
+  ]);
+  // A refurbished item is priced at the desk's re-price, not the new-item price list.
+  const priceOf = (assetId: string) => {
+    const listed = listPriceOn(priceLists, assetId, today);
+    const reprice = secondLife[assetId];
+    return listed.ok && reprice !== undefined ? { ...listed, priceCents: reprice } : listed;
+  };
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
     .filter((group) => group.assets.length > 0);
@@ -80,7 +91,8 @@ export default async function CataloguePage({ params, searchParams }: PageProps<
                 >
                   <AssetCard
                     asset={asset}
-                    price={listPriceOn(priceLists, asset.id, today)}
+                    price={priceOf(asset.id)}
+                    secondLife={secondLife[asset.id] !== undefined}
                     locale={locale}
                     t={t}
                   />

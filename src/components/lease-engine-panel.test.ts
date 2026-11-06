@@ -31,8 +31,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('active lease demo controls', () => {
-  it('shows invoice generation, demo completion, and early-return options', async () => {
+describe('lease actions', () => {
+  it('shows one invoice action and lifecycle placeholders', async () => {
     mocks.listInvoices.mockResolvedValue([]);
     mocks.schedule.mockResolvedValue({
       periods: [{ index: 1, startDate: '2026-11-05' }],
@@ -54,8 +54,10 @@ describe('active lease demo controls', () => {
     );
 
     expect(markup).toContain('engine.generate');
-    expect(markup).toContain('engine.complete');
+    expect(markup).toContain('end.buy');
+    expect(markup).toContain('end.pass');
     expect(markup).toContain('end.early');
+    expect(markup).not.toContain('engine.complete');
   });
 
   it('lets a completed lease submit a usage reading before a return receipt exists', async () => {

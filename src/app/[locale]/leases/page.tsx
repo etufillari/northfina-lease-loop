@@ -33,7 +33,9 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-7">
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t('account.title')}</h1>
+      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+        {t('account.leasesTitle')}
+      </h1>
 
       <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 text-stone-900 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100 sm:p-8">
         <h2 className="text-xl font-semibold">{t('account.leases')}</h2>
@@ -50,6 +52,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
               return (
                 <details
                   key={lease.terms.contractId}
+                  name="customer-leases"
                   className="group rounded-xl border border-stone-200 dark:border-stone-700"
                 >
                   <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 rounded-xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 [&::-webkit-details-marker]:hidden">
@@ -63,8 +66,16 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
                           : t('account.endOfTerm.dateError')}
                       </span>
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
-                      {t('account.savedLease')}
+                    <span
+                      className={
+                        lease.status === 'COMPLETED'
+                          ? 'rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-900 ring-1 ring-red-200 ring-inset dark:bg-red-950 dark:text-red-200 dark:ring-red-800'
+                          : 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800'
+                      }
+                    >
+                      {lease.status === 'SIGNED'
+                        ? t('account.savedLease')
+                        : leaseStatusLabels[lease.status]}
                     </span>
                     <svg
                       aria-hidden="true"

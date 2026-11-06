@@ -324,6 +324,22 @@ describe('AssetQuotePanel', () => {
     expect(onPriceChange).toHaveBeenCalledWith(null);
   });
 
+  it('carries the term and down payment chosen on the sliders to the application', async () => {
+    mockFetch(successResponse);
+    renderPanel();
+    await flushDebounce();
+
+    fireEvent.change(screen.getByLabelText('Lease term'), { target: { value: '24' } });
+    await flushDebounce();
+    fireEvent.change(screen.getByLabelText('Down payment'), { target: { value: '10000' } });
+    await flushDebounce();
+
+    expect(screen.getByRole('link', { name: /Apply for leasing/ })).toHaveAttribute(
+      'href',
+      '/en/assets/asset-001/apply?term=24&down=10000'
+    );
+  });
+
   it('displays the leasing application CTA when a quote is available', async () => {
     mockFetch(successResponse);
 
@@ -345,7 +361,7 @@ describe('AssetQuotePanel', () => {
 
     expect(screen.getByRole('link', { name: 'Apply for leasing' })).toHaveAttribute(
       'href',
-      '/en/assets/asset-001/apply'
+      '/en/assets/asset-001/apply?term=36&down=0'
     );
   });
 

@@ -15,6 +15,9 @@ export type QuoteInput = {
   termMonths: number;
 };
 
+/** The term the item page starts on, and the one catalogue estimates use. */
+export const DEFAULT_TERM_MONTHS = 36;
+
 export type DownPaymentLimitsResult =
   { ok: true; minCents: number; maxCents: number } | { ok: false; reason: 'below_minimum' };
 
@@ -78,4 +81,31 @@ export function quote(table: CoefficientTable, input: QuoteInput): QuoteResult {
       buyout_cents: roundedDivide(financedCents * buyoutBasisPoints, BASIS_POINTS_PER_WHOLE),
     },
   };
+}
+
+export type LeaseEstimate = { monthlyNetRentCents: number; termMonths: number };
+
+/**
+ * A catalogue estimate: the monthly net rent at the default term, with the smallest down
+ * payment the item allows. `null` when the price cannot be financed at all.
+ */
+export function leaseEstimate(
+  table: CoefficientTable,
+  basePriceCents: number
+): LeaseEstimate | null {
+  const limits = downPaymentLimits(table, basePriceCents);
+  if (!limits.ok) return null;
+
+  const result = quote(table, {
+    basePriceCents,
+    priceListVersion: null,
+    downPaymentCents: limits.minCents,
+    termMonths: DEFAULT_TERM_MONTHS,
+  });
+  return result.ok
+    ? {
+        monthlyNetRentCents: result.quote.monthly_net_rent_cents,
+        termMonths: DEFAULT_TERM_MONTHS,
+      }
+    : null;
 }

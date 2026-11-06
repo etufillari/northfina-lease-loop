@@ -5,8 +5,16 @@ import { getT } from '@/i18n/get-t';
 import { ApplyForLeasingCta } from '@/components/apply-for-leasing-cta';
 
 describe('ApplyForLeasingCta', () => {
-  it('renders the application CTA and links to the asset application page', () => {
-    render(<ApplyForLeasingCta assetId="asset-123" locale="en" t={getT('en')} />);
+  it('renders the application CTA and carries the chosen deal to the application', () => {
+    render(
+      <ApplyForLeasingCta
+        assetId="asset-123"
+        termMonths={24}
+        downPaymentCents={5000}
+        locale="en"
+        t={getT('en')}
+      />
+    );
 
     expect(screen.getByRole('heading', { name: 'Ready to lease this asset?' })).toBeTruthy();
 
@@ -18,6 +26,6 @@ describe('ApplyForLeasingCta', () => {
 
     const link = screen.getByRole('link', { name: 'Apply for leasing' });
 
-    expect(link.getAttribute('href')).toBe('/en/assets/asset-123/apply');
+    expect(link.getAttribute('href')).toBe('/en/assets/asset-123/apply?term=24&down=5000');
   });
 });

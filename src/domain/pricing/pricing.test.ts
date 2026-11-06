@@ -2,7 +2,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { quoteSchema } from '@/data/lease-schemas';
 import { loadCoefficientTable } from '@/data/load';
 import type { CoefficientTable } from '@/data/schemas';
-import { downPaymentLimits, quote, type QuoteInput } from './pricing';
+import {
+  DEFAULT_TERM_MONTHS,
+  downPaymentLimits,
+  leaseEstimate,
+  quote,
+  type QuoteInput,
+} from './pricing';
 
 let table: CoefficientTable;
 beforeAll(async () => {
@@ -180,5 +186,29 @@ describe('downPaymentLimits', () => {
   it('rejects a price that is not whole cents', () => {
     expect(() => downPaymentLimits(table, 100.5)).toThrow(RangeError);
     expect(() => downPaymentLimits(table, -1)).toThrow(RangeError);
+  });
+});
+
+describe('leaseEstimate', () => {
+  it('gives the rent at the default term with nothing down (card 1)', () => {
+    expect(leaseEstimate(table, 389_000)).toEqual({
+      monthlyNetRentCents: 10_730,
+      termMonths: DEFAULT_TERM_MONTHS,
+    });
+  });
+
+  it('uses the smallest allowed down payment for an item above the maximum (farm-006)', () => {
+    const atMinimum = quote(
+      table,
+      deal({ basePriceCents: 26_000_000, downPaymentCents: 1_000_000 })
+    );
+    if (!atMinimum.ok) throw new Error(atMinimum.reason);
+    expect(leaseEstimate(table, 26_000_000)?.monthlyNetRentCents).toBe(
+      atMinimum.quote.monthly_net_rent_cents
+    );
+  });
+
+  it('gives nothing for a price that cannot be financed (ebike-010 on price list 1)', () => {
+    expect(leaseEstimate(table, 28_900)).toBeNull();
   });
 });

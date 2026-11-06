@@ -6,6 +6,7 @@ import type { Locale } from '@/i18n/locales';
 import type { Translate } from '@/i18n/get-t';
 
 import { formatEuro } from '@/domain/money';
+import { DEFAULT_TERM_MONTHS } from '@/domain/pricing/pricing';
 import { intlLocale } from '@/i18n/locales';
 
 import { ApplyForLeasingCta } from '@/components/apply-for-leasing-cta';
@@ -74,7 +75,7 @@ export function AssetQuotePanel({
   t,
   onPriceChange,
 }: AssetQuotePanelProps) {
-  const [term, setTerm] = useState(36);
+  const [term, setTerm] = useState(DEFAULT_TERM_MONTHS);
   const [downPayment, setDownPayment] = useState(0);
 
   const [quote, setQuote] = useState<AssetQuote | null>(null);
@@ -306,7 +307,15 @@ export function AssetQuotePanel({
             )}
           </div>
 
-          {quote && !loadingQuote && <ApplyForLeasingCta assetId={assetId} locale={locale} t={t} />}
+          {quote && !loadingQuote && (
+            <ApplyForLeasingCta
+              assetId={assetId}
+              termMonths={term}
+              downPaymentCents={downPayment}
+              locale={locale}
+              t={t}
+            />
+          )}
         </>
       )}
     </aside>

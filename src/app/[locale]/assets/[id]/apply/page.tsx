@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import ApplicationFlow from '@/components/application/application-flow';
 
+import { DEFAULT_TERM_MONTHS } from '@/domain/pricing/pricing';
 import { isLocale } from '@/i18n/locales';
 
 type PageProps = {
@@ -42,8 +43,8 @@ export default async function ApplyPage({ params, searchParams }: PageProps) {
 
   const locale = localeParam;
 
-  const requestedTerm = parsePositiveInt(query.term, 36);
-  const termMonths = VALID_TERMS.includes(requestedTerm) ? requestedTerm : 36;
+  const requestedTerm = parsePositiveInt(query.term, DEFAULT_TERM_MONTHS);
+  const termMonths = VALID_TERMS.includes(requestedTerm) ? requestedTerm : DEFAULT_TERM_MONTHS;
 
   const downPaymentCents = parseNonNegativeInt(query.down, 0);
 

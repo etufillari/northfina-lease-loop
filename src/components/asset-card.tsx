@@ -2,6 +2,7 @@
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { AssetPriceResult } from '@/domain/pricing/price-list';
+import type { LeaseEstimate } from '@/domain/pricing/pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -13,12 +14,12 @@ import Link from 'next/link';
 type AssetCardProps = {
   asset: Asset;
   price: AssetPriceResult;
-  leasePrice: number;
+  lease: LeaseEstimate | null;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, lease, locale, t }: AssetCardProps) {
   const isRelisted = price.ok && price.priceListVersion === null;
   const headingId = `asset-${asset.id}`;
   const fallbackImage = categoryFallbackImages[asset.category];
@@ -79,18 +80,18 @@ export function AssetCard({ asset, price, leasePrice, locale, t }: AssetCardProp
           </div>
 
           {/* Estimated lease price */}
-          {price.ok && (
+          {lease && (
             <div className="mt-4 rounded-xl bg-stone-50 px-3 py-3 dark:bg-stone-800/60">
               <div className="flex items-end justify-between gap-3">
                 <div className="text-xs text-stone-600 dark:text-stone-400">
                   <p>{t('asset.estimatedLeasePrice')}</p>
                   <p>{t('asset.estimatedLeaseVat')}</p>
-                  <p>{t('asset.leaseDuration', { months: 12 })}</p>
+                  <p>{t('asset.leaseDuration', { months: lease.termMonths })}</p>
                 </div>
 
                 <div className="text-right">
                   <p className="text-xl font-semibold tabular-nums">
-                    {formatEuro(leasePrice, intlLocale[locale])}
+                    {formatEuro(lease.monthlyNetRentCents, intlLocale[locale])}
                   </p>
                   <p className="text-sm text-stone-500 dark:text-stone-400">/ {t('asset.month')}</p>
                 </div>

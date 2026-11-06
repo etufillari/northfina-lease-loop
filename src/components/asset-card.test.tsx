@@ -32,6 +32,8 @@ const asset = {
   status: 'available',
 } satisfies Asset;
 
+const lease = { monthlyNetRentCents: 21500, termMonths: 12 };
+
 const price = {
   ok: true,
   priceCents: 249900,
@@ -60,9 +62,7 @@ const t = ((key: string, params?: Record<string, unknown>) => {
 
 describe('AssetCard', () => {
   it('renders asset details and status', () => {
-    render(
-      <AssetCard asset={asset} price={price} leasePrice={21500} locale={'en' as Locale} t={t} />
-    );
+    render(<AssetCard asset={asset} price={price} lease={lease} locale={'en' as Locale} t={t} />);
 
     expect(screen.getByRole('heading', { name: 'EC250' })).toBeInTheDocument();
     expect(screen.getByText('Volvo')).toBeInTheDocument();
@@ -71,9 +71,7 @@ describe('AssetCard', () => {
   });
 
   it('renders the list price', () => {
-    render(
-      <AssetCard asset={asset} price={price} leasePrice={21500} locale={'en' as Locale} t={t} />
-    );
+    render(<AssetCard asset={asset} price={price} lease={lease} locale={'en' as Locale} t={t} />);
 
     expect(screen.getByText('List price excl. VAT')).toBeInTheDocument();
     expect(screen.getByText('€2,499.00')).toBeInTheDocument();
@@ -84,7 +82,7 @@ describe('AssetCard', () => {
       <AssetCard
         asset={asset}
         price={{ ok: true, priceCents: 34_482, priceListVersion: null }}
-        leasePrice={21500}
+        lease={lease}
         locale={'en' as Locale}
         t={t}
       />
@@ -96,14 +94,19 @@ describe('AssetCard', () => {
   });
 
   it('renders the estimated lease price and duration', () => {
-    render(
-      <AssetCard asset={asset} price={price} leasePrice={21500} locale={'en' as Locale} t={t} />
-    );
+    render(<AssetCard asset={asset} price={price} lease={lease} locale={'en' as Locale} t={t} />);
 
     expect(screen.getByText('Estimated lease price excl. VAT')).toBeInTheDocument();
     expect(screen.getByText('€215.00')).toBeInTheDocument();
     expect(screen.getByText('for 12 months')).toBeInTheDocument();
     expect(screen.getByText('/ month')).toBeInTheDocument();
+  });
+
+  it('hides the lease estimate on an item that cannot be leased', () => {
+    render(<AssetCard asset={asset} price={price} lease={null} locale={'en' as Locale} t={t} />);
+
+    expect(screen.queryByText('Estimated lease price excl. VAT')).not.toBeInTheDocument();
+    expect(screen.getByText('List price excl. VAT')).toBeInTheDocument();
   });
 
   it('hides the lease estimate when the list price is unavailable', () => {
@@ -113,13 +116,7 @@ describe('AssetCard', () => {
     } satisfies ListPriceResult;
 
     render(
-      <AssetCard
-        asset={asset}
-        price={missingPrice}
-        leasePrice={21500}
-        locale={'en' as Locale}
-        t={t}
-      />
+      <AssetCard asset={asset} price={missingPrice} lease={null} locale={'en' as Locale} t={t} />
     );
 
     expect(screen.getByText('No price available')).toBeInTheDocument();
